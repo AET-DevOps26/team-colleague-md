@@ -843,8 +843,8 @@
       "height": 340,
       "type": "class",
       "position": {
-        "x": 1900,
-        "y": -650
+        "x": 1300,
+        "y": -1410
       },
       "data": {
         "name": "Notification",
@@ -904,8 +904,8 @@
       "height": 200,
       "type": "class",
       "position": {
-        "x": 1870,
-        "y": -210
+        "x": 1270,
+        "y": -1000
       },
       "data": {
         "name": "NotificationType",
@@ -964,7 +964,24 @@
       "data": {
         "sourceRole": "*",
         "targetRole": "1",
-        "points": []
+        "points": [
+          {
+            "x": 2685,
+            "y": -151
+          },
+          {
+            "x": 2685,
+            "y": -769
+          },
+          {
+            "x": 1256,
+            "y": -769
+          },
+          {
+            "x": 1256,
+            "y": -651
+          }
+        ]
       }
     },
     {
@@ -999,7 +1016,7 @@
       "target": "48928833-d17e-4e4a-b432-8fa8a068fa03",
       "type": "ClassComposition",
       "sourceHandle": "top",
-      "targetHandle": "left",
+      "targetHandle": "left-mid-bottom",
       "data": {
         "sourceRole": "*",
         "targetRole": "1",
@@ -1011,7 +1028,7 @@
       "source": "48928833-d17e-4e4a-b432-8fa8a068fa03",
       "target": "c6122bd9-05d8-4d5f-943f-1467f4c1b7f3",
       "type": "ClassUnidirectional",
-      "sourceHandle": "top",
+      "sourceHandle": "top-mid-left",
       "targetHandle": "top",
       "data": {
         "sourceRole": "1",
@@ -1142,7 +1159,7 @@
       "target": "24118a55-37fc-4028-96f7-353d5b7b5453",
       "type": "ClassComposition",
       "sourceHandle": "top",
-      "targetHandle": "bottom",
+      "targetHandle": "bottom-mid-left",
       "data": {
         "sourceRole": "*",
         "targetRole": "1",
@@ -1155,7 +1172,7 @@
       "target": "24118a55-37fc-4028-96f7-353d5b7b5453",
       "type": "ClassComposition",
       "sourceHandle": "top",
-      "targetHandle": "bottom",
+      "targetHandle": "bottom-mid-right",
       "data": {
         "points": [],
         "targetRole": "1",
@@ -1167,8 +1184,8 @@
       "source": "a76d3f87-9ea6-4a61-9640-f890aea4aca1",
       "target": "48928833-d17e-4e4a-b432-8fa8a068fa03",
       "type": "ClassComposition",
-      "sourceHandle": "top",
-      "targetHandle": "top-mid-right",
+      "sourceHandle": "left",
+      "targetHandle": "top",
       "data": {
         "targetRole": "1",
         "sourceRole": "*",
@@ -1194,11 +1211,28 @@
       "target": "48928833-d17e-4e4a-b432-8fa8a068fa03",
       "type": "ClassComposition",
       "sourceHandle": "top",
-      "targetHandle": "top-mid-right",
+      "targetHandle": "top-right",
       "data": {
         "targetRole": "1",
         "sourceRole": "*",
-        "points": []
+        "points": [
+          {
+            "x": 2260,
+            "y": 149
+          },
+          {
+            "x": 2260,
+            "y": -749
+          },
+          {
+            "x": 1292,
+            "y": -749
+          },
+          {
+            "x": 1292,
+            "y": -651
+          }
+        ]
       }
     },
     {
@@ -1224,7 +1258,24 @@
       "data": {
         "sourceRole": "*",
         "targetRole": "1",
-        "points": []
+        "points": [
+          {
+            "x": 2760,
+            "y": -151
+          },
+          {
+            "x": 2760,
+            "y": -729
+          },
+          {
+            "x": 1670,
+            "y": -729
+          },
+          {
+            "x": 1670,
+            "y": -651
+          }
+        ]
       }
     },
     {
@@ -1246,7 +1297,7 @@
       "target": "24118a55-37fc-4028-96f7-353d5b7b5453",
       "type": "ClassComposition",
       "sourceHandle": "top-right",
-      "targetHandle": "bottom",
+      "targetHandle": "bottom-left",
       "data": {
         "points": [],
         "targetRole": "1",
@@ -1259,7 +1310,7 @@
       "target": "24118a55-37fc-4028-96f7-353d5b7b5453",
       "type": "ClassComposition",
       "sourceHandle": "left-top",
-      "targetHandle": "bottom",
+      "targetHandle": "bottom-right",
       "data": {
         "points": [],
         "targetRole": "1",
