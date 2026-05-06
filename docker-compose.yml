@@ -1,0 +1,16 @@
+services:
+  user-service:
+    build:
+      context: ./backend/user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+
+  genai-service:
+    build:
+      context: ./genai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
