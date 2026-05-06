@@ -1,0 +1,513 @@
+{
+  "id": "c3e4cdd2-7502-4e8e-b577-7e2674a97ae6",
+  "version": "4.0.0",
+  "title": "Use Case Diagram",
+  "type": "UseCaseDiagram",
+  "nodes": [
+    {
+      "id": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "width": 570,
+      "height": 540,
+      "type": "useCaseSystem",
+      "position": {
+        "x": 150,
+        "y": -140
+      },
+      "data": {
+        "name": "Verita"
+      },
+      "measured": {
+        "width": 570,
+        "height": 540
+      }
+    },
+    {
+      "id": "bd1c8f67-11da-4091-bcd9-17a5f1f307c4",
+      "width": 60,
+      "height": 100,
+      "type": "useCaseActor",
+      "position": {
+        "x": 50,
+        "y": -50
+      },
+      "data": {
+        "name": "Visitor"
+      },
+      "measured": {
+        "width": 60,
+        "height": 100
+      }
+    },
+    {
+      "id": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
+      "width": 60,
+      "height": 90,
+      "type": "useCaseActor",
+      "position": {
+        "x": 20,
+        "y": 100
+      },
+      "data": {
+        "name": "Registered User"
+      },
+      "measured": {
+        "width": 60,
+        "height": 90
+      }
+    },
+    {
+      "id": "cc030de4-d582-44c6-b98e-615dbed60375",
+      "width": 60,
+      "height": 100,
+      "type": "useCaseActor",
+      "position": {
+        "x": 370,
+        "y": 450
+      },
+      "data": {
+        "name": "Post/Comment Author"
+      },
+      "measured": {
+        "width": 60,
+        "height": 100
+      }
+    },
+    {
+      "id": "a73f2230-0894-46c0-959b-1a31966849e9",
+      "width": 60,
+      "height": 100,
+      "type": "useCaseActor",
+      "position": {
+        "x": 740,
+        "y": 10
+      },
+      "data": {
+        "name": "Administrator"
+      },
+      "measured": {
+        "width": 60,
+        "height": 100
+      }
+    },
+    {
+      "id": "d7e4aa2d-11ed-4270-add8-64e90dd8c43f",
+      "width": 150,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 10,
+        "y": 90
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Create account"
+      },
+      "measured": {
+        "width": 150,
+        "height": 50
+      }
+    },
+    {
+      "id": "59c7ed07-50e5-4076-8916-b470c56969af",
+      "width": 150,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 10,
+        "y": 140
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Create new post"
+      },
+      "measured": {
+        "width": 150,
+        "height": 50
+      }
+    },
+    {
+      "id": "9bd60c03-9e59-4d30-9204-db2128f90405",
+      "width": 170,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 10,
+        "y": 190
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Comment on posts"
+      },
+      "measured": {
+        "width": 170,
+        "height": 50
+      }
+    },
+    {
+      "id": "ffb63f09-b900-4472-9767-c3ce625e4ff4",
+      "width": 160,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 10,
+        "y": 240
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Subscribe to tags"
+      },
+      "measured": {
+        "width": 160,
+        "height": 50
+      }
+    },
+    {
+      "id": "fb1f1c7b-009d-4bf7-9f85-2fdc92e878df",
+      "width": 190,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 10,
+        "y": 290
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Generate AI summary"
+      },
+      "measured": {
+        "width": 190,
+        "height": 50
+      }
+    },
+    {
+      "id": "c46f8788-0c13-4882-b026-e14b497f6b37",
+      "width": 240,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 10,
+        "y": 340
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Upvote or downvote posts"
+      },
+      "measured": {
+        "width": 240,
+        "height": 50
+      }
+    },
+    {
+      "id": "5e09ad36-3617-4dc2-aecb-970dfa842869",
+      "width": 180,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 10,
+        "y": 390
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Receive daily digest"
+      },
+      "measured": {
+        "width": 180,
+        "height": 50
+      }
+    },
+    {
+      "id": "993a8db0-d02e-42e2-a99a-e8679500c11b",
+      "width": 200,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 0,
+        "y": 440
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Edit published posts"
+      },
+      "measured": {
+        "width": 200,
+        "height": 50
+      }
+    },
+    {
+      "id": "894f996a-6e7a-4b8b-a7f5-36f00a1e0838",
+      "width": 340,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 200,
+        "y": 390
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Delete user comments on own posts"
+      },
+      "measured": {
+        "width": 340,
+        "height": 50
+      }
+    },
+    {
+      "id": "2eddba51-b948-4d58-93b6-00ca7da19c84",
+      "width": 320,
+      "height": 60,
+      "type": "useCase",
+      "position": {
+        "x": 200,
+        "y": 120
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Manage user roles and permissions"
+      },
+      "measured": {
+        "width": 320,
+        "height": 60
+      }
+    },
+    {
+      "id": "4b8eb59c-e87d-41ad-b0dd-24c68d249943",
+      "width": 340,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 200,
+        "y": 180
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Delete any user's post or comment"
+      },
+      "measured": {
+        "width": 340,
+        "height": 50
+      }
+    },
+    {
+      "id": "a9eb5f2a-5648-4354-b668-6cec988faa80",
+      "width": 130,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 290,
+        "y": 230
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Ban users"
+      },
+      "measured": {
+        "width": 130,
+        "height": 50
+      }
+    },
+    {
+      "id": "c9b651b5-48b1-4cfb-b117-bb0ad3eac789",
+      "width": 150,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 340,
+        "y": 470
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Delete own post"
+      },
+      "measured": {
+        "width": 150,
+        "height": 50
+      }
+    },
+    {
+      "id": "eb617962-dc2b-4197-b831-b4788614bfe4",
+      "width": 150,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 10,
+        "y": 40
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "View posts"
+      },
+      "measured": {
+        "width": 150,
+        "height": 50
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "a6d23846-1dd9-4346-a29f-dc8894b8a9f3",
+      "source": "bd1c8f67-11da-4091-bcd9-17a5f1f307c4",
+      "target": "d7e4aa2d-11ed-4270-add8-64e90dd8c43f",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "7880ac67-040e-4fa3-afd1-c83fd0437c0b",
+      "source": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
+      "target": "59c7ed07-50e5-4076-8916-b470c56969af",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "e1b3ee4b-3794-4971-a322-53bf9146141f",
+      "source": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
+      "target": "9bd60c03-9e59-4d30-9204-db2128f90405",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "4066ceec-4264-4c5a-97f1-fa2fbf9ed156",
+      "source": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
+      "target": "ffb63f09-b900-4472-9767-c3ce625e4ff4",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "ba02d185-79fc-4aa4-afbe-38b4eb84d3a4",
+      "source": "fb1f1c7b-009d-4bf7-9f85-2fdc92e878df",
+      "target": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "left",
+      "targetHandle": "right",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "8197a820-e7a0-44db-85bf-1f894ba6f98f",
+      "source": "fb1f1c7b-009d-4bf7-9f85-2fdc92e878df",
+      "target": "ffb63f09-b900-4472-9767-c3ce625e4ff4",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "top",
+      "targetHandle": "bottom-right",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "5033c906-ce08-4c99-8935-dce21a7a19fd",
+      "source": "c46f8788-0c13-4882-b026-e14b497f6b37",
+      "target": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "left",
+      "targetHandle": "right",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "679d68f2-6a49-4fe9-b17e-9af054113203",
+      "source": "5e09ad36-3617-4dc2-aecb-970dfa842869",
+      "target": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "left",
+      "targetHandle": "right",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "dad3a896-97a8-42e9-9235-6b56bfa26f8d",
+      "source": "cc030de4-d582-44c6-b98e-615dbed60375",
+      "target": "993a8db0-d02e-42e2-a99a-e8679500c11b",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "top",
+      "targetHandle": "bottom",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "e44d3b54-3eea-4384-b625-18a18a699a74",
+      "source": "894f996a-6e7a-4b8b-a7f5-36f00a1e0838",
+      "target": "cc030de4-d582-44c6-b98e-615dbed60375",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "abd3f3a8-c14b-413f-8760-0718ad3b07ce",
+      "source": "a73f2230-0894-46c0-959b-1a31966849e9",
+      "target": "2eddba51-b948-4d58-93b6-00ca7da19c84",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "left",
+      "targetHandle": "right",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "b0af4436-c271-44cc-a4ec-b8ee36e17233",
+      "source": "4b8eb59c-e87d-41ad-b0dd-24c68d249943",
+      "target": "a73f2230-0894-46c0-959b-1a31966849e9",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "2f2f8e29-cee9-4bd8-a9d5-88e9076e61a3",
+      "source": "a9eb5f2a-5648-4354-b668-6cec988faa80",
+      "target": "a73f2230-0894-46c0-959b-1a31966849e9",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "ee93183c-c571-4d2b-8ba1-f5d048c19bdd",
+      "source": "c9b651b5-48b1-4cfb-b117-bb0ad3eac789",
+      "target": "cc030de4-d582-44c6-b98e-615dbed60375",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "3a7d83ad-884b-4bc7-b0b7-ae9ff01e612a",
+      "source": "eb617962-dc2b-4197-b831-b4788614bfe4",
+      "target": "bd1c8f67-11da-4091-bcd9-17a5f1f307c4",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "left",
+      "targetHandle": "right",
+      "data": {
+        "points": []
+      }
+    }
+  ],
+  "assessments": {}
+}
