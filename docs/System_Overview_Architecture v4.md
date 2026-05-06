@@ -58,7 +58,7 @@ This diagram will show:
 ### 2.1 Backend Services
 
 ```yaml
-Framework: Spring Boot 3.x
+Framework: Spring Boot 3.5.10
 Language: Java 21
 Build Tool: Gradle (Groovy DSL)
 Database Access: Spring Data JPA + Hibernate
