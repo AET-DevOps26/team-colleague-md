@@ -22,7 +22,7 @@
 
 ### 1.1 Project Description
 
-Verita is an AI-focused community platform designed to address the information overload problem in the rapidly evolving AI industry. The platform enables developers, researchers, and enthusiasts to share and discover practical AI knowledge through intelligent content curation, automated summarization, and personalized recommendations.
+Verita is an AI-focused community platform designed to address the information overload problem in the rapidly evolving AI industry. The platform enables developers, researchers, and enthusiasts to share and discover practical AI knowledge through intelligent content curation, automated summarization, and personalized recommendations. See more in [Problem Statement](Problem_Statement.md)
 
 ### 1.2 Core System Components
 
@@ -41,15 +41,6 @@ The system follows a microservices architecture consisting of:
 
 **Client Layer:**
 - **React Frontend:** Web application with Markdown editor, masonry layout, real-time updates
-
-### 1.3 System Architecture Diagram
-
-**[PLACEHOLDER - To be created in draw.io]**
-
-This diagram will show:
-- System layers (Client, Gateway, Services, Database, Monitoring)
-- Communication protocols (HTTPS/REST, JDBC)
-- Deployment environments (Docker Compose, Kubernetes)
 
 ---
 
@@ -216,8 +207,6 @@ The system is divided into four independent services following Domain-Driven Des
 - **Synchronous:** REST API calls (e.g., Content Service → GenAI Service for summarization)
 - **Asynchronous (P2):** Message queue (RabbitMQ) for non-blocking operations like digest generation
 
-*Detailed API specifications for each service available in: `Technical_Details/API_Specification.yaml`*
-
 ---
 
 ### 3.2 Data Architecture Overview
@@ -232,8 +221,6 @@ PostgreSQL instance with three logical schemas:
 | **content_schema** | Content Service | posts, comments, tags, post_tags, votes, bookmarks |
 | **recommendation_schema** | Recommendation Service | user_interactions, tag_subscriptions, trending_posts, notifications |
 
-*Complete schema with detailed design decisions available in: `Technical_Details/Database_Schema.md`*
-
 ---
 
 ## 4. UML Diagrams
@@ -241,246 +228,8 @@ PostgreSQL instance with three logical schemas:
 ### 4.1 Analysis Object Model (Class Diagram)
 
 This diagram illustrates the core domain entities, their attributes, relationships, and key methods.
+![Class Diagram](diagrams/Class%20Diagram.png)
 
-```mermaid
-classDiagram
-    %% ===== User Domain =====
-    class User {
-        -Long id
-        -String username
-        -String email
-        -String passwordHash
-        -UserRole role
-        -String bio
-        -JsonNode expertiseAreas
-        -JsonNode socialLinks
-        -Timestamp createdAt
-        -Timestamp updatedAt
-        +register()
-        +login()
-        +updateProfile()
-        +applyForVerification()
-    }
-
-    class UserRole {
-        <<enumeration>>
-        USER
-        ADMIN
-        VERIFIED
-    }
-
-    class VerificationRequest {
-        -Long id
-        -Long userId
-        -VerificationType requestType
-        -String supportingInfo
-        -VerificationStatus status
-        -Long reviewedBy
-        -Timestamp reviewedAt
-        -Timestamp createdAt
-        +submit()
-        +approve()
-        +reject()
-    }
-
-    class VerificationType {
-        <<enumeration>>
-        ORGANIZATION
-        EXPERT
-    }
-
-    class VerificationStatus {
-        <<enumeration>>
-        PENDING
-        APPROVED
-        REJECTED
-    }
-
-    %% ===== Content Domain =====
-    class Post {
-        -Long id
-        -Long userId
-        -String title
-        -String content
-        -String contentSummary
-        -String sourceUrl
-        -String coverImageUrl
-        -Integer viewCount
-        -Integer upvoteCount
-        -Integer downvoteCount
-        -Integer commentCount
-        -Timestamp createdAt
-        -Timestamp updatedAt
-        +create()
-        +update()
-        +delete()
-        +addComment()
-        +addTag()
-        +generateSummary()
-    }
-
-    class Comment {
-        -Long id
-        -Long postId
-        -Long userId
-        -Long parentCommentId
-        -String content
-        -Integer upvoteCount
-        -Timestamp createdAt
-        -Timestamp updatedAt
-        +create()
-        +update()
-        +delete()
-        +reply()
-    }
-
-    class Tag {
-        -Long id
-        -String name
-        -String description
-        -Integer postCount
-        -Timestamp createdAt
-        +create()
-        +incrementPostCount()
-        +getRelatedPosts()
-    }
-
-    class Vote {
-        -Long id
-        -Long userId
-        -VoteTargetType targetType
-        -Long targetId
-        -VoteType voteType
-        -Timestamp createdAt
-        +cast()
-        +remove()
-        +switch()
-    }
-
-    class VoteTargetType {
-        <<enumeration>>
-        POST
-        COMMENT
-    }
-
-    class VoteType {
-        <<enumeration>>
-        UPVOTE
-        DOWNVOTE
-    }
-
-    class Bookmark {
-        -Long id
-        -Long userId
-        -Long postId
-        -Timestamp createdAt
-        +save()
-        +remove()
-    }
-
-    %% ===== Recommendation Domain =====
-    class UserInteraction {
-        -Long id
-        -Long userId
-        -Long postId
-        -InteractionType interactionType
-        -Integer durationSeconds
-        -Timestamp createdAt
-        +track()
-        +analyze()
-    }
-
-    class InteractionType {
-        <<enumeration>>
-        VIEW
-        CLICK
-        UPVOTE
-        COMMENT
-        BOOKMARK
-    }
-
-    class TagSubscription {
-        -Long userId
-        -Long tagId
-        -Timestamp subscribedAt
-        +subscribe()
-        +unsubscribe()
-    }
-
-    class TrendingPost {
-        -Long postId
-        -BigDecimal trendingScore
-        -Integer rank
-        -TimeWindow timeWindow
-        -Timestamp calculatedAt
-        +calculate()
-        +updateRanking()
-    }
-
-    class TimeWindow {
-        <<enumeration>>
-        HOUR
-        DAY
-        WEEK
-    }
-
-    class Notification {
-        -Long id
-        -Long userId
-        -NotificationType type
-        -String content
-        -Long relatedPostId
-        -Boolean isRead
-        -Timestamp createdAt
-        +send()
-        +markAsRead()
-        +delete()
-    }
-
-    class NotificationType {
-        <<enumeration>>
-        COMMENT
-        UPVOTE
-        VERIFICATION_APPROVED
-        DAILY_DIGEST
-        NEW_POST_IN_SUBSCRIBED_TAG
-    }
-
-    %% ===== Relationships =====
-    User "1" --o "0..*" Post : creates
-    User "1" --o "0..*" Comment : writes
-    User "1" --o "0..*" Vote : casts
-    User "1" --o "0..*" Bookmark : saves
-    User "1" --o "0..*" VerificationRequest : submits
-    User "1" --o "0..*" UserInteraction : generates
-    User "1" --o "0..*" TagSubscription : has
-    User "1" --o "0..*" Notification : receives
-    User "1" --> "1" UserRole : has
-
-    Post "1" --o "0..*" Comment : has
-    Post "0..*" --o "0..*" Tag : tagged with
-    Post "1" --o "0..*" Vote : receives
-    Post "1" --o "0..*" Bookmark : bookmarked in
-    Post "1" --o "0..*" UserInteraction : tracked in
-    Post "1" --o "0..1" TrendingPost : may be
-
-    Comment "1" --o "0..*" Comment : replies to
-    Comment "1" --o "0..*" Vote : receives
-
-    Tag "1" --o "0..*" TagSubscription : subscribed by
-
-    VerificationRequest "1" --> "1" VerificationType : has
-    VerificationRequest "1" --> "1" VerificationStatus : has
-
-    Vote "1" --> "1" VoteTargetType : targets
-    Vote "1" --> "1" VoteType : is
-
-    UserInteraction "1" --> "1" InteractionType : has
-
-    TrendingPost "1" --> "1" TimeWindow : calculated for
-
-    Notification "1" --> "1" NotificationType : has
-```
 
 **Key Design Decisions:**
 
@@ -494,20 +243,14 @@ classDiagram
 ---
 
 ### 4.2 Use Case Diagram
-
-**[TODO - To be created by Team Member: ___________]**
-
-*Use case diagram will be inserted here once completed.*
+This diagram captures the primary actors (users) and their interactions with the system's core functionalities.
+![Use Case Diagram](diagrams/Use%20Case%20Diagram.png)
 
 ---
 
 ### 4.3 Component Diagram (Top-Level Architecture)
-
-**[TODO - To be created by Team Member: ___________]**
-
-*Component diagram will be inserted here once completed.*
-
-**Note:** This Component Diagram can be combined with the System Architecture Diagram (Section 1.3) if using draw.io, as they serve similar purposes with different levels of formality.
+This diagram shows the high-level components (services) and their interactions, including external dependencies.
+![Component Diagram](diagrams/Component%20Diagram.png)
 
 ---
 
@@ -588,64 +331,4 @@ The backlog is organized into 7 Epics corresponding to major feature areas. Each
 - Delete posts, comments, and ban users (admin only)
 - Transparent moderation logs (P2)
 
-*Detailed User Stories with acceptance criteria and Sprint planning available in: `Technical Details/Product_Backlog.md`*
-
 ---
-
-## 6. Technical Documentation Roadmap
-
-The following detailed documents will guide implementation:
-
-```
-verita/
-├── README.md
-│   └── Project overview and quick start guide
-│
-├── System_Overview_Architecture.md (this document)
-│   └── High-level architecture and technology decisions
-│
-├── Technical_Details/
-│   ├── Database_Schema.md
-│   │   └── Complete PostgreSQL schema with CREATE statements
-│   │
-│   ├── API_Specification.yaml
-│   │   └── OpenAPI 3.0 specification for all services
-│   │
-│   ├── Product_Backlog.md
-│   │   └── User Stories, acceptance criteria, and Sprint planning
-│   │
-│   ├── Frontend_Implementation.md
-│   │   └── React components, routing, and state management
-│   │
-│   ├── GenAI_Implementation.md
-│   │   └── LangChain chains, prompts, and model configuration
-│   │
-│   ├── DevOps_Configuration.md
-│   │   └── Docker, Kubernetes, CI/CD pipeline setup
-│   │
-│   └── Testing_Strategy.md
-│       └── Unit, integration, and E2E test guidelines
-│
-├── frontend/                    # React application
-├── backend/
-│   ├── user-service/           # Spring Boot (Port 8081)
-│   ├── content-service/        # Spring Boot (Port 8082)
-│   └── recommendation-service/ # Spring Boot (Port 8083)
-├── genai-service/              # FastAPI (Port 8000)
-├── infra/
-│   ├── docker-compose.yml
-│   └── k8s/                    # Kubernetes manifests
-└── .github/workflows/          # CI/CD pipelines
-```
-
-**Documentation Priority:**
-- **Week 1:** Database_Schema.md, API_Specification.yaml
-- **Week 2:** Product_Backlog.md, Frontend_Implementation.md
-- **Week 3:** GenAI_Implementation.md, DevOps_Configuration.md
-
----
-
-**End of System Overview Architecture**
-
-*For detailed implementation specifications, refer to documents in the `Technical_Details/` folder.*
-

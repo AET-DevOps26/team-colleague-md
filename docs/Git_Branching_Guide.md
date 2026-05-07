@@ -1,6 +1,7 @@
 # Verita Project - Git Branching Guide
 
 ## Branch Structure Overview
+```
 main (protected)
   ↑ Every 2-3 weeks (Sprint end)
   │
@@ -22,6 +23,7 @@ main (protected)
       ├── doc/api-spec (short-lived)
       ├── doc/architecture-diagrams (short-lived)
       └── doc/database-schema (short-lived)
+```
 
 ### Branch Types
 
