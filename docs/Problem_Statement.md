@@ -2,13 +2,13 @@
 
 ## **1. Problem Definition & Motivation**
 
-The AI Industry is moving at an unpredictable pace. Every day brings new model releases, framework updates, and announcements. This information first appears on technical platforms like GitHub, Hugging Face, and LLM Arena. Then developers, content creators, and enthusiasts process this information and share it through social media, blogs, and forums, such as Twitter, YouTube, and Reddit. We found that there are three important values for AI-related information: **timeliness** (models can quickly become outdated), **credibility** (clickbait headlines exaggerate capabilities), and **usefulness** (hyped tools often provide little practical value for real work).  
+The AI Industry is moving at an unpredictable pace. Every day brings new model releases, framework updates, and announcements. This information first appears on technical platforms like GitHub, Hugging Face, and LLM Arena. Then developers, content creators, and enthusiasts process this information and share it through social media, blogs, and forums, such as Twitter, YouTube, and Reddit. We found that there are three important values for AI-related information: **timeliness** (models can quickly become outdated), **credibility** (clickbait headlines exaggerate capabilities), and **usefulness** (hyped tools often provide little practical value for real work).
  However, users like AI practitioners, students, and enthusiasts who need useful AI knowledge are facing the following challenges:
 
-* **Information is scattered**: Useful AI insights are buried across Twitter threads, YouTube videos, Reddit discussions, and personal blogs, with no central place to find them  
-* **Hard to judge quality**: No clear way to tell if a new model or tool actually works well before spending time testing it yourself  
-* **Missing practical context**: Announcements show what's new, but not how to use it in real projects or what problems it actually solves  
-* **No community verification**: Users can't easily find others' real experiences with tools before trying them  
+* **Information is scattered**: Useful AI insights are buried across Twitter threads, YouTube videos, Reddit discussions, and personal blogs, with no central place to find them
+* **Hard to judge quality**: No clear way to tell if a new model or tool actually works well before spending time testing it yourself
+* **Missing practical context**: Announcements show what's new, but not how to use it in real projects or what problems it actually solves
+* **No community verification**: Users can't easily find others' real experiences with tools before trying them
 * **Time-consuming search**: Finding one useful AI tutorial or workflow example requires filtering through dozens of low-quality posts
 
 Verita is an AI-focused community platform where developers, researchers, and enthusiasts share and discover practical AI knowledge. Unlike general social media, we only host AI content. Unlike news aggregators, we encourage original posts with actionable insights, code examples, workflow tutorials, and real tool comparisons. Our platform uses AI to keep posts concise (auto-summaries), organized (auto-tagging), and trustworthy (community sentiment scores). The goal: make every minute you spend here directly useful for your AI work or learning.
@@ -21,32 +21,32 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 **Content Creation & Sharing**
 
-* **Markdown-Native Editor**: Full Markdown support with code syntax highlighting and real-time preview, enabling users to share copyable code examples, tutorials, and technical documentation  
+* **Markdown-Native Editor**: Full Markdown support with code syntax highlighting and real-time preview, enabling users to share copyable code examples, tutorials, and technical documentation
 * **Source Attribution System**: Built-in template fields for citing external sources when sharing curated content, maintaining transparency and credibility
 
 **AI-Powered Intelligence**
 
-* **Automatic Summarization**: AI generates summaries of long posts, helping readers quickly grasp key points before diving into details  
-* **Smart Tagging**: Intelligent tag suggestions based on post content, ensuring proper categorization without manual effort  
-* **AI Daily Digest**: AI-generated summaries of trending topics and important developments in your subscribed areas  
-* **Content Verification** (Optional): AI-powered fact-checking that validates information sources and detects potential misinformation  
+* **Automatic Summarization**: AI generates summaries of long posts, helping readers quickly grasp key points before diving into details
+* **Smart Tagging**: Intelligent tag suggestions based on post content, ensuring proper categorization without manual effort
+* **AI Daily Digest**: AI-generated summaries of trending topics and important developments in your subscribed areas
+* **Content Verification** (Optional): AI-powered fact-checking that validates information sources and detects potential misinformation
 * **Semantic Search** (Optional): RAG-powered search that understands intent and finds relevant discussions based on meaning, not just keywords
 
 **Personalized Discovery**
 
-* **Smart Feed Algorithm**: Homepage recommendation system that learns from your engagement patterns to surface relevant and high-quality posts  
+* **Smart Feed Algorithm**: Homepage recommendation system that learns from your engagement patterns to surface relevant and high-quality posts
 * **Topic Subscriptions**: Follow specific tags (\#OpenAI, \#LangChain, \#ComputerVision) to customize your content stream
 
 **Community & Trust**
 
-* **Verified Accounts**: Official verification system for company accounts and recognized experts, with distinct UI badges indicating credible sources  
-* **Rich Engagement**: Threaded comments, upvotes/downvotes, post bookmarking, and in-depth discussions around shared knowledge  
+* **Verified Accounts**: Official verification system for company accounts and recognized experts, with distinct UI badges indicating credible sources
+* **Rich Engagement**: Threaded comments, upvotes/downvotes, post bookmarking, and in-depth discussions around shared knowledge
 * **Quality Moderation**: Community-driven flagging combined with admin oversight to maintain high content standards and combat spam
 
 **User Experience**
 
-* **Clean Interface**: Minimalist design focused on readability and information density  
-* **Quick Navigation**: Fast filtering by tags, trending topics, and time ranges  
+* **Clean Interface**: Minimalist design focused on readability and information density
+* **Quick Navigation**: Fast filtering by tags, trending topics, and time ranges
 * **Save & Organize**: Bookmark valuable posts for future reference and build your personal knowledge library
 
 ---
@@ -55,8 +55,8 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 **Priority Levels**:
 
-* **Must-have (P0)**: Core MVP functionality - required for basic platform operation  
-* **Should-have (P1)**: Important features for alpha/beta release - significantly enhance user experience  
+* **Must-have (P0)**: Core MVP functionality - required for basic platform operation
+* **Should-have (P1)**: Important features for alpha/beta release - significantly enhance user experience
 * **Nice-to-have (P2)**: Optional features - add value but can be deferred if time-constrained
 
 ---
@@ -67,20 +67,20 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 **Must-have (P0)**:
 
-* As a new visitor, I want to create an account with email and password, so that I can access the platform and participate in the community  
-* As a registered user, I want to securely log in to my account, so that I can access personalized content and my saved posts  
+* As a new visitor, I want to create an account with email and password, so that I can access the platform and participate in the community
+* As a registered user, I want to securely log in to my account, so that I can access personalized content and my saved posts
 * As an administrator, I want to manage user roles and permissions so that I can moderate the platform effectively
 
 **Should-have (P1)**:
 
-* As a user, I want to manage my profile information (bio, expertise areas, social links), so that other community members understand my background and interests  
-* As a user representing an organization or recognized expert, I want to apply for account verification by submitting verification request with supporting information, so that I can be recognized as an official source  
-* As an administrator, I want to review verification applications in a dashboard and approve or reject requests, so that only legitimate organizations and experts receive verified status  
+* As a user, I want to manage my profile information (bio, expertise areas, social links), so that other community members understand my background and interests
+* As a user representing an organization or recognized expert, I want to apply for account verification by submitting verification request with supporting information, so that I can be recognized as an official source
+* As an administrator, I want to review verification applications in a dashboard and approve or reject requests, so that only legitimate organizations and experts receive verified status
 * As any user, I want to see a distinct verification badge on verified accounts' profiles and posts, so that I can easily identify official organizations and credible experts
 
 **Nice-to-have (P2)**:
 
-* As a verified account, I want my posts to be prioritized in trending sections and recommendation algorithms, so that official announcements reach the community more effectively  
+* As a verified account, I want my posts to be prioritized in trending sections and recommendation algorithms, so that official announcements reach the community more effectively
 * As a verified account, I want special formatting options for posts (e.g., announcement banners, pinned posts), so that important official updates stand out visually
 
 ---
@@ -91,16 +91,16 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 **Must-have (P0)**:
 
-* As a user, I want to create a new post with a title and Markdown-formatted body, so that I can share AI knowledge with the community  
-* As a user, I want to use a Markdown editor with syntax highlighting for code blocks, so that I can format technical documentation easily  
-* As a user, I want to add tags to my post during creation, so that others can discover my content through relevant topics  
+* As a user, I want to create a new post with a title and Markdown-formatted body, so that I can share AI knowledge with the community
+* As a user, I want to use a Markdown editor with syntax highlighting for code blocks, so that I can format technical documentation easily
+* As a user, I want to add tags to my post during creation, so that others can discover my content through relevant topics
 * As an administrator, I want to delete any user's post that violates community guidelines, so that the platform maintains quality standards
 
 **Should-have (P1)**:
 
-* As a user, I want to see real-time preview while editing Markdown, so that I can verify my formatting before publishing  
-* As a user sharing curated content, I want to fill in a source attribution field with the original URL, so that I properly credit external sources  
-* As a post author, I want to edit my published posts to correct mistakes or add updates, so that my content remains accurate  
+* As a user, I want to see real-time preview while editing Markdown, so that I can verify my formatting before publishing
+* As a user sharing curated content, I want to fill in a source attribution field with the original URL, so that I properly credit external sources
+* As a post author, I want to edit my published posts to correct mistakes or add updates, so that my content remains accurate
 * As a post author, I want to delete my own posts, so that I can remove outdated or incorrect information
 
 **Nice-to-have (P2)**:
@@ -113,7 +113,7 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 **Should-have (P1)**:
 
-* As a reader viewing a long post, I want to click a button to generate an AI summary, so that I can quickly understand key points before deciding to read the full content  
+* As a reader viewing a long post, I want to click a button to generate an AI summary, so that I can quickly understand key points before deciding to read the full content
 * As a post author, I want the system to automatically suggest relevant tags based on my post content, so that I don't need to manually categorize from hundreds of options
 
 **Nice-to-have (P2)**:
@@ -130,14 +130,14 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 **Must-have (P0)**:
 
-* As a user, I want to comment on posts to share my experiences and insights, so that I can contribute to the discussion and help others learn  
+* As a user, I want to comment on posts to share my experiences and insights, so that I can contribute to the discussion and help others learn
 * As a user, I want to upvote posts that I find valuable or downvote low-quality content, so that I can help surface useful information to the community
 
 **Should-have (P1)**:
 
-* As a user, I want to reply to existing comments creating threaded discussions, so that I can engage in detailed conversations with specific points  
-* As a user, I want to save posts to my personal library, so that I can reference important information later  
-* As a comment author, I want to edit or delete my own comments, so that I can correct mistakes or remove inappropriate remarks  
+* As a user, I want to reply to existing comments creating threaded discussions, so that I can engage in detailed conversations with specific points
+* As a user, I want to save posts to my personal library, so that I can reference important information later
+* As a comment author, I want to edit or delete my own comments, so that I can correct mistakes or remove inappropriate remarks
 * As a post author, I want to delete comments on my posts if necessary, so that I can moderate discussions on my content
 
 ---
@@ -146,7 +146,7 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 **Must-have (P0)**:
 
-* As a user, I want to view a homepage feed showing recent posts, so that I can discover new AI content  
+* As a user, I want to view a homepage feed showing recent posts, so that I can discover new AI content
 * As a user, I want to filter the feed by specific tags or multiple tags, so that I can focus on particular areas of interest
 
 **Should-have (P1)**:
@@ -182,7 +182,7 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 **Must-have (P0)**:
 
-* As an administrator, I want to view flagged content in a moderation dashboard, so that I can efficiently review and take action on reports  
+* As an administrator, I want to view flagged content in a moderation dashboard, so that I can efficiently review and take action on reports
 * As an administrator, I want to delete posts, comments, or ban users who repeatedly violate guidelines, so that the platform remains high-quality
 
 **Should-have (P1)**:
@@ -215,33 +215,33 @@ GenAI transforms Verita from a generic forum into an intelligent knowledge platf
 
 ### **Core GenAI Features (P1 - Should-have)**
 
-**On-Demand Post Summarization**  
+**On-Demand Post Summarization**
  Long technical posts can be overwhelming. Users click a "Generate Summary" button to get AI-extracted key points, helping them decide whether to read the full content. This scales to hundreds of daily posts without requiring manual summarization.
 
-**Automatic Tag Suggestion**  
+**Automatic Tag Suggestion**
  When users create posts, the GenAI service analyzes content and suggests relevant tags (\#OpenAI, \#CodingTools, \#ComputerVision). This ensures proper categorization without forcing users to manually browse hundreds of tag options or remember exact tag names.
 
-**AI Daily Digest**  
+**AI Daily Digest**
  The system aggregates posts from the past 24 hours in users' subscribed topics, analyzes importance and relevance, and generates personalized daily summaries. This delivers curated insights without requiring constant platform monitoring.
 
 ### **Optional GenAI Features (P2 - Nice-to-have)**
 
-**Sentiment Analysis**  
+**Sentiment Analysis**
  Analyze post content and community engagement to generate sentiment scores (e.g., "75% bullish" or "30% skeptical"). Helps users distinguish genuine breakthroughs from marketing hype by showing community reception patterns.
 
-**Content Verification**  
+**Content Verification**
  Detect potentially misleading claims or unverified information by cross-referencing statements with known facts. Flags posts that may require additional scrutiny before users act on them.
 
-**Semantic Search (RAG)**  
+**Semantic Search (RAG)**
  Users search using natural language questions, and the system retrieves contextually relevant posts even when exact keywords don't match. Powered by vector embeddings and retrieval-augmented generation for concept-based discovery.
 
 ### **Why GenAI is Essential**
 
 Traditional rule-based approaches cannot handle the complexity of AI content analysis:
 
-* **Summarization at scale**: Manually summarizing user-generated content is impractical; GenAI enables consistent, real-time processing  
-* **Contextual understanding**: Simple keyword matching fails to capture semantic meaning (e.g., distinguishing "GPT" as a model vs general conversation); GenAI understands context  
-* **Personalized curation**: Aggregating and prioritizing hundreds of posts requires understanding topic relationships beyond basic filtering  
+* **Summarization at scale**: Manually summarizing user-generated content is impractical; GenAI enables consistent, real-time processing
+* **Contextual understanding**: Simple keyword matching fails to capture semantic meaning (e.g., distinguishing "GPT" as a model vs general conversation); GenAI understands context
+* **Personalized curation**: Aggregating and prioritizing hundreds of posts requires understanding topic relationships beyond basic filtering
 * **Semantic discovery**: Users don't always know exact terminology; RAG enables finding discussions through conceptual similarity
 
 Without GenAI, the platform would be just another forum drowning in information overload.

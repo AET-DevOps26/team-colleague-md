@@ -1,0 +1,12 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace  # Remove trailing whitespace at end of lines
+      - id: end-of-file-fixer    # Ensure files end with a single newline
+
+  - repo: https://github.com/python-openapi/openapi-spec-validator
+    rev: 0.7.1
+    hooks:
+      - id: openapi-spec-validator  # Validate OpenAPI spec against the 3.0 schema
+        args: ['backend/user-service/api/openapi.yaml']
