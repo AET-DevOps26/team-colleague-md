@@ -28,3 +28,17 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s  # FastAPI starts faster than Spring Boot, shorter grace period
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"  # nginx listens on 80 inside the container, exposed on 3000 to match dev server
+    healthcheck:
+      # wget is available in nginx:alpine; curl is not
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s  # nginx starts faster than backend services
