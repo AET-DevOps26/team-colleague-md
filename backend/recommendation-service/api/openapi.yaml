@@ -129,8 +129,10 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/InteractionRequest' }
-
-
+      responses:
+        '202':
+          description: Interaction queued for processing
+        '400': { $ref: '#/components/responses/BadRequest' }
 
 components:
   securitySchemes:
