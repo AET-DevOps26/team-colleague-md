@@ -7,6 +7,13 @@ services:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+    healthcheck:
+      # Poll Spring Actuator health endpoint; non-200 response marks container unhealthy
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s      # Run the check every 30 seconds
+      timeout: 10s       # Fail the check if it takes longer than 10 seconds
+      retries: 3         # Mark unhealthy after 3 consecutive failures
+      start_period: 40s  # Grace period at startup before failures count
 
   genai-service:
     build:
@@ -14,3 +21,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    healthcheck:
+      # Poll FastAPI health endpoint; non-200 response marks container unhealthy
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s  # FastAPI starts faster than Spring Boot, shorter grace period
