@@ -5,8 +5,11 @@ repos:
       - id: trailing-whitespace  # Remove trailing whitespace at end of lines
       - id: end-of-file-fixer    # Ensure files end with a single newline
 
-  - repo: https://github.com/python-openapi/openapi-spec-validator
-    rev: 0.7.1
+  - repo: local
     hooks:
-      - id: openapi-spec-validator  # Validate OpenAPI spec against the 3.0 schema
-        args: ['backend/user-service/api/openapi.yaml']
+      - id: openapi-lint
+        name: Lint OpenAPI specs
+        language: system
+        entry: npx @redocly/cli lint
+        files: openapi\.yaml$
+        pass_filenames: true
