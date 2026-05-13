@@ -1,0 +1,30 @@
+﻿name: OpenAPI Lint
+
+on:
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - "**/openapi.yaml"
+      - ".github/workflows/openapi-lint.yml"
+
+jobs:
+  lint-openapi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli
+
+      # This command finds all openapi.yaml files and lints them automatically
+      - name: Lint all OpenAPI specs
+        run: |
+          find . -name "openapi.yaml" -not -path "*/node_modules/*" | xargs -I {} npx @redocly/cli lint {}
