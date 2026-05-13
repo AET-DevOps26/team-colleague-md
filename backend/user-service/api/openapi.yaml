@@ -13,19 +13,36 @@ info:
     - User-specific Preferences (Theme, Language)
     - Active Session Tracking and Revocation
   version: 1.0.1
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
 
 servers:
-  - url: http://localhost:8080
+  - url: https://api.verita.io
+    description: Production server
+  - url: http://{host}:{port}
     description: Local development environment
+    variables:
+      host:
+        default: localhost
+      port:
+        default: "8080"
 
 tags:
   - name: Authentication
+    description: Endpoints for user registration, login, and token management.
   - name: Users
+    description: Operations related to fetching and managing user profile data.
   - name: Roles
+    description: Administrative endpoints for managing user permissions and roles.
   - name: Preferences
+    description: Personalization settings like themes and language.
   - name: Sessions
+    description: Management of active login sessions and device tracking.
   - name: Verification
+    description: Account verification and status tracking.
   - name: Health
+    description: Service monitoring and uptime checks.
 
 paths:
   /health:
@@ -34,9 +51,14 @@ paths:
         - Health
       summary: Health check
       operationId: healthCheck
+      security: []
       responses:
         '200':
           description: Service is healthy.
+        '503':
+          description: Service unavailable.
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /auth/register:
     post:
@@ -44,6 +66,7 @@ paths:
         - Authentication
       summary: Register a new user
       operationId: registerUser
+      security: []
       requestBody:
         required: true
         content:
@@ -72,6 +95,7 @@ paths:
         - Authentication
       summary: Login user
       operationId: loginUser
+      security: []
       requestBody:
         required: true
         content:
@@ -87,6 +111,8 @@ paths:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /auth/logout:
     post:
@@ -99,6 +125,8 @@ paths:
       responses:
         '204':
           description: Logged out successfully.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /auth/refresh:
     post:
@@ -106,6 +134,7 @@ paths:
         - Authentication
       summary: Refresh access token
       operationId: refreshToken
+      security: []
       requestBody:
         required: true
         content:
@@ -119,6 +148,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /auth/forgot-password:
     post:
@@ -126,6 +159,7 @@ paths:
         - Authentication
       summary: Request password reset
       operationId: forgotPassword
+      security: []
       requestBody:
         required: true
         content:
@@ -135,6 +169,10 @@ paths:
       responses:
         '204':
           description: Password reset email sent.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /auth/reset-password:
     post:
@@ -142,6 +180,7 @@ paths:
         - Authentication
       summary: Reset password
       operationId: resetPassword
+      security: []
       requestBody:
         required: true
         content:
@@ -151,6 +190,8 @@ paths:
       responses:
         '204':
           description: Password reset successful.
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /users/me:
     get:
@@ -167,6 +208,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
     put:
       tags:
@@ -188,6 +231,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
     delete:
       tags:
@@ -199,6 +246,8 @@ paths:
       responses:
         '204':
           description: Account deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /users:
     get:
@@ -219,6 +268,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedUsers'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
 
@@ -246,6 +297,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedUsers'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /users/{userId}:
     get:
@@ -264,6 +319,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -286,6 +343,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     put:
       tags:
@@ -305,8 +366,14 @@ paths:
       responses:
         '200':
           description: Roles updated.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /users/me/preferences:
     get:
@@ -323,6 +390,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
     put:
       tags:
@@ -340,6 +409,10 @@ paths:
       responses:
         '200':
           description: Preferences updated.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /users/me/sessions:
     get:
@@ -358,6 +431,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /users/me/sessions/{sessionId}:
     delete:
@@ -376,6 +451,10 @@ paths:
       responses:
         '204':
           description: Session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /users/{userId}/verification-status:
     get:
@@ -394,6 +473,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VerificationStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
 components:
   securitySchemes:
