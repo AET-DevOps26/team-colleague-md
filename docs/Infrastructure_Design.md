@@ -99,7 +99,7 @@ pre-commit run --all-files
 |------|---------|
 | `trailing-whitespace` | Remove trailing whitespace at end of lines |
 | `end-of-file-fixer` | Ensure files end with a single newline |
-| `openapi-spec-validator` | Validate `user-service/api/openapi.yaml` against OpenAPI 3.0 schema |
+| `openapi-lint` (Redocly CLI) | Lint all `openapi.yaml` files against OpenAPI 3.0 rules via `npx @redocly/cli lint` |
 
 ---
 
@@ -149,6 +149,24 @@ EXPOSE 8000
 CMD  uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
+#### `frontend` — React / Vite
+
+A two-stage build: the builder stage compiles the static assets with Node.js; the runtime
+stage serves them with nginx. The final image contains no Node.js or source files.
+
+```
+Stage 1 (builder)  node:20-alpine
+  RUN  npm ci
+  RUN  npm run build        → dist/
+
+Stage 2 (runtime)  nginx:alpine
+  COPY --from=builder dist/ /usr/share/nginx/html
+  COPY nginx.conf /etc/nginx/conf.d/default.conf
+  EXPOSE 80
+```
+
+`nginx.conf` uses `try_files $uri $uri/ /index.html` so that React can handle client-side routing.
+
 ### 4.2 docker-compose.yml
 
 `docker-compose.yml` lives at the repository root. Each service entry declares its build
@@ -158,6 +176,7 @@ context (the directory containing the `Dockerfile`) and the host port mapping.
 |---------|--------------|----------------------|---------|
 | `user-service` | `./backend/user-service` | `8081 → 8081` | `dev` |
 | `genai-service` | `./genai-service` | `8000 → 8000` | — |
+| `frontend` | `./frontend` | `3000 → 80` | — |
 
 
 ---
@@ -166,11 +185,27 @@ context (the directory containing the `Dockerfile`) and the host port mapping.
 
 ### 5.1 Per-Service Build & Test
 
-...
+Each service has its own workflow file triggered on pull requests to `dev`. Path filters ensure
+a workflow only runs when files in that service change.
+
+| Workflow | Trigger path | Job |
+|----------|-------------|-----|
+| `ci-user-service.yml` | `backend/user-service/**` | `./gradlew build` (compile + unit tests) |
+| `ci-genai-service.yml` | `genai-service/**` | `pip install -r requirements.txt` + import check |
+| `ci-frontend.yml` | `frontend/**` | `npm ci` → `npm run lint` → `npm run build` (includes `tsc`) |
+
+All workflows also trigger when their own `.yml` file is modified.
 
 ### 5.2 API Contract Linting
 
-...
+`openapi-lint.yml` triggers on pull requests to `dev` when any `openapi.yaml` file changes.
+It uses Redocly CLI to lint all OpenAPI specs in the repository:
+
+```bash
+find . -name "openapi.yaml" -not -path "*/node_modules/*" | xargs npx @redocly/cli lint {}
+```
+
+This matches the local pre-commit hook so developers get the same feedback locally and in CI.
 
 ### 5.3 Code Generation Validation
 
