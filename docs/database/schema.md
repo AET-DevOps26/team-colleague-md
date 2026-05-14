@@ -10,9 +10,9 @@ Each microservice owns its own PostgreSQL database. Cross-service references sto
 
 | Service                  | Schema File                                                          | Tables                                                                  |
 | ------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **User Service**         | [user_service_schema.md](./user_service_schema.md)                   | `users`, `verification_requests`, `notifications`                       |
+| **User Service**         | [user_service_schema.md](./user_service_schema.md)                   | `users`, `verification_requests`                                        |
 | **Content Service**      | [content_service_schema.md](./content_service_schema.md)             | `posts`, `comments`, `tags`, `post_tags`, `votes`, `bookmarks`          |
-| **Recommendation Service** | [recommendation_service_schema.md](./recommendation_service_schema.md) | `user_interactions`, `tag_subscriptions`, `trending_posts`            |
+| **Recommendation Service** | [recommendation_service_schema.md](./recommendation_service_schema.md) | `user_interactions`, `tag_subscriptions`, `trending_posts`, `notifications` |
 
 ---
 
@@ -23,7 +23,6 @@ graph LR
     subgraph US["User Service DB"]
         users
         verification_requests
-        notifications
     end
 
     subgraph CS["Content Service DB"]
@@ -38,12 +37,14 @@ graph LR
         user_interactions
         tag_subscriptions
         trending_posts
+        notifications
     end
 
     posts -.->|user_id| users
     comments -.->|user_id| users
     votes -.->|user_id| users
     bookmarks -.->|user_id| users
+    notifications -.->|user_id| users
     notifications -.->|related_post_id| posts
     user_interactions -.->|user_id| users
     user_interactions -.->|post_id| posts

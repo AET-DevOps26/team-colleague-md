@@ -1,20 +1,16 @@
 # User Service — Database Schema
 
-> [!NOTE]
-> Tables marked with 🔗 are **external references** from another service's database.
-> Cross-service IDs (e.g. `related_post_id`) are stored as `UUID` but have **no database-level FK constraint**.
-> Data is resolved via inter-service API calls.
+> This service owns user identity, authentication, and verification.
 
 ---
 
 ## Enumerations
 
-| Enum Name             | Values                                                                             |
-| --------------------- | ---------------------------------------------------------------------------------- |
-| `user_role`           | `USER`, `ADMIN`, `VERIFIED`                                                        |
-| `verification_type`   | `ORGANIZATION`, `EXPERT`                                                           |
-| `verification_status` | `PENDING`, `APPROVED`, `REJECTED`                                                  |
-| `notification_type`   | `COMMENT`, `UPVOTE`, `VERIFICATION_APPROVED`, `DAILY_DIGEST`, `NEW_POST_IN_SUBSCRIBED_TAG` |
+| Enum Name             | Values                        |
+| --------------------- | ----------------------------- |
+| `user_role`           | `USER`, `ADMIN`, `VERIFIED`   |
+| `verification_type`   | `ORGANIZATION`, `EXPERT`      |
+| `verification_status` | `PENDING`, `APPROVED`, `REJECTED` |
 
 ---
 
@@ -68,33 +64,10 @@ Tracks user requests for verified status (organization or expert).
 
 ---
 
-### `notifications`
-
-In-app notifications delivered to users.
-
-| Column            | Type                | Nullable | Default             | Description                                        |
-| ----------------- | ------------------- | -------- | ------------------- | -------------------------------------------------- |
-| `id`              | `UUID`              | NO       | `gen_random_uuid()` | Primary key                                        |
-| `user_id`         | `UUID`              | NO       |                     | FK → `users.id` (recipient)                        |
-| `type`            | `notification_type` | NO       |                     | Notification category                              |
-| `content`         | `TEXT`              | NO       |                     | Notification message                               |
-| `related_post_id` | `UUID`              | YES      |                     | 🔗 Cross-service ref → Content Service `posts.id`  |
-| `is_read`         | `BOOLEAN`           | NO       | `FALSE`             | Read status                                        |
-| `created_at`      | `TIMESTAMP`         | NO       | `CURRENT_TIMESTAMP` | Notification timestamp                             |
-
-**Constraints:**
-
-- `PK` on `id`
-- `FK` `user_id` → `users(id)` ON DELETE CASCADE
-- ⚠️ `related_post_id` has **no FK constraint** — resolved via Content Service API
-
----
-
 ## Entity-Relationship Diagram
 
 ```mermaid
 erDiagram
-    %% ── Internal tables ──
     users {
         UUID id PK
         TEXT username UK
@@ -119,36 +92,16 @@ erDiagram
         TIMESTAMP created_at
     }
 
-    notifications {
-        UUID id PK
-        UUID user_id FK
-        notification_type type
-        TEXT content
-        UUID related_post_id "cross-service"
-        BOOLEAN is_read
-        TIMESTAMP created_at
-    }
-
-    %% ── External references ──
-    POSTS_EXT["🔗 posts (Content Service)"] {
-        UUID id PK
-    }
-
-    %% ── Relationships ──
     users ||--o{ verification_requests : "submits"
-    users ||--o{ notifications : "receives"
-    POSTS_EXT ||--o{ notifications : "referenced by"
 ```
 
 ---
 
 ## Indexes
 
-| Table                   | Index                              | Type   | Purpose              |
-| ----------------------- | ---------------------------------- | ------ | -------------------- |
-| `users`                 | `idx_users_username`               | UNIQUE | Login lookup          |
-| `users`                 | `idx_users_email`                  | UNIQUE | Email lookup          |
-| `verification_requests` | `idx_verif_user_id`                | B-TREE | Requests per user     |
-| `verification_requests` | `idx_verif_status`                 | B-TREE | Admin review queue    |
-| `notifications`         | `idx_notif_user_read` (`user_id, is_read`) | B-TREE | Unread notifications |
-| `notifications`         | `idx_notif_created_at`             | B-TREE | Chronological feed    |
+| Table                   | Index                | Type   | Purpose            |
+| ----------------------- | -------------------- | ------ | ------------------ |
+| `users`                 | `idx_users_username` | UNIQUE | Login lookup       |
+| `users`                 | `idx_users_email`    | UNIQUE | Email lookup       |
+| `verification_requests` | `idx_verif_user_id`  | B-TREE | Requests per user  |
+| `verification_requests` | `idx_verif_status`   | B-TREE | Admin review queue |

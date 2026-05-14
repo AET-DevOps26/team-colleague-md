@@ -9,10 +9,11 @@
 
 ## Enumerations
 
-| Enum Name          | Values                                        |
-| ------------------ | --------------------------------------------- |
-| `interaction_type` | `VIEW`, `CLICK`, `UPVOTE`, `COMMENT`, `BOOKMARK` |
-| `time_window`      | `HOUR`, `DAY`, `WEEK`                         |
+| Enum Name           | Values                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `interaction_type`  | `VIEW`, `CLICK`, `UPVOTE`, `COMMENT`, `BOOKMARK`                                  |
+| `time_window`       | `HOUR`, `DAY`, `WEEK`                                                              |
+| `notification_type` | `COMMENT`, `UPVOTE`, `VERIFICATION_APPROVED`, `DAILY_DIGEST`, `NEW_POST_IN_SUBSCRIBED_TAG` |
 
 ---
 
@@ -76,6 +77,28 @@ Pre-computed trending post rankings per time window.
 
 ---
 
+### `notifications`
+
+In-app notifications delivered to users.
+
+| Column            | Type                | Nullable | Default             | Description                                       |
+| ----------------- | ------------------- | -------- | ------------------- | ------------------------------------------------- |
+| `id`              | `UUID`              | NO       | `gen_random_uuid()` | Primary key                                       |
+| `user_id`         | `UUID`              | NO       |                     | 🔗 Cross-service ref → User Service `users.id`    |
+| `type`            | `notification_type` | NO       |                     | Notification category                             |
+| `content`         | `TEXT`              | NO       |                     | Notification message                              |
+| `related_post_id` | `UUID`              | YES      |                     | 🔗 Cross-service ref → Content Service `posts.id` |
+| `is_read`         | `BOOLEAN`           | NO       | `FALSE`             | Read status                                       |
+| `created_at`      | `TIMESTAMP`         | NO       | `CURRENT_TIMESTAMP` | Notification timestamp                            |
+
+**Constraints:**
+
+- `PK` on `id`
+- ⚠️ `user_id` has **no FK constraint** — resolved via User Service API
+- ⚠️ `related_post_id` has **no FK constraint** — resolved via Content Service API
+
+---
+
 ## Entity-Relationship Diagram
 
 ```mermaid
@@ -115,10 +138,22 @@ erDiagram
         TIMESTAMP calculated_at
     }
 
+    notifications {
+        UUID id PK
+        UUID user_id
+        notification_type type
+        TEXT content
+        UUID related_post_id
+        BOOLEAN is_read
+        TIMESTAMP created_at
+    }
+
     USERS_EXT ||--o{ user_interactions : "performs"
     USERS_EXT ||--o{ tag_subscriptions : "subscribes"
+    USERS_EXT ||--o{ notifications : "receives"
     POSTS_EXT ||--o{ user_interactions : "tracked in"
     POSTS_EXT ||--o{ trending_posts : "ranked in"
+    POSTS_EXT ||--o{ notifications : "referenced by"
     TAGS_EXT ||--o{ tag_subscriptions : "subscribed via"
 ```
 
@@ -126,10 +161,12 @@ erDiagram
 
 ## Indexes
 
-| Table                | Index                                            | Type   | Purpose                    |
-| -------------------- | ------------------------------------------------ | ------ | -------------------------- |
-| `user_interactions`  | `idx_interactions_user_id`                       | B-TREE | Interactions per user      |
-| `user_interactions`  | `idx_interactions_post_id`                       | B-TREE | Interactions per post      |
-| `user_interactions`  | `idx_interactions_created_at`                    | B-TREE | Time-range analytics       |
-| `tag_subscriptions`  | `idx_tag_subs_user_id`                           | B-TREE | User's subscriptions       |
-| `trending_posts`     | `idx_trending_window_rank` (`time_window, rank`) | B-TREE | Trending feed queries      |
+| Table                | Index                                            | Type   | Purpose                |
+| -------------------- | ------------------------------------------------ | ------ | ---------------------- |
+| `user_interactions`  | `idx_interactions_user_id`                       | B-TREE | Interactions per user  |
+| `user_interactions`  | `idx_interactions_post_id`                       | B-TREE | Interactions per post  |
+| `user_interactions`  | `idx_interactions_created_at`                    | B-TREE | Time-range analytics   |
+| `tag_subscriptions`  | `idx_tag_subs_user_id`                           | B-TREE | User's subscriptions   |
+| `trending_posts`     | `idx_trending_window_rank` (`time_window, rank`) | B-TREE | Trending feed queries  |
+| `notifications`      | `idx_notif_user_read` (`user_id, is_read`)       | B-TREE | Unread notifications   |
+| `notifications`      | `idx_notif_created_at`                           | B-TREE | Chronological feed     |
