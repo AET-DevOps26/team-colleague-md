@@ -1,0 +1,199 @@
+﻿openapi: 3.0.3
+info:
+  title: Verita Recommendation & Notification Service API
+  description: |
+    Discovery and signaling layer for the Verita platform. 
+    Handles personalized feeds, subscription logic, trending algorithms, and real-time notifications.
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: 'http://api.verita.local/recommendation'
+    description: Production-style internal URL
+
+paths:
+  # --- FEEDS & DISCOVERY ---
+  /api/v1/feed/personal:
+    get:
+      operationId: getPersonalFeed
+      summary: Get personalized post feed for the logged-in user
+      description: Uses an algorithmic blend of subscriptions and user interests.
+      tags: [Discovery]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Personalized feed retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/feed/trending:
+    get:
+      operationId: getTrendingFeed
+      summary: Get globally trending content
+      tags: [Discovery]
+      security: [] # Public access
+      responses:
+        '200':
+          description: Trending feed retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  # --- SUBSCRIPTIONS (Follow System) ---
+  /api/v1/subscriptions/{userId}:
+    post:
+      operationId: subscribeToUser
+      summary: Follow another user or organization
+      tags: [Subscriptions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Subscription created successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: unsubscribeFromUser
+      summary: Unfollow a user
+      tags: [Subscriptions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Unsubscribed successfully
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --- NOTIFICATIONS ---
+  /api/v1/notifications:
+    get:
+      operationId: getUserNotifications
+      summary: Retrieve notification history
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/NotificationResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      summary: Mark a specific notification as read
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Notification status updated
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --- ANALYTICS / INTERACTION TRACKING ---
+  /api/v1/interactions/track:
+    post:
+      operationId: trackInteraction
+      summary: Signal user interaction for the recommendation engine
+      description: Track "dwell time" or "clicks" that aren't explicit votes.
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InteractionRequest' }
+      responses:
+        '202':
+          description: Interaction queued for processing
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Authentication failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    FeedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              postId: { type: string, format: uuid }
+              recommendationReason: { type: string, example: "Because you follow AI_Enthusiast" }
+              score: { type: number, format: float }
+
+    NotificationResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [NEW_POST, REPLY, VOTE, SYSTEM] }
+        title: { type: string }
+        message: { type: string }
+        isRead: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        link: { type: string, description: "URL or ID to redirect the user" }
+
+    InteractionRequest:
+      type: object
+      required: [targetId, interactionType]
+      properties:
+        targetId: { type: string, format: uuid, description: "ID of the post or user interacted with" }
+        interactionType: { type: string, enum: [CLICK, VIEW, DWELL_10S, SHARE] }
+        metadata: { type: object, additionalProperties: true }
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer }
+        error: { type: string }
+        message: { type: string }
