@@ -1,11 +1,12 @@
-name: Deploy API Docs
+name: Deploy API Docs Hub
 
 on:
   push:
     branches:
-      - main  # Runs only when you merge to main
+      - main
     paths:
       - "**/openapi.yaml"
+      - "index.html"
 
 permissions:
   contents: read
@@ -27,9 +28,20 @@ jobs:
       - name: Install Redocly CLI
         run: npm install -g @redocly/cli
 
+      - name: Create Build Directory
+        run: mkdir public_docs
+
+      # 1. Copy the index file to the build folder
+      - name: Prepare Index
+        run: cp index.html public_docs/
+
+      # 2. Build User Service (referenced from backend/user-service/api/openapi.yaml)
       - name: Build User Service Docs
-        # Matches your structure: backend/user-service/api/openapi.yaml
-        run: redocly build-docs backend/user-service/api/openapi.yaml --output=index.html
+        run: redocly build-docs backend/user-service/api/openapi.yaml --output=public_docs/user-service.html
+
+      # 3. Build Content Service (referenced from backend/content-service/api/openapi.yaml)
+      - name: Build Content Service Docs
+        run: redocly build-docs backend/content-service/api/openapi.yaml --output=public_docs/content-service.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -37,7 +49,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.' # Uploads the folder containing index.html
+          path: 'public_docs' # Upload only the generated folder
 
       - name: Deploy to GitHub Pages
         id: deployment

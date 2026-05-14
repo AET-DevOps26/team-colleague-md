@@ -1,5 +1,7 @@
-# team-colleague-md
+# team-colleague-md - Verita Platform
+[![API Docs](https://img.shields.io/badge/API-Documentation-blue)](https://AET-DevOps26.github.io/team-colleague-md/)
 
+Technical documentation for all Verita microservices.
 ## Quick Start
 
 This repository contains three main parts:
