@@ -1,0 +1,15 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace  # Remove trailing whitespace at end of lines
+      - id: end-of-file-fixer    # Ensure files end with a single newline
+
+  - repo: local
+    hooks:
+      - id: openapi-lint
+        name: Lint OpenAPI specs
+        language: system
+        entry: npx @redocly/cli lint
+        files: openapi\.yaml$
+        pass_filenames: true

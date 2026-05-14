@@ -1,8 +1,8 @@
 # System Overview → Architecture
 
-**Project:** AI Knowledge Sharing Platform (Verita)  
+**Project:** AI Knowledge Sharing Platform (Verita)
 **Team:** Colleagues.md
-**Date:** May 2026  
+**Date:** May 2026
 **Version:** 1.0
 
 ---
