@@ -1,5 +1,7 @@
-# team-colleague-md
+# team-colleague-md - Verita Platform
+[![API Docs](https://img.shields.io/badge/API-Documentation-blue)](https://AET-DevOps26.github.io/team-colleague-md/)
 
+Technical documentation for all Verita microservices.
 ## Quick Start
 
 This repository contains three main parts:
@@ -78,11 +80,16 @@ From the repository root you can build and run the services with Docker Compose:
 docker compose up --build
 ```
 
-This will build and start the following services (as defined in `docker-compose.yml`):
+This will build and start all three services (as defined in `docker-compose.yml`):
 
-- `user-service` → exposed on `http://localhost:8081`
-- `genai-service` → exposed on `http://localhost:8000`
+- `frontend` → `http://localhost:3000`
+- `user-service` → `http://localhost:8081`
+- `genai-service` → `http://localhost:8000`
 
-Note: The frontend is not included in the compose configuration and should be started locally.
+To start a single service:
+
+```bash
+docker compose up --build frontend
+```
 
 ---

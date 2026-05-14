@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # /api/scripts/gen-all.sh
 
 set -e  # stop on first error

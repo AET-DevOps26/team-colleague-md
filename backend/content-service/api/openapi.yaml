@@ -1,0 +1,291 @@
+﻿openapi: 3.0.3
+info:
+  title: Verita Content Service API
+  description: |
+    Comprehensive service for managing the lifecycle of posts, hierarchical comments, 
+    tagging systems, user interactions (votes/bookmarks), and content moderation.
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: 'http://api.verita.local/content'
+    description: Production-style internal URL (Resolves localhost warning)
+
+paths:
+  # --- POSTS MANAGEMENT ---
+  /api/v1/posts:
+    get:
+      operationId: getAllPosts
+      summary: Retrieve a paginated list of posts
+      tags: [Posts]
+      security: [] # Explicitly public
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: tag
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: A paginated list of posts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+    post:
+      operationId: createPost
+      summary: Create a new post or draft
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostRequest' }
+      responses:
+        '201':
+          description: Post created successfully
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/posts/{id}:
+    get:
+      operationId: getPostById
+      summary: Get detailed post by ID
+      tags: [Posts]
+      security: [] # Public access
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Post details retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    put:
+      operationId: updatePost
+      summary: Update an existing post
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostRequest' }
+      responses:
+        '200':
+          description: Post updated successfully
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    delete:
+      operationId: deletePost
+      summary: Soft-delete a post
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Post deleted successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --- COMMENTS ---
+  /api/v1/posts/{id}/comments:
+    get:
+      operationId: getPostComments
+      summary: Get all comments for a post
+      tags: [Comments]
+      security: [] # Public
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Hierarchical list of comments retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CommentResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    post:
+      operationId: addComment
+      summary: Post a comment or reply
+      tags: [Comments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommentRequest' }
+      responses:
+        '201':
+          description: Comment created successfully
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # --- VOTING ---
+  /api/v1/posts/{id}/vote:
+    post:
+      operationId: castVote
+      summary: Cast or change a vote
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoteRequest' }
+      responses:
+        '200':
+          description: Vote processed successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # --- BOOKMARKS ---
+  /api/v1/bookmarks:
+    get:
+      operationId: getUserBookmarks
+      summary: Get the current user's bookmarks
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List of bookmarks retrieved
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/PostResponse' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/tags/trending:
+    get:
+      operationId: getTrendingTags
+      summary: Get popular tags
+      tags: [Discovery]
+      security: []
+      responses:
+        '200':
+          description: List of trending tags retrieved
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/TagResponse' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or body
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    PostRequest:
+      type: object
+      required: [title, content]
+      properties:
+        title: { type: string, minLength: 5, maxLength: 200 }
+        content: { type: string }
+        tags: { type: array, items: { type: string } }
+
+    PostResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        title: { type: string }
+        content: { type: string }
+        tags: { type: array, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+
+    PostPage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/PostResponse' } }
+        totalPages: { type: integer }
+        totalElements: { type: integer }
+
+    CommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string }
+        parentId: { type: string, format: uuid }
+
+    CommentResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        content: { type: string }
+        replies: { type: array, items: { $ref: '#/components/schemas/CommentResponse' } }
+
+    VoteRequest:
+      type: object
+      required: [direction]
+      properties:
+        direction: { type: integer, enum: [1, 0, -1] }
+
+    TagResponse:
+      type: object
+      properties:
+        name: { type: string }
+        usageCount: { type: integer }
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer }
+        error: { type: string }
+        message: { type: string }
