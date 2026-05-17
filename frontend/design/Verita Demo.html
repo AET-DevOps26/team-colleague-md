@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Verita — Interactive Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;1,500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-base:      #F5F5F3;
+    --bg-surface:   #FFFFFF;
+    --bg-elevated:  #F0F0F0;
+    --text-primary:   #0A0A0A;
+    --text-secondary: #6B6B6B;
+    --text-tertiary:  #ABABAB;
+    --border-subtle:  #E5E5E5;
+    --border-default: #D4D4D4;
+    --accent:       #0A0A0A;
+    --accent-hover: #333333;
+    --success:      #16A34A;
+    --success-bg:   #F0FDF4;
+    --warning:      #CA8A04;
+    --warning-bg:   #FEFCE8;
+    --danger:       #DC2626;
+    --danger-bg:    #FEF2F2;
+    --radius-card:  10px;
+    --radius-btn:   8px;
+    --sidebar-w:    220px;
+    --topbar-h:     56px;
+    --font-sans:  "Inter", system-ui, -apple-system, sans-serif;
+    --font-mono:  "JetBrains Mono", ui-monospace, monospace;
+    --font-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg-base); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    grid-template-rows: 48px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    z-index: 10;
+  }
+  .topbar-logo {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-right: 4px;
+  }
+  .topbar-sep { width: 1px; height: 18px; background: var(--border-subtle); }
+  .topbar-label {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+  }
+  .topbar-page-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-family: var(--font-mono);
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar-spacer { flex: 1; }
+  .topbar-hint {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .topbar-hint kbd {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--text-primary);
+  }
+
+  /* ── Rail / nav ── */
+  .rail {
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 12px 8px 16px;
+  }
+  .rail-section {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 10px 8px 5px;
+    margin-top: 4px;
+  }
+  .rail-section:first-child { margin-top: 0; }
+  .rail-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    transition: background 100ms, color 100ms;
+    line-height: 1.3;
+  }
+  .rail-item:hover { background: var(--bg-base); color: var(--text-primary); }
+  .rail-item.active {
+    background: var(--text-primary);
+    color: #fff;
+  }
+  .rail-item .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+    opacity: 0.5;
+  }
+  .rail-item.active .dot { opacity: 1; background: #fff; }
+
+  .rail-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: 8px 4px;
+  }
+
+  /* ── Preview area ── */
+  .preview-area {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-base);
+  }
+
+  /* Desktop scale wrapper */
+  .preview-scale-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .preview-frame-outer {
+    position: relative;
+    transform-origin: top center;
+  }
+
+  .preview-frame-outer iframe {
+    display: block;
+    border: none;
+    width: 1440px;
+    height: 900px;
+    background: #fff;
+    border-radius: 2px;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  /* Loading overlay */
+  .preview-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-base);
+    gap: 10px;
+    pointer-events: none;
+    transition: opacity 200ms;
+  }
+  .preview-loading.hidden { opacity: 0; }
+  .spinner {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border-subtle);
+    border-top-color: var(--text-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .preview-loading-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+
+  /* Breadcrumb / trail */
+  .nav-trail {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    padding: 5px 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    max-width: 560px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    white-space: nowrap;
+    z-index: 5;
+  }
+  .nav-trail::-webkit-scrollbar { display: none; }
+  .trail-item {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .trail-item:hover { color: var(--text-primary); }
+  .trail-item.current { color: var(--text-primary); font-weight: 600; }
+  .trail-sep {
+    font-size: 10px;
+    color: var(--border-subtle);
+    user-select: none;
+  }
+
+  /* Back button overlay */
+  .back-overlay-btn {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 7px;
+    padding: 5px 10px;
+    cursor: pointer;
+    z-index: 5;
+    transition: color 100ms, background 100ms;
+  }
+  .back-overlay-btn:hover { color: var(--text-primary); background: #fff; }
+  .back-overlay-btn svg { flex-shrink: 0; }
+  .back-overlay-btn.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <span class="topbar-logo">Verita</span>
+    <div class="topbar-sep"></div>
+    <span class="topbar-label">Interactive prototype</span>
+    <span class="topbar-page-name" id="current-page-name">Verita Home.html</span>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-hint">
+      <span>Click any nav element inside the preview to navigate</span>
+    </div>
+  </header>
+
+  <!-- Rail -->
+  <nav class="rail" aria-label="Pages">
+    <div class="rail-section">Core</div>
+    <button class="rail-item active" data-page="Verita Home.html" type="button">
+      <span class="dot"></span>Home Feed
+    </button>
+    <button class="rail-item" data-page="Verita Post Detail.html" type="button">
+      <span class="dot"></span>Post Detail
+    </button>
+    <button class="rail-item" data-page="Verita Search Results.html" type="button">
+      <span class="dot"></span>Search Results
+    </button>
+    <button class="rail-item" data-page="Verita User Profile.html" type="button">
+      <span class="dot"></span>User Profile
+    </button>
+
+    <div class="rail-section">Digest</div>
+    <button class="rail-item" data-page="Verita Digest Post.html" type="button">
+      <span class="dot"></span>Digest Reader
+    </button>
+    <button class="rail-item" data-page="Verita Digest Management.html" type="button">
+      <span class="dot"></span>Digest Management
+    </button>
+
+    <div class="rail-section">Create &amp; Account</div>
+    <button class="rail-item" data-page="Verita Post Editor.html" type="button">
+      <span class="dot"></span>Post Editor
+    </button>
+    <button class="rail-item" data-page="Verita Settings.html" type="button">
+      <span class="dot"></span>Settings
+    </button>
+
+    <div class="rail-divider"></div>
+    <div class="rail-section">Auth</div>
+    <button class="rail-item" data-page="Verita Auth.html" type="button">
+      <span class="dot"></span>Sign in / Sign up
+    </button>
+
+    <div class="rail-divider"></div>
+    <div class="rail-section">Admin</div>
+    <button class="rail-item" data-page="Verita Admin.html" type="button">
+      <span class="dot"></span>Admin Panel
+    </button>
+    <button class="rail-item" data-page="Verita 404.html" type="button">
+      <span class="dot"></span>404
+    </button>
+  </nav>
+
+  <!-- Preview -->
+  <div class="preview-area" id="preview-area">
+    <div class="preview-scale-wrap" id="scale-wrap">
+      <div class="preview-frame-outer" id="frame-outer">
+        <iframe id="preview-iframe" src="Verita Home.html" title="Verita page preview"></iframe>
+      </div>
+    </div>
+
+    <!-- Back button (shown when not on Home) -->
+    <button class="back-overlay-btn hidden" id="back-btn" type="button" aria-label="Go back">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back
+    </button>
+
+    <!-- Loading indicator -->
+    <div class="preview-loading hidden" id="loading">
+      <div class="spinner"></div>
+      <div class="preview-loading-text" id="loading-text">Loading…</div>
+    </div>
+
+    <!-- Navigation trail -->
+    <div class="nav-trail" id="nav-trail"></div>
+  </div>
+
+</div>
+
+<script>
+const PAGE_LABELS = {
+  'Verita Home.html':              'Home',
+  'Verita Post Detail.html':       'Post Detail',
+  'Verita Search Results.html':    'Search',
+  'Verita User Profile.html':      'Profile',
+  'Verita Digest Post.html':       'Digest',
+  'Verita Digest Management.html': 'Manage Digest',
+  'Verita Post Editor.html':       'Editor',
+  'Verita Settings.html':          'Settings',
+  'Verita Admin.html':             'Admin',
+  'Verita 404.html':               '404',
+  'Verita Auth.html':              'Sign in',
+};
+
+const HOME = 'Verita Home.html';
+const iframe = document.getElementById('preview-iframe');
+const frameOuter = document.getElementById('frame-outer');
+const loadingEl = document.getElementById('loading');
+const loadingText = document.getElementById('loading-text');
+const currentPageName = document.getElementById('current-page-name');
+const backBtn = document.getElementById('back-btn');
+const navTrail = document.getElementById('nav-trail');
+
+let history = [HOME];
+let current = HOME;
+
+// ── Scale-to-fit ──
+function scaleFrame() {
+  const area = document.getElementById('preview-area');
+  const aw = area.clientWidth;
+  const ah = area.clientHeight;
+  const iw = 1440, ih = 900;
+  const scale = Math.min(aw / iw, ah / ih, 1);
+  frameOuter.style.width = iw + 'px';
+  frameOuter.style.height = ih + 'px';
+  frameOuter.style.transform = `scale(${scale})`;
+  // Vertically center
+  const scaledH = ih * scale;
+  const topPad = Math.max(0, (ah - scaledH) / 2);
+  frameOuter.style.marginTop = topPad + 'px';
+}
+window.addEventListener('resize', scaleFrame);
+scaleFrame();
+
+// ── Navigate ──
+function navigateTo(page, pushHistory = true) {
+  if (page === current) return;
+  if (pushHistory) history.push(page);
+  current = page;
+
+  loadingEl.classList.remove('hidden');
+  loadingText.textContent = PAGE_LABELS[page] || page;
+
+  iframe.src = page;
+
+  // Update rail
+  document.querySelectorAll('.rail-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === page);
+  });
+
+  currentPageName.textContent = PAGE_LABELS[page] || page;
+
+  backBtn.classList.toggle('hidden', history.length <= 1);
+
+  updateTrail();
+}
+
+function updateTrail() {
+  const items = history.slice(-5);
+  navTrail.innerHTML = items.map((p, i) => {
+    const isCurrent = i === items.length - 1;
+    const label = PAGE_LABELS[p] || p.replace('Verita ', '').replace('.html', '');
+    const sep = i > 0 ? `<span class="trail-sep">›</span>` : '';
+    return `${sep}<span class="trail-item${isCurrent ? ' current' : ''}" data-idx="${i}" data-page="${p}">${label}</span>`;
+  }).join('');
+
+  navTrail.querySelectorAll('.trail-item:not(.current)').forEach(item => {
+    item.addEventListener('click', () => {
+      const idx = parseInt(item.dataset.idx);
+      const page = item.dataset.page;
+      history = history.slice(0, history.indexOf(page, history.length - (items.length - idx)) + 1);
+      if (history.length === 0) history = [HOME];
+      current = '';
+      navigateTo(page, false);
+    });
+  });
+}
+
+// ── Rail clicks ──
+document.querySelectorAll('.rail-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.page;
+    history = [page];
+    current = '';
+    navigateTo(page, false);
+  });
+});
+
+// ── Back button ──
+backBtn.addEventListener('click', () => {
+  if (history.length > 1) {
+    history.pop();
+    const prev = history[history.length - 1];
+    current = '';
+    navigateTo(prev, false);
+  }
+});
+
+// ── iframe load ──
+iframe.addEventListener('load', () => {
+  loadingEl.classList.add('hidden');
+  // Update rail in case navigated from within iframe
+  document.querySelectorAll('.rail-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === current);
+  });
+});
+
+// ── postMessage from child pages ──
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'verita-navigate') {
+    navigateTo(e.data.page);
+  }
+});
+
+// ── Init ──
+updateTrail();
+</script>
+</body>
+</html>

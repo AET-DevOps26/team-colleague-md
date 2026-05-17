@@ -1,0 +1,18 @@
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  min-height: 100vh;
+  transition: grid-template-columns 200ms ease;
+}
+
+.app[data-reader] {
+  grid-template-columns: 52px 1fr;
+}
+
+.app[data-reader]:has(aside:hover) {
+  grid-template-columns: 148px 1fr;
+}
+
+.main {
+  min-width: 0;
+}
