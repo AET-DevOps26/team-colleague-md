@@ -1,4 +1,4 @@
-﻿package com.verita.userservice.controller;
+package com.verita.userservice.controller;
 
 import com.verita.api.UsersApi;
 import com.verita.model.*;
