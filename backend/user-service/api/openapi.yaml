@@ -375,6 +375,38 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /users/{userId}/ban:
+    put:
+      tags:
+        - Roles
+      summary: Ban or unban a user
+      operationId: updateUserBanStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBanStatusRequest'
+      responses:
+        '200':
+          description: User ban status updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BanStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /users/me/preferences:
     get:
       tags:
@@ -662,6 +694,29 @@ components:
           items: { type: string, enum: [USER, MODERATOR, ADMIN] }
       example:
         roles: ["USER", "MODERATOR"]
+
+    UpdateBanStatusRequest:
+      type: object
+      required: [banned]
+      properties:
+        banned: { type: boolean }
+        reason: { type: string, maxLength: 250 }
+      example:
+        banned: true
+        reason: "Repeated violations of community guidelines."
+
+    BanStatusResponse:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        banned: { type: boolean }
+        reason: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time }
+      example:
+        userId: "550e8400-e29b-41d4-a716-446655440000"
+        banned: true
+        reason: "Repeated violations of community guidelines."
+        updatedAt: "2026-05-19T11:45:00Z"
 
     UserPreferences:
       type: object
