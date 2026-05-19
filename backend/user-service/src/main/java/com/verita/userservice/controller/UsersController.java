@@ -152,6 +152,11 @@ public class UsersController implements UsersApi {
         return null;
     }
 
+    @Override
+    public ResponseEntity<BanStatusResponse> updateUserBanStatus(UUID userId, UpdateBanStatusRequest updateBanStatusRequest) {
+        return null;
+    }
+
     /**
      * PUT /users/me/preferences : Update user preferences
      *
