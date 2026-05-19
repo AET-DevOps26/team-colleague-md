@@ -42,7 +42,6 @@ export default function PostDetail() {
 
   useEffect(() => {
     if (!id) { navigate('/'); return; }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([contentService.getPost(id), contentService.getComments(id)]).then(
       ([p, c]) => { setPost(p); setComments(c); setLoading(false); },

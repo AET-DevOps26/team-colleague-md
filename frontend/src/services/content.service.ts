@@ -265,7 +265,6 @@ export const contentService = {
     });
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getComments(_postId: string): Promise<Comment[]> {
     return new Promise((resolve) => {
       setTimeout(() => resolve([...MOCK_COMMENTS]), 300);
