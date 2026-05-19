@@ -12,6 +12,7 @@ const TOKEN_KEY = 'verita_token';
 const USER_KEY = 'verita_user';
 
 export const authService = {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   login(_email: string, _password: string): Promise<AuthUser> {
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -22,6 +23,7 @@ export const authService = {
     });
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   signup(_username: string, _email: string, _password: string): Promise<AuthUser> {
     return new Promise((resolve) => {
       setTimeout(() => {
