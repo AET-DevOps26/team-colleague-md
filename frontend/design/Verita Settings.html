@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Verita — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+  --bg-base:      #FFFFFF;
+  --bg-surface:   #F9F9F9;
+  --bg-elevated:  #F0F0F0;
+  --text-primary:   #0A0A0A;
+  --text-secondary: #6B6B6B;
+  --text-tertiary:  #ABABAB;
+  --border-subtle:  #EBEBEB;
+  --border-default: #D4D4D4;
+  --accent:       #0A0A0A;
+  --accent-hover: #333333;
+  --success:      #16A34A;
+  --success-bg:   #F0FDF4;
+  --warning:      #CA8A04;
+  --warning-bg:   #FEFCE8;
+  --danger:       #DC2626;
+  --danger-bg:    #FEF2F2;
+  --radius-card:  10px;
+  --radius-btn:   8px;
+  --sidebar-w:    220px;
+  --topbar-h:     56px;
+  --font-sans:  "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:  "JetBrains Mono", ui-monospace, monospace;
+  --font-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+}
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-base); color: var(--text-primary); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  body { font-size: 13px; line-height: 1.5; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ── Layout ── */
+  .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: sticky; top: 0; height: 100vh;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column;
+    padding: 18px 12px 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; padding: 6px 10px 22px; margin-bottom: 4px; }
+  .brand-word { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; letter-spacing: -0.02em; color: var(--text-primary); }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    position: relative;
+    display: flex; align-items: center; gap: 11px;
+    padding: 8px 12px; border-radius: 8px;
+    color: var(--text-secondary); font-size: 13.5px; font-weight: 500;
+    transition: background 120ms ease-out, color 120ms ease-out;
+    cursor: pointer; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .nav-item.active { color: var(--text-primary); background: var(--bg-elevated); }
+  .nav-item.active::before {
+    content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px;
+    width: 3px; background: var(--accent); border-radius: 0 2px 2px 0;
+  }
+  .nav-item .ico { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.75; }
+  .nav-item .badge {
+    margin-left: auto; background: var(--accent); color: #fff;
+    font-size: 10.5px; font-weight: 600; line-height: 1;
+    padding: 3px 6px; border-radius: 999px; min-width: 16px; text-align: center;
+  }
+  .nav-spacer { flex: 1; }
+  .sidebar-auth-toggle { display: flex; flex-direction: column; gap: 4px; padding: 12px 4px 0; }
+  .sidebar-auth-toggle-label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px; }
+  .sidebar-auth-toggle-row { display: flex; border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; }
+  .sidebar-auth-btn { flex: 1; padding: 7px 0; font-size: 12px; font-weight: 500; color: var(--text-tertiary); background: transparent; text-align: center; transition: background 120ms ease-out, color 120ms ease-out; }
+  .sidebar-auth-btn:first-child { border-right: 1px solid var(--border-default); }
+  .sidebar-auth-btn.active { background: var(--accent); color: #fff; }
+  .sidebar-auth-btn:not(.active):hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .nav-bottom { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid var(--border-subtle); margin-top: 10px; }
+  .nav-cta { margin: 6px 4px 10px; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--accent); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: background 120ms ease-out; }
+  .nav-cta:hover { background: var(--accent-hover); }
+  .nav-signin { margin: 6px 4px 10px; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--accent); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: background 120ms ease-out; }
+  .nav-signin:hover { background: var(--accent-hover); }
+  .nav-item.disabled { color: var(--text-tertiary); cursor: default; pointer-events: none; }
+
+  /* ── Main area (dimmed behind modal) ── */
+  .main { min-width: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(160%) blur(10px);
+    -webkit-backdrop-filter: saturate(160%) blur(10px);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .topbar-row { display: flex; align-items: center; gap: 12px; padding: 14px 24px; }
+  .topbar-title { font-size: 15px; font-weight: 600; }
+
+  .content-area { padding: 32px 24px; color: var(--text-tertiary); font-size: 13px; }
+
+  /* ── Modal backdrop ── */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.28);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 160ms ease-out;
+  }
+  .modal-backdrop.open {
+    opacity: 1; pointer-events: all;
+  }
+
+  /* ── Modal shell ── */
+  .modal {
+    background: var(--bg-base);
+    border-radius: 14px;
+    border: 1px solid var(--border-subtle);
+    width: 440px;
+    max-width: calc(100vw - 32px);
+    box-shadow: 0 24px 64px -16px rgba(0,0,0,0.18);
+    transform: translateY(8px) scale(0.98);
+    transition: transform 160ms ease-out;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-backdrop.open .modal {
+    transform: translateY(0) scale(1);
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky; top: 0; background: var(--bg-base);
+    border-radius: 14px 14px 0 0;
+    z-index: 1;
+  }
+  .modal-title { font-size: 14.5px; font-weight: 600; }
+  .modal-close {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    color: var(--text-tertiary);
+    transition: background 120ms ease-out, color 120ms ease-out;
+  }
+  .modal-close:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .modal-close svg { width: 16px; height: 16px; stroke-width: 2; }
+
+  /* ── Settings sections ── */
+  .modal-body { padding: 0 0 8px; }
+  .settings-section { padding: 20px 20px 4px; }
+  .settings-section + .settings-section { border-top: 1px solid var(--border-subtle); padding-top: 16px; }
+  .section-label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-tertiary); margin-bottom: 12px;
+  }
+
+  /* ── Account rows ── */
+  .account-field { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+  .account-field-label { font-size: 11.5px; font-weight: 500; color: var(--text-secondary); }
+  .account-field-value { font-size: 13.5px; font-weight: 500; color: var(--text-primary); }
+
+  /* ── Nav link row ── */
+  .settings-link {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; margin-bottom: 4px;
+    color: var(--text-primary); font-size: 13.5px; font-weight: 500;
+    border-radius: 6px;
+    transition: color 120ms ease-out;
+    cursor: pointer; width: 100%;
+  }
+  .settings-link:hover { color: var(--accent-hover); }
+  .settings-link:hover .link-arrow { color: var(--text-secondary); }
+  .settings-link-text { display: flex; flex-direction: column; gap: 1px; }
+  .settings-link-desc { font-size: 11.5px; font-weight: 400; color: var(--text-tertiary); }
+  .link-arrow { color: var(--text-tertiary); transition: color 120ms ease-out; }
+  .link-arrow svg { width: 14px; height: 14px; stroke-width: 2; display: block; }
+
+  /* ── Segmented frequency control ── */
+  .freq-control { display: flex; border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+  .freq-btn {
+    flex: 1; padding: 8px 0; font-size: 12.5px; font-weight: 500;
+    color: var(--text-tertiary); background: transparent; text-align: center;
+    transition: background 120ms ease-out, color 120ms ease-out;
+    border-right: 1px solid var(--border-default);
+  }
+  .freq-btn:last-child { border-right: 0; }
+  .freq-btn.active { background: var(--accent); color: #fff; }
+  .freq-btn:not(.active):hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+  /* ── Toggle switch ── */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; gap: 16px;
+  }
+  .toggle-row + .toggle-row { border-top: 1px solid var(--border-subtle); }
+  .toggle-info { display: flex; flex-direction: column; gap: 2px; }
+  .toggle-label { font-size: 13.5px; font-weight: 500; color: var(--text-primary); }
+  .toggle-desc { font-size: 11.5px; font-weight: 400; color: var(--text-tertiary); }
+
+  /* Switch pill */
+  .switch { position: relative; width: 38px; height: 22px; flex-shrink: 0; cursor: pointer; }
+  .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .switch-track {
+    position: absolute; inset: 0;
+    background: var(--bg-elevated);
+    border-radius: 999px;
+    border: 1.5px solid var(--border-default);
+    transition: background 160ms ease-out, border-color 160ms ease-out;
+  }
+  .switch input:checked ~ .switch-track {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .switch-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    background: var(--text-tertiary);
+    border-radius: 50%;
+    transition: transform 160ms ease-out, background 160ms ease-out;
+    pointer-events: none;
+  }
+  .switch input:checked ~ .switch-track .switch-thumb {
+    transform: translateX(16px);
+    background: #fff;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a class="brand" href="#" aria-label="Verita"><div class="brand-word">Verita</div></a>
+    <nav class="nav" aria-label="Primary">
+      <button class="nav-item" type="button">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m14.5 9.5-2 5-5 2 2-5 5-2z" fill="currentColor" stroke="none"/></svg>
+        Explore
+      </button>
+      <button class="nav-item" type="button">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+        Digest
+        <span class="badge" id="digest-badge">3</span>
+      </button>
+    </nav>
+    <div class="nav-spacer">
+      <div class="sidebar-auth-toggle">
+        <span class="sidebar-auth-toggle-label">Preview state</span>
+        <div class="sidebar-auth-toggle-row" role="group" aria-label="Auth state">
+          <button class="sidebar-auth-btn" id="btn-loggedout" type="button" onclick="setAuth(false)">Logged out</button>
+          <button class="sidebar-auth-btn" id="btn-loggedin" type="button" onclick="setAuth(true)">Logged in</button>
+        </div>
+      </div>
+    </div>
+    <div id="sidebar-cta"></div>
+    <div class="nav-bottom">
+      <button class="nav-item active" id="settings-nav-btn" type="button" onclick="openModal()">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        Settings
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content (dimmed while modal open) -->
+  <div class="main" id="main-area">
+    <div class="topbar">
+      <div class="topbar-row">
+        <span class="topbar-title">Explore</span>
+      </div>
+    </div>
+    <div class="content-area">
+      Click <strong>Settings</strong> in the sidebar to open the modal.
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-backdrop" id="settingsModal" aria-modal="true" role="dialog" aria-label="Settings" onclick="handleBackdropClick(event)">
+  <div class="modal" id="modalContent">
+    <!-- Header -->
+    <div class="modal-header">
+      <span class="modal-title">Settings</span>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close settings">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Section 1: Account -->
+      <div class="settings-section">
+        <div class="section-label">Account</div>
+
+        <div class="account-field">
+          <div class="account-field-label">Email</div>
+          <div class="account-field-value" id="account-email">jane.doe@example.com</div>
+        </div>
+        <div class="account-field" style="margin-bottom: 14px;">
+          <div class="account-field-label">Username</div>
+          <div class="account-field-value" id="account-username">@janedoe</div>
+        </div>
+
+        <button class="settings-link" type="button" onclick="navigate('user-profile')">
+          <div class="settings-link-text">
+            <span>Edit Profile</span>
+            <span class="settings-link-desc">Update bio, avatar, and profile fields</span>
+          </div>
+          <span class="link-arrow">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+          </span>
+        </button>
+      </div>
+
+      <!-- Section 2: Digest -->
+      <div class="settings-section">
+        <div class="section-label">Digest</div>
+
+        <div class="account-field-label" style="margin-bottom: 8px;">Email frequency</div>
+        <div class="freq-control" role="group" aria-label="Digest frequency">
+          <button class="freq-btn active" id="freq-daily" type="button" onclick="setFreq('daily')">Daily</button>
+          <button class="freq-btn" id="freq-weekly" type="button" onclick="setFreq('weekly')">Weekly</button>
+          <button class="freq-btn" id="freq-off" type="button" onclick="setFreq('off')">Off</button>
+        </div>
+
+        <button class="settings-link" type="button" onclick="navigate('digest-management')">
+          <div class="settings-link-text">
+            <span>Manage Topics</span>
+            <span class="settings-link-desc">Subscribe or unsubscribe from digest topics</span>
+          </div>
+          <span class="link-arrow">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+          </span>
+        </button>
+      </div>
+
+      <!-- Section 3: Privacy -->
+      <div class="settings-section" style="padding-bottom: 20px;">
+        <div class="section-label">Privacy</div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-label">Show my Bookmarks to others</div>
+            <div class="toggle-desc">Visible on your public profile</div>
+          </div>
+          <label class="switch" aria-label="Show bookmarks to others">
+            <input type="checkbox" id="toggle-bookmarks" checked onchange="handleToggle('bookmarks', this.checked)" />
+            <div class="switch-track">
+              <div class="switch-thumb"></div>
+            </div>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-label">Show my Likes to others</div>
+            <div class="toggle-desc">Visible on your public profile</div>
+          </div>
+          <label class="switch" aria-label="Show likes to others">
+            <input type="checkbox" id="toggle-likes" onchange="handleToggle('likes', this.checked)" />
+            <div class="switch-track">
+              <div class="switch-thumb"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Auth preview toggle (floating, removed — now in sidebar) -->
+
+<script>
+  // ── Modal open / close ──
+  function openModal() {
+    const modal = document.getElementById('settingsModal');
+    modal.classList.add('open');
+    document.addEventListener('keydown', handleEsc);
+  }
+
+  function closeModal() {
+    const modal = document.getElementById('settingsModal');
+    modal.classList.remove('open');
+    document.removeEventListener('keydown', handleEsc);
+  }
+
+  function handleEsc(e) {
+    if (e.key === 'Escape') closeModal();
+  }
+
+  function handleBackdropClick(e) {
+    if (e.target === document.getElementById('settingsModal')) closeModal();
+  }
+
+  // ── Frequency toggle ──
+  let currentFreq = 'daily';
+
+  function setFreq(val) {
+    if (currentFreq === val) return;
+    document.getElementById('freq-' + currentFreq).classList.remove('active');
+    document.getElementById('freq-' + val).classList.add('active');
+    currentFreq = val;
+  }
+
+  // ── Privacy toggles ──
+  function handleToggle(key, val) {}
+
+  // ── Navigation links ──
+  function navigate(dest) {
+    const labels = { 'user-profile': 'User Profile', 'digest-management': 'Digest Management' };
+    const btn = event.currentTarget;
+    const nameEl = btn.querySelector('.settings-link-text span:first-child');
+    const orig = nameEl.textContent;
+    nameEl.textContent = '→ ' + labels[dest] + '…';
+    setTimeout(() => { nameEl.textContent = orig; }, 1200);
+  }
+
+  // ── Auth state preview ──
+  function setAuth(loggedIn) {
+    document.getElementById('btn-loggedin').classList.toggle('active', loggedIn);
+    document.getElementById('btn-loggedout').classList.toggle('active', !loggedIn);
+
+    const settingsBtn = document.getElementById('settings-nav-btn');
+    const digestBadge = document.getElementById('digest-badge');
+
+    if (loggedIn) {
+      settingsBtn.classList.remove('disabled');
+      settingsBtn.classList.add('active');
+      digestBadge.style.display = '';
+      document.getElementById('sidebar-cta').innerHTML =
+        `<a class="nav-cta" href="#"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>New post</a>`;
+      openModal();
+    } else {
+      closeModal();
+      settingsBtn.classList.add('disabled');
+      settingsBtn.classList.remove('active');
+      digestBadge.style.display = 'none';
+      document.getElementById('sidebar-cta').innerHTML =
+        `<a class="nav-signin" href="#"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Sign in</a>`;
+    }
+  }
+
+  // Init: logged-in state by default
+  setAuth(true);
+
+  // ── Demo navigation intercept ──
+  (function() {
+    function nav(page) {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'verita-navigate', page }, '*');
+      } else {
+        window.location.href = page;
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      const el = e.target.closest('a, button');
+      if (!el) return;
+
+      if (el.closest('.brand')) { e.preventDefault(); nav('Verita Home.html'); return; }
+
+      const navItem = el.closest('.nav-item');
+      if (navItem) {
+        const label = navItem.textContent.trim().toLowerCase();
+        if (label.startsWith('explore')) { e.preventDefault(); nav('Verita Home.html'); return; }
+        if (label.startsWith('digest')) { e.preventDefault(); nav('Verita Digest Post.html'); return; }
+      }
+
+      if (el.closest('.nav-cta')) { e.preventDefault(); nav('Verita Post Editor.html'); return; }
+      if (el.closest('.avatar-btn')) { e.preventDefault(); nav('Verita User Profile.html'); return; }
+
+      // Close/back button → Home
+      if (el.closest('.modal-close') || el.closest('.settings-close') || el.closest('.back-btn')) {
+        e.preventDefault(); nav('Verita Home.html'); return;
+      }
+
+      // Digest link in settings → Digest Management
+      if (el.closest('.digest-settings') || el.closest('[data-action="digest"]')) {
+        e.preventDefault(); nav('Verita Digest Management.html'); return;
+      }
+    }, true);
+  })();
+</script>
+</body>
+</html>
