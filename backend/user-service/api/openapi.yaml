@@ -594,16 +594,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Role'
-        bio:
-          type: string
-        expertise:
-          type: array
-          items:
-            type: string
-        socialLinks:
-          type: object
-          additionalProperties:
-            type: string
       example:
         id: "550e8400-e29b-41d4-a716-446655440000"
         username: "johndoe"
@@ -681,14 +671,6 @@ components:
         username: { type: string, minLength: 3 }
         bio: { type: string, maxLength: 250 }
         avatarUrl: { type: string, format: uri }
-        expertise:
-          type: array
-          items:
-            type: string
-        socialLinks:
-          type: object
-          additionalProperties:
-            type: string
       example:
         username: "john_updated"
         bio: "Just a user navigating the Verita ecosystem."
@@ -742,11 +724,6 @@ components:
         theme: { type: string, enum: [light, dark, system] }
         language: { type: string, enum: [en, es, fr, de, jp] }
         notificationsEnabled: { type: boolean }
-        digestFrequency: { type: string, enum: [daily, weekly, immediately, never] }
-        privacySettings:
-          type: object
-          properties:
-            profileVisibility: { type: string, enum: [public, private, connections_only] }
       example:
         theme: "dark"
         language: "en"
