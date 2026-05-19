@@ -38,22 +38,6 @@ paths:
               schema: { $ref: '#/components/schemas/PostPage' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
-    post:
-      operationId: createPost
-      summary: Create a new post or draft
-      tags: [Posts]
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/PostRequest' }
-      responses:
-        '201':
-          description: Post created successfully
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-
   /api/v1/posts/{id}:
     get:
       operationId: getPostById
@@ -111,6 +95,80 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /api/v1/posts/search:
+    get:
+      operationId: searchPosts
+      summary: Search posts by query string
+      tags: [Posts]
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+    post:
+      operationId: createPost
+      summary: Create a new post or draft
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostRequest' }
+      responses:
+        '201':
+          description: Post created successfully
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/posts/{id}/bookmark:
+    post:
+      operationId: bookmarkPost
+      summary: Save a post to the current user's bookmarks
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Post bookmarked successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    delete:
+      operationId: unbookmarkPost
+      summary: Remove a post from the current user's bookmarks
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Post removed from bookmarks successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # --- COMMENTS ---
   /api/v1/posts/{id}/comments:
     get:
@@ -154,6 +212,41 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/v1/comments/{id}:
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment owned by the current user
+      tags: [Comments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Comment deleted successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/comments/{id}/vote:
+    post:
+      operationId: castCommentVote
+      summary: Like a comment
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Comment like processed successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # --- VOTING ---
   /api/v1/posts/{id}/vote:
     post:
@@ -191,6 +284,73 @@ paths:
               schema: { type: array, items: { $ref: '#/components/schemas/PostResponse' } }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/v1/users/{id}/posts:
+    get:
+      operationId: getPostsByUserId
+      summary: Get paginated posts authored by a user
+      tags: [Posts]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: User posts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/users/me/drafts:
+    get:
+      operationId: getMyDrafts
+      summary: Get current user's drafts
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Drafts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/users/me/likes:
+    get:
+      operationId: getMyLikedPosts
+      summary: Get posts liked by the current user
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Liked posts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /api/v1/tags/trending:
     get:
       operationId: getTrendingTags
@@ -220,6 +380,11 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     Unauthorized:
       description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: The user is not allowed to perform this action
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
