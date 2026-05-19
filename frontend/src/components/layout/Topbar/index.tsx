@@ -1,4 +1,5 @@
-import { useRef, FormEvent } from 'react';
+import { useRef } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
