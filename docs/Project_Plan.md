@@ -66,42 +66,62 @@ Labels: `infrastructure` `P0` `W1`
 
 ---
 
+**Refine API Specification and Database Schema**
+Labels: `backend` `P0` `W2`
+- [ ] Align User Service API endpoints with Frontend_PRD requirements (auth flows, profile data, user settings)
+- [ ] Align Content Service API data model (posts, comments, tags, bookmarks) with frontend needs
+- [ ] Align Recommendation Service API (feed, trending, subscriptions) with frontend discovery pages
+- [ ] Review and update database schemas to ensure all required fields and relationships are present
+- [ ] Team review: backend → frontend, Frontend_PRD → API spec/schema mapping confirmed
+- [ ] Update openapi.yaml and database schema documentation
+
+---
+
 **User Service Implementation**
 Labels: `backend` `P0` `W2`
-- [ ] POST /api/v1/auth/register — create account, return JWT
-- [ ] POST /api/v1/auth/login — validate credentials, return JWT (24h expiry)
-- [ ] GET /api/v1/users/{id}/profile
-- [ ] PUT /api/v1/users/{id}/profile — own profile only, auth required
-- [ ] POST /api/v1/verification/apply — submit verification request
-- [ ] GET /api/v1/verification/requests — admin only
-- [ ] PATCH /api/v1/verification/{id}/approve and /reject — admin only
-- [ ] PATCH /api/v1/users/{id}/role — admin only
-- [ ] Role-based access control: USER, ADMIN, VERIFIED
+- [ ] User authentication: registration and login with JWT token generation
+- [ ] User profile management: create, read, and update user profiles with bio, expertise, social links
+- [ ] User settings: manage account preferences (digest frequency, privacy settings)
+- [ ] User role and permission system: ROLE_USER, ROLE_VERIFIED, ROLE_ADMIN with access control checks
+- [ ] Admin capabilities: view and update user roles, manage user verification status
+- [ ] Role-based access control enforced at service level
 - [ ] Unit tests (>80% coverage)
 - [ ] Docker image builds, health check passes at /health
 
 ---
 
-**Auth UI**
+**Home UI + Auth UI**
 Labels: `frontend` `P0` `W2`
-- [ ] Registration page with email + password form and validation
-- [ ] Login page, JWT stored in localStorage
-- [ ] Axios client configured with Authorization: Bearer header
-- [ ] Protected routes — redirect to login if no valid JWT
-- [ ] User profile view page
-- [ ] Profile edit form (bio, expertise areas, social links)
+- [ ] Home Feed page layout: sidebar, top bar, tag filter bar, post feed (mock data)
+- [ ] Auth Modal: Sign Up and Log In tabs with form validation
+- [ ] JWT token management: store in localStorage, attach to API requests via Authorization header
+- [ ] Protected routes: redirect to Auth Modal if no valid JWT
+- [ ] User Profile page: view user info, edit profile form (bio, expertise, social links)
+- [ ] Settings Modal: account settings, digest frequency, privacy toggles
+- [ ] Responsive layout and component integration
 - [ ] Works against User Service API or Prism mock server
 
 ---
 
-**GenAI Service Foundation + Summarization**
+**GenAI Service Foundation**
 Labels: `genai` `P1` `W2`
-- [ ] FastAPI project structure finalized
-- [ ] LangChain integrated with OpenAI API (key via environment variable)
-- [ ] POST /api/v1/genai/summarize — accepts post content, returns 3-bullet summary
-- [ ] Local model support (GPT4All or LLaMA via Ollama) as fallback
-- [ ] pytest tests for summarization endpoint
+- [ ] FastAPI project structure and dependencies configured
+- [ ] LangChain integration for LLM interactions (environment-based API key configuration)
+- [ ] Summarization capability: accepts content and returns structured summary
+- [ ] Fallback mechanism for local model support (implementation details TBD)
+- [ ] Basic endpoint testing with pytest
 - [ ] Dockerfile builds and service starts
+
+---
+
+**Database Setup and Test Data**
+Labels: `infrastructure` `P0` `W2`
+- [ ] PostgreSQL: initialize local instance (Docker Compose), create databases for all services
+- [ ] MinIO: initialize local S3-compatible storage for file uploads (post cover images, user avatars)
+- [ ] Create test data scripts: seed users, posts, tags, comments for manual testing
+- [ ] Verify connectivity: all services can connect to PostgreSQL and MinIO
+- [ ] Document database connection strings and credentials for local development
+- [ ] Health check endpoints confirm database and storage availability
 
 ---
 
