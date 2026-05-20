@@ -69,6 +69,37 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/v1/posts/cards:
+    get:
+      operationId: getPostCards
+      summary: Fetch lightweight PostCard objects for multiple posts by ID
+      description: |
+        Returns `PostCard` objects (no article body) for the given post IDs, preserving
+        the order of the `ids` parameter. Called by the frontend after receiving a `postIds`
+        list from the Recommendation Service to populate feed cards.
+      tags: [Posts]
+      security: []
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          description: Comma-separated list of post UUIDs, e.g. `ids=id1,id2,id3`.
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+            maxItems: 50
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: Posts retrieved successfully. Missing IDs are silently omitted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PostCard' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
   /api/v1/posts/search:
     get:
       operationId: searchPosts
@@ -229,7 +260,7 @@ paths:
   # --- COMMENTS ---
   /api/v1/posts/{id}/comments:
     get:
-      operationId: getPostComments
+      operationId: getCommentsByPost
       summary: Get all comments for a post
       tags: [Comments]
       security: []
@@ -249,7 +280,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
     post:
-      operationId: addComment
+      operationId: createComment
       summary: Post a comment or reply
       tags: [Comments]
       security: [{ bearerAuth: [] }]
@@ -310,12 +341,12 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  # --- USER CONTENT ---
-  /api/v1/bookmarks:
+  # --- CURRENT USER PRIVATE RESOURCES (/me/) ---
+  /api/v1/me/drafts:
     get:
-      operationId: getUserBookmarks
-      summary: Get the current user's bookmarked posts
-      tags: [Interactions]
+      operationId: getMyDrafts
+      summary: Get current user's draft posts
+      tags: [Me]
       security: [{ bearerAuth: [] }]
       parameters:
         - name: page
@@ -326,17 +357,18 @@ paths:
           schema: { type: integer, default: 10 }
       responses:
         '200':
-          description: List of bookmarked posts retrieved
+          description: Drafts retrieved successfully
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PostPage' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  # --- USER PUBLIC RESOURCES (/users/{id}/) ---
   /api/v1/users/{id}/posts:
     get:
-      operationId: getPostsByUserId
-      summary: Get paginated posts authored by a user
-      tags: [Posts]
+      operationId: getUserPosts
+      summary: Get published posts authored by a user
+      tags: [Users]
       security: []
       parameters:
         - name: id
@@ -357,13 +389,21 @@ paths:
               schema: { $ref: '#/components/schemas/PostPage' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  /api/v1/users/me/drafts:
+  /api/v1/users/{id}/bookmarks:
     get:
-      operationId: getMyDrafts
-      summary: Get current user's draft posts
-      tags: [Posts]
-      security: [{ bearerAuth: [] }]
+      operationId: getUserBookmarks
+      summary: Get a user's bookmarked posts
+      description: |
+        Returns bookmarked posts for the given user. Visibility is controlled by the user's
+        `showBookmarks` preference (from UserPreferences). The current user can always access
+        their own bookmarks; other users' bookmarks are only visible when `showBookmarks` is true.
+      tags: [Users]
+      security: []
       parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
         - name: page
           in: query
           schema: { type: integer, default: 0 }
@@ -372,19 +412,28 @@ paths:
           schema: { type: integer, default: 10 }
       responses:
         '200':
-          description: Drafts retrieved successfully
+          description: Bookmarked posts retrieved successfully
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PostPage' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
-  /api/v1/users/me/likes:
+  /api/v1/users/{id}/likes:
     get:
-      operationId: getMyLikedPosts
-      summary: Get posts liked by the current user
-      tags: [Interactions]
-      security: [{ bearerAuth: [] }]
+      operationId: getUserLikes
+      summary: Get posts liked by a user
+      description: |
+        Returns liked posts for the given user. Visibility is controlled by the user's
+        `showLikes` preference (from UserPreferences). The current user can always access
+        their own likes; other users' likes are only visible when `showLikes` is true.
+      tags: [Users]
+      security: []
       parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
         - name: page
           in: query
           schema: { type: integer, default: 0 }
@@ -397,7 +446,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PostPage' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   # --- TAGS ---
   /api/v1/tags/trending:
@@ -463,6 +513,23 @@ components:
         name: { type: string }
 
     # --- POSTS ---
+    PostCard:
+      type: object
+      description: Lightweight post shape for feed cards. Omits full body content.
+      properties:
+        id: { type: string, format: uuid }
+        author: { $ref: '#/components/schemas/AuthorSummary' }
+        title: { type: string }
+        excerpt: { type: string, nullable: true }
+        coverImageUrl: { type: string, format: uri, nullable: true }
+        tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        readTimeMinutes: { type: integer, nullable: true }
+        likeCount: { type: integer }
+        commentCount: { type: integer }
+        viewCount: { type: integer }
+        isLikedByMe: { type: boolean, description: "False when request is unauthenticated" }
+        createdAt: { type: string, format: date-time }
+
     PostRequest:
       type: object
       required: [title, content]
