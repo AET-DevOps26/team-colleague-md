@@ -1,0 +1,190 @@
+"""
+Tests for the summarization endpoint.
+
+Uses FastAPI TestClient with a mocked LangChain chain so that
+tests run without a real API key or LLM service.
+"""
+
+from unittest.mock import AsyncMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+@pytest.fixture
+def client():
+    """Create a FastAPI test client."""
+    return TestClient(app)
+
+
+# ---------------------------------------------------------------------------
+# Sample test data
+# ---------------------------------------------------------------------------
+
+VALID_CONTENT = (
+    "OpenAI just released GPT-5 with significant improvements in reasoning, "
+    "code generation, and multimodal understanding. The model shows 40% improvement "
+    "on HumanEval benchmarks and introduces a new 'thinking' mode that makes its "
+    "reasoning process transparent. Early benchmarks suggest it outperforms Claude "
+    "and Gemini on most coding tasks, though it struggles with very long context "
+    "windows. Pricing is set at $10 per million input tokens, making it a premium "
+    "offering in the current LLM market."
+)
+
+MOCK_LLM_RESPONSE = (
+    "• GPT-5 delivers 40% improvement on HumanEval with a new transparent thinking mode\n"
+    "• Outperforms Claude and Gemini on coding but struggles with long context windows\n"
+    "• Priced at $10/1M input tokens as a premium LLM offering"
+)
+
+SHORT_CONTENT = "Too short to summarize."  # Under 50 chars
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
+class TestSummarizeEndpoint:
+    """Tests for POST /api/v1/genai/summarize."""
+
+    @patch("app.services.summarizer._build_chain")
+    def test_summarize_success(self, mock_build_chain, client):
+        """Valid request should return 200 with 3-bullet summary."""
+        # Mock the LCEL chain's ainvoke to return canned response
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.return_value = MOCK_LLM_RESPONSE
+        mock_build_chain.return_value = (mock_chain, "gemini-2.0-flash")
+
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={"content": VALID_CONTENT, "title": "GPT-5 Released"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["summary"]) == 3
+        assert data["model"] == "gemini-2.0-flash"
+        assert "GPT-5" in data["summary"][0]
+
+    @patch("app.services.summarizer._build_chain")
+    def test_summarize_without_title(self, mock_build_chain, client):
+        """Request without title should also work."""
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.return_value = MOCK_LLM_RESPONSE
+        mock_build_chain.return_value = (mock_chain, "gemini-2.0-flash")
+
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={"content": VALID_CONTENT},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["summary"]) == 3
+
+    def test_summarize_content_too_short(self, client):
+        """Content under 50 characters should return 422 validation error."""
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={"content": SHORT_CONTENT},
+        )
+
+        assert response.status_code == 422
+
+    def test_summarize_missing_content(self, client):
+        """Missing content field should return 422 validation error."""
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={},
+        )
+
+        assert response.status_code == 422
+
+    def test_summarize_empty_body(self, client):
+        """Empty request body should return 422 validation error."""
+        response = client.post(
+            "/api/v1/genai/summarize",
+            content="",
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 422
+
+    @patch("app.services.summarizer._build_chain")
+    def test_summarize_llm_failure(self, mock_build_chain, client):
+        """LLM failure should return 502 with error details."""
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.side_effect = Exception("API rate limit exceeded")
+        mock_build_chain.return_value = (mock_chain, "gemini-2.0-flash")
+
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={"content": VALID_CONTENT},
+        )
+
+        assert response.status_code == 502
+        data = response.json()
+        assert data["detail"]["error"] == "llm_error"
+        assert "rate limit" in data["detail"]["details"]
+
+
+class TestHealthEndpoint:
+    """Tests for GET /health."""
+
+    def test_health_check(self, client):
+        """Health check should always return 200 OK."""
+        response = client.get("/health")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["service"] == "GenAI Service"
+
+
+class TestBulletParsing:
+    """Tests for the _parse_bullets helper function."""
+
+    def test_parse_standard_bullets(self):
+        """Standard bullet format should parse correctly."""
+        from app.services.summarizer import _parse_bullets
+
+        raw = "• First point\n• Second point\n• Third point"
+        result = _parse_bullets(raw)
+        assert result == ["First point", "Second point", "Third point"]
+
+    def test_parse_dash_bullets(self):
+        """Dash-style bullets should parse correctly."""
+        from app.services.summarizer import _parse_bullets
+
+        raw = "- First point\n- Second point\n- Third point"
+        result = _parse_bullets(raw)
+        assert result == ["First point", "Second point", "Third point"]
+
+    def test_parse_numbered_list(self):
+        """Numbered list should parse correctly."""
+        from app.services.summarizer import _parse_bullets
+
+        raw = "1. First point\n2. Second point\n3. Third point"
+        result = _parse_bullets(raw)
+        assert result == ["First point", "Second point", "Third point"]
+
+    def test_parse_pads_short_output(self):
+        """Output with fewer than 3 bullets should be padded."""
+        from app.services.summarizer import _parse_bullets
+
+        raw = "• First point\n• Second point"
+        result = _parse_bullets(raw)
+        assert len(result) == 3
+        assert result[2] == ""
+
+    def test_parse_truncates_long_output(self):
+        """Output with more than 3 bullets should be truncated."""
+        from app.services.summarizer import _parse_bullets
+
+        raw = "• One\n• Two\n• Three\n• Four\n• Five"
+        result = _parse_bullets(raw)
+        assert len(result) == 3
+        assert result == ["One", "Two", "Three"]
