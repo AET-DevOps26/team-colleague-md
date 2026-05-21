@@ -1,0 +1,86 @@
+.card {
+  break-inside: avoid;
+  background: #0a0a0a;
+  color: #fff;
+  border-radius: 10px;
+  padding: 18px 16px 14px;
+  margin: 0 0 14px;
+}
+
+.label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ababab;
+  margin-bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0 0 10px;
+}
+
+.bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bullets li {
+  display: flex;
+  gap: 7px;
+  font-size: 12.5px;
+  color: #d4d4d4;
+  line-height: 1.45;
+}
+
+.bullets li::before {
+  content: '•';
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #6b6b6b;
+}
+
+.ctaLink,
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  color: #0a0a0a;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 120ms;
+}
+
+.ctaLink:hover,
+.cta:hover {
+  opacity: 0.88;
+}

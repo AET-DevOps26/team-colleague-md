@@ -1,0 +1,28 @@
+.masonry {
+  column-count: 4;
+  column-gap: 14px;
+}
+
+@media (max-width: 1440px) {
+  .masonry { column-count: 3; }
+}
+
+@media (max-width: 1024px) {
+  .masonry { column-count: 2; }
+}
+
+@media (max-width: 768px) {
+  .masonry { column-count: 1; }
+}
+
+.sentinel {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingText {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}

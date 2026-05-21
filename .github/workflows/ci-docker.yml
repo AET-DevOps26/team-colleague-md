@@ -1,0 +1,23 @@
+name: CI - Docker Compose Build
+
+on:
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "genai-service/**"
+      - "docker-compose.yml"
+      - ".github/workflows/ci-docker.yml"
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build all Docker images
+        run: docker compose build

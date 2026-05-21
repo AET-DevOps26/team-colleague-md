@@ -9,6 +9,7 @@ RUN chmod +x gradlew
 # Download dependencies
 RUN ./gradlew dependencies --no-daemon
 
+COPY api api
 COPY src src
 RUN ./gradlew bootJar --no-daemon -x test
 

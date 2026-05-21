@@ -1,0 +1,1794 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Verita — Skill Induction Heads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+  --bg-base:      #FFFFFF;
+  --bg-surface:   #F9F9F9;
+  --bg-elevated:  #F0F0F0;
+  --text-primary:   #0A0A0A;
+  --text-secondary: #6B6B6B;
+  --text-tertiary:  #ABABAB;
+  --border-subtle:  #EBEBEB;
+  --border-default: #D4D4D4;
+  --accent:       #0A0A0A;
+  --accent-hover: #333333;
+  --success:      #16A34A;
+  --success-bg:   #F0FDF4;
+  --warning:      #CA8A04;
+  --warning-bg:   #FEFCE8;
+  --danger:       #DC2626;
+  --danger-bg:    #FEF2F2;
+  --radius-card:  10px;
+  --radius-btn:   8px;
+  --sidebar-w:    220px;
+  --topbar-h:     56px;
+  --font-sans:  "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:  "JetBrains Mono", ui-monospace, monospace;
+  --font-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+}
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-base); color: var(--text-primary); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  body { font-size: 13px; line-height: 1.5; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ---------- App layout ---------- */
+  .app {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    min-height: 100vh;
+    transition: grid-template-columns 200ms ease;
+  }
+  .app:has(.sidebar:hover) { grid-template-columns: 148px 1fr; }
+
+  /* ---------- Sidebar (collapsed by default on post detail) ---------- */
+  .sidebar {
+    position: sticky; top: 0; height: 100vh;
+    width: 52px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column;
+    padding: 18px 8px 14px;
+    overflow: hidden;
+    z-index: 30;
+    transition: width 200ms ease;
+  }
+  .sidebar:hover { width: 148px; }
+  .brand {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 6px 22px; margin-bottom: 4px;
+    white-space: nowrap;
+    position: relative;
+  }
+  .brand-mark {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center;
+    font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 16px;
+    letter-spacing: -0.02em; flex-shrink: 0;
+  }
+  .brand-word {
+    font-family: var(--font-serif); font-style: italic; font-weight: 500;
+    font-size: 22px; letter-spacing: -0.02em; color: var(--text-primary);
+    white-space: nowrap;
+    opacity: 0; transition: opacity 150ms ease 60ms;
+    position: absolute; left: 14px;
+  }
+  .sidebar:hover .brand-mark { opacity: 0; }
+  .sidebar:hover .brand-word { opacity: 1; }
+  .brand-mark { transition: opacity 150ms ease 60ms; }
+
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    position: relative;
+    display: flex; align-items: center; gap: 11px;
+    padding: 8px 8px; border-radius: 8px;
+    color: var(--text-secondary); font-size: 13px; font-weight: 500;
+    transition: background 120ms ease-out, color 120ms ease-out;
+    cursor: pointer; width: 100%; text-align: left;
+    white-space: nowrap; overflow: hidden;
+  }
+  .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .nav-item.active { color: var(--text-primary); background: var(--bg-elevated); }
+  .nav-item .ico { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.75; }
+  .nav-item .label {
+    opacity: 0; transition: opacity 150ms ease 60ms;
+  }
+  .sidebar:hover .nav-item .label { opacity: 1; }
+  .nav-item .badge {
+    margin-left: auto;
+    background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 600; line-height: 1;
+    padding: 3px 6px; border-radius: 999px; min-width: 16px; text-align: center;
+    opacity: 0; transition: opacity 150ms ease 60ms;
+  }
+  .sidebar:hover .nav-item .badge { opacity: 1; }
+  .nav-spacer { flex: 1; }
+  .nav-bottom { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid var(--border-subtle); margin-top: 10px; }
+  .nav-cta {
+    margin: 6px 4px 10px;
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    background: var(--accent); color: #fff;
+    width: 32px; height: 32px; padding: 0; border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    transition: background 120ms ease-out, width 200ms ease, gap 200ms ease, padding 200ms ease;
+    white-space: nowrap; overflow: hidden;
+    align-self: center;
+  }
+  .sidebar:hover .nav-cta {
+    width: auto; height: auto; padding: 9px 12px; gap: 6px; align-self: stretch;
+  }
+  .nav-cta:hover { background: var(--accent-hover); }
+  .nav-cta .label { opacity: 0; transition: opacity 150ms ease 60ms; width: 0; overflow: hidden; }
+  .sidebar:hover .nav-cta .label { opacity: 1; width: auto; }
+
+  /* Sign-in CTA (logged-out sidebar) */
+  .nav-signin {
+    margin: 6px 4px 10px;
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    background: var(--accent); color: #fff;
+    width: 32px; height: 32px; padding: 0; border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    transition: background 120ms ease-out, width 200ms ease, gap 200ms ease, padding 200ms ease;
+    white-space: nowrap; overflow: hidden;
+    align-self: center;
+  }
+  .sidebar:hover .nav-signin {
+    width: auto; height: auto; padding: 9px 12px; gap: 6px; align-self: stretch;
+  }
+  .nav-signin:hover { background: var(--accent-hover); }
+  .nav-signin .label { opacity: 0; transition: opacity 150ms ease 60ms; width: 0; overflow: hidden; }
+  .sidebar:hover .nav-signin .label { opacity: 1; width: auto; }
+
+  /* ---------- Main column ---------- */
+  .main {
+    min-width: 0;
+  }
+
+  /* The reader column (center) */
+  .reader-col {
+    min-width: 0;
+    padding: 28px 32px 200px;
+    display: flex; justify-content: center;
+  }
+  .reader { width: 100%; max-width: 720px; }
+
+  /* ---------- Top bar (minimal on detail) ---------- */
+  .topbar {
+    grid-column: 1 / -1;
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(160%) blur(10px);
+    -webkit-backdrop-filter: saturate(160%) blur(10px);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 24px;
+  }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--text-secondary);
+    padding: 6px 10px 6px 6px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 500;
+    transition: background 120ms ease-out, color 120ms ease-out;
+  }
+  .back-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .avatar-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #c0a4ff 0%, #ff8a8a 45%, #ffc28a 100%);
+    border: 1px solid var(--border-subtle);
+    position: relative;
+    transition: transform 160ms;
+  }
+  .avatar-btn:hover { transform: translateY(-1px); }
+  .avatar-btn::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 30% 35%, #fff 0 5px, transparent 6px),
+      radial-gradient(circle at 65% 32%, #fff 0 5px, transparent 6px),
+      radial-gradient(ellipse at 50% 70%, #0a0a0a 0 7px, transparent 8px),
+      linear-gradient(135deg, #c0a4ff 0%, #ff8a8a 45%, #ffc28a 100%);
+  }
+  .avatar-btn::after {
+    content: "";
+    position: absolute; left: 30%; top: 35%; width: 2.5px; height: 2.5px;
+    background: #0a0a0a; border-radius: 50%;
+    box-shadow: 18px 0 0 #0a0a0a;
+  }
+
+  /* ---------- Reader content ---------- */
+  .author-block {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 22px;
+  }
+  .av-lg {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg,#d4d4d4,#6b6b6b);
+    color: #fff;
+    display: grid; place-items: center;
+    font-size: 12.5px; font-weight: 700; letter-spacing: -0.01em;
+    flex-shrink: 0;
+  }
+  .author-info { min-width: 0; }
+  .author-name {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 13.5px; font-weight: 600; color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .author-name .verified { color: var(--accent); width: 13px; height: 13px; flex-shrink: 0; }
+  .author-meta {
+    font-size: 12px; color: var(--text-tertiary);
+    margin-top: 2px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .author-meta .dot-sep { color: var(--text-tertiary); }
+
+  .post-title {
+    font-size: 32px; font-weight: 700; line-height: 1.15;
+    color: var(--text-primary);
+    letter-spacing: -0.025em;
+    margin: 0 0 18px;
+    text-wrap: balance;
+  }
+
+  /* AI Summary */
+  .ai-toggle {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 32px; padding: 0 12px 0 11px;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: #fff;
+    color: var(--text-primary);
+    font-size: 12.5px; font-weight: 500;
+    transition: all 140ms;
+    margin-bottom: 18px;
+  }
+  .ai-toggle:hover { border-color: var(--border-default); background: var(--bg-surface); }
+  .ai-toggle.open {
+    background: var(--bg-surface); border-color: var(--border-default);
+  }
+  .ai-toggle .spark { color: var(--text-primary); }
+  .ai-toggle .chev {
+    transition: transform 220ms ease-out;
+    color: var(--text-tertiary);
+    margin-left: 1px;
+  }
+  .ai-toggle.open .chev { transform: rotate(180deg); }
+
+  .ai-panel-wrap {
+    overflow: hidden;
+    transition: max-height 280ms cubic-bezier(0.22,1,0.36,1), opacity 200ms ease-out, margin 220ms;
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+  }
+  .ai-panel-wrap.open {
+    max-height: 900px;
+    opacity: 1;
+    margin-bottom: 24px;
+  }
+  .ai-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 18px 20px 18px;
+    position: relative;
+  }
+  .ai-panel-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .ai-panel-label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+  .ai-panel-tag {
+    font-size: 10px; color: var(--text-tertiary);
+    font-family: var(--font-mono);
+    margin-left: auto;
+  }
+  .ai-panel-bullets {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .ai-panel-bullets li {
+    position: relative;
+    padding-left: 18px;
+    font-size: 13.5px; line-height: 1.55;
+    color: var(--text-primary);
+    text-wrap: pretty;
+  }
+  .ai-panel-bullets li::before {
+    content: "";
+    position: absolute; left: 0; top: 8px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text-primary);
+  }
+  .ai-panel-bullets li b { font-weight: 600; }
+  .ai-panel-bullets li .mono {
+    font-family: var(--font-mono); font-size: 12.5px;
+    background: #fff;
+    padding: 1px 5px; border-radius: 3px;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+  }
+  .ai-panel-foot {
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11.5px; color: var(--text-tertiary);
+  }
+  .ai-panel-foot .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--text-tertiary); }
+  .ai-regenerate {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--text-secondary);
+    transition: color 120ms;
+    font-size: 11.5px; font-weight: 500;
+  }
+  .ai-regenerate:hover { color: var(--text-primary); }
+
+  /* ---------- Markdown body ---------- */
+  .md {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+  }
+  .md > * + * { margin-top: 1.1em; }
+  .md p { margin: 0; text-wrap: pretty; }
+  .md h2 {
+    font-size: 22px; font-weight: 700; line-height: 1.25;
+    letter-spacing: -0.02em;
+    margin: 2em 0 0.6em;
+  }
+  .md h2:first-child { margin-top: 0; }
+  .md h3 {
+    font-size: 16px; font-weight: 600; line-height: 1.3;
+    margin: 1.6em 0 0.4em;
+    letter-spacing: -0.01em;
+  }
+  .md a {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--border-default);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 120ms;
+  }
+  .md a:hover { text-decoration-color: var(--accent); }
+  .md strong { font-weight: 600; }
+  .md em { font-style: italic; }
+  .md code {
+    font-family: var(--font-mono); font-size: 13px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    padding: 1px 5px; border-radius: 4px;
+    color: var(--text-primary);
+  }
+  .md .code-block {
+    position: relative;
+  }
+  .md .code-block:hover .copy-btn { opacity: 1; }
+  .copy-btn {
+    position: absolute; top: 10px; right: 10px;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 6px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #ababab;
+    font: 500 11.5px var(--font-mono);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 140ms, background 120ms, color 120ms;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+  .copy-btn.copied { color: #9ce0a0; border-color: rgba(156,224,160,0.3); }
+  .copy-btn svg { width: 12px; height: 12px; }
+  .md pre {
+    background: #0A0A0A; color: #f0f0f0;
+    padding: 16px 18px;
+    border-radius: 10px;
+    font: 400 13px/1.65 var(--font-mono);
+    overflow-x: auto;
+    border: 1px solid #1a1a1a;
+    margin: 0;
+  }
+  .md pre code {
+    background: none; border: 0; padding: 0; color: inherit; font-size: inherit;
+  }
+  .md pre .kw { color: #c5a3ff; }
+  .md pre .st { color: #9ce0a0; }
+  .md pre .cm { color: #6B6B6B; font-style: italic; }
+  .md pre .fn { color: #f0c674; }
+  .md pre .nm { color: #8ec8ff; }
+
+  .md blockquote {
+    border-left: 2px solid var(--text-primary);
+    padding: 4px 0 4px 18px;
+    margin: 0;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+  .md ul, .md ol {
+    margin: 0; padding-left: 24px;
+  }
+  .md ul li, .md ol li {
+    margin-top: 6px;
+    text-wrap: pretty;
+  }
+  .md hr {
+    border: 0; height: 1px; background: var(--border-subtle);
+    margin: 2.4em 0;
+  }
+  .md figure {
+    margin: 1.6em 0;
+  }
+  .md figcaption {
+    font-size: 12px; color: var(--text-tertiary);
+    margin-top: 8px; text-align: center;
+    font-family: var(--font-mono);
+  }
+  .md .fig {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  /* In-body figure: induction-heads diagram */
+  .fig-induction { display: block; width: 100%; height: auto; }
+
+  /* Stats table */
+  .md .stats {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    font-size: 13px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.1em;
+  }
+  .md .stats > div {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .md .stats > div:nth-last-child(-n+4) { border-bottom: 0; }
+  .md .stats .head {
+    background: var(--bg-surface);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+  }
+  .md .stats .num {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .md .stats .delta-up { color: var(--success); font-weight: 600; }
+  .md .stats .delta-dn { color: var(--danger); font-weight: 600; }
+
+  /* ---------- Post footer (tags + sources) ---------- */
+  .post-footer {
+    margin-top: 40px; padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .post-footer .tags {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .post-footer .tag-pill {
+    font-size: 12px; font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 4px 10px; border-radius: 4px;
+    transition: background 120ms, color 120ms;
+  }
+  .post-footer .tag-pill:hover { background: var(--text-primary); color: #fff; }
+  .post-footer .sources {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .post-footer .sources-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-tertiary);
+    margin-bottom: 2px;
+  }
+  .post-footer .src-item {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12.5px; color: var(--text-secondary);
+    transition: color 120ms;
+  }
+  .post-footer .src-item:hover { color: var(--text-primary); }
+  .post-footer .src-item svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+  /* ---------- Engagement strip ---------- */
+  .engage-row {
+    margin-top: 22px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex; align-items: center; gap: 22px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .engage-row .stat {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .engage-row .stat b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .engage-row .sep { width: 1px; height: 14px; background: var(--border-subtle); }
+
+  /* ---------- Comments ---------- */
+  .comments { margin-top: 40px; }
+  .comments-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 18px;
+  }
+  .comments-head h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+  .comments-head .count { font-size: 12.5px; color: var(--text-tertiary); font-weight: 500; }
+
+  /* Action buttons (actions pill) */
+  .cact {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 10px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 500; color: var(--text-secondary);
+    transition: background 120ms ease-out, color 120ms ease-out;
+  }
+  .cact:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .cact svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .cact.on { color: var(--text-primary); font-weight: 600; }
+  .cact.on svg { fill: currentColor; }
+  .cact-group { display: flex; }
+  .sort-pill {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 7px;
+    font-size: 12px; color: var(--text-secondary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    transition: all 120ms;
+  }
+  .sort-pill:hover { background: var(--bg-elevated); }
+  .sort-pill svg { width: 11px; height: 11px; }
+
+  .cmt { display: flex; gap: 10px; padding: 14px 0; }
+  .cmt + .cmt { border-top: 1px solid var(--border-subtle); }
+  .cmt .av-sm {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg,#ccc,#888);
+    color: #fff;
+    display: grid; place-items: center;
+    font-size: 10.5px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .cmt-body { flex: 1; min-width: 0; }
+  .cmt-head {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12.5px; color: var(--text-tertiary);
+    margin-bottom: 4px;
+  }
+  .cmt-head .who {
+    color: var(--text-primary); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .cmt-head .who .verified { color: var(--accent); width: 11px; height: 11px; }
+  .cmt-head .role {
+    font-family: var(--font-mono); font-size: 10.5px;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+    padding: 1px 5px; border-radius: 3px;
+  }
+  .cmt-head .op {
+    font-size: 9.5px; font-weight: 600;
+    color: var(--text-primary);
+    background: #fff;
+    border: 1px solid var(--border-default);
+    padding: 0 4px; border-radius: 3px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .cmt-text {
+    font-size: 13.5px; line-height: 1.6; color: var(--text-primary);
+    text-wrap: pretty;
+  }
+  .cmt-text code {
+    font-family: var(--font-mono); font-size: 12px;
+    background: var(--bg-surface); padding: 0 4px; border-radius: 3px;
+    border: 1px solid var(--border-subtle);
+  }
+  .cmt-text > p + p { margin-top: 6px; }
+  .cmt-text > * { margin: 0; }
+  .cmt-actions {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 8px;
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .cmt-actions button {
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--text-secondary);
+    transition: color 120ms;
+  }
+  .cmt-actions button:hover { color: var(--text-primary); }
+  .cmt-actions button.liked { color: var(--text-primary); font-weight: 600; }
+  .cmt-actions button.liked svg { fill: currentColor; }
+  .cmt-actions svg { width: 13px; height: 13px; }
+
+  .cmt-replies {
+    margin-top: 10px;
+    padding-left: 14px;
+    border-left: 2px solid var(--border-subtle);
+    display: flex; flex-direction: column; gap: 0;
+  }
+  .cmt-replies .cmt { padding: 10px 0 10px; }
+  .cmt-replies .cmt + .cmt { border-top: 1px solid var(--border-subtle); }
+  .cmt-replies .av-sm { width: 22px; height: 22px; font-size: 9px; }
+  .cmt-replies .cmt-text { font-size: 13px; }
+
+  .show-more {
+    margin-top: 18px;
+    padding: 10px;
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    transition: all 120ms;
+  }
+  .show-more:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+  /* ---------- Floating bottom bar (actions + composer) ---------- */
+  .bottom-bar {
+    position: fixed; bottom: 22px; left: 0; right: 0;
+    z-index: 40;
+    display: flex; align-items: flex-end; justify-content: center; gap: 10px;
+    pointer-events: none;
+    padding-left: 52px;
+  }
+  .actions-pill {
+    pointer-events: auto;
+    display: flex; align-items: center;
+    background: #fff;
+    border: 0.5px solid var(--border-default);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    border-radius: 14px;
+    padding: 4px 6px;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .cact-sep {
+    width: 1px; height: 18px; background: var(--border-subtle); margin: 0 2px; flex-shrink: 0;
+  }
+  .composer {
+    pointer-events: auto;
+    width: min(480px, calc(100vw - 80px - 52px - 180px));
+    background: #fff;
+    border: 0.5px solid var(--border-default);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    border-radius: 14px;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 16px;
+    transition: all 240ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .composer.expanded {
+    border-radius: 14px;
+    padding: 12px 14px 10px;
+    flex-direction: column; align-items: stretch; gap: 8px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.14);
+  }
+  .composer .av-sm {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: linear-gradient(135deg,#d4d4d4,#6b6b6b);
+    color: #fff;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .composer-row1 { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .composer.expanded .composer-row1 { flex: none; width: 100%; }
+  .composer .input {
+    flex: 1;
+    height: 32px;
+    border: 0; background: none; outline: 0;
+    font: 400 13.5px var(--font-sans); color: var(--text-primary);
+    min-width: 0;
+  }
+  .composer .input::placeholder { color: var(--text-tertiary); }
+  .composer.expanded .input {
+    height: 88px;
+    resize: none;
+    line-height: 1.55;
+    padding-top: 4px;
+  }
+  .composer-foot {
+    display: none; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--text-tertiary);
+  }
+  .composer.expanded .composer-foot { display: flex; }
+  .composer-foot .char-count {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
+  .composer-foot .send-cta {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--accent); color: #fff;
+    padding: 6px 12px; border-radius: 7px;
+    font-size: 12px; font-weight: 600;
+    transition: all 140ms;
+  }
+  .composer-foot .send-cta:hover { background: var(--accent-hover); }
+  .composer-foot .send-cta.disabled { background: var(--bg-elevated); color: var(--text-tertiary); pointer-events: none; }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed; bottom: 22px; right: 22px;
+    z-index: 60;
+    width: 280px;
+    background: var(--accent); color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12.5px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 200ms, transform 200ms;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: 1; transform: translateY(0);
+  }
+  .toast svg { width: 14px; height: 14px; color: #9ce0a0; }
+
+  /* ---------- Reading progress ---------- */
+  .reading-progress {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 2px;
+    z-index: 100;
+    background: transparent;
+  }
+  .reading-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 60ms linear;
+  }
+
+  /* ---------- Sort dropdown ---------- */
+  .sort-dropdown-wrap {
+    position: relative;
+  }
+  .sort-dropdown {
+    position: absolute; top: calc(100% + 4px); right: 0;
+    background: #fff;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    padding: 4px;
+    min-width: 140px;
+    z-index: 30;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 140ms, transform 140ms;
+  }
+  .sort-dropdown.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .sort-dropdown button {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12.5px; font-weight: 500;
+    color: var(--text-secondary);
+    transition: background 100ms, color 100ms;
+  }
+  .sort-dropdown button:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .sort-dropdown button.active { color: var(--text-primary); font-weight: 600; }
+  .sort-dropdown button.active::after {
+    content: "";
+    margin-left: auto;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ---------- Inline reply input ---------- */
+  .reply-inline {
+    margin-top: 10px;
+    display: flex; align-items: flex-start; gap: 8px;
+    animation: fadeIn 180ms ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reply-inline .av-sm {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg,#d4d4d4,#6b6b6b);
+    color: #fff;
+    display: grid; place-items: center;
+    font-size: 9px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .reply-inline-box {
+    flex: 1;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+    transition: border-color 120ms;
+  }
+  .reply-inline-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(10,10,10,0.05);
+  }
+  .reply-inline textarea {
+    width: 100%;
+    border: 0; outline: 0;
+    padding: 8px 12px;
+    font: 400 13px var(--font-sans);
+    color: var(--text-primary);
+    resize: none;
+    min-height: 36px;
+    max-height: 120px;
+    line-height: 1.5;
+  }
+  .reply-inline textarea::placeholder { color: var(--text-tertiary); }
+  .reply-inline-actions {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 8px 6px;
+    justify-content: flex-end;
+  }
+  .reply-inline-actions button {
+    font-size: 11.5px; font-weight: 500;
+    padding: 5px 10px; border-radius: 6px;
+    transition: all 120ms;
+  }
+  .reply-inline-actions .reply-cancel {
+    color: var(--text-secondary);
+  }
+  .reply-inline-actions .reply-cancel:hover { color: var(--text-primary); }
+  .reply-inline-actions .reply-submit {
+    background: var(--accent); color: #fff;
+  }
+  .reply-inline-actions .reply-submit:hover { background: var(--accent-hover); }
+  .reply-inline-actions .reply-submit.disabled {
+    background: var(--bg-elevated); color: var(--text-tertiary);
+    pointer-events: none;
+  }
+
+  /* ---------- Auth toggle (sidebar) ---------- */
+  .sidebar-auth-toggle {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 12px 4px 0;
+  }
+  .sidebar-auth-toggle-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-tertiary); padding: 0 8px;
+  }
+  .sidebar-auth-toggle-row {
+    display: flex; border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden;
+  }
+  .sidebar-auth-btn {
+    flex: 1; padding: 7px 0; font-size: 12px; font-weight: 500; color: var(--text-tertiary);
+    background: transparent; text-align: center;
+    transition: background 120ms ease-out, color 120ms ease-out;
+  }
+  .sidebar-auth-btn:first-child { border-right: 1px solid var(--border-default); }
+  .sidebar-auth-btn.active { background: var(--accent); color: #fff; }
+  .sidebar-auth-btn:not(.active):hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+  /* ---------- Sign-in button (topbar, logged-out) ---------- */
+  .signin-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 36px; padding: 0 16px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 600;
+    transition: background 120ms;
+  }
+  .signin-btn:hover { background: var(--accent-hover); }
+
+  /* ---------- Sign-in to comment (composer, logged-out) ---------- */
+  .composer-signin {
+    pointer-events: auto;
+    background: #fff;
+    border: 0.5px solid var(--border-default);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 6px 16px;
+    font-size: 13.5px; color: var(--text-secondary);
+  }
+  .composer-signin-cta {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 16px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 600;
+    transition: background 120ms;
+  }
+  .composer-signin-cta:hover { background: var(--accent-hover); }
+
+  /* ---------- Scrollbar tidy ---------- */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<!-- Reading progress bar -->
+<div class="reading-progress"><div class="reading-progress-bar" id="readingProgress"></div></div>
+
+<div class="app" id="app">
+
+  <!-- ============== SIDEBAR (auto-collapsed) ============== -->
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#" aria-label="Verita">
+      <div class="brand-mark">V</div>
+      <div class="brand-word">Verita</div>
+    </a>
+
+    <nav class="nav" aria-label="Primary">
+      <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m14.5 9.5-2 5-5 2 2-5 5-2z" fill="currentColor" stroke="none"/></svg><span class="label">Explore</span></a>
+      <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg><span class="label">Digest</span><span class="badge">3</span></a>
+    </nav>
+
+    <div class="nav-spacer">
+      <!-- Auth state toggle -->
+      <div class="sidebar-auth-toggle">
+        <span class="sidebar-auth-toggle-label">Preview state</span>
+        <div class="sidebar-auth-toggle-row" role="group" aria-label="Auth state">
+          <button class="sidebar-auth-btn" id="btn-loggedout" type="button">Logged out</button>
+          <button class="sidebar-auth-btn" id="btn-loggedin" type="button">Logged in</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sidebar-cta"></div>
+
+    <div class="nav-bottom">
+      <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="label">Settings</span></a>
+    </div>
+  </aside>
+
+  <!-- ============== MAIN ============== -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <a class="back-btn" id="backBtn" href="#" aria-label="Back to Explore">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <span id="backLabel">Explore</span>
+      </a>
+      <div class="topbar-right" id="topbar-auth">
+        <button class="avatar-btn" type="button" aria-label="Profile"></button>
+      </div>
+    </header>
+
+    <!-- READER COLUMN -->
+    <div class="reader-col">
+      <article class="reader">
+
+        <!-- AUTHOR BLOCK -->
+        <div class="author-block">
+          <div class="av-lg" style="background:linear-gradient(135deg,#b399ff,#5e35d8);">AR</div>
+          <div class="author-info">
+            <div class="author-name">
+              Ananya Roy
+              <svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="author-meta">
+              <span>Research scientist · Anthropic</span>
+              <span class="dot-sep">·</span>
+              <span>4 hours ago</span>
+              <span class="dot-sep">·</span>
+              <span>May 12, 2026</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TITLE -->
+        <h1 class="post-title">Skill Induction Heads: mechanistic evidence for few-shot learning in 70B models</h1>
+
+        <!-- AI SUMMARY TOGGLE -->
+        <button class="ai-toggle" id="aiToggle" type="button" aria-expanded="false">
+          <svg class="spark" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+          <span>AI summary</span>
+          <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+
+        <!-- AI SUMMARY PANEL -->
+        <div class="ai-panel-wrap" id="aiPanel">
+          <div class="ai-panel">
+            <div class="ai-panel-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+              <span class="ai-panel-label">Key points</span>
+              <span class="ai-panel-tag">generated · 4h ago</span>
+            </div>
+            <ul class="ai-panel-bullets">
+              <li>The authors isolate a class of <b>~140 attention heads</b> across layers 18–32 that fire only on <em>coherent</em> in-context examples — not on shuffled or noisy ones.</li>
+              <li>Ablating a <em>single</em> head drops 5-shot accuracy by <span class="mono">11–18 pts</span> on MMLU-Pro; ablating the cluster collapses few-shot to zero-shot performance.</li>
+              <li>Heads form three sub-populations: <b>retrieval</b> (find the demonstration), <b>format</b> (lock onto the output shape), and <b>predict</b> (apply the rule).</li>
+              <li>The circuit appears <em>only above 30B parameters</em>; smaller models show statistically null versions of the same heads.</li>
+              <li>Activation patching localises the effect to a sparse, <span class="mono">&lt; 800-feature</span> subspace in the residual stream — small enough to start naming individual features.</li>
+            </ul>
+            <div class="ai-panel-foot">
+              <span>Sourced from §3, §4.2, Fig. 5</span>
+<a class="ai-regenerate" href="#">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></svg>
+                Regenerate
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- MARKDOWN BODY -->
+        <div class="md">
+          <p>For the last three years, in-context learning has been the most useful and least understood capability of large language models. You show the model a handful of examples, it learns the pattern, and it does the task. There is no weight update. There is no obvious place where the &ldquo;learning&rdquo; could be happening. And yet it works — sometimes startlingly well, sometimes inexplicably not at all.</p>
+
+          <p>In this paper we present mechanistic evidence that few-shot learning in 70B-class models is implemented by a specific, localizable circuit: a population of attention heads we call <strong>skill induction heads</strong>. We characterise the circuit, ablate it, and show that without it, in-context learning collapses to chance-above-baseline.</p>
+
+          <h2>What we found</h2>
+
+          <p>Across two open-weights 70B models and one frontier closed model accessed via logit lens, we identify roughly 140 attention heads — concentrated in <code>layers 18–32</code> — that activate selectively when the model is presented with a coherent in-context task.</p>
+
+          <p>The heads are <em>not</em> activated by:</p>
+          <ul>
+            <li>shuffled demonstrations (same tokens, random order)</li>
+            <li>label-corrupted demonstrations (right format, wrong labels)</li>
+            <li>off-task demonstrations (right labels for a different problem)</li>
+          </ul>
+
+          <p>They <em>are</em> activated by anything the model can plausibly use as a worked example — even if the example is in a language the model has never been finetuned on, even if the format is unusual, even if the demonstration is presented as a comment in a code block.</p>
+
+          <figure>
+            <div class="fig">
+              <svg class="fig-induction" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="head-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#0a0a0a" stop-opacity="0.05"/>
+                    <stop offset="1" stop-color="#0a0a0a" stop-opacity="0.3"/>
+                  </linearGradient>
+                </defs>
+                <rect width="680" height="280" fill="#F9F9F9"/>
+                <!-- axes -->
+                <line x1="60" y1="240" x2="640" y2="240" stroke="#D4D4D4" stroke-width="1"/>
+                <line x1="60" y1="40" x2="60" y2="240" stroke="#D4D4D4" stroke-width="1"/>
+                <!-- x labels: layer numbers -->
+                <g font-family="JetBrains Mono" font-size="9.5" fill="#ABABAB">
+                  <text x="60" y="258">L0</text>
+                  <text x="200" y="258">L16</text>
+                  <text x="340" y="258">L32</text>
+                  <text x="480" y="258">L48</text>
+                  <text x="620" y="258">L64</text>
+                </g>
+                <!-- y labels: head index -->
+                <g font-family="JetBrains Mono" font-size="9.5" fill="#ABABAB" text-anchor="end">
+                  <text x="54" y="244">0</text>
+                  <text x="54" y="180">16</text>
+                  <text x="54" y="116">32</text>
+                  <text x="54" y="52">48</text>
+                </g>
+                <!-- background grid -->
+                <g stroke="#EBEBEB" stroke-width="0.5">
+                  <line x1="60" y1="180" x2="640" y2="180"/>
+                  <line x1="60" y1="116" x2="640" y2="116"/>
+                  <line x1="60" y1="52" x2="640" y2="52"/>
+                </g>
+                <!-- heatmap-style dots representing head activations; cluster in layers 18-32 -->
+                <g id="heads"></g>
+                <!-- annotation -->
+                <rect x="200" y="60" width="180" height="170" fill="none" stroke="#0a0a0a" stroke-width="1.2" stroke-dasharray="3 3"/>
+                <text x="290" y="54" font-family="Inter" font-size="11" font-weight="600" fill="#0a0a0a" text-anchor="middle">Skill induction cluster · 138 heads</text>
+                <text x="290" y="248" font-family="Inter" font-size="10" fill="#6B6B6B" text-anchor="middle">layer index →</text>
+                <text x="20" y="140" font-family="Inter" font-size="10" fill="#6B6B6B" transform="rotate(-90 20 140)" text-anchor="middle">head index →</text>
+                <!-- legend -->
+                <g transform="translate(490 60)">
+                  <rect width="130" height="62" fill="#fff" stroke="#EBEBEB" rx="6"/>
+                  <circle cx="14" cy="18" r="3.5" fill="#0a0a0a" opacity="0.9"/>
+                  <text x="24" y="21" font-family="Inter" font-size="10" fill="#0a0a0a">selective (high)</text>
+                  <circle cx="14" cy="36" r="3" fill="#0a0a0a" opacity="0.5"/>
+                  <text x="24" y="39" font-family="Inter" font-size="10" fill="#6B6B6B">selective (mid)</text>
+                  <circle cx="14" cy="52" r="2" fill="#ABABAB" opacity="0.6"/>
+                  <text x="24" y="55" font-family="Inter" font-size="10" fill="#6B6B6B">background</text>
+                </g>
+              </svg>
+            </div>
+            <figcaption>fig 3 · head-level selectivity for in-context demonstrations · llama-3 70B</figcaption>
+          </figure>
+
+          <h2>How we tested it</h2>
+
+          <p>The core experimental claim is an ablation. We zero out the output of a head, hold everything else fixed, and measure the change in few-shot performance. The result, on a panel of seven downstream tasks:</p>
+
+          <div class="stats">
+            <div class="head">Task</div>
+            <div class="head">5-shot base</div>
+            <div class="head">Head-cluster ablated</div>
+            <div class="head">Δ</div>
+
+            <div>MMLU-Pro</div>
+            <div class="num">62.4</div>
+            <div class="num">41.1</div>
+            <div class="num delta-dn">−21.3</div>
+
+            <div>GSM8K</div>
+            <div class="num">81.0</div>
+            <div class="num">52.7</div>
+            <div class="num delta-dn">−28.3</div>
+
+            <div>AIME 2024</div>
+            <div class="num">28.1</div>
+            <div class="num">11.4</div>
+            <div class="num delta-dn">−16.7</div>
+
+            <div>BBH (avg)</div>
+            <div class="num">71.6</div>
+            <div class="num">59.0</div>
+            <div class="num delta-dn">−12.6</div>
+
+            <div>HumanEval</div>
+            <div class="num">76.8</div>
+            <div class="num">73.5</div>
+            <div class="num delta-dn">−3.3</div>
+          </div>
+
+          <p>The effect is largest on tasks that require <em>compositional</em> reasoning over the demonstration (GSM8K, MMLU-Pro), smaller on tasks where the demonstration mainly anchors output format (HumanEval). This is consistent with the &ldquo;skill induction&rdquo; framing: when there is no skill to induce — just a format to match — the heads matter less.</p>
+
+          <p>Crucially, ablating the same heads has <strong>almost no effect</strong> on zero-shot performance. The model is not relying on these heads to know things; it is relying on them to learn from things you just showed it.</p>
+
+          <h2>A minimal probe</h2>
+
+          <p>Below is a 14-line patching harness. If you have model internals and a tokenizer, you can reproduce the headline number for any 70B-class model in roughly twelve minutes.</p>
+
+<div class="code-block">
+  <button class="copy-btn" type="button" aria-label="Copy code">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    Copy
+  </button>
+  <pre><code><span class="kw">from</span> <span class="nm">verita.interp</span> <span class="kw">import</span> <span class="fn">patch_heads</span>, <span class="fn">eval_suite</span>
+
+<span class="cm"># 1) probe the model with two demonstration formats</span>
+clean   = <span class="fn">eval_suite</span>(model, suite=<span class="st">"mmlu-pro"</span>, n_shot=<span class="st">5</span>)
+shuffled = <span class="fn">eval_suite</span>(model, suite=<span class="st">"mmlu-pro"</span>, n_shot=<span class="st">5</span>, shuffle=<span class="st">True</span>)
+
+<span class="cm"># 2) identify heads whose activation deltas track demo coherence</span>
+heads = <span class="fn">patch_heads</span>(model, clean, shuffled, threshold=<span class="st">0.4</span>)
+
+<span class="cm"># 3) ablate and re-evaluate</span>
+score = <span class="fn">eval_suite</span>(model, suite=<span class="st">"mmlu-pro"</span>, n_shot=<span class="st">5</span>,
+                    <span class="fn">zero_heads</span>=heads)
+
+<span class="kw">print</span>(<span class="st">f"clean: {clean:.1f}  ablated: {score:.1f}"</span>)
+<span class="cm"># clean: 62.4  ablated: 41.1</span></code></pre>
+</div>
+
+          <p>The script and our checkpoint hashes are in the repo. If you reproduce, please file an issue with your environment — we&rsquo;re collecting a leaderboard of head-counts across models, and the data is starting to look like a phase diagram.</p>
+
+          <h2>What this isn&rsquo;t</h2>
+
+          <p>This is <em>not</em> a claim that we understand in-context learning. We have localized a circuit that is necessary for it; we have not shown that the circuit is sufficient, and we cannot yet predict from weights alone which heads will become skill-induction heads during training.</p>
+
+          <blockquote>The honest version is: we can now point at the place where the magic happens. We still don&rsquo;t know what the magic is.</blockquote>
+
+          <p>That said — pointing matters. For the first time, the field has a falsifiable target. We expect the next year of mechanistic interpretability work to refine, contest, and extend the picture we&rsquo;re sketching here. The point of this paper is not to be right. The point is to be specific enough to be wrong.</p>
+        </div>
+
+        <!-- POST FOOTER: tags + sources -->
+        <div class="post-footer">
+          <div class="tags">
+            <a class="tag-pill" href="#">#mech-interp</a>
+            <a class="tag-pill" href="#">#paper</a>
+            <a class="tag-pill" href="#">#alignment</a>
+            <a class="tag-pill" href="#">#in-context-learning</a>
+          </div>
+          <div class="sources">
+            <span class="sources-label">Sources</span>
+            <a class="src-item" href="#" aria-label="arxiv paper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="m15 3 6 0 0 6"/><path d="M10 14 21 3"/></svg>
+              arxiv.org/abs/2511.04812
+            </a>
+            <a class="src-item" href="#" aria-label="GitHub repository">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="m15 3 6 0 0 6"/><path d="M10 14 21 3"/></svg>
+              github.com/anthropics/skill-induction-heads
+            </a>
+            <a class="src-item" href="#" aria-label="Weights & Biases report">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="m15 3 6 0 0 6"/><path d="M10 14 21 3"/></svg>
+              wandb.ai/ananya-roy/skill-induction/reports/…
+            </a>
+          </div>
+        </div>
+
+        <!-- ENGAGE STRIP -->
+        <div class="engage-row">
+          <span class="stat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <b id="engageLikes">487</b> likes
+          </span>
+          <span class="sep"></span>
+          <span class="stat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>
+            <b>62</b> comments
+          </span>
+          <span class="sep"></span>
+          <span class="stat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <b>1,204</b> saves
+          </span>
+          <span class="sep"></span>
+          <span class="stat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <b>18,402</b> views
+          </span>
+        </div>
+
+        <!-- COMMENTS -->
+        <section class="comments" id="comments">
+          <div class="comments-head">
+            <h2>Comments</h2>
+            <span class="count">62</span>
+            <div class="sort-dropdown-wrap">
+              <button class="sort-pill" id="sortPill" type="button">
+                <span id="sortLabel">Top</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div class="sort-dropdown" id="sortDropdown">
+                <button type="button" class="active" data-sort="top">Top</button>
+                <button type="button" data-sort="newest">Newest</button>
+                <button type="button" data-sort="oldest">Oldest</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comment 1 -->
+          <article class="cmt">
+            <div class="av-sm" style="background:linear-gradient(135deg,#f9d976,#c97b1a);">CO</div>
+            <div class="cmt-body">
+              <div class="cmt-head">
+                <span class="who">Chris Olah <svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="role">anthropic</span>
+                <span>·</span>
+                <span>3h ago</span>
+              </div>
+              <div class="cmt-text">
+                <p>This is great. The most interesting part for me is the &ldquo;skill induction only above 30B&rdquo; finding — it&rsquo;s consistent with what we&rsquo;ve been seeing internally on the SAE side. There&rsquo;s a phase transition where some bundle of capabilities arrives <em>together</em>, and it really does look like a circuit-level thing rather than a smooth scaling curve.</p>
+                <p>Question: did you check whether the same 140 heads transfer across finetunes? Curious whether they survive RLHF.</p>
+              </div>
+              <div class="cmt-actions">
+                <button type="button" class="liked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>184</button>
+                <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+              </div>
+
+              <!-- Reply thread -->
+              <div class="cmt-replies">
+                <article class="cmt">
+                  <div class="av-sm" style="background:linear-gradient(135deg,#b399ff,#5e35d8);">AR</div>
+                  <div class="cmt-body">
+                    <div class="cmt-head">
+                      <span class="who">Ananya Roy <svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                      <span class="op">Author</span>
+                      <span>·</span>
+                      <span>2h ago</span>
+                    </div>
+                    <div class="cmt-text">
+                      <p>Yes — we ran the same probe on three RLHF&rsquo;d checkpoints. ~92% of the heads survive, but the <em>selectivity</em> sharpens: the &ldquo;format&rdquo; sub-population gets noticeably more decisive after RLHF. We have a follow-up draft on this. Will share next week.</p>
+                    </div>
+                    <div class="cmt-actions">
+                      <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>96</button>
+                      <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="cmt">
+                  <div class="av-sm" style="background:linear-gradient(135deg,#7ab8c9,#1f5f78);">LS</div>
+                  <div class="cmt-body">
+                    <div class="cmt-head">
+                      <span class="who">L. Sharkey</span>
+                      <span class="role">apollo</span>
+                      <span>·</span>
+                      <span>1h ago</span>
+                    </div>
+                    <div class="cmt-text">
+                      <p>+1 to this question — also curious about the cross-family case. Do the heads have a clean signature in residual space that survives different tokenizers? If yes, the &ldquo;naming features&rdquo; story actually has legs.</p>
+                    </div>
+                    <div class="cmt-actions">
+                      <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>41</button>
+                      <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </article>
+
+          <!-- Comment 2 -->
+          <article class="cmt">
+            <div class="av-sm" style="background:linear-gradient(135deg,#ffb27a,#c44a4a);">HP</div>
+            <div class="cmt-body">
+              <div class="cmt-head">
+                <span class="who">Helena Park <svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="role">aisi</span>
+                <span>·</span>
+                <span>2h ago</span>
+              </div>
+              <div class="cmt-text">
+                <p>The line at the end — &ldquo;specific enough to be wrong&rdquo; — is the kind of framing this field has been missing. I want to push back gently on one thing though: ablation as evidence of necessity is fine, but it&rsquo;s not the same as evidence of <em>mechanism</em>. The cluster could be necessary because it&rsquo;s downstream of the real circuit, not because it <em>is</em> the real circuit.</p>
+                <p>Have you tried activation patching <em>from</em> shuffled-demo runs <em>into</em> coherent-demo runs, instead of just ablating?</p>
+              </div>
+              <div class="cmt-actions">
+                <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>112</button>
+                <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- Comment 3 -->
+          <article class="cmt">
+            <div class="av-sm" style="background:linear-gradient(135deg,#a3d4a8,#3f7d4a);">MC</div>
+            <div class="cmt-body">
+              <div class="cmt-head">
+                <span class="who">Marcus Chen</span>
+                <span>·</span>
+                <span>1h ago</span>
+              </div>
+              <div class="cmt-text">
+                <p>Reproduced the headline number on llama-3 70B-instruct: <code>62.4 → 42.7</code>. Slightly less collapse than yours, probably because of the instruct overlay. Will post the full env in a few hours, but the effect is real and not noise.</p>
+                <p>One small thing: line 9 of the patching harness wants <code>n_shot=5</code> as an int, not a string. Tripped me up for ten minutes.</p>
+              </div>
+              <div class="cmt-actions">
+                <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>67</button>
+                <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- Comment 4 -->
+          <article class="cmt">
+            <div class="av-sm" style="background:linear-gradient(135deg,#c5b9ff,#4f3eaa);">NG</div>
+            <div class="cmt-body">
+              <div class="cmt-head">
+                <span class="who">Naomi Greene <svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="role">deepmind</span>
+                <span>·</span>
+                <span>34m ago</span>
+              </div>
+              <div class="cmt-text">
+                <p>The three sub-populations — retrieval, format, predict — line up uncannily well with what we got from a totally different methodology (path patching on synthetic tasks). Either we&rsquo;re both seeing the same thing or we&rsquo;re both pattern-matching on the same coincidence. I&rsquo;d bet on the former.</p>
+              </div>
+              <div class="cmt-actions">
+                <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>89</button>
+                <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+              </div>
+            </div>
+          </article>
+
+          <button class="show-more" type="button">Load 58 more comments</button>
+        </section>
+
+      </article>
+    </div>
+
+    <!-- right spacer column (kept symmetric) -->
+    <div></div>
+  </main>
+</div>
+
+<!-- FLOATING BOTTOM BAR: composer + actions pill -->
+<div class="bottom-bar">
+  <div id="composer-slot"></div>
+  <div class="actions-pill">
+    <button class="cact" id="scrollCommentsBtn" type="button" aria-label="Jump to comments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span id="commentCountLabel">62</span>
+    </button>
+    <div class="cact-sep"></div>
+    <div class="cact-group" id="likeGroup">
+      <button class="cact" id="likeBtn" type="button" aria-label="Like">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="likeIcon"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span id="likeCount">487</span>
+      </button>
+    </div>
+    <div class="cact-sep"></div>
+    <div class="cact-group" id="bookmarkGroup">
+      <button class="cact" id="bookmarkBtn" type="button" aria-label="Save">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="bookmarkIcon"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span>Save</span>
+      </button>
+    </div>
+    <div class="cact-sep"></div>
+    <button class="cact" id="shareBtn" type="button" aria-label="Copy link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v14"/></svg>
+      <span>Share</span>
+    </button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toastMsg">Link copied to clipboard</span>
+</div>
+
+<script>
+/* ======= Back label (context-aware via history.state) ======= */
+(function() {
+  const label = document.getElementById('backLabel');
+  const from = (history.state && history.state.from) || 'Explore';
+  label.textContent = from;
+})();
+
+/* ======= Reading progress ======= */
+const progressBar = document.getElementById('readingProgress');
+function updateProgress() {
+  const article = document.querySelector('.reader');
+  if (!article) return;
+  const rect = article.getBoundingClientRect();
+  const total = article.scrollHeight - window.innerHeight;
+  const scrolled = -rect.top;
+  const pct = Math.max(0, Math.min(100, (scrolled / total) * 100));
+  progressBar.style.width = pct + '%';
+}
+window.addEventListener('scroll', updateProgress, { passive: true });
+updateProgress();
+
+/* ======= AI summary toggle ======= */
+const aiToggle = document.getElementById('aiToggle');
+const aiPanel = document.getElementById('aiPanel');
+aiToggle.addEventListener('click', () => {
+  const open = aiPanel.classList.toggle('open');
+  aiToggle.classList.toggle('open', open);
+  aiToggle.setAttribute('aria-expanded', open);
+});
+
+
+/* ======= Like (main) ======= */
+const likeBtn = document.getElementById('likeBtn');
+const likeGroup = document.getElementById('likeGroup');
+const likeIcon = document.getElementById('likeIcon');
+const likeCount = document.getElementById('likeCount');
+const engageLikes = document.getElementById('engageLikes');
+let liked = false;
+let likes = 487;
+likeBtn.addEventListener('click', () => {
+  liked = !liked;
+  likes += liked ? 1 : -1;
+  likeBtn.classList.toggle('on', liked);
+  likeGroup.classList.toggle('on', liked);
+  likeIcon.setAttribute('fill', liked ? 'currentColor' : 'none');
+  likeCount.textContent = likes.toLocaleString();
+  engageLikes.textContent = likes.toLocaleString();
+});
+
+/* ======= Bookmark ======= */
+const bookmarkBtn = document.getElementById('bookmarkBtn');
+const bookmarkGroup = document.getElementById('bookmarkGroup');
+const bookmarkIcon = document.getElementById('bookmarkIcon');
+bookmarkBtn.addEventListener('click', () => {
+  const saved = bookmarkBtn.classList.toggle('on');
+  bookmarkGroup.classList.toggle('on', saved);
+  bookmarkIcon.setAttribute('fill', saved ? 'currentColor' : 'none');
+  showToast(saved ? 'Saved to bookmarks' : 'Removed from bookmarks');
+});
+
+/* ======= Share / copy link ======= */
+document.getElementById('shareBtn').addEventListener('click', () => {
+  showToast('Link copied to clipboard');
+});
+
+/* ======= Scroll to comments ======= */
+document.getElementById('scrollCommentsBtn').addEventListener('click', () => {
+  const section = document.getElementById('comments');
+  if (!section) return;
+  const y = section.getBoundingClientRect().top + window.scrollY - 80;
+  window.scrollTo({ top: y, behavior: 'smooth' });
+});
+
+/* ======= Comment likes (per-comment) ======= */
+document.querySelectorAll('.cmt-actions').forEach(actions => {
+  const likeBtn = actions.querySelector('button:first-child');
+  if (!likeBtn) return;
+  const svg = likeBtn.querySelector('svg');
+  if (!svg) return;
+  const originalNum = parseInt(likeBtn.textContent.trim()) || 0;
+  let cmtLiked = likeBtn.classList.contains('liked');
+  let cmtCount = originalNum;
+
+  likeBtn.addEventListener('click', () => {
+    cmtLiked = !cmtLiked;
+    cmtCount += cmtLiked ? 1 : -1;
+    likeBtn.classList.toggle('liked', cmtLiked);
+    svg.setAttribute('fill', cmtLiked ? 'currentColor' : 'none');
+    const textNode = [...likeBtn.childNodes].find(n => n.nodeType === 3);
+    if (textNode) textNode.textContent = cmtCount;
+    else likeBtn.appendChild(document.createTextNode(cmtCount));
+  });
+});
+
+/* ======= Reply inline ======= */
+function createReplyInput(commentBody) {
+  if (commentBody.querySelector('.reply-inline')) return;
+  const el = document.createElement('div');
+  el.className = 'reply-inline';
+  el.innerHTML = `
+    <div class="av-sm">YL</div>
+    <div class="reply-inline-box">
+      <textarea placeholder="Write a reply…" rows="1"></textarea>
+      <div class="reply-inline-actions">
+        <button type="button" class="reply-cancel">Cancel</button>
+        <button type="button" class="reply-submit disabled">Reply</button>
+      </div>
+    </div>
+  `;
+  commentBody.appendChild(el);
+  const ta = el.querySelector('textarea');
+  const submitBtn = el.querySelector('.reply-submit');
+  ta.focus();
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+    submitBtn.classList.toggle('disabled', ta.value.trim().length === 0);
+  });
+  el.querySelector('.reply-cancel').addEventListener('click', () => el.remove());
+  submitBtn.addEventListener('click', () => {
+    if (ta.value.trim()) {
+      showToast('Reply posted');
+      el.remove();
+    }
+  });
+}
+
+document.querySelectorAll('.cmt-actions').forEach(actions => {
+  const replyBtn = actions.querySelectorAll('button')[1];
+  if (!replyBtn || !replyBtn.textContent.includes('Reply')) return;
+  replyBtn.addEventListener('click', () => {
+    createReplyInput(actions.closest('.cmt-body'));
+  });
+});
+
+/* ======= Sort dropdown ======= */
+const sortPill = document.getElementById('sortPill');
+const sortDropdown = document.getElementById('sortDropdown');
+const sortLabel = document.getElementById('sortLabel');
+
+sortPill.addEventListener('click', (e) => {
+  e.stopPropagation();
+  sortDropdown.classList.toggle('open');
+});
+sortDropdown.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    sortDropdown.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sortLabel.textContent = btn.textContent;
+    sortDropdown.classList.remove('open');
+  });
+});
+document.addEventListener('click', () => sortDropdown.classList.remove('open'));
+
+/* ======= Auth state toggle ======= */
+let isLoggedIn = true;
+
+function applyAuthState() {
+  // Sidebar CTA: New post (logged-in) vs Sign in (logged-out)
+  document.getElementById('sidebar-cta').innerHTML = isLoggedIn
+    ? `<a class="nav-cta" href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 5v14M5 12h14"/></svg><span class="label">New post</span></a>`
+    : `<a class="nav-signin" href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg><span class="label">Sign in</span></a>`;
+
+  // Topbar right: avatar vs sign-in btn
+  document.getElementById('topbar-auth').innerHTML = isLoggedIn
+    ? `<button class="avatar-btn" type="button" aria-label="Profile"></button>`
+    : `<button class="signin-btn" type="button">Sign in</button>`;
+
+  // Floating composer vs sign-in prompt
+  const slot = document.getElementById('composer-slot');
+  if (isLoggedIn) {
+    slot.innerHTML = `
+      <div class="composer" id="composer">
+        <div class="composer-row1">
+          <div class="av-sm">YL</div>
+          <input class="input" id="composerInput" placeholder="Add a comment…" />
+        </div>
+        <div class="composer-foot" id="composerFoot">
+          <span class="char-count" id="charCount">0 / 2000</span>
+          <button class="send-cta disabled" id="sendCta" type="button">
+            Send
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-14 9V3z"/></svg>
+          </button>
+        </div>
+      </div>`;
+    initComposer();
+  } else {
+    slot.innerHTML = `
+      <div class="composer-signin">
+        <span>Join the discussion</span>
+        <button class="composer-signin-cta" type="button">Sign in to comment</button>
+      </div>`;
+  }
+
+  document.getElementById('btn-loggedin').classList.toggle('active', isLoggedIn);
+  document.getElementById('btn-loggedout').classList.toggle('active', !isLoggedIn);
+}
+
+function initComposer() {
+  const composer = document.getElementById('composer');
+  if (!composer) return;
+
+  function expand() {
+    if (composer.classList.contains('expanded')) return;
+    composer.classList.add('expanded');
+    const inp = document.getElementById('composerInput');
+    if (inp && inp.tagName === 'INPUT') {
+      const ta = document.createElement('textarea');
+      ta.id = 'composerInput';
+      ta.className = 'input';
+      ta.placeholder = 'Share your thoughts on this paper…';
+      ta.value = inp.value;
+      inp.replaceWith(ta);
+      ta.focus();
+      ta.addEventListener('input', updateChar);
+      updateChar();
+    }
+  }
+  function collapse() {
+    composer.classList.remove('expanded');
+    const inp = document.getElementById('composerInput');
+    if (inp && inp.tagName === 'TEXTAREA' && inp.value.trim() === '') {
+      const newInp = document.createElement('input');
+      newInp.id = 'composerInput';
+      newInp.className = 'input';
+      newInp.placeholder = 'Add a comment…';
+      newInp.type = 'text';
+      inp.replaceWith(newInp);
+      newInp.addEventListener('focus', expand);
+    }
+  }
+  function updateChar() {
+    const inp = document.getElementById('composerInput');
+    const charCount = document.getElementById('charCount');
+    const sendCta = document.getElementById('sendCta');
+    if (!inp || !charCount || !sendCta) return;
+    const n = inp.value.length;
+    charCount.textContent = `${n} / 2000`;
+    sendCta.classList.toggle('disabled', n === 0);
+  }
+
+  const composerInput = document.getElementById('composerInput');
+  if (composerInput) composerInput.addEventListener('focus', expand);
+
+  document.addEventListener('click', (e) => {
+    if (!composer.contains(e.target)) {
+      const inp = document.getElementById('composerInput');
+      if (inp && inp.value && inp.value.trim() !== '') return;
+      collapse();
+    }
+  });
+
+  const sendCta = document.getElementById('sendCta');
+  if (sendCta) {
+    sendCta.addEventListener('click', () => {
+      const inp = document.getElementById('composerInput');
+      if (inp && inp.value && inp.value.trim()) {
+        showToast('Comment posted');
+        inp.value = '';
+        collapse();
+      }
+    });
+  }
+}
+
+document.getElementById('btn-loggedin').addEventListener('click', () => { isLoggedIn = true; applyAuthState(); });
+document.getElementById('btn-loggedout').addEventListener('click', () => { isLoggedIn = false; applyAuthState(); });
+
+// Run once on load
+applyAuthState();
+
+/* ======= Toast ======= */
+const toast = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMsg');
+let toastTimer = null;
+function showToast(msg) {
+  toastMsg.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+/* ======= Populate figure dots ======= */
+(function(){
+  const g = document.getElementById('heads');
+  if (!g) return;
+  const cols = 64, rows = 56;
+  const x0 = 60, x1 = 640, y0 = 40, y1 = 240;
+  const cellW = (x1 - x0) / cols;
+  const cellH = (y1 - y0) / rows;
+  function selectivity(layer, head) {
+    const lc = 25, hc = 30, lw = 8, hw = 18;
+    const dl = (layer - lc) / lw;
+    const dh = (head - hc) / hw;
+    const base = Math.exp(-(dl*dl + dh*dh));
+    return base * 0.95 + Math.random() * 0.06;
+  }
+  let dots = '';
+  for (let l = 0; l < cols; l++) {
+    for (let h = 0; h < rows; h++) {
+      const s = selectivity(l, h);
+      if (s < 0.06 && Math.random() > 0.04) continue;
+      const cx = x0 + (l + 0.5) * cellW;
+      const cy = y1 - (h + 0.5) * cellH;
+      const r = s < 0.15 ? 1.4 : (s < 0.45 ? 2.2 : 3.5);
+      const op = s < 0.15 ? 0.3 : (s < 0.45 ? 0.6 : 0.9);
+      dots += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="#0a0a0a" opacity="${op}"/>`;
+    }
+  }
+  g.innerHTML = dots;
+})();
+
+/* Copy code blocks */
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const code = btn.closest('.code-block').querySelector('code');
+    navigator.clipboard.writeText(code.innerText).then(() => {
+      btn.classList.add('copied');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy';
+      }, 2000);
+    });
+  });
+});
+
+// ── Demo navigation intercept ──
+(function() {
+  function nav(page) {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'verita-navigate', page }, '*');
+    } else {
+      window.location.href = page;
+    }
+  }
+
+  document.addEventListener('click', function(e) {
+    const el = e.target.closest('a, button');
+    if (!el) return;
+
+    if (el.closest('.brand')) { e.preventDefault(); nav('Verita Home.html'); return; }
+
+    const navItem = el.closest('.nav-item');
+    if (navItem) {
+      const label = navItem.textContent.trim().toLowerCase();
+      if (label.startsWith('explore')) { e.preventDefault(); nav('Verita Home.html'); return; }
+      if (label.startsWith('digest')) { e.preventDefault(); nav('Verita Digest Post.html'); return; }
+      if (label.startsWith('settings')) { e.preventDefault(); nav('Verita Settings.html'); return; }
+    }
+
+    if (el.closest('.back-btn') || el.id === 'backBtn') { e.preventDefault(); nav('Verita Home.html'); return; }
+    if (el.closest('.nav-cta')) { e.preventDefault(); nav('Verita Post Editor.html'); return; }
+    if (el.closest('.avatar-btn')) { e.preventDefault(); nav('Verita User Profile.html'); return; }
+    if (el.closest('.author-chip') || (el.closest('.author-row') && !el.closest('.card'))) {
+      e.preventDefault(); nav('Verita User Profile.html'); return;
+    }
+  }, true);
+})();
+</script>
+
+</body>
+</html>

@@ -1,16 +1,16 @@
-﻿openapi: 3.0.3
+openapi: 3.0.3
 info:
   title: Verita Content Service API
   description: |
-    Comprehensive service for managing the lifecycle of posts, hierarchical comments, 
-    tagging systems, user interactions (votes/bookmarks), and content moderation.
-  version: 1.0.0
+    Comprehensive service for managing the lifecycle of posts, hierarchical comments,
+    tagging systems, user interactions (likes/bookmarks), and content moderation.
+  version: 1.1.0
   license:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
 servers:
   - url: 'http://api.verita.local/content'
-    description: Production-style internal URL (Resolves localhost warning)
+    description: Production-style internal URL
 
 paths:
   # --- POSTS MANAGEMENT ---
@@ -18,8 +18,20 @@ paths:
     get:
       operationId: getAllPosts
       summary: Retrieve a paginated list of posts
+      description: |
+        General-purpose endpoint for fetching a batch of posts with optional tag filtering.
+        Intended for use cases such as tag-based browsing, admin tooling, or any client
+        that needs raw paginated post data.
+
+        **Not** the homepage feed — the personalised and trending feeds are served by the
+        Recommendation Service (`GET /api/v1/feed/personal` and `GET /api/v1/feed/trending`).
+        Those endpoints apply algorithmic ranking and return enriched post payloads.
+
+        The `tag` parameter performs an exact-match filter and returns results in
+        reverse-chronological order. For popularity-ranked tag browsing, use
+        `GET /api/v1/feed/trending?tag=` in the Recommendation Service instead.
       tags: [Posts]
-      security: [] # Explicitly public
+      security: []
       parameters:
         - name: page
           in: query
@@ -51,15 +63,85 @@ paths:
       responses:
         '201':
           description: Post created successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/posts/cards:
+    get:
+      operationId: getPostCards
+      summary: Fetch lightweight PostCard objects for multiple posts by ID
+      description: |
+        Returns `PostCard` objects (no article body) for the given post IDs, preserving
+        the order of the `ids` parameter. Called by the frontend after receiving a `postIds`
+        list from the Recommendation Service to populate feed cards.
+      tags: [Posts]
+      security: []
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          description: Comma-separated list of post UUIDs, e.g. `ids=id1,id2,id3`.
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+            maxItems: 50
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: Posts retrieved successfully. Missing IDs are silently omitted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PostCard' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/posts/search:
+    get:
+      operationId: searchPosts
+      summary: Search posts by keyword
+      description: |
+        Full-text keyword search across post titles and content.
+        Returns results ranked by relevance to the query string, not by time or popularity.
+
+        This endpoint is driven by user intent (the user typed something to find) and is
+        distinct from feed discovery. Future iterations may back this with a dedicated
+        search engine (e.g. Elasticsearch) without changing the contract.
+
+        Authentication is optional. When a valid Bearer token is present, `isLikedByMe`
+        and `isBookmarkedByMe` are populated per the authenticated user; otherwise they
+        default to `false`.
+      tags: [Posts]
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
 
   /api/v1/posts/{id}:
     get:
       operationId: getPostById
       summary: Get detailed post by ID
       tags: [Posts]
-      security: [] # Public access
+      security: []
       parameters:
         - name: id
           in: path
@@ -91,6 +173,9 @@ paths:
       responses:
         '200':
           description: Post updated successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -111,13 +196,74 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  # --- LIKES ---
+  /api/v1/posts/{id}/like:
+    post:
+      operationId: likePost
+      summary: Like or dislike a post
+      description: Send LIKE or DISLIKE to cast/change a reaction. Send NONE to remove any existing reaction.
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LikeRequest' }
+      responses:
+        '200':
+          description: Like processed successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostLikeResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --- BOOKMARKS ---
+  /api/v1/posts/{id}/bookmark:
+    post:
+      operationId: bookmarkPost
+      summary: Save a post to the current user's bookmarks
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Post bookmarked successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    delete:
+      operationId: unbookmarkPost
+      summary: Remove a post from the current user's bookmarks
+      tags: [Interactions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Post removed from bookmarks successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # --- COMMENTS ---
   /api/v1/posts/{id}/comments:
     get:
-      operationId: getPostComments
+      operationId: getCommentsByPost
       summary: Get all comments for a post
       tags: [Comments]
-      security: [] # Public
+      security: []
       parameters:
         - name: id
           in: path
@@ -134,7 +280,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
     post:
-      operationId: addComment
+      operationId: createComment
       summary: Post a comment or reply
       tags: [Comments]
       security: [{ bearerAuth: [] }]
@@ -151,14 +297,34 @@ paths:
       responses:
         '201':
           description: Comment created successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  # --- VOTING ---
-  /api/v1/posts/{id}/vote:
+  /api/v1/comments/{id}:
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment owned by the current user
+      tags: [Comments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Comment deleted successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/comments/{id}/like:
     post:
-      operationId: castVote
-      summary: Cast or change a vote
+      operationId: likeComment
+      summary: Like a comment
       tags: [Interactions]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -166,31 +332,124 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/VoteRequest' }
       responses:
         '200':
-          description: Vote processed successfully
-        '401': { $ref: '#/components/responses/Unauthorized' }
-
-  # --- BOOKMARKS ---
-  /api/v1/bookmarks:
-    get:
-      operationId: getUserBookmarks
-      summary: Get the current user's bookmarks
-      tags: [Interactions]
-      security: [{ bearerAuth: [] }]
-      responses:
-        '200':
-          description: List of bookmarks retrieved
+          description: Comment like processed successfully
           content:
             application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/PostResponse' } }
+              schema: { $ref: '#/components/schemas/CommentLikeResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --- CURRENT USER PRIVATE RESOURCES (/me/) ---
+  /api/v1/me/drafts:
+    get:
+      operationId: getMyDrafts
+      summary: Get current user's draft posts
+      tags: [Me]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Drafts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  # --- USER PUBLIC RESOURCES (/users/{id}/) ---
+  /api/v1/users/{id}/posts:
+    get:
+      operationId: getUserPosts
+      summary: Get published posts authored by a user
+      tags: [Users]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: User posts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/users/{id}/bookmarks:
+    get:
+      operationId: getUserBookmarks
+      summary: Get a user's bookmarked posts
+      description: |
+        Returns bookmarked posts for the given user. Visibility is controlled by the user's
+        `showBookmarks` preference (from UserPreferences). The current user can always access
+        their own bookmarks; other users' bookmarks are only visible when `showBookmarks` is true.
+      tags: [Users]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Bookmarked posts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/users/{id}/likes:
+    get:
+      operationId: getUserLikes
+      summary: Get posts liked by a user
+      description: |
+        Returns liked posts for the given user. Visibility is controlled by the user's
+        `showLikes` preference (from UserPreferences). The current user can always access
+        their own likes; other users' likes are only visible when `showLikes` is true.
+      tags: [Users]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Liked posts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --- TAGS ---
   /api/v1/tags/trending:
     get:
       operationId: getTrendingTags
@@ -223,6 +482,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: The user is not allowed to perform this action
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
     NotFound:
       description: The requested resource was not found
       content:
@@ -230,58 +494,139 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
+    # --- SHARED ---
+    AuthorSummary:
+      type: object
+      description: Lightweight author info embedded in posts and comments to avoid extra lookups
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        avatarUrl: { type: string, format: uri, nullable: true }
+        role: { type: string, enum: [USER, VERIFIED, ADMIN] }
+        organisation: { type: string, nullable: true }
+
+    Tag:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    # --- POSTS ---
+    PostCard:
+      type: object
+      description: Lightweight post shape for feed cards. Omits full body content.
+      properties:
+        id: { type: string, format: uuid }
+        author: { $ref: '#/components/schemas/AuthorSummary' }
+        title: { type: string }
+        excerpt: { type: string, nullable: true }
+        coverImageUrl: { type: string, format: uri, nullable: true }
+        tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        readTimeMinutes: { type: integer, nullable: true }
+        likeCount: { type: integer }
+        commentCount: { type: integer }
+        viewCount: { type: integer }
+        isLikedByMe: { type: boolean, description: "False when request is unauthenticated" }
+        createdAt: { type: string, format: date-time }
+
     PostRequest:
       type: object
       required: [title, content]
       properties:
-        title: { type: string, minLength: 5, maxLength: 200 }
+        title: { type: string, minLength: 5, maxLength: 100 }
         content: { type: string }
-        tags: { type: array, items: { type: string } }
+        excerpt: { type: string, maxLength: 500, description: "Short preview shown in feed cards. Auto-generated from content if omitted." }
+        coverImageUrl: { type: string, format: uri, nullable: true }
+        sourceUrl: { type: array, items: { type: string, format: uri } }
+        tags: { type: array, items: { type: string }, description: "Tag names. New tags are created automatically." }
+        status: { type: string, enum: [DRAFT, PUBLISHED], default: PUBLISHED }
 
     PostResponse:
       type: object
       properties:
         id: { type: string, format: uuid }
-        authorId: { type: string, format: uuid }
+        author: { $ref: '#/components/schemas/AuthorSummary' }
+        status: { type: string, enum: [DRAFT, PUBLISHED] }
         title: { type: string }
-        content: { type: string }
-        tags: { type: array, items: { type: string } }
+        excerpt: { type: string, description: "Short preview text for feed cards" }
+        content: { type: string, description: "Full post body (Markdown)" }
+        coverImageUrl: { type: string, format: uri, nullable: true }
+        tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        sourceUrl: { type: array, items: { type: string, format: uri } }
+        readTimeMinutes: { type: integer }
+        likeCount: { type: integer }
+        dislikeCount: { type: integer }
+        commentCount: { type: integer }
+        viewCount: { type: integer }
+        saveCount: { type: integer, description: "Number of times this post has been bookmarked" }
+        isLikedByMe: { type: boolean, description: "True if the authenticated user liked this post" }
+        isDislikedByMe: { type: boolean, description: "True if the authenticated user disliked this post" }
+        isBookmarkedByMe: { type: boolean, description: "True if the authenticated user bookmarked this post" }
         createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     PostPage:
       type: object
       properties:
         content: { type: array, items: { $ref: '#/components/schemas/PostResponse' } }
+        page: { type: integer }
+        size: { type: integer }
         totalPages: { type: integer }
         totalElements: { type: integer }
 
+    # --- COMMENTS ---
     CommentRequest:
       type: object
-      required: [content]
+      required: [text]
       properties:
-        content: { type: string }
-        parentId: { type: string, format: uuid }
+        text: { type: string }
+        parentId: { type: string, format: uuid, nullable: true, description: "ID of parent comment for replies" }
 
     CommentResponse:
       type: object
       properties:
         id: { type: string, format: uuid }
-        authorId: { type: string, format: uuid }
-        content: { type: string }
+        author: { $ref: '#/components/schemas/AuthorSummary' }
+        text: { type: string }
+        likeCount: { type: integer }
+        isLikedByMe: { type: boolean }
+        createdAt: { type: string, format: date-time }
         replies: { type: array, items: { $ref: '#/components/schemas/CommentResponse' } }
 
-    VoteRequest:
+    # --- INTERACTIONS ---
+    LikeRequest:
       type: object
-      required: [direction]
+      required: [type]
       properties:
-        direction: { type: integer, enum: [1, 0, -1] }
+        type:
+          type: string
+          enum: [LIKE, DISLIKE, NONE]
+          description: "LIKE or DISLIKE to cast/change reaction. NONE to remove any existing reaction."
 
+    PostLikeResponse:
+      type: object
+      properties:
+        likeCount: { type: integer }
+        dislikeCount: { type: integer }
+        isLikedByMe: { type: boolean }
+        isDislikedByMe: { type: boolean }
+
+    CommentLikeResponse:
+      type: object
+      properties:
+        likeCount: { type: integer }
+        isLikedByMe: { type: boolean }
+
+    # --- TAGS ---
     TagResponse:
       type: object
       properties:
+        id: { type: string, format: uuid }
         name: { type: string }
         usageCount: { type: integer }
 
+    # --- ERRORS ---
     ErrorResponse:
       type: object
       properties:
