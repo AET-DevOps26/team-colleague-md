@@ -1,0 +1,45 @@
+.tagbar {
+  display: flex;
+  align-items: center;
+  padding: 16px 32px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.85);
+  gap: 0;
+}
+
+.tagbar::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  font-size: 13.5px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 120ms ease-out;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.chip:first-child {
+  padding-left: 0;
+}
+
+.chip:hover {
+  color: var(--text-primary);
+}
+
+.chip.active {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}

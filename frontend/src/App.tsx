@@ -1,25 +1,44 @@
-import { useEffect, useState } from 'react'
-import './App.css'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { AuthModalProvider, SettingsModalProvider } from './contexts/ModalContext';
+import AppLayout from './components/layout/AppLayout';
+import Home from './pages/Home';
+import PostDetail from './pages/PostDetail';
+import PostEditor from './pages/PostEditor';
+import Digest from './pages/Digest';
+import DigestPost from './pages/DigestPost';
+import Search from './pages/Search';
+import UserProfile from './pages/UserProfile';
+import Admin from './pages/Admin';
+import NotFound from './pages/NotFound';
+import AuthModal from './components/modals/AuthModal';
+import SettingsModal from './components/modals/SettingsModal';
 
-function App() {
-  const [message, setMessage] = useState('Loading...')
-
-  useEffect(() => {
-    fetch('http://localhost:8081/health')
-      .then(res => res.text())
-      .then(data => setMessage(data))
-      .catch(err => setMessage('Error fetching from User Service: ' + err.message))
-  }, [])
-
+export default function App() {
   return (
-    <div className="App">
-      <h1>Verita Frontend</h1>
-      <div className="card">
-        <p>Message from backend:</p>
-        <h2>{message}</h2>
-      </div>
-    </div>
-  )
+    <BrowserRouter>
+      <AuthProvider>
+        <AuthModalProvider>
+          <SettingsModalProvider>
+            <Routes>
+              <Route path="/" element={<AppLayout />}>
+                <Route index element={<Home />} />
+                <Route path="post/new" element={<PostEditor />} />
+                <Route path="post/:id/edit" element={<PostEditor />} />
+                <Route path="post/:id" element={<PostDetail />} />
+                <Route path="digest" element={<Digest />} />
+                <Route path="digest/:date" element={<DigestPost />} />
+                <Route path="search" element={<Search />} />
+                <Route path="profile/:username" element={<UserProfile />} />
+                <Route path="admin" element={<Admin />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+            <AuthModal />
+            <SettingsModal />
+          </SettingsModalProvider>
+        </AuthModalProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
 }
-
-export default App
