@@ -19,7 +19,6 @@ export function useFeed() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadInitial(activeTag);
   }, [activeTag, loadInitial]);
 

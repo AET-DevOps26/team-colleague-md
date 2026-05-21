@@ -18,5 +18,23 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // Allow context and hooks to be exported alongside components
+      // This is a common React pattern for centralized state management
+      'react-refresh/only-export-components': 'warn',
+
+      // Allow setState in effects for loading state management
+      // Async data fetching typically sets loading state synchronously
+      'react-hooks/set-state-in-effect': 'off',
+
+      // Allow unused parameters prefixed with underscore (mock implementations)
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
 ])

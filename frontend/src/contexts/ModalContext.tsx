@@ -15,7 +15,6 @@ interface SettingsModalContextValue {
   close: () => void;
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const AuthModalContext = createContext<AuthModalContextValue>({
   isOpen: false,
   activeTab: 'login',
@@ -23,19 +22,16 @@ export const AuthModalContext = createContext<AuthModalContextValue>({
   close: () => {},
 });
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const SettingsModalContext = createContext<SettingsModalContextValue>({
   isOpen: false,
   open: () => {},
   close: () => {},
 });
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuthModal() {
   return useContext(AuthModalContext);
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useSettingsModal() {
   return useContext(SettingsModalContext);
 }
