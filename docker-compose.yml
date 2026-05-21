@@ -21,6 +21,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    env_file:
+      - ./genai-service/.env
     healthcheck:
       # Poll FastAPI health endpoint; non-200 response marks container unhealthy
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
