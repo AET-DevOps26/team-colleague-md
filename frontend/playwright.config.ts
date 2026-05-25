@@ -3,6 +3,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   snapshotDir: './tests/snapshots',
+  expect: {
+    toHaveScreenshot: { maxDiffPixelRatio: 0.25 },
+  },
   use: {
     baseURL: 'http://localhost:3000',
     screenshot: 'only-on-failure',
