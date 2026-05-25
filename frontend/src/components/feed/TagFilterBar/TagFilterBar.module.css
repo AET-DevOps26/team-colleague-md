@@ -1,12 +1,11 @@
 .tagbar {
   display: flex;
   align-items: center;
-  padding: 16px 32px 14px;
+  height: 44px;
+  padding: 0 28px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  border-top: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.85);
   gap: 0;
 }
 
@@ -22,7 +21,7 @@
   color: var(--text-tertiary);
   font-weight: 500;
   white-space: nowrap;
-  transition: color 120ms ease-out;
+  transition: color var(--motion-hover);
   background: none;
   border: none;
   cursor: pointer;
