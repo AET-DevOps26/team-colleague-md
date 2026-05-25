@@ -99,15 +99,17 @@ test('I-12: FAB click triggers spin animation', async ({ page }) => {
   await page.goto('/');
   const fab = page.locator('[aria-label="Refresh feed"]');
   await fab.click();
-  const cls = await fab.locator('svg').getAttribute('class');
-  expect(cls).toContain('spinning');
+  await expect(fab.locator('svg')).toHaveClass(/spinning/);
 });
 
 test('I-13: scroll to bottom loads more posts', async ({ page }) => {
   await page.goto('/');
   const before = await page.locator('[data-testid="image-card"], [data-testid="text-card"]').count();
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await page.waitForTimeout(800);
+  await page.waitForFunction(
+    (n) => document.querySelectorAll('[data-testid="image-card"], [data-testid="text-card"]').length > n,
+    before
+  );
   const after = await page.locator('[data-testid="image-card"], [data-testid="text-card"]').count();
   expect(after).toBeGreaterThan(before);
 });
