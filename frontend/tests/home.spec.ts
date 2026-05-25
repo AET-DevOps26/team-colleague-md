@@ -19,7 +19,7 @@ test('VR-1: logged-out 3-column masonry at 1440px', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await page.waitForSelector('[data-testid="image-card"], [data-testid="text-card"]');
-  await expect(page).toMatchSnapshot('home-logged-out-1440.png');
+  await expect(page).toHaveScreenshot('home-logged-out-1440.png');
 });
 
 test('VR-2: logged-in 3-column masonry at 1440px', async ({ page }) => {
@@ -27,21 +27,21 @@ test('VR-2: logged-in 3-column masonry at 1440px', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await page.waitForSelector('[data-testid="image-card"], [data-testid="text-card"]');
-  await expect(page).toMatchSnapshot('home-logged-in-1440.png');
+  await expect(page).toHaveScreenshot('home-logged-in-1440.png');
 });
 
 test('VR-3: 2-column masonry at 1024px', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto('/');
   await page.waitForSelector('[data-testid="image-card"], [data-testid="text-card"]');
-  await expect(page).toMatchSnapshot('home-1024.png');
+  await expect(page).toHaveScreenshot('home-1024.png');
 });
 
 test('VR-4: single column at 759px', async ({ page }) => {
   await page.setViewportSize({ width: 759, height: 900 });
   await page.goto('/');
   await page.waitForSelector('[data-testid="image-card"], [data-testid="text-card"]');
-  await expect(page).toMatchSnapshot('home-759.png');
+  await expect(page).toHaveScreenshot('home-759.png');
 });
 
 test('LT-5: sidebar is 240px wide', async ({ page }) => {
