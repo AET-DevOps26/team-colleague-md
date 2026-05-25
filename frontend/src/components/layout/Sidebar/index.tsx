@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal, useSettingsModal } from '../../../contexts/ModalContext';
 import styles from './Sidebar.module.css';
@@ -55,28 +55,39 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
   const { open: openSettings } = useSettingsModal();
+  const { pathname } = useLocation();
 
   return (
-    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
-      <Link to="/" className={styles.brand} aria-label="Verita home">
-        {collapsed ? (
-          <>
-            <span className={styles.brandMark}>V</span>
-            <span className={styles.brandWord}>Verita</span>
-          </>
-        ) : (
-          <span className={styles.brandWord}>Verita</span>
-        )}
-      </Link>
+    <aside
+      className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}
+      data-testid="sidebar"
+    >
+      <div className={styles.brand}>
+        <div className={styles.brandWordmark}>
+          <span className={styles.brandV}>V</span>
+          <span className={styles.brandErita}>erita</span>
+        </div>
+      </div>
 
       <nav className={styles.nav} aria-label="Primary">
-        <Link to="/" className={styles.navItem}>
+        <Link
+          to="/"
+          className={styles.navItem}
+          aria-current={pathname === '/' ? 'page' : undefined}
+        >
           <IconExplore />
           <span className={styles.label}>Explore</span>
         </Link>
-        <Link to="/digest" className={styles.navItem}>
+        <Link
+          to="/digest"
+          className={styles.navItem}
+          aria-current={pathname.startsWith('/digest') ? 'page' : undefined}
+        >
           <IconDigest />
           <span className={styles.label}>Digest</span>
+          {isLoggedIn && (
+            <span className={styles.badge} data-testid="digest-badge">3</span>
+          )}
         </Link>
       </nav>
 
@@ -88,7 +99,11 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           <span className={styles.label}>New post</span>
         </Link>
       ) : (
-        <button className={styles.navSignin} onClick={() => openAuth('login')}>
+        <button
+          className={styles.navSignin}
+          onClick={() => openAuth('login')}
+          data-testid="sidebar-signin"
+        >
           <IconSignIn />
           <span className={styles.label}>Sign in</span>
         </button>
@@ -100,6 +115,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           onClick={isLoggedIn ? openSettings : undefined}
           disabled={!isLoggedIn}
           aria-disabled={!isLoggedIn}
+          data-testid="sidebar-settings"
         >
           <IconSettings />
           <span className={styles.label}>Settings</span>
