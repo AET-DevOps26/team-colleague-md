@@ -54,31 +54,41 @@ class TestSummarizeEndpoint:
     def test_summarize_success(self, mock_build_chain, client):
         """Valid request should return 200 with 3-bullet summary."""
         # Mock the LCEL chain's ainvoke to return canned response
+        from langchain_core.messages import AIMessage
         mock_chain = AsyncMock()
-        mock_chain.ainvoke.return_value = MOCK_LLM_RESPONSE
+        mock_chain.ainvoke.return_value = AIMessage(
+            content=MOCK_LLM_RESPONSE,
+            usage_metadata={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150}
+        )
         mock_build_chain.return_value = (mock_chain, "gemini-2.0-flash")
 
         response = client.post(
             "/api/v1/genai/summarize",
-            json={"content": VALID_CONTENT, "title": "GPT-5 Released"},
+            json={"postId": "test-post-id", "content": VALID_CONTENT, "title": "GPT-5 Released"},
         )
 
         assert response.status_code == 200
         data = response.json()
+        assert data["postId"] == "test-post-id"
         assert len(data["summary"]) == 3
         assert data["model"] == "gemini-2.0-flash"
         assert "GPT-5" in data["summary"][0]
+        assert data["usage"]["total_tokens"] == 150
 
     @patch("app.services.summarizer._build_chain")
     def test_summarize_without_title(self, mock_build_chain, client):
         """Request without title should also work."""
+        from langchain_core.messages import AIMessage
         mock_chain = AsyncMock()
-        mock_chain.ainvoke.return_value = MOCK_LLM_RESPONSE
+        mock_chain.ainvoke.return_value = AIMessage(
+            content=MOCK_LLM_RESPONSE,
+            usage_metadata={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150}
+        )
         mock_build_chain.return_value = (mock_chain, "gemini-2.0-flash")
 
         response = client.post(
             "/api/v1/genai/summarize",
-            json={"content": VALID_CONTENT},
+            json={"postId": "test-post-id", "content": VALID_CONTENT},
         )
 
         assert response.status_code == 200
@@ -89,7 +99,7 @@ class TestSummarizeEndpoint:
         """Content under 50 characters should return 422 validation error."""
         response = client.post(
             "/api/v1/genai/summarize",
-            json={"content": SHORT_CONTENT},
+            json={"postId": "test-post-id", "content": SHORT_CONTENT},
         )
 
         assert response.status_code == 422
@@ -122,7 +132,7 @@ class TestSummarizeEndpoint:
 
         response = client.post(
             "/api/v1/genai/summarize",
-            json={"content": VALID_CONTENT},
+            json={"postId": "test-post-id", "content": VALID_CONTENT},
         )
 
         assert response.status_code == 502
