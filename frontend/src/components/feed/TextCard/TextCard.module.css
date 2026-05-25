@@ -1,0 +1,60 @@
+.card {
+  break-inside: avoid;
+  margin-bottom: 24px;
+  cursor: pointer;
+  transition: transform var(--motion-card-lift);
+  display: block;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+}
+
+.cream {
+  background: var(--bg-paper);
+  border-radius: 12px;
+  padding: 14px 28px 14px 16px;
+  transition: transform var(--motion-card-lift), box-shadow var(--motion-card-lift);
+}
+
+.card:hover .cream {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -10px rgba(0, 0, 0, 0.12);
+}
+
+.eyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.pullQuote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  border-left: 2px solid var(--border-default);
+  padding-left: 12px;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+  margin-top: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

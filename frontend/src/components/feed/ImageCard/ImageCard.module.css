@@ -1,0 +1,59 @@
+.card {
+  break-inside: avoid;
+  margin-bottom: 24px;
+  cursor: pointer;
+  transition: transform var(--motion-card-lift);
+  display: block;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+}
+
+.cover {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform var(--motion-card-lift), box-shadow var(--motion-card-lift);
+}
+
+.card:hover .cover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -10px rgba(0, 0, 0, 0.12);
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.badgeType {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: var(--radius-tag);
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+  margin-top: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
