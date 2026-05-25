@@ -1,0 +1,1072 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>Verita — New Post</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens/tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-base); color: var(--text-primary); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  body { font-size: 13px; line-height: 1.5; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  input, textarea, select { font: inherit; }
+
+  /* ---- Layout ---- */
+  .app { display: grid; grid-template-columns: var(--sidebar-rail) 1fr; min-height: 100vh; transition: grid-template-columns 200ms ease; }
+  .app:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
+
+  /* ---- Sidebar ---- */
+  .sidebar {
+    position: sticky; top: 0; height: 100vh;
+    width: var(--sidebar-rail);
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column;
+    padding: 0 8px 14px;
+    overflow: hidden;
+    transition: width 200ms ease, padding 200ms ease;
+  }
+  .sidebar:hover { width: var(--sidebar-w); padding: 0 14px 16px; }
+  .brand {
+    display: flex; align-items: flex-end; justify-content: center; gap: 1px;
+    height: 88px; padding: 0 0 16px; margin: 0;
+    white-space: nowrap; overflow: hidden;
+  }
+  .brand-word {
+    font-family: var(--font-serif); font-style: italic; font-weight: 500;
+    font-size: 32px; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1;
+    white-space: nowrap;
+  }
+  .brand-word .lead { font-size: 38px; font-weight: 600; }
+  .sidebar:not(:hover) .brand-word { transform: translateX(-2px); }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 13px;
+    padding: 16px 14px; border-radius: 8px;
+    color: var(--text-secondary); font-size: 15px; font-weight: 500;
+    transition: background 120ms ease-out, color 120ms ease-out;
+    cursor: pointer; width: 100%; text-align: left; white-space: nowrap; overflow: hidden;
+  }
+  .sidebar:not(:hover) .nav-item { padding: 16px 0; justify-content: center; gap: 0; }
+  .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .nav-item.active { color: var(--text-primary); background: var(--bg-elevated); }
+  .nav-item .ico { width: 24px; height: 24px; flex-shrink: 0; stroke-width: 1.75; }
+  .nav-label {
+    opacity: 0; transition: opacity 150ms ease 60ms;
+    overflow: hidden;
+  }
+  .sidebar:not(:hover) .nav-label { width: 0; margin: 0; padding: 0; }
+  .sidebar:hover .nav-label { opacity: 1; }
+  .nav-spacer { flex: 1; }
+  .nav-bottom { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid var(--border-subtle); margin-top: 10px; }
+
+  /* ---- Main col ---- */
+  .main { min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ---- Top bar ---- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: saturate(160%) blur(10px);
+    -webkit-backdrop-filter: saturate(160%) blur(10px);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 28px 10px 24px;
+    height: 52px;
+  }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--text-secondary); font-size: 12.5px; font-weight: 500;
+    padding: 5px 8px 5px 6px; border-radius: 7px;
+    transition: background 120ms, color 120ms;
+  }
+  .back-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .back-btn svg { width: 16px; height: 16px; }
+  .topbar-spacer { flex: 1; }
+  .stat-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 500; color: var(--text-tertiary);
+    font-family: var(--font-mono);
+    padding: 3px 8px; border-radius: 5px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+  }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 500; color: var(--text-secondary);
+    padding: 4px 10px; border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    transition: background 120ms;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-tertiary);
+  }
+  .status-pill.saved .status-dot { background: var(--success); }
+  .status-pill.saving .status-dot { background: var(--warning); }
+  .discard-btn {
+    height: 34px; padding: 0 13px; border-radius: 8px;
+    border: 1px solid var(--border-default);
+    font-size: 12.5px; font-weight: 500; color: var(--text-secondary);
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: background 120ms, color 120ms, border-color 120ms, opacity 120ms;
+  }
+  .discard-btn.hidden { display: none !important; }
+  .discard-btn:hover { background: var(--bg-elevated); color: var(--danger); border-color: var(--danger); }
+  .publish-btn {
+    height: 34px; padding: 0 16px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    font-size: 12.5px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background 140ms, transform 140ms;
+  }
+  .publish-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .publish-btn:active { transform: translateY(0); }
+  .avatar-btn {
+    width: 34px; height: 34px; border-radius: 10px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #c0a4ff 0%, #ff8a8a 45%, #ffc28a 100%);
+    border: 1px solid var(--border-subtle);
+    position: relative; flex-shrink: 0;
+  }
+  .avatar-btn::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 30% 35%, #fff 0 4px, transparent 5px),
+      radial-gradient(circle at 65% 32%, #fff 0 4px, transparent 5px),
+      radial-gradient(ellipse at 50% 70%, #0a0a0a 0 6px, transparent 7px),
+      linear-gradient(135deg, #c0a4ff 0%, #ff8a8a 45%, #ffc28a 100%);
+  }
+  .avatar-btn::after {
+    content: "";
+    position: absolute; left: 30%; top: 35%; width: 2px; height: 2px;
+    background: #0a0a0a; border-radius: 50%;
+    box-shadow: 15px 0 0 #0a0a0a;
+  }
+
+  /* ---- Editor canvas ---- */
+  .editor-canvas {
+    flex: 1;
+    display: flex; justify-content: center;
+    padding: 40px 28px 120px;
+  }
+  .editor-inner { width: 100%; max-width: 760px; }
+
+  /* ---- Title ---- */
+  .title-input {
+    width: 100%;
+    border: 0; outline: 0; background: transparent;
+    font-family: var(--font-sans);
+    font-size: 32px; font-weight: 700; line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+    resize: none; overflow: hidden;
+    padding: 0; margin: 0 0 10px;
+    display: block;
+  }
+  .title-input::placeholder { color: var(--text-tertiary); }
+
+  /* ---- Cover area ---- */
+  .cover-zone { margin-bottom: 22px; }
+  .cover-add-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 500; color: var(--text-tertiary);
+    padding: 6px 10px 6px 8px; border-radius: 7px;
+    border: 1px dashed var(--border-default);
+    transition: all 140ms;
+  }
+  .cover-add-btn:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-surface); }
+  .cover-add-btn svg { width: 15px; height: 15px; }
+  .cover-preview {
+    position: relative; width: 100%;
+    aspect-ratio: 3/2; border-radius: 10px;
+    overflow: hidden; border: 1px solid var(--border-subtle);
+    display: none;
+  }
+  .cover-preview.visible { display: block; }
+  .cover-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cover-remove {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(10,10,10,0.65); color: #fff;
+    border-radius: 6px; padding: 4px 8px;
+    font-size: 11.5px; font-weight: 500;
+    transition: background 120ms;
+  }
+  .cover-remove:hover { background: rgba(10,10,10,0.88); }
+  #coverInput { display: none; }
+
+  /* ---- Toolbar ---- */
+  .toolbar {
+    display: flex; align-items: center; gap: 2px;
+    padding: 6px 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .tb-btn {
+    width: 32px; height: 32px; border-radius: 6px;
+    display: grid; place-items: center;
+    color: var(--text-secondary);
+    transition: background 120ms, color 120ms;
+    position: relative;
+  }
+  .tb-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .tb-btn[disabled] { opacity: 0.35; pointer-events: none; }
+  .tb-btn svg { width: 15px; height: 15px; stroke-width: 1.8; }
+  .tb-btn-tip {
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent); color: #fff;
+    font-size: 10.5px; font-weight: 500; white-space: nowrap;
+    padding: 4px 7px; border-radius: 5px;
+    opacity: 0; pointer-events: none; transition: opacity 100ms;
+    z-index: 10;
+  }
+  .tb-btn:hover .tb-btn-tip { opacity: 1; }
+  .tb-sep { width: 1px; height: 20px; background: var(--border-subtle); margin: 0 4px; }
+  .tb-toggle {
+    margin-left: auto;
+    display: inline-flex; align-items: center;
+    border: 1px solid var(--border-default);
+    border-radius: 7px; overflow: hidden;
+  }
+  .tb-toggle-btn {
+    height: 30px; padding: 0 12px;
+    font-size: 12px; font-weight: 500; color: var(--text-secondary);
+    transition: background 120ms, color 120ms;
+  }
+  .tb-toggle-btn:hover { color: var(--text-primary); }
+  .tb-toggle-btn.on { background: var(--accent); color: #fff; }
+  .tb-toggle-sep { width: 1px; background: var(--border-default); }
+
+  /* ---- Editor/Preview ---- */
+  .ed-write, .ed-preview { display: none; }
+  .ed-write.active, .ed-preview.active { display: block; }
+
+  .ed-textarea {
+    width: 100%; min-height: 460px;
+    border: 0; outline: 0; background: transparent;
+    font-family: var(--font-mono);
+    font-size: 14px; line-height: 1.7;
+    color: var(--text-primary);
+    resize: none; padding: 20px 0 0; display: block;
+  }
+  .ed-textarea::placeholder { color: var(--text-tertiary); }
+
+  .ed-preview { padding: 20px 0 0; }
+  .preview-badge {
+    display: none; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-tertiary);
+    margin-bottom: 14px;
+  }
+  .preview-badge.visible { display: inline-flex; }
+  .preview-badge::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--success);
+  }
+
+  /* Markdown preview styles */
+  .md { font-size: 15px; line-height: 1.75; color: var(--text-primary); letter-spacing: -0.005em; }
+  .md > * + * { margin-top: 1.1em; }
+  .md p { margin: 0; text-wrap: pretty; }
+  .md h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; margin: 0 0 0.5em; }
+  .md h2 { font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; margin: 2em 0 0.6em; }
+  .md h2:first-child { margin-top: 0; }
+  .md h3 { font-size: 16px; font-weight: 600; line-height: 1.3; margin: 1.6em 0 0.4em; letter-spacing: -0.01em; }
+  .md strong { font-weight: 600; }
+  .md em { font-style: italic; }
+  .md a { color: var(--text-primary); text-decoration: underline; text-decoration-color: var(--border-default); text-underline-offset: 3px; }
+  .md a:hover { text-decoration-color: var(--accent); }
+  .md code { font-family: var(--font-mono); font-size: 13px; background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1px 5px; border-radius: 4px; }
+  .md pre { background: #0A0A0A; color: #f0f0f0; padding: 16px 18px; border-radius: 10px; font: 400 13px/1.65 var(--font-mono); overflow-x: auto; margin: 0; }
+  .md pre code { background: none; border: 0; padding: 0; color: inherit; }
+  .md blockquote { border-left: 2px solid var(--text-primary); padding: 4px 0 4px 18px; margin: 0; font-family: var(--font-serif); font-style: italic; font-size: 17px; line-height: 1.5; }
+  .md ul, .md ol { margin: 0; padding-left: 24px; }
+  .md ul li, .md ol li { margin-top: 6px; text-wrap: pretty; }
+  .md hr { border: 0; height: 1px; background: var(--border-subtle); margin: 2.4em 0; }
+  .md img { max-width: 100%; border-radius: 8px; border: 1px solid var(--border-subtle); display: block; }
+
+  /* ---- Meta section ---- */
+  .meta-section {
+    margin-top: 32px; padding-top: 24px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .meta-field { display: flex; flex-direction: column; gap: 7px; }
+  .meta-label {
+    font-size: 11px; font-weight: 600; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.07em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .meta-label svg { width: 13px; height: 13px; stroke-width: 1.7; color: var(--text-tertiary); }
+  .meta-input {
+    height: 38px; width: 100%;
+    border: 1px solid var(--border-subtle); border-radius: 8px;
+    background: var(--bg-surface); padding: 0 12px;
+    font-size: 13px; color: var(--text-primary); outline: 0;
+    transition: border-color 120ms, background 120ms, box-shadow 120ms;
+  }
+  .meta-input::placeholder { color: var(--text-tertiary); }
+  .meta-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+
+  /* Sources (multi-URL) */
+  .sources-list { display: flex; flex-direction: column; gap: 6px; }
+  .source-row {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .source-row .meta-input { flex: 1; margin: 0; }
+  .source-remove-btn {
+    width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
+    display: grid; place-items: center; color: var(--text-tertiary);
+    transition: background 120ms, color 120ms;
+  }
+  .source-remove-btn:hover { background: var(--bg-elevated); color: var(--danger); }
+  .source-remove-btn svg { width: 14px; height: 14px; stroke-width: 2; }
+  .source-add-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500; color: var(--text-tertiary);
+    padding: 5px 8px 5px 6px; border-radius: 7px;
+    border: 1px dashed var(--border-default);
+    transition: all 140ms; margin-top: 2px;
+  }
+  .source-add-btn:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-surface); }
+  .source-add-btn svg { width: 13px; height: 13px; stroke-width: 2; }
+
+  /* Tags input */
+  .tags-wrap {
+    display: flex; align-items: flex-start; flex-wrap: wrap; gap: 6px;
+    min-height: 38px;
+    border: 1px solid var(--border-subtle); border-radius: 8px;
+    background: var(--bg-surface); padding: 5px 10px; cursor: text;
+    transition: border-color 120ms, background 120ms, box-shadow 120ms;
+  }
+  .tags-wrap:focus-within { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+  .tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--bg-elevated); color: var(--text-primary);
+    padding: 3px 8px 3px 9px; border-radius: 4px;
+    font-size: 12px; font-weight: 500; font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+  .tag-chip-remove {
+    width: 14px; height: 14px; border-radius: 3px;
+    display: grid; place-items: center;
+    color: var(--text-tertiary);
+    transition: background 100ms, color 100ms;
+  }
+  .tag-chip-remove:hover { background: var(--border-default); color: var(--text-primary); }
+  .tag-chip-remove svg { width: 9px; height: 9px; stroke-width: 2.5; }
+  .tags-input {
+    flex: 1; min-width: 120px; height: 24px;
+    border: 0; outline: 0; background: transparent;
+    font-size: 13px; color: var(--text-primary);
+    padding: 0 2px; align-self: center;
+  }
+  .tags-input::placeholder { color: var(--text-tertiary); }
+
+
+  /* ---- Modals ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.2); backdrop-filter: blur(2px);
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; border: 1px solid var(--border-subtle);
+    border-radius: 14px; box-shadow: 0 24px 48px rgba(0,0,0,0.14);
+    padding: 20px 22px 18px; width: 400px;
+    animation: modalIn 160ms cubic-bezier(0.22,1,0.36,1);
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-title { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 16px; }
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-tertiary); margin-bottom: 5px; }
+  .modal-field input { width: 100%; height: 36px; border: 1px solid var(--border-default); border-radius: 7px; background: var(--bg-surface); padding: 0 10px; font-size: 13px; color: var(--text-primary); outline: 0; transition: border-color 120ms, box-shadow 120ms; }
+  .modal-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .modal-cancel { height: 32px; padding: 0 12px; border-radius: 7px; font-size: 12.5px; font-weight: 500; color: var(--text-secondary); transition: background 120ms; }
+  .modal-cancel:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .modal-insert { height: 32px; padding: 0 14px; border-radius: 7px; background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 600; transition: background 120ms; }
+  .modal-insert:hover { background: var(--accent-hover); }
+
+  /* Publish confirm */
+  .confirm-overlay {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(0,0,0,0.2); backdrop-filter: blur(2px);
+    display: none; align-items: center; justify-content: center;
+  }
+  .confirm-overlay.open { display: flex; }
+  .confirm-card {
+    background: #fff; border: 1px solid var(--border-subtle);
+    border-radius: 14px; box-shadow: 0 24px 48px rgba(0,0,0,0.14);
+    padding: 28px 28px 22px; width: 420px; text-align: center;
+    animation: modalIn 160ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .confirm-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle); display: grid; place-items: center; margin: 0 auto 14px; }
+  .confirm-icon svg { width: 20px; height: 20px; }
+  .confirm-title { font-size: 16px; font-weight: 700; letter-spacing: -0.015em; margin: 0 0 6px; }
+  .confirm-sub { font-size: 13px; color: var(--text-secondary); margin: 0 0 22px; line-height: 1.5; text-wrap: balance; }
+  .confirm-actions { display: flex; gap: 8px; justify-content: center; }
+  .confirm-back { height: 36px; padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-secondary); border: 1px solid var(--border-default); transition: all 120ms; }
+  .confirm-back:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .confirm-pub { height: 36px; padding: 0 18px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; transition: background 120ms; }
+  .confirm-pub:hover { background: var(--accent-hover); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 22px; right: 22px; z-index: 80;
+    background: var(--accent); color: #fff;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 12.5px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 200ms, transform 200ms; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast svg { width: 14px; height: 14px; color: #9ce0a0; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#" aria-label="Verita">
+      <div class="brand-word" id="brandWord"><span class="lead">V</span></div>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a class="nav-item" href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m14.5 9.5-2 5-5 2 2-5 5-2z" fill="currentColor" stroke="none"/></svg>
+        <span class="nav-label">Explore</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+        <span class="nav-label">Digest</span>
+      </a>
+    </nav>
+    <div class="nav-spacer"></div>
+    <div class="nav-bottom">
+      <a class="nav-item" href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span class="nav-label">Settings</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <a class="back-btn" id="backBtn" href="#" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <span id="backLabel">Explore</span>
+      </a>
+      <div class="topbar-spacer"></div>
+      <span class="stat-pill" id="statPill">0 words</span>
+      <div class="status-pill" id="statusPill">
+        <span class="status-dot"></span>
+        <span id="statusLabel">Draft</span>
+      </div>
+      <button class="discard-btn hidden" id="discardBtn" type="button">Discard</button>
+      <button class="publish-btn" id="publishBtn" type="button">
+        Publish
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-14 9V3z"/></svg>
+      </button>
+      <button class="avatar-btn" type="button" aria-label="Profile" style="margin-left:4px;"></button>
+    </header>
+
+    <!-- EDITOR CANVAS -->
+    <div class="editor-canvas">
+      <div class="editor-inner">
+
+        <!-- COVER -->
+        <div class="cover-zone">
+          <input type="file" id="coverInput" accept="image/*" />
+          <button class="cover-add-btn" id="coverAddBtn" type="button" aria-label="Add cover image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            Add cover image
+          </button>
+          <div class="cover-preview" id="coverPreview">
+            <img id="coverImg" src="" alt="Cover" />
+            <button class="cover-remove" id="coverRemove" type="button">Remove</button>
+          </div>
+        </div>
+
+        <!-- TITLE -->
+        <textarea
+          class="title-input"
+          id="titleInput"
+          rows="1"
+          placeholder="Post title…"
+          maxlength="200"
+          aria-label="Post title"
+        ></textarea>
+
+        <!-- TOOLBAR -->
+        <div class="toolbar" id="toolbar" role="toolbar" aria-label="Markdown formatting">
+          <button class="tb-btn" id="tbBold" type="button" aria-label="Bold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
+            <span class="tb-btn-tip">Bold (⌘B)</span>
+          </button>
+          <button class="tb-btn" id="tbItalic" type="button" aria-label="Italic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+            <span class="tb-btn-tip">Italic (⌘I)</span>
+          </button>
+          <button class="tb-btn" id="tbCode" type="button" aria-label="Inline code">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span class="tb-btn-tip">Inline code</span>
+          </button>
+          <button class="tb-btn" id="tbCodeBlock" type="button" aria-label="Code block">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M9 9l-3 3 3 3M15 9l3 3-3 3"/></svg>
+            <span class="tb-btn-tip">Code block</span>
+          </button>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" id="tbLink" type="button" aria-label="Insert link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span class="tb-btn-tip">Link (⌘K)</span>
+          </button>
+          <button class="tb-btn" id="tbImage" type="button" aria-label="Insert image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            <span class="tb-btn-tip">Insert image</span>
+          </button>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" id="tbH1" type="button" aria-label="Heading 1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M12 6v12M4 12h8"/><line x1="17" y1="7" x2="17" y2="17"/><path d="M14 9.5 17 7"/></svg>
+            <span class="tb-btn-tip">H1</span>
+          </button>
+          <button class="tb-btn" id="tbH2" type="button" aria-label="Heading 2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M12 6v12M4 12h8"/><path d="M16 10h4M18 8v8"/></svg>
+            <span class="tb-btn-tip">H2</span>
+          </button>
+          <button class="tb-btn" id="tbH3" type="button" aria-label="Heading 3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M12 6v12M4 12h8"/><path d="M16 8h3.5a1.5 1.5 0 0 1 0 3H16h3.5a1.5 1.5 0 0 1 0 3H16"/></svg>
+            <span class="tb-btn-tip">H3</span>
+          </button>
+          <button class="tb-btn" id="tbQuote" type="button" aria-label="Blockquote">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>
+            <span class="tb-btn-tip">Blockquote</span>
+          </button>
+          <button class="tb-btn" id="tbHr" type="button" aria-label="Horizontal rule">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/></svg>
+            <span class="tb-btn-tip">Divider</span>
+          </button>
+          <!-- Edit / Preview toggle -->
+          <div class="tb-toggle" role="group" aria-label="View mode">
+            <button class="tb-toggle-btn on" id="modeEdit" type="button">Edit</button>
+            <div class="tb-toggle-sep"></div>
+            <button class="tb-toggle-btn" id="modePreview" type="button">Preview</button>
+          </div>
+        </div>
+
+        <!-- EDITOR PANEL -->
+        <div class="ed-write active" id="edWrite">
+          <textarea
+            class="ed-textarea"
+            id="editorArea"
+            placeholder="Write in Markdown…&#10;&#10;## Heading&#10;**Bold**, _italic_, `inline code`&#10;&#10;```python&#10;print('Hello Verita')&#10;```"
+            spellcheck="true"
+            aria-label="Post body"
+          ></textarea>
+        </div>
+        <div class="ed-preview" id="edPreview">
+          <div class="preview-badge visible">Preview</div>
+          <div class="md" id="previewContent"></div>
+        </div>
+
+        <!-- META SECTION -->
+        <div class="meta-section">
+
+          <div class="meta-field">
+            <label class="meta-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="m15 3 6 0 0 6"/><path d="M10 14 21 3"/></svg>
+              Sources
+            </label>
+            <div class="sources-list" id="sourcesList"></div>
+            <button class="source-add-btn" id="sourceAddBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add source URL
+            </button>
+          </div>
+
+          <div class="meta-field">
+            <label class="meta-label" for="tagInputField">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              Tags
+            </label>
+            <div class="tags-wrap" id="tagsWrap">
+              <input
+                class="tags-input"
+                type="text"
+                id="tagInputField"
+                placeholder="Add tags… (Enter or comma to confirm)"
+                aria-label="Add tags"
+              />
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- UNSAVED CHANGES MODAL -->
+<div class="confirm-overlay" id="discardOverlay" role="dialog" aria-modal="true" aria-labelledby="discardTitle">
+  <div class="confirm-card">
+    <div class="confirm-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><rect x="5" y="6" width="14" height="14" rx="2"/><path d="M10 11v6M14 11v6"/></svg>
+    </div>
+    <h2 class="confirm-title" id="discardTitle">Discard changes?</h2>
+    <p class="confirm-sub">Your unsaved edits will be lost. This cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="confirm-back" id="discardCancel" type="button">Keep editing</button>
+      <button class="confirm-pub" id="discardConfirm" type="button" style="background:var(--danger);">Discard</button>
+    </div>
+  </div>
+</div>
+
+<!-- LINK MODAL -->
+<div class="modal-overlay" id="linkModal" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
+  <div class="modal">
+    <h2 class="modal-title" id="linkModalTitle">Insert link</h2>
+    <div class="modal-field">
+      <label for="linkText">Display text</label>
+      <input type="text" id="linkText" placeholder="Link label" />
+    </div>
+    <div class="modal-field">
+      <label for="linkUrl">URL</label>
+      <input type="url" id="linkUrl" placeholder="https://…" />
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="linkCancel" type="button">Cancel</button>
+      <button class="modal-insert" id="linkInsert" type="button">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE MODAL -->
+<div class="modal-overlay" id="imageModal" role="dialog" aria-modal="true" aria-labelledby="imageModalTitle">
+  <div class="modal">
+    <h2 class="modal-title" id="imageModalTitle">Insert image</h2>
+    <div class="modal-field">
+      <label for="imageUrl">Image URL</label>
+      <input type="url" id="imageUrl" placeholder="https://…" />
+    </div>
+    <div class="modal-field">
+      <label for="imageAlt">Alt text</label>
+      <input type="text" id="imageAlt" placeholder="Describe the image…" />
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="imageCancel" type="button">Cancel</button>
+      <button class="modal-insert" id="imageInsert" type="button">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- PUBLISH CONFIRM -->
+<div class="confirm-overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="confirm-card">
+    <div class="confirm-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v14"/></svg>
+    </div>
+    <h2 class="confirm-title" id="confirmTitle">Ready to publish?</h2>
+    <p class="confirm-sub">Your post will be visible to the Verita community. You can edit it afterwards.</p>
+    <div class="confirm-actions">
+      <button class="confirm-back" id="confirmBack" type="button">Keep editing</button>
+      <button class="confirm-pub" id="confirmPub" type="button">Publish now</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toastMsg">Saved</span>
+</div>
+
+<script>
+/* Back label: read from history.state.from if navigated via pushState */
+(function() {
+  const from = (history.state && history.state.from) || 'Explore';
+  document.getElementById('backLabel').textContent = from;
+})();
+
+const toastEl = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMsg');
+let toastTimer;
+function showToast(msg) {
+  toastMsg.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+}
+
+/* Title auto-resize */
+const titleInput = document.getElementById('titleInput');
+function resizeTitle() {
+  titleInput.style.height = 'auto';
+  titleInput.style.height = titleInput.scrollHeight + 'px';
+}
+titleInput.addEventListener('input', resizeTitle);
+resizeTitle();
+
+/* Cover image */
+const coverInput = document.getElementById('coverInput');
+const coverAddBtn = document.getElementById('coverAddBtn');
+const coverPreview = document.getElementById('coverPreview');
+const coverImg = document.getElementById('coverImg');
+const coverRemove = document.getElementById('coverRemove');
+coverAddBtn.addEventListener('click', () => coverInput.click());
+coverInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  coverImg.src = URL.createObjectURL(file);
+  coverPreview.classList.add('visible');
+  coverAddBtn.style.display = 'none';
+});
+coverRemove.addEventListener('click', () => {
+  coverImg.src = '';
+  coverPreview.classList.remove('visible');
+  coverAddBtn.style.display = '';
+  coverInput.value = '';
+});
+
+/* Edit / Preview toggle */
+const modeEdit = document.getElementById('modeEdit');
+const modePreview = document.getElementById('modePreview');
+const edWrite = document.getElementById('edWrite');
+const edPreview = document.getElementById('edPreview');
+const previewContent = document.getElementById('previewContent');
+const editorArea = document.getElementById('editorArea');
+
+modeEdit.addEventListener('click', () => {
+  modeEdit.classList.add('on'); modePreview.classList.remove('on');
+  edWrite.classList.add('active'); edPreview.classList.remove('active');
+  document.querySelectorAll('.tb-btn').forEach(b => b.removeAttribute('disabled'));
+});
+modePreview.addEventListener('click', () => {
+  modePreview.classList.add('on'); modeEdit.classList.remove('on');
+  edPreview.classList.add('active'); edWrite.classList.remove('active');
+  renderPreview();
+  document.querySelectorAll('.tb-btn').forEach(b => b.setAttribute('disabled', ''));
+});
+
+function renderMd(src) {
+  if (!src.trim()) return '<p style="color:var(--text-tertiary);font-style:italic;">Nothing to preview yet — switch to Edit and start writing.</p>';
+  let html = src
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  html = html.replace(/```[\w]*\n([\s\S]*?)```/gm, (_,c) => `<pre><code>${c.trimEnd()}</code></pre>`);
+  html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  html = html.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  html = html.replace(/^---$/gm,'<hr>');
+  html = html.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  html = html.replace(/__(.+?)__/g,'<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  html = html.replace(/_(.+?)_/g,'<em>$1</em>');
+  html = html.replace(/^(\s*[-*+] .+(\n|$))+/gm, m => {
+    const items = m.trim().split('\n').map(l=>`<li>${l.replace(/^\s*[-*+] /,'')}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+  html = html.replace(/^(\s*\d+\. .+(\n|$))+/gm, m => {
+    const items = m.trim().split('\n').map(l=>`<li>${l.replace(/^\s*\d+\. /,'')}</li>`).join('');
+    return `<ol>${items}</ol>`;
+  });
+  const blockRe = /^(<h[1-6]|<ul|<ol|<pre|<blockquote|<hr|<img)/;
+  html = html.split(/\n{2,}/).map(block => {
+    const t = block.trim();
+    if (!t) return '';
+    if (blockRe.test(t)) return t;
+    return `<p>${t.replace(/\n/g,'<br>')}</p>`;
+  }).join('\n');
+  return html;
+}
+function renderPreview() {
+  previewContent.innerHTML = renderMd(editorArea.value);
+}
+
+/* Word count */
+const statPill = document.getElementById('statPill');
+function updateWordCount() {
+  const text = (titleInput.value + ' ' + editorArea.value).trim();
+  const words = text ? text.split(/\s+/).filter(w=>w).length : 0;
+  const mins = Math.max(1, Math.round(words/200));
+  statPill.textContent = words===0 ? '0 words' : `${words.toLocaleString()} words · ${mins} min read`;
+}
+titleInput.addEventListener('input', updateWordCount);
+editorArea.addEventListener('input', updateWordCount);
+
+/* Auto-save indicator */
+const statusPill = document.getElementById('statusPill');
+const statusLabel = document.getElementById('statusLabel');
+let saveTimer;
+function triggerAutosave() {
+  statusPill.classList.remove('saved'); statusPill.classList.add('saving');
+  statusLabel.textContent = 'Saving…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    statusPill.classList.remove('saving'); statusPill.classList.add('saved');
+    statusLabel.textContent = 'Saved';
+  }, 900);
+}
+titleInput.addEventListener('input', triggerAutosave);
+editorArea.addEventListener('input', triggerAutosave);
+
+/* Toolbar helpers */
+function wrapSelection(before, after, placeholder) {
+  const ta = editorArea;
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = ta.value.slice(s,e) || placeholder;
+  ta.setRangeText(before+sel+after, s, e, 'select');
+  ta.focus(); updateWordCount(); triggerAutosave();
+}
+function insertAtLine(prefix) {
+  const ta = editorArea, s = ta.selectionStart;
+  const lineStart = ta.value.lastIndexOf('\n', s-1)+1;
+  const lineEnd = ta.value.indexOf('\n', s);
+  const end = lineEnd===-1 ? ta.value.length : lineEnd;
+  ta.setRangeText(prefix+ta.value.slice(lineStart,end), lineStart, end, 'end');
+  ta.focus(); updateWordCount(); triggerAutosave();
+}
+function insertText(text) {
+  const ta = editorArea, s = ta.selectionStart;
+  ta.setRangeText(text, s, ta.selectionEnd, 'end');
+  ta.focus(); updateWordCount(); triggerAutosave();
+}
+
+document.getElementById('tbBold').addEventListener('click', () => wrapSelection('**','**','bold text'));
+document.getElementById('tbItalic').addEventListener('click', () => wrapSelection('_','_','italic text'));
+document.getElementById('tbCode').addEventListener('click', () => wrapSelection('`','`','code'));
+document.getElementById('tbCodeBlock').addEventListener('click', () => insertText('\n```\n\n```\n'));
+document.getElementById('tbH1').addEventListener('click', () => insertAtLine('# '));
+document.getElementById('tbH2').addEventListener('click', () => insertAtLine('## '));
+document.getElementById('tbH3').addEventListener('click', () => insertAtLine('### '));
+document.getElementById('tbQuote').addEventListener('click', () => insertAtLine('> '));
+document.getElementById('tbHr').addEventListener('click', () => insertText('\n\n---\n\n'));
+
+editorArea.addEventListener('keydown', (e) => {
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && e.key==='b') { e.preventDefault(); wrapSelection('**','**','bold text'); }
+  if (mod && e.key==='i') { e.preventDefault(); wrapSelection('_','_','italic text'); }
+  if (mod && e.key==='k') { e.preventDefault(); openLinkModal(); }
+  if (e.key==='Tab') { e.preventDefault(); insertText('  '); }
+});
+
+/* Link modal */
+const linkModal = document.getElementById('linkModal');
+const linkText = document.getElementById('linkText');
+const linkUrl = document.getElementById('linkUrl');
+function openLinkModal() {
+  linkText.value = editorArea.value.slice(editorArea.selectionStart, editorArea.selectionEnd)||'';
+  linkUrl.value = '';
+  linkModal.classList.add('open');
+  (linkText.value ? linkUrl : linkText).focus();
+}
+document.getElementById('tbLink').addEventListener('click', openLinkModal);
+document.getElementById('linkCancel').addEventListener('click', () => { linkModal.classList.remove('open'); editorArea.focus(); });
+document.getElementById('linkInsert').addEventListener('click', () => {
+  const t = linkText.value.trim()||linkUrl.value, u = linkUrl.value.trim();
+  if (u) insertText(`[${t}](${u})`);
+  linkModal.classList.remove('open');
+});
+linkModal.addEventListener('click', e => { if (e.target===linkModal) linkModal.classList.remove('open'); });
+
+/* Image modal */
+const imageModal = document.getElementById('imageModal');
+document.getElementById('tbImage').addEventListener('click', () => {
+  document.getElementById('imageUrl').value=''; document.getElementById('imageAlt').value='';
+  imageModal.classList.add('open'); document.getElementById('imageUrl').focus();
+});
+document.getElementById('imageCancel').addEventListener('click', () => { imageModal.classList.remove('open'); editorArea.focus(); });
+document.getElementById('imageInsert').addEventListener('click', () => {
+  const url = document.getElementById('imageUrl').value.trim();
+  const alt = document.getElementById('imageAlt').value.trim()||'image';
+  if (url) insertText(`\n![${alt}](${url})\n`);
+  imageModal.classList.remove('open');
+});
+imageModal.addEventListener('click', e => { if (e.target===imageModal) imageModal.classList.remove('open'); });
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { linkModal.classList.remove('open'); imageModal.classList.remove('open'); discardOverlay.classList.remove('open'); }
+});
+
+/* Tags */
+const tagsWrap = document.getElementById('tagsWrap');
+const tagInputField = document.getElementById('tagInputField');
+let tags = [];
+
+function renderTags() {
+  tagsWrap.querySelectorAll('.tag-chip').forEach(c=>c.remove());
+  tags.forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `#${t}<button class="tag-chip-remove" aria-label="Remove ${t}" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+    chip.querySelector('.tag-chip-remove').addEventListener('click', () => { tags=tags.filter(x=>x!==t); renderTags(); });
+    tagsWrap.insertBefore(chip, tagInputField);
+  });
+}
+function addTag(val) {
+  const clean = val.trim().replace(/^#+/,'').toLowerCase().replace(/\s+/g,'-');
+  if (clean && !tags.includes(clean) && tags.length<10) { tags.push(clean); renderTags(); }
+}
+tagInputField.addEventListener('keydown', e => {
+  if (e.key==='Enter'||e.key===',') { e.preventDefault(); addTag(tagInputField.value); tagInputField.value=''; }
+  if (e.key==='Backspace' && tagInputField.value==='' && tags.length>0) { tags.pop(); renderTags(); }
+});
+tagInputField.addEventListener('blur', () => { if (tagInputField.value.trim()) { addTag(tagInputField.value); tagInputField.value=''; } });
+tagsWrap.addEventListener('click', () => tagInputField.focus());
+
+
+
+
+/* Multi-source URLs */
+const sourcesList = document.getElementById('sourcesList');
+const sourceAddBtn = document.getElementById('sourceAddBtn');
+const SOURCE_PLACEHOLDERS = [
+  'https://arxiv.org/abs/…',
+  'https://github.com/…',
+  'https://blog.example.com/…',
+  'https://huggingface.co/…',
+];
+let sourceCount = 0;
+
+function addSourceRow(value) {
+  sourceCount++;
+  const idx = sourceCount;
+  const row = document.createElement('div');
+  row.className = 'source-row';
+  row.dataset.idx = idx;
+  const ph = SOURCE_PLACEHOLDERS[(idx - 1) % SOURCE_PLACEHOLDERS.length];
+  row.innerHTML = `
+    <input class="meta-input" type="url" placeholder="${ph}" aria-label="Source URL ${idx}" value="${value || ''}" />
+    <button class="source-remove-btn" type="button" aria-label="Remove source ${idx}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>`;
+  row.querySelector('.source-remove-btn').addEventListener('click', () => {
+    row.remove();
+    if (sourcesList.children.length === 0) sourceCount = 0;
+  });
+  sourcesList.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+sourceAddBtn.addEventListener('click', () => addSourceRow(''));
+addSourceRow('');
+
+/* Dirty state + Discard button */
+const discardBtn = document.getElementById('discardBtn');
+const discardOverlay = document.getElementById('discardOverlay');
+let isDirty = false;
+
+function markDirty() {
+  if (!isDirty) {
+    isDirty = true;
+    discardBtn.classList.remove('hidden');
+  }
+}
+
+titleInput.addEventListener('input', markDirty);
+editorArea.addEventListener('input', markDirty);
+
+discardBtn.addEventListener('click', () => {
+  if (isDirty) discardOverlay.classList.add('open');
+});
+document.getElementById('discardCancel').addEventListener('click', () => {
+  discardOverlay.classList.remove('open');
+});
+document.getElementById('discardConfirm').addEventListener('click', () => {
+  discardOverlay.classList.remove('open');
+  isDirty = false;
+  discardBtn.classList.add('hidden');
+  titleInput.value = '';
+  editorArea.value = '';
+  resizeTitle();
+  updateWordCount();
+  statusPill.classList.remove('saved', 'saving');
+  statusLabel.textContent = 'Draft';
+  tags = []; renderTags();
+  sourcesList.innerHTML = ''; sourceCount = 0; addSourceRow('');
+  coverImg.src = ''; coverPreview.classList.remove('visible'); coverAddBtn.style.display = ''; coverInput.value = '';
+  showToast('Changes discarded');
+});
+discardOverlay.addEventListener('click', e => { if (e.target === discardOverlay) discardOverlay.classList.remove('open'); });
+
+/* Publish */
+const confirmOverlay = document.getElementById('confirmOverlay');
+document.getElementById('publishBtn').addEventListener('click', () => {
+  if (!titleInput.value.trim()) { showToast('Add a title before publishing'); titleInput.focus(); return; }
+  confirmOverlay.classList.add('open');
+});
+document.getElementById('confirmBack').addEventListener('click', () => confirmOverlay.classList.remove('open'));
+document.getElementById('confirmPub').addEventListener('click', () => {
+  confirmOverlay.classList.remove('open');
+  statusPill.classList.remove('saving'); statusPill.classList.add('saved');
+  statusLabel.textContent = 'Published';
+  showToast('Post published to Verita');
+});
+confirmOverlay.addEventListener('click', e => { if (e.target===confirmOverlay) confirmOverlay.classList.remove('open'); });
+
+// ── Demo navigation intercept ──
+(function() {
+  function nav(page) {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'verita-navigate', page }, '*');
+    } else {
+      window.location.href = page;
+    }
+  }
+
+  document.addEventListener('click', function(e) {
+    const el = e.target.closest('a, button');
+    if (!el) return;
+
+    if (el.closest('.brand')) { e.preventDefault(); nav('Verita Home.html'); return; }
+
+    // Cancel / back → Home
+    if (el.closest('.editor-cancel') || el.closest('.back-btn') ||
+        (el.textContent.trim() === 'Cancel' && el.tagName === 'BUTTON')) {
+      e.preventDefault(); nav('Verita Home.html'); return;
+    }
+
+    // After publish confirm → Post Detail
+    if (el.id === 'confirmPub') {
+      setTimeout(() => nav('Verita Post Detail.html'), 800);
+      return;
+    }
+  }, true);
+})();
+
+// Brand V → Verita text swap on sidebar hover
+(function(){
+  const sidebar = document.getElementById('sidebar');
+  const brandWord = document.getElementById('brandWord');
+  if (sidebar && brandWord) {
+    sidebar.addEventListener('mouseenter', () => { brandWord.innerHTML = '<span class="lead">V</span>erita'; });
+    sidebar.addEventListener('mouseleave', () => { brandWord.innerHTML = '<span class="lead">V</span>'; });
+  }
+})();
+</script>
+
+</body>
+</html>
