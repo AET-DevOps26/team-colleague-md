@@ -5,7 +5,7 @@ export default function AuthBanner() {
   const { open } = useAuthModal();
 
   return (
-    <div className={styles.banner}>
+    <div className={styles.banner} data-testid="auth-banner">
       <p className={styles.text}>
         Browsing as guest. <strong>Sign in</strong> to get a personalised feed, save bookmarks, and join the discussion.
       </p>
