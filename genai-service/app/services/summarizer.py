@@ -71,9 +71,10 @@ def _build_chain():
     )
 
     model = _get_llm(settings)
-    parser = StrOutputParser()
 
-    return prompt | model | parser, settings.llm_model
+    # We do not use StrOutputParser here because we want to preserve
+    # the AIMessage output which contains the token usage_metadata.
+    return prompt | model, settings.llm_model
 
 
 def _get_llm(settings):
@@ -172,18 +173,32 @@ async def summarize(request: SummarizeRequest) -> SummarizeResponse:
 
     # Invoke the LCEL chain
     # Use ainvoke for async execution (FastAPI is async-native)
-    raw_output = await chain.ainvoke({"input_text": input_text})
+    ai_message = await chain.ainvoke({"input_text": input_text})
+    
+    # ai_message.content can theoretically be a list of blocks, but for this prompt it is a string.
+    raw_output = ai_message.content if isinstance(ai_message.content, str) else str(ai_message.content)
 
     logger.debug("Raw LLM output: %s", raw_output)
+
+    # Extract token usage metadata if available
+    usage_info = None
+    if hasattr(ai_message, "usage_metadata") and ai_message.usage_metadata:
+        usage = ai_message.usage_metadata
+        usage_info = TokenUsage(
+            input_tokens=usage.get("input_tokens", 0),
+            output_tokens=usage.get("output_tokens", 0),
+            total_tokens=usage.get("total_tokens", 0),
+        )
 
     # Parse the bullet points from the raw output
     bullets = _parse_bullets(raw_output)
 
     # Build response
     response = SummarizeResponse(
+        postId=request.postId,
         summary=bullets,
         model=model_name,
-        usage=None,  # Token usage tracking can be added via LangChain callbacks later
+        usage=usage_info,
     )
 
     logger.info("Summarization complete: %d bullets returned", len(bullets))
