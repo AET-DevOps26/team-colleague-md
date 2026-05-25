@@ -26,6 +26,10 @@ class SummarizeRequest(BaseModel):
         title:   Optional post title, provides additional context to the LLM.
     """
 
+    postId: str = Field(
+        ...,
+        description="The ID of the post being summarized",
+    )
     content: str = Field(
         ...,
         min_length=50,
@@ -42,6 +46,7 @@ class SummarizeRequest(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
+                    "postId": "123e4567-e89b-12d3-a456-426614174000",
                     "content": (
                         "OpenAI just released GPT-5 with significant improvements in reasoning, "
                         "code generation, and multimodal understanding. The model shows 40% improvement "
@@ -65,6 +70,10 @@ class SummarizeResponse(BaseModel):
     along with metadata about the LLM call.
     """
 
+    postId: str = Field(
+        ...,
+        description="The ID of the summarized post",
+    )
     summary: list[str] = Field(
         ...,
         description="3-bullet summary of the post content",
@@ -82,6 +91,7 @@ class SummarizeResponse(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
+                    "postId": "123e4567-e89b-12d3-a456-426614174000",
                     "summary": [
                         "GPT-5 introduces 40% improvement on HumanEval benchmarks with a new transparent 'thinking' mode",
                         "Outperforms Claude and Gemini on most coding tasks but struggles with very long context windows",
