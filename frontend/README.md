@@ -126,20 +126,13 @@ Tests live in `frontend/tests/home.spec.ts`. Playwright starts the dev server au
 
 ```bash
 # Run all tests
-npm test
+npx playwright test
 
-# Open interactive debug UI
-npm run test:ui
-
-# Run only a specific group (fast, no snapshots)
-npm test -- --grep "Layout"
-npm test -- --grep "Interactions"
-
-# Run only visual regression tests
-npm test -- --grep "Visual Regression"
+# Run only layout / interaction tests (fast, no snapshots)
+npx playwright test --grep-invert "VR-"
 
 # Regenerate visual regression baselines after UI changes
-npm run test:update -- --grep "Visual Regression"
+npx playwright test --grep "VR-" --update-snapshots
 ```
 
 Visual snapshots are stored in `tests/snapshots/`. Commit them alongside any intentional visual change.
