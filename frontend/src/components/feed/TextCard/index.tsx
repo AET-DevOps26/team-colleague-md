@@ -8,10 +8,9 @@ import styles from './TextCard.module.css';
 interface Props {
   post: Post;
   onLike: (id: string) => void;
-  onTagClick: (tag: string) => void;
 }
 
-export default function TextCard({ post, onLike, _onTagClick }: Props) {
+export default function TextCard({ post, onLike }: Props) {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
   const navigate = useNavigate();

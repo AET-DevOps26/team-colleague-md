@@ -26,7 +26,6 @@ export default function Home() {
           loading={loading}
           onLoadMore={loadMore}
           onLike={toggleLike}
-          onTagClick={setTag}
         />
       </section>
       <RefreshFAB onRefresh={refresh} />
