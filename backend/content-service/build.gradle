@@ -10,7 +10,7 @@ version = '0.0.1-SNAPSHOT'
 description = 'user-service'
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -44,10 +44,10 @@ openApiGenerate {
     modelPackage = "com.verita.model"
     invokerPackage = "com.verita.invoker"
 
-	configOptions = [
+    configOptions = [
             dateLibrary: "java8",
             interfaceOnly: "true",
-            useSpringBoot3: "false",
+            useSpringBoot3: "true",
             useJakartaEe: "true",
             skipDefaultInterface: "true"
     ]
