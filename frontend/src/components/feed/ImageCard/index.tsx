@@ -33,14 +33,16 @@ export default function ImageCard({ post, onLike, onTagClick }: Props) {
         <img src={post.coverImageUrl} alt="" className={styles.coverImg} />
         <span className={styles.badgeType}>{typeBadge}</span>
       </div>
-      <h2 className={styles.title}>{post.title}</h2>
-      <AuthorRow
-        author={post.author}
-        createdAt={post.createdAt}
-        likeCount={post.likeCount}
-        isLikedByMe={post.isLikedByMe}
-        onLike={handleLike}
-      />
+      <div className={styles.body}>
+        <h2 className={styles.title}>{post.title}</h2>
+          <AuthorRow
+          author={post.author}
+          createdAt={post.createdAt}
+          likeCount={post.likeCount}
+          isLikedByMe={post.isLikedByMe}
+          onLike={handleLike}
+        />
+      </div>
     </article>
   );
 }

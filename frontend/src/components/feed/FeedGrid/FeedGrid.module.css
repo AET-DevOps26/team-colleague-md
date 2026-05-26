@@ -3,6 +3,11 @@
   column-gap: 32px;
 }
 
+@media (min-width: 1144px) {
+  .masonry > *:nth-child(5n+2) { margin-top: 10px; }
+  .masonry > *:nth-child(7n+4) { margin-top: 16px; }
+}
+
 @media (max-width: 1143px) {
   .masonry { column-count: 2; }
 }

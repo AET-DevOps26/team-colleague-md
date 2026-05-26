@@ -46,12 +46,16 @@
   line-height: 1.4;
 }
 
+.body {
+  padding: 12px 8px 4px;
+}
+
 .title {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.35;
+  letter-spacing: -0.018em;
   color: var(--text-primary);
-  margin-top: 10px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;

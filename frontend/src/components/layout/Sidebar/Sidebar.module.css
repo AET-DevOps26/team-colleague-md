@@ -72,11 +72,11 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 8px;
+  gap: 13px;
+  padding: 16px 14px;
   border-radius: 8px;
   color: var(--text-secondary);
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 500;
   transition: background var(--motion-hover), color var(--motion-hover);
   cursor: pointer;
@@ -103,8 +103,8 @@
   content: '';
   position: absolute;
   left: -14px;
-  top: 8px;
-  bottom: 8px;
+  top: 10px;
+  bottom: 10px;
   width: 3px;
   background: var(--accent);
   border-radius: 0 2px 2px 0;
@@ -115,8 +115,8 @@
 }
 
 .ico {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
   stroke-width: 1.75;
 }
