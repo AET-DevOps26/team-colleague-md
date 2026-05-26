@@ -129,7 +129,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Tag' }
+                items: { $ref: '#/components/schemas/TopicTag' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/v1/subscriptions/tags/{tagId}:
@@ -275,7 +275,7 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
-    Tag:
+    TopicTag:
       type: object
       required: [id, name]
       properties:
