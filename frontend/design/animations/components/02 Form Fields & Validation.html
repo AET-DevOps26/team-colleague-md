@@ -1,0 +1,1357 @@
+<!doctype html>
+<!--
+  C02 — Form Fields & Validation
+  Scope:      Text inputs, password fields, textareas, search fields, and the
+              validation states that wrap them. Production tier verifies five
+              field families (Auth field-box, Home/Search topbar search,
+              Post-Editor meta-input, Post-Editor inline-modal field, Admin
+              search-input). Extended tier proposes the unified <TextField>
+              motion contract: floating label, error shake, success tick,
+              password visibility toggle, character counter.
+  Spec:       docs/Animation Spec.md  ·  Form Fields & Validation
+  React hint: <TextField>, <PasswordField>, <Textarea>, useFieldValidation()
+  Source:     pages/Verita Auth.html             · 126–139, 165–174, 229–248
+              pages/Verita Home.html             · 109–118
+              pages/Verita Post Editor.html      · 188–200, 278–286, 335–343,
+                                                   368–398, 419–423
+              pages/Verita Admin.html            · 204–212, 336–338
+              pages/Verita Search Results.html   · 109–126
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Form Fields & Validation · Verita Animation Demo</title>
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout, not the field styles) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .scope {
+    color: var(--text-secondary);
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+
+  /* Tier badges (matches C01) */
+  .tier {
+    display: inline-block;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    vertical-align: middle;
+  }
+  .tier.production {
+    color: var(--success);
+    background: color-mix(in oklab, var(--success) 14%, transparent);
+    border: 1px solid color-mix(in oklab, var(--success) 32%, transparent);
+  }
+  .tier.extended {
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .tier-divider {
+    margin-top: 80px;
+    padding-top: 28px;
+    border-top: 2px solid var(--border-default);
+  }
+  .tier-divider h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 28px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .tier-divider p {
+    color: var(--text-secondary);
+    font-size: 14.5px;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* Spec table */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 26%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 14%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 18%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+  .badge.prod, .badge.ext {
+    display: inline-block;
+    font: 500 9px var(--font-mono);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: 1px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .badge.prod { color: var(--success); background: color-mix(in oklab, var(--success) 14%, transparent); }
+  .badge.ext  { color: var(--text-secondary); background: var(--bg-elevated); }
+
+  /* Scope list */
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  /* Trigger buttons (used for "Submit", "Reset" actions) */
+  .triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 4px;
+  }
+  .trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    transition:
+      transform 160ms var(--ease-out),
+      background 160ms var(--ease-out),
+      border-color 160ms var(--ease-out);
+  }
+  .trigger:hover {
+    background: var(--bg-elevated);
+    border-color: var(--text-primary);
+  }
+  .trigger:active { transform: translateY(1px); }
+  .trigger.primary {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+  .trigger.primary:hover { background: #333; }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* React hint footer */
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd {
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.55;
+  }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ===========================================================
+   * SHARED LAYOUT helpers
+   * =========================================================== */
+  .field-stack { display: flex; flex-direction: column; gap: 16px; }
+  .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
+  .x-row { display: grid; gap: 14px; }
+
+  /* ===========================================================
+   * PRODUCTION 1 — Auth field-box (Verita Auth.html lines 126–139)
+   * Verbatim. 44px height · 8px radius · --bg-elevated background
+   * =========================================================== */
+  .field { margin-bottom: 14px; }
+  .field-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; font-weight: 500; color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+  .field-box {
+    height: 44px;
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    display: flex; align-items: center;
+    gap: 8px; padding: 0 14px;
+    transition: border-color 120ms;
+  }
+  .field-box:focus-within { border-color: var(--text-primary); }
+  .field-box.error { border-color: var(--danger); }
+  .field-box input {
+    flex: 1; min-width: 0;
+    font: inherit; font-size: 13.5px;
+    color: var(--text-primary);
+    background: none; border: 0; outline: 0;
+  }
+  .field-box input::placeholder { color: var(--text-tertiary); }
+  .field-eye {
+    color: var(--text-tertiary);
+    display: grid; place-items: center;
+    padding: 2px;
+    transition: color 120ms;
+    background: none; border: 0; cursor: pointer;
+  }
+  .field-eye:hover { color: var(--text-secondary); }
+  .field-error {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--danger);
+    font-weight: 500;
+    display: flex; align-items: center; gap: 5px;
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+  }
+  .field-error.visible { opacity: 1; transform: translateY(0); }
+  .field-error svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .field-hint {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--text-tertiary);
+  }
+
+  /* Field-level error shake — fires once on submit-error */
+  @keyframes field-shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-6px); }
+    40%      { transform: translateX( 6px); }
+    60%      { transform: translateX(-4px); }
+    80%      { transform: translateX( 4px); }
+  }
+  .field-box.shake { animation: field-shake 320ms var(--ease-out); }
+
+  /* ===========================================================
+   * PRODUCTION 2 — Topbar search (Verita Home / Search Results)
+   * 44px h · 10px radius · 4px focus shadow
+   * =========================================================== */
+  .v-search {
+    display: flex; align-items: center; gap: 10px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 0 14px;
+    transition:
+      border-color 120ms ease-out,
+      box-shadow 120ms ease-out,
+      background 120ms ease-out;
+  }
+  .v-search:focus-within {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(10, 10, 10, 0.06);
+  }
+  .v-search > svg { color: var(--text-tertiary); flex-shrink: 0; }
+  .v-search input {
+    flex: 1;
+    background: none; border: 0; outline: 0;
+    font: 400 13.5px var(--font-sans);
+    color: var(--text-primary);
+  }
+  .v-search input::placeholder { color: var(--text-tertiary); }
+  .v-search-clear {
+    display: flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--border-default);
+    color: #fff;
+    flex-shrink: 0;
+    cursor: pointer;
+    border: 0;
+    transition: background 120ms ease-out, opacity 120ms ease-out;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .v-search.has-value .v-search-clear { opacity: 1; pointer-events: auto; }
+  .v-search-clear:hover { background: var(--text-secondary); }
+  .v-search-clear svg { width: 10px; height: 10px; stroke-width: 2.5; color: #fff; }
+
+  /* ===========================================================
+   * PRODUCTION 3 — meta-input (Post Editor lines 335–343)
+   * 38px h · 8px radius · 3px focus shadow · bg flips to #fff
+   * =========================================================== */
+  .meta-field { display: flex; flex-direction: column; gap: 7px; }
+  .meta-label {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .meta-label svg {
+    width: 13px; height: 13px;
+    stroke-width: 1.7;
+    color: var(--text-tertiary);
+  }
+  .meta-input {
+    height: 38px; width: 100%;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    padding: 0 12px;
+    font: 400 13px var(--font-sans);
+    color: var(--text-primary);
+    outline: 0;
+    transition: border-color 120ms, background 120ms, box-shadow 120ms;
+  }
+  .meta-input::placeholder { color: var(--text-tertiary); }
+  .meta-input:focus {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.06);
+  }
+
+  /* ===========================================================
+   * PRODUCTION 4 — Post Editor borderless title + textarea
+   * (lines 188–200, 278–286). Caret-only, no focus ring.
+   * =========================================================== */
+  .pe-stage {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 22px 24px 24px;
+  }
+  .title-input {
+    width: 100%;
+    border: 0; outline: 0; background: transparent;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 36px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    padding: 0;
+    resize: none;
+    display: block;
+  }
+  .title-input::placeholder { color: var(--text-tertiary); }
+  .ed-textarea {
+    width: 100%; min-height: 180px;
+    border: 0; outline: 0; background: transparent;
+    font: 400 16px/1.65 var(--font-sans);
+    color: var(--text-primary);
+    resize: none;
+    padding: 16px 0 0;
+    display: block;
+  }
+  .ed-textarea::placeholder { color: var(--text-tertiary); }
+
+  /* ===========================================================
+   * PRODUCTION 5 — Post Editor inline-modal field (lines 419–423)
+   * 36px h · 7px radius · used by Add-source dialog
+   * =========================================================== */
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label {
+    display: block;
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-tertiary);
+    margin-bottom: 5px;
+  }
+  .modal-field input {
+    width: 100%;
+    height: 36px;
+    border: 1px solid var(--border-default);
+    border-radius: 7px;
+    background: var(--bg-surface);
+    padding: 0 10px;
+    font-size: 13px;
+    color: var(--text-primary);
+    outline: 0;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .modal-field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.06);
+  }
+
+  /* ===========================================================
+   * PRODUCTION 6 — Admin search (lines 204–212)
+   * 34px h · 8px radius · 3px shadow · icon-prefixed
+   * =========================================================== */
+  .admin-search-wrap {
+    position: relative;
+    width: 320px;
+  }
+  .admin-search-wrap > svg {
+    position: absolute;
+    left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+  .admin-search-input {
+    width: 100%;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    padding: 0 12px 0 32px;
+    font: 400 13px var(--font-sans);
+    color: var(--text-primary);
+    outline: 0;
+    transition: border-color 120ms, box-shadow 120ms, background 120ms;
+  }
+  .admin-search-input:focus {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.06);
+  }
+  .admin-search-input::placeholder { color: var(--text-tertiary); }
+
+  /* ===========================================================
+   * PRODUCTION 7 — Disabled states (3 mechanisms)
+   * =========================================================== */
+  .disabled-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+  .disabled-cell {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+  }
+  .disabled-label {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .disabled-label code {
+    font: 500 10px var(--font-mono);
+    color: var(--text-secondary);
+    background: none; padding: 0;
+  }
+
+  /* ===========================================================
+   * EXTENDED 1 — Floating label
+   * 160ms ease-out · idle = label centered · focus/has-value = label up + scaled
+   * =========================================================== */
+  .x-float {
+    position: relative;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 22px 12px 6px;
+    transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+  }
+  .x-float:focus-within {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.06);
+  }
+  .x-float input {
+    width: 100%;
+    border: 0; outline: 0; background: transparent;
+    font: 400 13.5px var(--font-sans);
+    color: var(--text-primary);
+    line-height: 22px;
+    padding: 0;
+  }
+  .x-float label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    transform-origin: 0 50%;
+    color: var(--text-tertiary);
+    font: 400 13.5px var(--font-sans);
+    pointer-events: none;
+    transition: transform 160ms var(--ease-out), color 160ms var(--ease-out);
+  }
+  .x-float:focus-within label,
+  .x-float.has-value label {
+    transform: translate(0, -18px) scale(0.78);
+    color: var(--text-secondary);
+  }
+
+  /* ===========================================================
+   * EXTENDED 2 — Success tick (SVG stroke-dashoffset draw)
+   * =========================================================== */
+  .field-box.success { border-color: var(--success); }
+  .field-tick {
+    width: 18px; height: 18px;
+    color: var(--success);
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 80ms var(--ease-out);
+  }
+  .field-tick path {
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;
+    transition: stroke-dashoffset 240ms var(--ease-out) 60ms;
+  }
+  .field-box.success .field-tick { opacity: 1; }
+  .field-box.success .field-tick path { stroke-dashoffset: 0; }
+
+  /* ===========================================================
+   * EXTENDED 3 — Password visibility toggle (eye morph)
+   * =========================================================== */
+  .pw-eye-wrap {
+    position: relative;
+    width: 16px; height: 16px;
+    display: inline-block;
+  }
+  .pw-eye-wrap svg {
+    position: absolute; inset: 0;
+    transition: opacity 140ms var(--ease-out), transform 200ms var(--ease-out);
+  }
+  .pw-eye-wrap .pw-open  { opacity: 1; transform: scale(1); }
+  .pw-eye-wrap .pw-closed { opacity: 0; transform: scale(0.85); }
+  .field-eye.is-on .pw-open  { opacity: 0; transform: scale(0.85); }
+  .field-eye.is-on .pw-closed { opacity: 1; transform: scale(1); }
+
+  /* ===========================================================
+   * EXTENDED 4 — Character counter color transition
+   * =========================================================== */
+  .x-counter-wrap {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 14px;
+    transition: border-color 240ms var(--ease-out);
+  }
+  .x-counter-wrap textarea {
+    width: 100%;
+    min-height: 80px;
+    border: 0; outline: 0;
+    background: transparent;
+    font: 400 14px/1.55 var(--font-sans);
+    color: var(--text-primary);
+    resize: none;
+  }
+  .x-counter-wrap textarea::placeholder { color: var(--text-tertiary); }
+  .x-counter {
+    display: flex; justify-content: flex-end;
+    margin-top: 8px;
+    font: 500 11.5px var(--font-mono);
+    color: var(--text-tertiary);
+    letter-spacing: 0.04em;
+    transition: color 240ms var(--ease-out);
+  }
+  .x-counter.warn   { color: var(--warning); }
+  .x-counter.danger { color: var(--danger); }
+
+  /* Reduced motion — explicit named overrides for clarity.
+   * tokens.css already collapses transition/animation duration globally;
+   * we re-state intent for the demo. */
+  @media (prefers-reduced-motion: reduce) {
+    .field-box.shake { animation: none; }
+    .field-tick path { transition: none; stroke-dashoffset: 0; }
+    .x-float label { transition: none; }
+    .x-counter { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ───────── Demo header ───────── -->
+<div class="demo-header">
+  <span class="demo-title">C02 · Form Fields & Validation</span>
+  <span class="demo-spec">5 production fields · floating label · shake · success tick · password toggle · counter</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<div class="demo-stage">
+<div class="wrap">
+
+  <!-- ───────── Lead block ───────── -->
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Form Fields & Validation</h1>
+    <ul class="scope-list">
+      <li><strong>Production tier</strong> — five field families (Auth field-box, topbar search, Post-Editor meta-input, Post-Editor inline-modal field, Admin search), borderless Post-Editor title/body textareas, and the three production disabled mechanisms surfaced as form context.</li>
+      <li><strong>Extended tier</strong> — proposals for the unified <code>&lt;TextField&gt;</code> contract: floating label, error shake (320ms 3-cycle), success tick (240ms stroke draw), password visibility toggle (eye morph), and character counter color transition.</li>
+      <li><strong>Inconsistency audit</strong> — five field discrepancies (height drift across 32/34/36/38/44px, two focus-ring widths, two background-on-focus behaviors, two error-message patterns, and zero motion-token references). Documented for follow-up in <code>Plan.md</code>.</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- ───────── Spec table ───────── -->
+  <section>
+    <h2>Spec</h2>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge prod">prod</span>Field-box border on focus</td>
+          <td>120ms</td><td>linear</td>
+          <td><code>border-color</code> on <code>.field-box</code>. No bg flip. Auth modal lines 128–132.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>Topbar search focus ring</td>
+          <td>120ms</td><td>ease-out</td>
+          <td>4px <code>rgba(10,10,10,0.06)</code> shadow + bg flip to <code>#fff</code>. Home line 113–115.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>meta-input focus ring</td>
+          <td>120ms</td><td>linear</td>
+          <td>3px <code>rgba(10,10,10,0.06)</code> shadow + bg flip. Post Editor line 343.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>Admin search focus ring</td>
+          <td>120ms</td><td>linear</td>
+          <td>Same recipe as meta-input but on a 34px shorter field. Admin line 211.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>Eye-icon hover</td>
+          <td>120ms</td><td>linear</td>
+          <td>Color shifts <code>--text-tertiary</code> → <code>--text-secondary</code>. Auth line 137.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>Error message reveal</td>
+          <td>160ms</td><td>ease-out</td>
+          <td>Opacity 0→1 + translateY(-2px)→0 on <code>.field-error</code>. Subtle entry — never shake on every keystroke.</td>
+        </tr>
+        <tr>
+          <td><span class="badge ext">ext</span>Floating label</td>
+          <td>160ms</td><td>ease-out</td>
+          <td>Translate + scale 0.78. Pairs with focus-within and has-value.</td>
+        </tr>
+        <tr>
+          <td><span class="badge ext">ext</span>Error shake</td>
+          <td>320ms</td><td>ease-out</td>
+          <td>5 keyframes, <code>±6/4px</code>. Fires once on submit-error.</td>
+        </tr>
+        <tr>
+          <td><span class="badge ext">ext</span>Success tick draw</td>
+          <td>240ms</td><td>ease-out</td>
+          <td><code>stroke-dashoffset 22 → 0</code> with 60ms delay so opacity comes in first.</td>
+        </tr>
+        <tr>
+          <td><span class="badge ext">ext</span>Password eye morph</td>
+          <td>140ms / 200ms</td><td>ease-out</td>
+          <td>Two SVGs cross-fade + 0.85→1 scale. No rotation, no flip — both icons are eye-shaped.</td>
+        </tr>
+        <tr>
+          <td><span class="badge ext">ext</span>Character counter</td>
+          <td>240ms</td><td>ease-out</td>
+          <td>Color shifts at 80% (warn) and 100% (danger). No size change.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =========================================================
+       PRODUCTION TIER divider
+       ========================================================= -->
+  <div class="tier-divider">
+    <h2>Production</h2>
+    <p>Five field families verified 1:1 against <code>pages/*.html</code>. Each section preserves the original padding, radius, border, focus recipe, and motion literals — token migration noted in the audit, deferred to a separate pass.</p>
+  </div>
+
+  <!-- =========================================================
+       SECTION 1 — Auth field-box (PRODUCTION) · primary
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · Verita Auth lines 126–139</span>
+    <h2>Auth field-box · 44 × 8 · border-only focus</h2>
+    <dl class="section-meta">
+      <dt>Surface</dt><dd>44px h · 8px radius · <code>--bg-elevated</code> bg · 1px <code>--border-default</code></dd>
+      <dt>Focus</dt><dd>border swaps to <code>--text-primary</code> over 120ms — no shadow, no bg flip</dd>
+      <dt>Error</dt><dd><code>.error</code> swaps border to <code>--danger</code> · message slides in (160ms · opacity + translateY)</dd>
+      <dt>Eye</dt><dd>pure color hover, 120ms — production has no glyph morph yet (see Extended 3 below)</dd>
+    </dl>
+    <p>The dominant field shape across the auth modal — Login, Signup, Reset all use it. Focus and click outside to see border-only motion; the field never lightens to white the way Post-Editor and Admin fields do.</p>
+    <div class="field-stack">
+      <div class="field">
+        <div class="field-header"><span>Email</span></div>
+        <div class="field-box">
+          <input type="email" placeholder="you@domain.com" value="alex@verita.app" />
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <span>Password</span>
+          <span style="font-size:11.5px;color:var(--text-tertiary)">Forgot password?</span>
+        </div>
+        <div class="field-box" id="prodPwBox">
+          <input type="password" id="prodPwInput" placeholder="••••••••" value="" />
+          <button class="field-eye" type="button" tabindex="-1" aria-label="Show password" onclick="togglePwSimple(this, 'prodPwInput')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="field-error" id="prodPwError">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Please enter your password</span>
+        </div>
+      </div>
+    </div>
+    <div class="triggers">
+      <button class="trigger primary" type="button" onclick="prodAuthSubmit()">Log in</button>
+      <button class="trigger" type="button" onclick="prodAuthClear()">Reset</button>
+    </div>
+    <p class="hint">120ms <code>border-color</code>-only is preserved as a literal. The auth modal is the only production field that doesn't lighten on focus — every other family swaps bg to <code>#fff</code>. Documented under <strong>Inconsistencies</strong> §3 in <code>Plan.md</code>.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 2 — Topbar search (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · Verita Home lines 109–118 · Search Results 109–126</span>
+    <h2>Topbar search · 44 × 10 · 4px focus shadow</h2>
+    <dl class="section-meta">
+      <dt>Surface</dt><dd>44px h · 10px radius · <code>--bg-elevated</code> bg · 1px <code>--border-subtle</code></dd>
+      <dt>Focus</dt><dd>border <code>--accent</code> · bg flips <code>#fff</code> · 4px <code>rgba(10,10,10,0.06)</code> shadow · 120ms ease-out</dd>
+      <dt>Clear</dt><dd>22px circle button appears when value is non-empty · hover <code>--text-secondary</code></dd>
+      <dt>Why 4px</dt><dd>topbar fields sit on a darker chrome surface than meta-inputs, so the ring needs more weight — Home/Search use 4px, Post-Editor/Admin use 3px</dd>
+    </dl>
+    <p>The dominant search shape across product pages. Focus to see the recipe — border + bg flip + 4px ring all run together over 120ms. Type to reveal the clear button.</p>
+    <div class="v-search" id="searchTopbar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="text" placeholder="Search Verita — papers, people, tags, ideas…" />
+      <button class="v-search-clear" type="button" aria-label="Clear search" onclick="clearTopSearch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <p class="hint">Same shadow color (<code>rgba(10,10,10,0.06)</code>) as the other production fields — only the spread differs (4px vs 3px). A token like <code>--ring-shadow-strong</code> / <code>--ring-shadow</code> would settle the drift; today both are literals.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 3 — Post Editor meta-input (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · Verita Post Editor lines 335–343</span>
+    <h2>meta-input · 38 × 8 · 3px focus shadow</h2>
+    <dl class="section-meta">
+      <dt>Surface</dt><dd>38px h · 8px radius · <code>--bg-surface</code> bg · 1px <code>--border-subtle</code></dd>
+      <dt>Focus</dt><dd>border <code>--accent</code> · bg flips <code>#fff</code> · 3px shadow · 120ms</dd>
+      <dt>Use</dt><dd>cover-source URL, tags input wrap, sources row — every metadata field in the editor sidebar</dd>
+      <dt>Why 38px</dt><dd>shorter than topbar search (44px) because the metadata column is narrower and denser — fields stack 4–5 deep</dd>
+    </dl>
+    <p>Metadata column inside the editor. Click each input to see the same shadow recipe at 3px — quieter than the topbar because it sits on a lighter surface.</p>
+    <div class="field-grid-2">
+      <div class="meta-field">
+        <label class="meta-label" for="meta-source">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Source URL
+        </label>
+        <input class="meta-input" id="meta-source" type="url" value="https://arxiv.org/abs/2410.21276" />
+      </div>
+      <div class="meta-field">
+        <label class="meta-label" for="meta-pub">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Publication
+        </label>
+        <input class="meta-input" id="meta-pub" type="text" placeholder="e.g. arXiv, Nature, blog…" />
+      </div>
+      <div class="meta-field">
+        <label class="meta-label" for="meta-doi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          DOI
+        </label>
+        <input class="meta-input" id="meta-doi" type="text" placeholder="10.xxxx/yyy" />
+      </div>
+      <div class="meta-field">
+        <label class="meta-label" for="meta-cite">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V12h6v9"/></svg>
+          Citation key
+        </label>
+        <input class="meta-input" id="meta-cite" type="text" value="openai2024gpt4o" />
+      </div>
+    </div>
+    <p class="hint">Shadow recipe and 120ms duration are both literals — no <code>--dur-*</code> token references in production. The 3px vs 4px split between meta-input/admin and topbar/search is a deliberate weight call, not an oversight.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 4 — Post Editor borderless title + textarea (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · Verita Post Editor lines 188–200, 278–286</span>
+    <h2>Title input + body textarea · borderless, caret-only</h2>
+    <dl class="section-meta">
+      <dt>Surface</dt><dd>transparent · no border · no focus ring · only the caret signals focus</dd>
+      <dt>Title</dt><dd><code>&lt;textarea rows="1"&gt;</code> with serif italic 36px (production: 40px); auto-grows via JS</dd>
+      <dt>Body</dt><dd>min 180px h, sans 16px / 1.65 — same metrics as a published post</dd>
+      <dt>Why borderless</dt><dd>writing surface ≠ form-field surface · the editor is a single composition canvas, not a stack of inputs</dd>
+    </dl>
+    <p>The composition surface. No focus ring is intentional — the affordance is "this is where I write," not "this is one of several fields to fill in." React's <code>&lt;Textarea variant="composition"&gt;</code> should expose this as a distinct shape.</p>
+    <div class="pe-stage">
+      <textarea class="title-input" id="peTitle" rows="1" placeholder="Post title…" maxlength="200">Why GPT-4o's unified encoder changes the small-model story</textarea>
+      <textarea class="ed-textarea" id="peBody" placeholder="Write your post…">Six months of reverse-engineering later, the picture is clearer than it was at launch. The "o" stands for omni — but the real shift is that GPT-4o processes vision, audio, and text in a single shared latent space, not via separate heads bolted onto a text core. That changes what distillation can recover, and what it can't.</textarea>
+    </div>
+    <p class="hint">Title autosize is a 1-line implementation: on input, set <code>height:auto</code> then <code>height: scrollHeight</code>. C02 ships the field shape; the autosize hook lives in the React contract.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 5 — Inline-modal field (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · Verita Post Editor lines 419–423</span>
+    <h2>Inline-modal field · 36 × 7 · 3px shadow</h2>
+    <dl class="section-meta">
+      <dt>Surface</dt><dd>36px h · 7px radius · <code>--bg-surface</code> bg · 1px <code>--border-default</code></dd>
+      <dt>Focus</dt><dd>border <code>--accent</code> · 3px shadow · 120ms · <strong>no bg flip</strong></dd>
+      <dt>Use</dt><dd>"Add source" mini-dialog inside the editor — the only inline-modal form in the product today</dd>
+      <dt>Drift</dt><dd>height (36 vs 38) and radius (7 vs 8) both differ from <code>.meta-input</code> by 1px — cosmetic but visible in audit</dd>
+    </dl>
+    <p>Lives inside a small confirm-style dialog at <code>320–360px</code> wide. The 1-pixel deltas vs <code>.meta-input</code> are the kind of drift the unified <code>&lt;TextField size="sm"&gt;</code> needs to settle.</p>
+    <div class="modal-field" style="max-width:360px">
+      <label for="mf-url">Source URL</label>
+      <input id="mf-url" type="url" placeholder="https://" />
+    </div>
+    <div class="modal-field" style="max-width:360px">
+      <label for="mf-title">Title (optional)</label>
+      <input id="mf-title" type="text" placeholder="e.g. arXiv 2410.21276" />
+    </div>
+    <p class="hint">No background flip on focus — that's the deliberate difference between a field on a primary canvas (meta-input · flips) and a field already on the modal's elevated surface (this · doesn't). Same shadow recipe, same duration.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 6 — Admin search (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · Verita Admin lines 204–212</span>
+    <h2>Admin search · 34 × 8 · icon-prefixed</h2>
+    <dl class="section-meta">
+      <dt>Surface</dt><dd>34px h · 8px radius · <code>--bg-surface</code> · 1px <code>--border-default</code> · 32px left-pad for icon</dd>
+      <dt>Focus</dt><dd>border <code>--accent</code> · bg flips <code>#fff</code> · 3px shadow · 120ms</dd>
+      <dt>Why 34px</dt><dd>admin tables are the densest surface in the product — fields here trade comfort for row height</dd>
+    </dl>
+    <p>Used to filter the admin user table — the shortest of the production family. Click to focus and watch the same recipe scaled down.</p>
+    <div class="admin-search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="admin-search-input" type="search" placeholder="Search by name or email…" />
+    </div>
+    <p class="hint">All five production fields share <code>rgba(10,10,10,0.06)</code> as the focus-shadow color. The two heights of the spread (3px and 4px) and the two backgrounds (flip / no-flip) are the only real divergences — see <code>Plan.md</code> Inconsistencies §1 for the convergence proposal.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 7 — Disabled state (PRODUCTION · cross-ref C01)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · 3 mechanisms · cross-reference C01 §2</span>
+    <h2>Disabled · form-context recap</h2>
+    <dl class="section-meta">
+      <dt>Why here</dt><dd>C01 documents these as a button audit · this section anchors the same finding inside form context · so <code>&lt;TextField disabled&gt;</code> picks the right mechanism</dd>
+      <dt>Recommended</dt><dd><code>.disabled { opacity: 0.38; pointer-events: none }</code> — works on any element, matches the most-used variant</dd>
+    </dl>
+    <p>Three disabled patterns coexist in production. The same audit applies inside forms: when <code>&lt;TextField disabled&gt;</code> lands, it should standardize on the opacity-only mechanism rather than introduce a fourth.</p>
+    <div class="disabled-row">
+      <div class="disabled-cell">
+        <span class="disabled-label">Auth · <code>:disabled</code></span>
+        <div class="field-box" style="background:var(--border-default);border-color:var(--border-default)">
+          <input type="text" disabled placeholder="Locked while loading…" />
+        </div>
+      </div>
+      <div class="disabled-cell">
+        <span class="disabled-label">Editor · <code>[disabled]</code> · 0.35</span>
+        <div style="opacity:0.35">
+          <input class="meta-input" type="text" disabled value="Auto-fetched citation" />
+        </div>
+      </div>
+      <div class="disabled-cell">
+        <span class="disabled-label">Settings · <code>.disabled</code> · 0.38</span>
+        <div style="opacity:0.38">
+          <div class="v-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="text" disabled placeholder="Search disabled" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Cross-fades between disabled and enabled go through the same 120ms <code>border-color</code> + 120ms <code>opacity</code> path — there's no separate disabled-state animation to spec. The audit is settled in C01 §2; this section just makes the form-context implication visible.</p>
+  </section>
+
+  <!-- =========================================================
+       EXTENDED TIER divider
+       ========================================================= -->
+  <div class="tier-divider">
+    <h2>Extended</h2>
+    <p>Proposals for the unified <code>&lt;TextField&gt;</code> + <code>&lt;PasswordField&gt;</code> + <code>&lt;Textarea&gt;</code> contract. None of these animations exist in <code>pages/*.html</code> today; each is wired to a real interaction so the React component has a target shape.</p>
+  </div>
+
+  <!-- =========================================================
+       SECTION 8 — Floating label (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier extended">Extended · proposed for &lt;TextField label="…" /&gt;</span>
+    <h2>Floating label · translate + scale</h2>
+    <dl class="section-meta">
+      <dt>Idle</dt><dd>label sits centered inside the field at 13.5px · color <code>--text-tertiary</code></dd>
+      <dt>Focus</dt><dd>label translates to <code>(0, -18px)</code> · scales to 0.78 · color <code>--text-secondary</code> · 160ms ease-out</dd>
+      <dt>Has-value</dt><dd>same float position even when blurred — value present always lifts the label</dd>
+      <dt>Why scale 0.78</dt><dd>13.5 × 0.78 ≈ 10.5px — matches the existing <code>.meta-label</code> uppercase-eyebrow size, so floated labels read as the same eyebrow style</dd>
+    </dl>
+    <p>Click into either field to see the label lift. Tab away from the empty one and the label drops back; the filled one keeps the label up.</p>
+    <div class="x-row">
+      <div class="x-float" id="xFloat1">
+        <label for="xf-1">Display name</label>
+        <input id="xf-1" type="text" oninput="updateFloat(this)" onblur="updateFloat(this)" />
+      </div>
+      <div class="x-float has-value" id="xFloat2">
+        <label for="xf-2">Email address</label>
+        <input id="xf-2" type="email" value="alex@verita.app" oninput="updateFloat(this)" onblur="updateFloat(this)" />
+      </div>
+    </div>
+    <p class="hint">Material's 12px floated-label size is too small against Verita's body — 0.78 lands at the eyebrow size we already use elsewhere. Action when this lands: retire the standalone <code>.meta-label</code> + <code>.meta-input</code> pair in favor of <code>&lt;TextField label="…" /&gt;</code>.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 9 — Error shake (EXTENDED) · primary
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier extended">Extended · proposed for useFieldValidation()</span>
+    <h2>Error shake · 320ms 5-keyframe</h2>
+    <dl class="section-meta">
+      <dt>Trigger</dt><dd>fires once on submit-error · never on keystroke validation · never on blur</dd>
+      <dt>Curve</dt><dd>0% · 20% (-6px) · 40% (+6px) · 60% (-4px) · 80% (+4px) · 100% — symmetric decay</dd>
+      <dt>Pair</dt><dd>error message slides in (160ms · opacity + translateY) <em>after</em> shake completes — the order matters</dd>
+      <dt>Master</dt><dd>C03 noted modal-level <code>.auth-modal.shake</code> is unreachable in production · C02 plumbs it at field-level so the React contract matches the user's mental model (one wrong field, not the whole modal)</dd>
+    </dl>
+    <p>Submit the empty form to fire the shake. The message reveal runs after the shake settles — overlapping the two reads as anxious; sequencing them reads as deliberate.</p>
+    <div class="field-stack" style="max-width:420px">
+      <div class="field">
+        <div class="field-header"><span>Email</span></div>
+        <div class="field-box" id="extEmailBox">
+          <input type="email" id="extEmailInput" placeholder="you@domain.com" />
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-header"><span>Password</span></div>
+        <div class="field-box" id="extPwBox">
+          <input type="password" id="extPwInput" placeholder="••••••••" />
+        </div>
+        <div class="field-error" id="extPwError">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Please enter your password</span>
+        </div>
+      </div>
+    </div>
+    <div class="triggers">
+      <button class="trigger primary" type="button" onclick="extSubmit()">Submit empty</button>
+      <button class="trigger" type="button" onclick="extReset()">Reset</button>
+    </div>
+    <p class="hint">5 keyframes · max travel ±6px · the curve is intentionally slightly under-damped so the rest position reads as a settle, not a snap. Reduced motion collapses the shake to no movement; the message still reveals.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 10 — Success tick (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier extended">Extended · proposed for &lt;TextField status="success" /&gt;</span>
+    <h2>Success tick · 240ms stroke draw</h2>
+    <dl class="section-meta">
+      <dt>Order</dt><dd>border swaps to <code>--success</code> · then 60ms later the tick draws (<code>stroke-dashoffset 22 → 0</code> over 240ms)</dd>
+      <dt>Why 60ms</dt><dd>the gap lets the eye land on the green border before the tick draws — without it both motions read as one snap</dd>
+      <dt>Use</dt><dd>async validation pass (e.g. username check, email-domain ping) — single field at a time</dd>
+    </dl>
+    <p>Click "Validate" to fire the success state. The tick draws inside the field-box itself, replacing the eye-icon position.</p>
+    <div class="field" style="max-width:420px">
+      <div class="field-header"><span>Username</span></div>
+      <div class="field-box" id="successBox">
+        <input type="text" id="successInput" value="alex" />
+        <svg class="field-tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m5 12 5 5L20 7"/>
+        </svg>
+      </div>
+    </div>
+    <div class="triggers">
+      <button class="trigger" type="button" onclick="successFire()">Validate (success)</button>
+      <button class="trigger" type="button" onclick="successReset()">Reset</button>
+    </div>
+    <p class="hint">A single 22-unit dasharray covers the path's actual length — the tick stays crisp because the line never has to interpolate sub-pixel widths during the draw.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 11 — Password visibility toggle (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier extended">Extended · proposed for &lt;PasswordField /&gt;</span>
+    <h2>Password eye · cross-fade morph</h2>
+    <dl class="section-meta">
+      <dt>Idle (hidden)</dt><dd>open eye glyph at full opacity · scale 1</dd>
+      <dt>On (visible)</dt><dd>closed (slashed) eye glyph · cross-fade 140ms · scale 0.85 → 1 over 200ms</dd>
+      <dt>Why morph</dt><dd>production uses one open-eye SVG that toggles <code>input.type</code> with no glyph change — the user has to guess state from the input · a 2-glyph morph eliminates that guess</dd>
+    </dl>
+    <p>Click the eye icon to toggle visibility. The two SVGs cross-fade with a slight scale so the change is decisive but not noisy.</p>
+    <div class="field" style="max-width:420px">
+      <div class="field-header"><span>Password</span></div>
+      <div class="field-box" id="extPwToggleBox">
+        <input type="password" id="extPwToggleInput" value="gpt4o-changes-everything" />
+        <button class="field-eye" id="extPwToggleBtn" type="button" tabindex="-1" aria-label="Show password" onclick="togglePwMorph()">
+          <span class="pw-eye-wrap">
+            <svg class="pw-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="pw-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-10-7-10-7a18.6 18.6 0 0 1 5.06-5.94"/><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12A3 3 0 0 1 9.88 9.88"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+    <p class="hint">No flip, no rotation — both glyphs are eye-shaped, and a flip would suggest the eye flips physically rather than the visibility state changing. Action: when <code>&lt;PasswordField /&gt;</code> lands, replace the existing single-glyph eye in <code>pages/Verita Auth.html</code> with this 2-glyph morph.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 12 — Character counter (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier extended">Extended · proposed for &lt;Textarea maxLength={n} showCount /&gt;</span>
+    <h2>Character counter · 240ms color shift</h2>
+    <dl class="section-meta">
+      <dt>Idle</dt><dd>color <code>--text-tertiary</code></dd>
+      <dt>Warn</dt><dd>≥ 80% of limit → <code>--warning</code> · 240ms ease-out</dd>
+      <dt>Danger</dt><dd>≥ 100% → <code>--danger</code> · 240ms · field-box border swaps in parallel</dd>
+      <dt>No size change</dt><dd>color is the only signal · resizing the counter would shift the layout below it</dd>
+    </dl>
+    <p>Type into the textarea — the counter shifts to amber at 80% and red at 100%. The field's border picks up the danger color when over-limit, but the input keeps accepting characters so the user can see what they're cutting.</p>
+    <div class="x-counter-wrap" id="counterWrap">
+      <textarea id="counterTA" placeholder="Write your bio…">Researcher · multimodal models · ex-DeepMind · writing about why GPT-4o's unified encoder changes the small-model story.</textarea>
+      <div class="x-counter" id="counterLabel">123 / 160</div>
+    </div>
+    <p class="hint">Limit set to <strong>160</strong> on the demo so the warn/danger thresholds are easy to reach by typing. Production limits will vary per field — the React contract takes <code>warnAt</code> (default 0.8) and <code>maxLength</code>, and computes the rest.</p>
+  </section>
+
+  <!-- =========================================================
+       React hint footer
+       ========================================================= -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <dl>
+      <dt>&lt;TextField&gt;</dt>
+      <dd>props: <code>label</code>, <code>placeholder</code>, <code>size: 'sm' | 'md' | 'lg'</code> (34/38/44), <code>variant: 'auth' | 'meta' | 'topbar' | 'admin'</code>, <code>status: 'idle' | 'error' | 'success'</code>, <code>floatingLabel</code> (boolean, Extended)</dd>
+
+      <dt>&lt;PasswordField&gt;</dt>
+      <dd>extends <code>&lt;TextField&gt;</code> · adds <code>showToggle</code> (default true) · 2-glyph morph on toggle · auto-clears reveal on blur if <code>autoClearOnBlur</code></dd>
+
+      <dt>&lt;Textarea&gt;</dt>
+      <dd>variants: <code>composition</code> (borderless title/body) · <code>standard</code> (bordered) · adds <code>showCount</code>, <code>maxLength</code>, <code>warnAt</code> for the counter color shift</dd>
+
+      <dt>&lt;SearchField&gt;</dt>
+      <dd>icon-prefixed wrapper around <code>&lt;TextField&gt;</code> · adds <code>onClear</code> · <code>variant: 'topbar'</code> uses 4px ring · <code>variant: 'admin'</code> uses 3px ring</dd>
+
+      <dt>useFieldValidation()</dt>
+      <dd>returns <code>{ status, error, shakeKey, validate, reset }</code> · increment <code>shakeKey</code> to fire one shake · validation runs on submit, not on every keystroke</dd>
+    </dl>
+  </div>
+
+</div>
+</div>
+
+<script>
+  /* ───── Production 1 — Auth field-box ───── */
+  function togglePwSimple(btn, inputId) {
+    const inp = document.getElementById(inputId);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.setAttribute('aria-label', inp.type === 'password' ? 'Show password' : 'Hide password');
+  }
+  function prodAuthSubmit() {
+    const box = document.getElementById('prodPwBox');
+    const err = document.getElementById('prodPwError');
+    const inp = document.getElementById('prodPwInput');
+    if (inp.value.trim() === '') {
+      box.classList.add('error');
+      err.classList.add('visible');
+    } else {
+      box.classList.remove('error');
+      err.classList.remove('visible');
+    }
+  }
+  function prodAuthClear() {
+    document.getElementById('prodPwBox').classList.remove('error');
+    document.getElementById('prodPwError').classList.remove('visible');
+    document.getElementById('prodPwInput').value = '';
+  }
+  document.getElementById('prodPwInput').addEventListener('input', () => {
+    document.getElementById('prodPwBox').classList.remove('error');
+    document.getElementById('prodPwError').classList.remove('visible');
+  });
+
+  /* ───── Production 2 — Topbar search clear ───── */
+  const topSearch = document.getElementById('searchTopbar');
+  const topSearchInput = topSearch.querySelector('input');
+  function syncTopSearch() {
+    topSearch.classList.toggle('has-value', topSearchInput.value.length > 0);
+  }
+  topSearchInput.addEventListener('input', syncTopSearch);
+  function clearTopSearch() {
+    topSearchInput.value = '';
+    syncTopSearch();
+    topSearchInput.focus();
+  }
+
+  /* ───── Production 4 — Title autosize (recipe-only) ───── */
+  const peTitle = document.getElementById('peTitle');
+  function peTitleAutosize() {
+    peTitle.style.height = 'auto';
+    peTitle.style.height = peTitle.scrollHeight + 'px';
+  }
+  peTitle.addEventListener('input', peTitleAutosize);
+  peTitleAutosize();
+
+  /* ───── Extended 1 — Floating label ───── */
+  function updateFloat(input) {
+    const wrap = input.closest('.x-float');
+    wrap.classList.toggle('has-value', input.value.length > 0);
+  }
+
+  /* ───── Extended 2 — Error shake (sequenced reveal) ───── */
+  function extSubmit() {
+    const emailBox = document.getElementById('extEmailBox');
+    const pwBox    = document.getElementById('extPwBox');
+    const pwErr    = document.getElementById('extPwError');
+    const emailVal = document.getElementById('extEmailInput').value.trim();
+    const pwVal    = document.getElementById('extPwInput').value.trim();
+
+    [emailBox, pwBox].forEach(b => b.classList.remove('shake'));
+    pwErr.classList.remove('visible');
+
+    let shaken = false;
+    if (!emailVal) {
+      void emailBox.offsetWidth;
+      emailBox.classList.add('shake');
+      shaken = true;
+    }
+    if (!pwVal) {
+      void pwBox.offsetWidth;
+      pwBox.classList.add('shake');
+      shaken = true;
+    }
+    if (shaken) {
+      // Reveal the message AFTER the shake settles (320ms)
+      setTimeout(() => {
+        if (!document.getElementById('extPwInput').value.trim()) {
+          pwErr.classList.add('visible');
+        }
+      }, 320);
+    }
+  }
+  function extReset() {
+    document.getElementById('extEmailInput').value = '';
+    document.getElementById('extPwInput').value = '';
+    document.getElementById('extEmailBox').classList.remove('shake');
+    document.getElementById('extPwBox').classList.remove('shake');
+    document.getElementById('extPwError').classList.remove('visible');
+  }
+  ['extEmailInput', 'extPwInput'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      document.getElementById('extPwError').classList.remove('visible');
+    });
+  });
+
+  /* ───── Extended 3 — Success tick ───── */
+  function successFire() {
+    const box = document.getElementById('successBox');
+    box.classList.remove('success');
+    void box.offsetWidth;
+    box.classList.add('success');
+  }
+  function successReset() {
+    document.getElementById('successBox').classList.remove('success');
+  }
+
+  /* ───── Extended 4 — Password eye morph ───── */
+  function togglePwMorph() {
+    const btn = document.getElementById('extPwToggleBtn');
+    const inp = document.getElementById('extPwToggleInput');
+    const wasHidden = inp.type === 'password';
+    inp.type = wasHidden ? 'text' : 'password';
+    btn.classList.toggle('is-on', wasHidden);
+    btn.setAttribute('aria-label', wasHidden ? 'Hide password' : 'Show password');
+  }
+
+  /* ───── Extended 5 — Character counter ───── */
+  const counterWrap = document.getElementById('counterWrap');
+  const counterTA   = document.getElementById('counterTA');
+  const counterLbl  = document.getElementById('counterLabel');
+  const COUNTER_MAX = 160;
+  function updateCounter() {
+    const len = counterTA.value.length;
+    counterLbl.textContent = `${len} / ${COUNTER_MAX}`;
+    counterLbl.classList.toggle('warn',   len >= COUNTER_MAX * 0.8 && len < COUNTER_MAX);
+    counterLbl.classList.toggle('danger', len >= COUNTER_MAX);
+    counterWrap.style.borderColor = len >= COUNTER_MAX ? 'var(--danger)' : '';
+  }
+  counterTA.addEventListener('input', updateCounter);
+  updateCounter();
+</script>
+
+</body>
+</html>

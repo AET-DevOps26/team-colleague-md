@@ -1,0 +1,1238 @@
+<!doctype html>
+<!--
+  C03 — Modals & Dialogs
+  Scope:      Centered dialog patterns: open/close motion, internal panel push,
+              shake error feedback, confirm-dialog variant, dismiss patterns,
+              and reduced-motion fallbacks.
+  Spec:       docs/Animation Spec.md  §  Modals & Dialogs
+  React hint: <Modal>, <ConfirmDialog>, <AuthModal>, useModalStack().
+  Source:     Extracted from animations/Verita Transition.html
+              · settings modal       lines 778–815, 2139–2155, 2418–2486
+              · auth modal           lines 893–1180, 2157–2335, 2491–2600
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Modals & Dialogs · Verita Animation Demo</title>
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout, not the modal styles) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .scope {
+    color: var(--text-secondary);
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+
+  /* Spec table — compact */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 20%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 18%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 22%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  /* Scope list */
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  /* Section meta — compact structured description */
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  /* Trigger buttons */
+  .triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 8px 0 4px;
+  }
+  .trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    transition:
+      transform 160ms var(--ease-out),
+      background 160ms var(--ease-out),
+      border-color 160ms var(--ease-out);
+  }
+  .trigger:hover {
+    background: var(--bg-elevated);
+    border-color: var(--text-primary);
+  }
+  .trigger:active { transform: translateY(1px); }
+  .trigger.primary {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+  .trigger.primary:hover { background: #333; }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* React hint footer */
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd {
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.55;
+  }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ===========================================================
+   * MODALS — extracted verbatim from Verita Transition.html
+   * =========================================================== */
+
+  /* ----- Settings-style modal (centered, mid-size, simple) ----- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms var(--ease-out);
+  }
+  .modal-backdrop.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .modal-backdrop:not(.open) * { pointer-events: none; }
+  .modal {
+    background: var(--bg-base);
+    border-radius: 14px;
+    border: 1px solid var(--border-subtle);
+    width: 440px;
+    max-width: calc(100vw - 32px);
+    box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.18);
+    transform: translateY(8px) scale(0.98);
+    transition: transform 160ms var(--ease-out);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky;
+    top: 0;
+    background: var(--bg-base);
+    border-radius: 14px 14px 0 0;
+    z-index: 1;
+  }
+  .modal-title { font-size: 14.5px; font-weight: 600; }
+  .modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: var(--text-tertiary);
+    transition:
+      background 120ms var(--ease-out),
+      color 120ms var(--ease-out);
+  }
+  .modal-close:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+  .modal-close svg { width: 16px; height: 16px; stroke-width: 2; }
+  .modal-body { padding: 0; }
+
+  /* Settings body — verbatim from master demo */
+  .settings-section { padding: 20px 20px 4px; }
+  .settings-section + .settings-section { border-top: 1px solid var(--border-subtle); padding-top: 16px; }
+  .section-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; }
+  .account-field { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+  .account-field-label { font-size: 11.5px; font-weight: 500; color: var(--text-secondary); }
+  .account-field-value { font-size: 13.5px; font-weight: 500; color: var(--text-primary); }
+  .settings-link { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; margin-bottom: 4px; color: var(--text-primary); font-size: 13.5px; font-weight: 500; border-radius: 6px; transition: color 120ms ease-out; cursor: pointer; width: 100%; background: none; border: 0; text-align: left; }
+  .settings-link:hover { color: var(--accent-hover); }
+  .settings-link:hover .link-arrow { color: var(--text-secondary); }
+  .settings-link-text { display: flex; flex-direction: column; gap: 1px; }
+  .settings-link-desc { font-size: 11.5px; font-weight: 400; color: var(--text-tertiary); }
+  .link-arrow { color: var(--text-tertiary); transition: color 120ms ease-out; }
+  .link-arrow svg { width: 14px; height: 14px; stroke-width: 2; display: block; }
+  .freq-control { display: flex; border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+  .freq-btn { flex: 1; padding: 8px 0; font-size: 12.5px; font-weight: 500; color: var(--text-tertiary); background: transparent; text-align: center; transition: background 120ms ease-out, color 120ms ease-out; border-right: 1px solid var(--border-default); border-top: 0; border-bottom: 0; border-left: 0; cursor: pointer; }
+  .freq-btn:last-child { border-right: 0; }
+  .freq-btn.active { background: var(--accent); color: #fff; }
+  .freq-btn:not(.active):hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; gap: 16px; }
+  .toggle-row + .toggle-row { border-top: 1px solid var(--border-subtle); }
+  .toggle-info { display: flex; flex-direction: column; gap: 2px; }
+  .toggle-label { font-size: 13.5px; font-weight: 500; color: var(--text-primary); }
+  .toggle-desc { font-size: 11.5px; font-weight: 400; color: var(--text-tertiary); }
+  .switch { position: relative; width: 38px; height: 22px; flex-shrink: 0; cursor: pointer; }
+  .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .switch-track { position: absolute; inset: 0; background: var(--bg-elevated); border-radius: 999px; border: 1.5px solid var(--border-default); transition: background 160ms ease-out, border-color 160ms ease-out; }
+  .switch input:checked ~ .switch-track { background: var(--accent); border-color: var(--accent); }
+  .switch-thumb { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; background: var(--text-tertiary); border-radius: 50%; transition: transform 160ms ease-out, background 160ms ease-out; pointer-events: none; }
+  .switch input:checked ~ .switch-track .switch-thumb { transform: translateX(16px); background: #fff; }
+
+  /* Confirm-dialog variant — narrower, action-row */
+  .modal.modal--narrow { width: 320px; }
+  .modal--narrow .modal-body {
+    padding: 18px 20px 0;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .modal--narrow .modal-body strong { color: var(--text-primary); font-weight: 600; }
+  .modal--narrow .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 18px 20px 18px;
+  }
+  .btn-text,
+  .btn-danger {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background 120ms var(--ease-out),
+      color 120ms var(--ease-out);
+  }
+  .btn-text {
+    color: var(--text-secondary);
+    background: transparent;
+    border: 0;
+  }
+  .btn-text:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+  .btn-danger {
+    color: #fff;
+    background: var(--danger);
+    border: 0;
+  }
+  .btn-danger:hover { background: color-mix(in oklab, var(--danger) 88%, #000); }
+
+  /* ----- Auth modal (full extraction) ----- */
+  .auth-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms var(--ease-out);
+  }
+  .auth-modal-backdrop.open { opacity: 1; pointer-events: all; }
+  .auth-modal-backdrop:not(.open),
+  .auth-modal-backdrop:not(.open) * { pointer-events: none !important; }
+  .auth-modal {
+    position: relative;
+    background: var(--bg-base);
+    border-radius: 16px;
+    border: 1px solid var(--border-subtle);
+    width: 380px;
+    max-width: calc(100vw - 32px);
+    box-shadow:
+      0 32px 80px -20px rgba(0, 0, 0, 0.24),
+      0 8px 24px -8px rgba(0, 0, 0, 0.10);
+    transform: translateY(10px) scale(0.985);
+    opacity: 0;
+    transition:
+      transform 180ms var(--ease-out),
+      opacity 180ms var(--ease-out);
+    overflow: hidden;
+    padding: 24px 28px 26px;
+  }
+  .auth-modal-backdrop.open .auth-modal {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  .auth-modal.shake { animation: auth-shake 240ms var(--ease-out); }
+  @keyframes auth-shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-6px); }
+    40%      { transform: translateX(6px); }
+    60%      { transform: translateX(-4px); }
+    80%      { transform: translateX(4px); }
+  }
+
+  .auth-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    color: var(--text-tertiary);
+    z-index: 5;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition:
+      background 120ms var(--ease-out),
+      color 120ms var(--ease-out);
+  }
+  .auth-close:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .auth-close svg { width: 16px; height: 16px; stroke-width: 2; }
+
+  .auth-wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 32px;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .auth-wordmark .lead { font-size: 38px; font-weight: 600; }
+
+  .auth-tabs {
+    display: flex;
+    gap: 28px;
+    margin-top: 22px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .auth-tab {
+    padding: 0 0 11px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    background: none;
+    transition:
+      color 120ms var(--ease-out),
+      border-color 120ms var(--ease-out);
+  }
+  .auth-tab.active {
+    color: var(--text-primary);
+    font-weight: 600;
+    border-bottom-color: var(--text-primary);
+  }
+
+  .auth-stage {
+    position: relative;
+    margin-top: 22px;
+    transition: height 240ms var(--ease-ios);
+    overflow: hidden;
+  }
+  .auth-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: block;
+    opacity: 0;
+    transform: translateX(0);
+    transition:
+      transform 220ms var(--ease-out),
+      opacity 220ms var(--ease-out);
+    pointer-events: none;
+  }
+  .auth-panel.active { opacity: 1; pointer-events: all; }
+  .auth-panel.exit-left {
+    transform: translateX(-20px);
+    opacity: 0;
+    transition:
+      transform 180ms ease-in,
+      opacity 180ms ease-in;
+  }
+  .auth-panel.exit-right {
+    transform: translateX(20px);
+    opacity: 0;
+    transition:
+      transform 180ms ease-in,
+      opacity 180ms ease-in;
+  }
+  .auth-panel.enter-from-right { transform: translateX(20px); opacity: 0; }
+  .auth-panel.enter-from-left  { transform: translateX(-20px); opacity: 0; }
+  .auth-panel.entered { transform: translateX(0); opacity: 1; }
+
+  .auth-field { margin-bottom: 14px; }
+  .auth-field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+  .auth-field-header .forgot-link {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+    transition: color 120ms var(--ease-out);
+  }
+  .auth-field-header .forgot-link:hover { color: var(--text-primary); }
+  .auth-field-box {
+    height: 44px;
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    transition: border-color 120ms var(--ease-out);
+  }
+  .auth-field-box:focus-within { border-color: var(--text-primary); }
+  .auth-field-box input {
+    flex: 1;
+    min-width: 0;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    background: none;
+    border: 0;
+    outline: 0;
+    font-family: inherit;
+  }
+  .auth-field-box input::placeholder { color: var(--text-tertiary); }
+  .auth-field-eye {
+    color: var(--text-tertiary);
+    display: grid;
+    place-items: center;
+    padding: 2px;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    transition: color 120ms var(--ease-out);
+  }
+  .auth-field-eye:hover { color: var(--text-secondary); }
+  .auth-field-hint { margin-top: 6px; font-size: 11.5px; color: var(--text-tertiary); }
+
+  .auth-cta {
+    width: 100%;
+    height: 44px;
+    border-radius: 8px;
+    background: var(--text-primary);
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-top: 4px;
+    border: 0;
+    transition: background 120ms var(--ease-out);
+  }
+  .auth-cta:hover { background: #333; }
+  .auth-cta .label { transition: opacity 120ms var(--ease-out); }
+  .auth-cta .spinner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    opacity: 0;
+    animation: auth-spin 720ms linear infinite;
+    transition: opacity 120ms var(--ease-out);
+  }
+  .auth-cta.loading .label { opacity: 0; }
+  .auth-cta.loading .spinner { opacity: 1; }
+  @keyframes auth-spin { to { transform: rotate(360deg); } }
+
+  .auth-switch {
+    margin-top: 16px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+  .auth-switch button {
+    color: var(--text-primary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--text-primary);
+    padding-bottom: 1px;
+    cursor: pointer;
+    background: none;
+    border-top: 0;
+    border-left: 0;
+    border-right: 0;
+    font: inherit;
+  }
+  .auth-tos {
+    margin-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--text-tertiary);
+    text-align: center;
+  }
+  .auth-tos .term { color: var(--text-secondary); text-decoration: underline; }
+
+  .auth-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 18px;
+    background: none;
+    border: 0;
+    padding: 0;
+    transition: color 120ms var(--ease-out);
+  }
+  .auth-back:hover { color: var(--text-primary); }
+  .auth-back svg { width: 16px; height: 16px; stroke-width: 1.75; }
+  .auth-forgot-headline {
+    margin-top: 20px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+  .auth-forgot-sub {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+
+  .auth-success {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: var(--bg-base);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms var(--ease-out);
+  }
+  .auth-success.show { opacity: 1; }
+  .auth-success-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--success-bg);
+    color: var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: scale(0.5);
+    opacity: 0;
+    transition:
+      transform 280ms var(--ease-ios),
+      opacity 200ms var(--ease-out);
+  }
+  .auth-success.show .auth-success-circle { transform: scale(1); opacity: 1; }
+  .auth-success-circle svg { width: 32px; height: 32px; stroke-width: 2.4; }
+  .auth-success-text {
+    font-family: var(--font-serif);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    opacity: 0;
+    transform: translateY(4px);
+    transition:
+      opacity 220ms var(--ease-out) 100ms,
+      transform 220ms var(--ease-out) 100ms;
+  }
+  .auth-success.show .auth-success-text { opacity: 1; transform: translateY(0); }
+
+  /* Content stagger — children with --stagger-i lift in sequence on open */
+  .auth-modal-backdrop.open.stagger-in .auth-stagger {
+    opacity: 0;
+    transform: translateY(4px);
+    animation: auth-stagger-in 200ms var(--ease-out) forwards;
+    animation-delay: calc(var(--stagger-i, 0) * 1ms);
+  }
+  @keyframes auth-stagger-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Reduced motion (extends tokens.css's global override) */
+  @media (prefers-reduced-motion: reduce) {
+    .auth-modal,
+    .auth-modal-backdrop.open .auth-modal,
+    .modal,
+    .modal-backdrop.open .modal { transform: none; }
+    .auth-panel { transition: opacity 100ms linear !important; }
+    .auth-panel.exit-left,
+    .auth-panel.exit-right,
+    .auth-panel.enter-from-left,
+    .auth-panel.enter-from-right { transform: none !important; }
+    .auth-modal-backdrop.open.stagger-in .auth-stagger {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-header">
+  <span class="demo-title">C03 · Modals & Dialogs</span>
+  <span class="demo-spec">Open / close · internal push · shake · confirm · dismiss · reduced-motion</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<div class="demo-stage">
+<div class="wrap">
+
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Modals &amp; Dialogs</h1>
+    <ul class="scope-list">
+      <li>Auth modal — Login / Signup / Forgot with internal push</li>
+      <li>Settings modal — mid-size variant</li>
+      <li>Confirm dialog — narrow 320px variant</li>
+      <li>Shared open / close motion vocabulary across all three</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SPEC TABLE                                                    -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Spec</h2>
+    <p style="font-size:12.5px;color:var(--text-tertiary);margin:4px 0 14px">Tokens from <code style="font:500 11px var(--font-mono);color:var(--text-secondary)">tokens/tokens.css</code> · deviations tracked in <code style="font:500 11px var(--font-mono);color:var(--text-secondary)">animations/Plan.md</code></p>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Backdrop fade-in</td><td>160ms</td><td>var(--ease-out)</td><td>Both modal styles. Closes symmetric.</td></tr>
+        <tr><td>Panel scale-in</td><td>180ms (auth) / 160ms (settings)</td><td>var(--ease-out)</td><td>translateY 8–10px + scale 0.98–0.985 → identity.</td></tr>
+        <tr><td>Internal panel push</td><td>180ms exit · 60ms gap · 220ms enter</td><td>ease-in (exit) / var(--ease-out) (enter)</td><td>Stage height transitions over 240ms with var(--ease-ios).</td></tr>
+        <tr><td>Submit-error shake</td><td>240ms</td><td>var(--ease-out)</td><td>±6px / ±4px translateX cycle on the panel.</td></tr>
+        <tr><td>Content stagger</td><td>200ms · 40ms step</td><td>var(--ease-out)</td><td>Wordmark · tabs · stage lift sequentially via --stagger-i.</td></tr>
+        <tr><td>Success overlay</td><td>200ms fade · 280ms circle scale</td><td>var(--ease-ios)</td><td>Held 700ms before close, then dismissed.</td></tr>
+        <tr><td>Confirm dialog</td><td>same as settings (160ms)</td><td>var(--ease-out)</td><td>Narrower 320px panel, two-button row.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 1 · AUTH MODAL                                                -->
+  <!-- ============================================================ -->
+  <section class="divided">
+    <h2>Auth modal — open / tabs / forgot / shake</h2>
+    <dl class="section-meta">
+      <dt>Modes</dt><dd>Login · Signup · Forgot</dd>
+      <dt>Tab switch</dt><dd>Horizontal push, forward = left</dd>
+      <dt>Submit</dt><dd>800ms loading → success overlay → auto-close</dd>
+      <dt>Dismiss</dt><dd><code>Esc</code> · backdrop click · close button</dd>
+    </dl>
+    <div class="triggers">
+      <button class="trigger primary" type="button" onclick="openAuthModal('login')">Open auth · Log in</button>
+      <button class="trigger" type="button" onclick="openAuthModal('signup')">Open auth · Sign up</button>
+      <button class="trigger" type="button" onclick="openAuthModal('forgot')">Open auth · Forgot</button>
+      <button class="trigger" type="button" onclick="triggerAuthShake()">Trigger error shake</button>
+    </div>
+    <p class="hint">Press <code>Esc</code> or click the dim backdrop to dismiss. Shake fires whether or not the modal is open — if closed, it opens to login first.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 2 · SETTINGS-STYLE MODAL                                      -->
+  <!-- ============================================================ -->
+  <section class="divided">
+    <h2>Settings modal — mid-size</h2>
+    <dl class="section-meta">
+      <dt>Panel</dt><dd>440px wide · scrolls on overflow</dd>
+      <dt>Motion</dt><dd>160ms backdrop fade · 160ms translateY + scale</dd>
+      <dt>Internal</dt><dd>No panel push — flat content</dd>
+    </dl>
+    <div class="triggers">
+      <button class="trigger primary" type="button" onclick="openSettingsModal()">Open settings</button>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 3 · CONFIRM DIALOG                                            -->
+  <!-- ============================================================ -->
+  <section class="divided">
+    <h2>Confirm dialog — narrow variant</h2>
+    <dl class="section-meta">
+      <dt>Panel</dt><dd>320px wide · no header bar</dd>
+      <dt>Actions</dt><dd>Cancel + Confirm row at bottom · danger token when destructive</dd>
+      <dt>Motion</dt><dd>Inherits settings modal (160ms)</dd>
+    </dl>
+    <div class="triggers">
+      <button class="trigger primary" type="button" onclick="openConfirm()">Delete digest…</button>
+    </div>
+    <p class="hint">Choosing <strong>Delete</strong> simply closes — no toast firing here, that's <code>C04</code>'s job.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- React hint footer                                             -->
+  <!-- ============================================================ -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin:0">
+      <code>&lt;Modal&gt;</code> · <code>&lt;ConfirmDialog&gt;</code> · <code>&lt;AuthModal&gt;</code>, with <code>useModalStack()</code> for z-index, focus return, and Esc dispatch.
+      Key props: <code>open</code>, <code>onClose</code>, <code>dismissOn</code>, <code>blockDismiss</code> (mid-submit), <code>disableMotion</code>.
+      <code>&lt;AuthModal&gt;</code> adds <code>mode: 'login' | 'signup' | 'forgot'</code> and <code>onSuccess(kind)</code>.
+      Files: <code>src/components/Modal/{Modal,ConfirmDialog}.tsx</code> · <code>src/components/Auth/AuthModal.tsx</code>.
+      Esc, backdrop click, and × button are wired on every modal; the auth modal blocks dismiss while submitting.
+      Reduced motion follows <code>tokens.css</code>'s global override.
+    </p>
+  </div>
+
+</div>
+</div>
+
+
+<!-- =============================================================
+     SETTINGS MODAL MARKUP
+     ============================================================= -->
+<div class="modal-backdrop" id="settingsModal" aria-modal="true" role="dialog" aria-label="Settings" onclick="handleSettingsBackdrop(event)">
+  <div class="modal" id="settingsPanel">
+    <div class="modal-header">
+      <span class="modal-title">Settings</span>
+      <button class="modal-close" type="button" onclick="closeSettingsModal()" aria-label="Close settings">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <div class="section-label">Account</div>
+        <div class="account-field">
+          <div class="account-field-label">Email</div>
+          <div class="account-field-value">jane.doe@example.com</div>
+        </div>
+        <div class="account-field" style="margin-bottom:14px;">
+          <div class="account-field-label">Username</div>
+          <div class="account-field-value">@janedoe</div>
+        </div>
+        <button class="settings-link" type="button">
+          <div class="settings-link-text">
+            <span>Edit Profile</span>
+            <span class="settings-link-desc">Update bio, avatar, and profile fields</span>
+          </div>
+          <span class="link-arrow"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg></span>
+        </button>
+      </div>
+      <div class="settings-section">
+        <div class="section-label">Digest</div>
+        <div class="account-field-label" style="margin-bottom:8px;">Email frequency</div>
+        <div class="freq-control" role="group" aria-label="Digest frequency">
+          <button class="freq-btn active" id="freq-daily" type="button" onclick="setFreq('daily')">Daily</button>
+          <button class="freq-btn" id="freq-weekly" type="button" onclick="setFreq('weekly')">Weekly</button>
+          <button class="freq-btn" id="freq-off" type="button" onclick="setFreq('off')">Off</button>
+        </div>
+        <button class="settings-link" type="button">
+          <div class="settings-link-text">
+            <span>Manage Topics</span>
+            <span class="settings-link-desc">Subscribe or unsubscribe from digest topics</span>
+          </div>
+          <span class="link-arrow"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg></span>
+        </button>
+      </div>
+      <div class="settings-section" style="padding-bottom:20px;">
+        <div class="section-label">Privacy</div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-label">Show my Bookmarks to others</div>
+            <div class="toggle-desc">Visible on your public profile</div>
+          </div>
+          <label class="switch" aria-label="Show bookmarks to others">
+            <input type="checkbox" checked />
+            <div class="switch-track"><div class="switch-thumb"></div></div>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-label">Show my Likes to others</div>
+            <div class="toggle-desc">Visible on your public profile</div>
+          </div>
+          <label class="switch" aria-label="Show likes to others">
+            <input type="checkbox" />
+            <div class="switch-track"><div class="switch-thumb"></div></div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================
+     CONFIRM DIALOG MARKUP
+     ============================================================= -->
+<div class="modal-backdrop" id="confirmModal" aria-modal="true" role="dialog" aria-label="Delete digest" onclick="handleConfirmBackdrop(event)">
+  <div class="modal modal--narrow">
+    <div class="modal-body">
+      Delete <strong>"Slow web reads"</strong>? This digest and its 14 saved posts will be removed for everyone subscribed.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-text" type="button" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-danger" type="button" onclick="closeConfirm()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================
+     AUTH MODAL MARKUP
+     ============================================================= -->
+<div class="auth-modal-backdrop" id="authModal" aria-modal="true" role="dialog" aria-label="Sign in">
+  <div class="auth-modal" id="authModalPanel">
+    <button class="auth-close" type="button" onclick="closeAuthModal()" aria-label="Close">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+
+    <div class="auth-wordmark auth-stagger" id="authWordmark" style="--stagger-i:80">
+      <span class="lead">V</span>erita
+    </div>
+
+    <div class="auth-tabs auth-stagger" id="authTabs" style="--stagger-i:120">
+      <button class="auth-tab active" data-mode="login" type="button" onclick="setAuthMode('login')">Log in</button>
+      <button class="auth-tab" data-mode="signup" type="button" onclick="setAuthMode('signup')">Sign up</button>
+    </div>
+
+    <div class="auth-stage auth-stagger" id="authStage" style="--stagger-i:160">
+
+      <!-- LOGIN -->
+      <div class="auth-panel active" id="panel-login" data-panel="login">
+        <div class="auth-field">
+          <div class="auth-field-header"><span>Email</span></div>
+          <div class="auth-field-box"><input type="email" placeholder="you@domain.com" value="alex@verita.app" autocomplete="email"></div>
+        </div>
+        <div class="auth-field">
+          <div class="auth-field-header"><span>Password</span><button class="forgot-link" type="button" onclick="setAuthMode('forgot')">Forgot password?</button></div>
+          <div class="auth-field-box"><input type="password" id="loginPw" placeholder="••••••••" autocomplete="current-password"><button class="auth-field-eye" type="button" tabindex="-1" onclick="toggleAuthPw('loginPw')" aria-label="Show password"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        </div>
+        <button class="auth-cta" type="button" onclick="submitAuth('login')"><span class="label">Log in</span><span class="spinner"></span></button>
+        <div class="auth-switch">No account? <button type="button" onclick="setAuthMode('signup')">Sign up</button></div>
+      </div>
+
+      <!-- SIGNUP -->
+      <div class="auth-panel" id="panel-signup" data-panel="signup">
+        <div class="auth-field"><div class="auth-field-header"><span>Username</span></div><div class="auth-field-box"><input type="text" placeholder="3–20 chars, letters / numbers / _"></div></div>
+        <div class="auth-field"><div class="auth-field-header"><span>Email</span></div><div class="auth-field-box"><input type="email" placeholder="you@domain.com" autocomplete="email"></div></div>
+        <div class="auth-field">
+          <div class="auth-field-header"><span>Password</span></div>
+          <div class="auth-field-box"><input type="password" id="signupPw" placeholder="At least 8 characters" autocomplete="new-password"><button class="auth-field-eye" type="button" tabindex="-1" onclick="toggleAuthPw('signupPw')" aria-label="Show password"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+          <div class="auth-field-hint">Use 8 or more characters with a mix of letters and numbers.</div>
+        </div>
+        <button class="auth-cta" type="button" onclick="submitAuth('signup')"><span class="label">Create account</span><span class="spinner"></span></button>
+        <div class="auth-tos">By signing up you agree to our <span class="term">Terms</span> and <span class="term">Privacy Policy</span>.</div>
+        <div class="auth-switch">Already have an account? <button type="button" onclick="setAuthMode('login')">Log in</button></div>
+      </div>
+
+      <!-- FORGOT -->
+      <div class="auth-panel" id="panel-forgot" data-panel="forgot">
+        <button class="auth-back" type="button" onclick="setAuthMode('login')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Back to log in
+        </button>
+        <div class="auth-wordmark"><span class="lead">V</span>erita</div>
+        <div class="auth-forgot-headline">Reset your password</div>
+        <div class="auth-forgot-sub">Enter your account email and we'll send a link to reset your password.</div>
+        <div style="margin-top:20px">
+          <div class="auth-field"><div class="auth-field-header"><span>Email</span></div><div class="auth-field-box"><input type="email" placeholder="you@domain.com" autocomplete="email"></div></div>
+          <button class="auth-cta" type="button" onclick="submitAuth('forgot')"><span class="label">Send reset link</span><span class="spinner"></span></button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Success overlay -->
+    <div class="auth-success" id="authSuccess">
+      <div class="auth-success-circle"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+      <div class="auth-success-text" id="authSuccessText">Welcome back, Alex</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* =====================================================
+   * AUTH MODAL CONTROL — extracted from Verita Transition
+   * (the success path no longer flips outer auth state;
+   * it just plays the success overlay then closes.)
+   * ===================================================== */
+  const AUTH_MODE_ORDER = ['login','signup','forgot'];
+  let _authMode = 'login';
+  let _authSubmitting = false;
+
+  const _authBackdrop = () => document.getElementById('authModal');
+  const _authPanel    = (m) => document.getElementById('panel-' + m);
+  const _authStage    = () => document.getElementById('authStage');
+  const _authPanelEl  = () => document.getElementById('authModalPanel');
+
+  function _measurePanelHeight(panel){
+    const prev = {p:panel.style.position,v:panel.style.visibility,o:panel.style.opacity,t:panel.style.transform,e:panel.style.pointerEvents};
+    panel.style.position='static';panel.style.visibility='hidden';panel.style.opacity='0';panel.style.transform='none';panel.style.pointerEvents='none';
+    const h = panel.offsetHeight;
+    panel.style.position=prev.p;panel.style.visibility=prev.v;panel.style.opacity=prev.o;panel.style.transform=prev.t;panel.style.pointerEvents=prev.e;
+    return h;
+  }
+
+  function openAuthModal(mode){
+    if(!mode) mode='login';
+    const bd = _authBackdrop();
+    document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active','exit-left','exit-right','enter-from-left','enter-from-right','entered'));
+    _authPanel(mode).classList.add('active');
+    _authMode = mode;
+    _updateAuthChrome(mode);
+    _authStage().style.height = _measurePanelHeight(_authPanel(mode)) + 'px';
+    document.getElementById('authSuccess').classList.remove('show');
+    document.querySelectorAll('.auth-cta').forEach(c => c.classList.remove('loading'));
+    bd.classList.remove('stagger-in');
+    void bd.offsetWidth;
+    bd.classList.add('open','stagger-in');
+    document.addEventListener('keydown', _authEsc);
+    bd.addEventListener('click', _authBackdropClick);
+  }
+
+  function closeAuthModal(){
+    if(_authSubmitting) return;
+    const bd = _authBackdrop();
+    bd.classList.remove('open','stagger-in');
+    document.removeEventListener('keydown', _authEsc);
+    bd.removeEventListener('click', _authBackdropClick);
+  }
+
+  function _authEsc(e){ if(e.key === 'Escape') closeAuthModal(); }
+  function _authBackdropClick(e){ if(e.target === _authBackdrop()) closeAuthModal(); }
+
+  function _updateAuthChrome(mode){
+    const tabs = document.getElementById('authTabs');
+    tabs.style.display = (mode === 'login' || mode === 'signup') ? 'flex' : 'none';
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+    const wm = document.getElementById('authWordmark');
+    if(wm) wm.style.display = (mode === 'login' || mode === 'signup') ? 'block' : 'none';
+  }
+
+  function toggleAuthPw(id){
+    const inp = document.getElementById(id);
+    if(!inp) return;
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  function setAuthMode(nextMode){
+    if(nextMode === _authMode) return;
+    const bd = _authBackdrop();
+    if(!bd.classList.contains('open')){ _authMode = nextMode; return; }
+    const fromPanel = _authPanel(_authMode);
+    const toPanel   = _authPanel(nextMode);
+    const forward   = AUTH_MODE_ORDER.indexOf(nextMode) > AUTH_MODE_ORDER.indexOf(_authMode);
+    _authStage().style.height = _measurePanelHeight(toPanel) + 'px';
+    fromPanel.classList.remove('active','entered');
+    fromPanel.classList.add(forward ? 'exit-left' : 'exit-right');
+    toPanel.classList.remove('exit-left','exit-right','entered');
+    toPanel.classList.add(forward ? 'enter-from-right' : 'enter-from-left');
+    void toPanel.offsetWidth;
+    setTimeout(() => {
+      toPanel.classList.add('active');
+      toPanel.classList.remove('enter-from-right','enter-from-left');
+      toPanel.classList.add('entered');
+    }, 60);
+    setTimeout(() => fromPanel.classList.remove('exit-left','exit-right'), 220);
+    _authMode = nextMode;
+    _updateAuthChrome(nextMode);
+  }
+
+  function submitAuth(kind){
+    if(_authSubmitting) return;
+    _authSubmitting = true;
+    const btn = document.querySelector('#panel-' + _authMode + ' .auth-cta');
+    if(btn) btn.classList.add('loading');
+
+    if(kind === 'forgot'){
+      setTimeout(() => {
+        if(btn) btn.classList.remove('loading');
+        _authSubmitting = false;
+        setAuthMode('login');
+      }, 700);
+      return;
+    }
+
+    setTimeout(() => {
+      if(btn) btn.classList.remove('loading');
+      const success = document.getElementById('authSuccess');
+      document.getElementById('authSuccessText').textContent =
+        kind === 'signup' ? 'Welcome to Verita' : 'Welcome back, Alex';
+      success.classList.add('show');
+      setTimeout(() => {
+        const bd = _authBackdrop();
+        bd.classList.remove('open','stagger-in');
+        document.removeEventListener('keydown', _authEsc);
+        bd.removeEventListener('click', _authBackdropClick);
+        setTimeout(() => success.classList.remove('show'), 200);
+        _authSubmitting = false;
+      }, 700);
+    }, 800);
+  }
+
+  /* Demo-only: surface the .shake style that exists in the master demo
+   * but has no JS trigger there. Open the modal first if it isn't open. */
+  function triggerAuthShake(){
+    const bd = _authBackdrop();
+    if(!bd.classList.contains('open')){ openAuthModal('login'); }
+    const panel = _authPanelEl();
+    panel.classList.remove('shake');
+    void panel.offsetWidth;
+    panel.classList.add('shake');
+    setTimeout(() => panel.classList.remove('shake'), 260);
+  }
+
+  /* =====================================================
+   * SETTINGS MODAL CONTROL
+   * ===================================================== */
+  function openSettingsModal(){
+    document.getElementById('settingsModal').classList.add('open');
+    document.addEventListener('keydown', _settingsEsc);
+  }
+  function closeSettingsModal(){
+    document.getElementById('settingsModal').classList.remove('open');
+    document.removeEventListener('keydown', _settingsEsc);
+  }
+  function handleSettingsBackdrop(e){
+    if(e.target === document.getElementById('settingsModal')) closeSettingsModal();
+  }
+  function _settingsEsc(e){ if(e.key === 'Escape') closeSettingsModal(); }
+
+  /* =====================================================
+   * CONFIRM DIALOG CONTROL
+   * ===================================================== */
+  function openConfirm(){
+    document.getElementById('confirmModal').classList.add('open');
+    document.addEventListener('keydown', _confirmEsc);
+  }
+  function closeConfirm(){
+    document.getElementById('confirmModal').classList.remove('open');
+    document.removeEventListener('keydown', _confirmEsc);
+  }
+  function handleConfirmBackdrop(e){
+    if(e.target === document.getElementById('confirmModal')) closeConfirm();
+  }
+
+  // Settings · digest frequency segmented control
+  function setFreq(value){
+    ['daily','weekly','off'].forEach(v => {
+      const el = document.getElementById('freq-' + v);
+      if(el) el.classList.toggle('active', v === value);
+    });
+  }
+  function _confirmEsc(e){ if(e.key === 'Escape') closeConfirm(); }
+</script>
+
+</body>
+</html>

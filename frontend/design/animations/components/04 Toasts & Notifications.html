@@ -1,0 +1,685 @@
+<!doctype html>
+<!--
+  C04 — Toasts & Notifications
+  Scope:      Two parallel toast surfaces:
+                1. Toast system   — bottom-right, tinted bg, 4 semantic variants
+                                    (success / error / warning / info), stack max 2,
+                                    hover-pause, manual close, 4000ms auto-dismiss
+                2. Welcome pill   — top-center, tinted neutral fill (no icon),
+                                    one-shot greeting, 3000ms auto-dismiss
+              Reduced-motion fallbacks honor tokens.css global override.
+  Spec:       docs/Animation Spec.md  §  Toasts & Notifications
+  React hint: showToast({variant, message, lifetime?}) → id ; dismiss(id) ; dismissAll()
+              <WelcomePill message lifetime onDismiss />  (independent surface)
+  Source:     Extended from animations/Verita Transition.html (master had singleton
+              accent toast + welcome pill only); merged into a single tinted variant
+              system per design review.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Toasts & Notifications · Verita Animation Demo</title>
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout, not the toast styles) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .scope {
+    color: var(--text-secondary);
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+
+  /* Spec table — compact */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 20%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 18%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 22%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  /* Scope list */
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  /* Section meta — compact structured description */
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  /* Trigger buttons */
+  .triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 8px 0 4px;
+  }
+  .trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    transition:
+      transform 160ms var(--ease-out),
+      background 160ms var(--ease-out),
+      border-color 160ms var(--ease-out);
+  }
+  .trigger:hover {
+    background: var(--bg-elevated);
+    border-color: var(--text-primary);
+  }
+  .trigger:active { transform: translateY(1px); }
+  .trigger.primary {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+  .trigger.primary:hover { background: #333; }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* React hint footer */
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd {
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.55;
+  }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ===========================================================
+   * TOAST SYSTEM — bottom-right, tinted, 4 semantic variants,
+   * stack max 2, hover-pause, manual close.
+   * =========================================================== */
+
+  /* Stack container — bottom-right column, oldest at top, newest at bottom. */
+  .toast-stack {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    width: 320px;
+  }
+
+  /* Individual toast — variant colors via CSS vars set per-element. */
+  .toast-item {
+    --toast-fg: var(--text-primary);
+    --toast-bg: var(--bg-surface);
+    --toast-border: var(--border-default);
+    --toast-icon: var(--text-secondary);
+
+    pointer-events: auto;
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    align-items: start;
+    gap: 10px;
+    padding: 11px 12px 11px 14px;
+    background: var(--toast-bg);
+    color: var(--toast-fg);
+    border: 1px solid var(--toast-border);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 220ms var(--ease-out),
+      transform 220ms var(--ease-ios);
+  }
+  .toast-item.show { opacity: 1; transform: translateY(0); }
+  .toast-item.leaving { opacity: 0; transform: translateY(-6px); }
+
+  .toast-item .toast-icon {
+    width: 18px; height: 18px;
+    color: var(--toast-icon);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .toast-item .toast-msg {
+    color: var(--toast-fg);
+    word-break: break-word;
+  }
+  .toast-item .toast-close {
+    background: transparent;
+    border: 0;
+    padding: 2px;
+    margin: -2px -2px 0 4px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 140ms var(--ease-out), background 140ms var(--ease-out);
+    line-height: 0;
+  }
+  .toast-item .toast-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
+  .toast-item .toast-close svg { width: 12px; height: 12px; }
+
+  /* Variant: success */
+  .toast-item[data-variant="success"] {
+    --toast-bg: var(--success-bg);
+    --toast-border: color-mix(in oklab, var(--success) 30%, var(--border-default));
+    --toast-icon: var(--success);
+  }
+  /* Variant: error */
+  .toast-item[data-variant="error"] {
+    --toast-bg: var(--danger-bg);
+    --toast-border: color-mix(in oklab, var(--danger) 32%, var(--border-default));
+    --toast-icon: var(--danger);
+  }
+  /* Variant: warning */
+  .toast-item[data-variant="warning"] {
+    --toast-bg: var(--warning-bg);
+    --toast-border: color-mix(in oklab, var(--warning) 32%, var(--border-default));
+    --toast-icon: var(--warning);
+  }
+  /* Variant: info — uses ink/accent on neutral surface (no --info token) */
+  .toast-item[data-variant="info"] {
+    --toast-bg: var(--bg-surface);
+    --toast-border: var(--border-default);
+    --toast-icon: var(--accent);
+  }
+
+  /* ===========================================================
+   * WELCOME PILL — top-center, tinted neutral fill, text-only.
+   * Aligned to toast vocabulary (tinted bg, ink text, semantic
+   * shadow weight) but kept on a different surface — pill shape +
+   * top-center position — so it cannot be confused with bottom-
+   * right system toasts. One-shot greeting, no hover-pause.
+   * =========================================================== */
+  /* In production welcome pill sits at top:24px of viewport. In this demo it
+     is pinned at top:140px so it does not overlap the fixed demo-header bar. */
+  .welcome-toast {
+    position: fixed;
+    top: 140px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-14px);
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    padding: 14px 26px;
+    border-radius: 999px;
+    font-size: 14.5px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    box-shadow: 0 14px 36px -8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 80;
+    transition:
+      opacity 240ms var(--ease-out),
+      transform 240ms var(--ease-ios);
+  }
+  .welcome-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .welcome-toast .welcome-msg {
+    line-height: 1.3;
+  }
+
+  /* Reduced motion (extends tokens.css's global override) */
+  @media (prefers-reduced-motion: reduce) {
+    .toast-item { transition: opacity 120ms linear; }
+    .toast-item.show, .toast-item.leaving { transform: none; }
+    .welcome-toast { transition: opacity 120ms linear; }
+    .welcome-toast.show { transform: translateX(-50%); }
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-header">
+  <span class="demo-title">C04 · Toasts & Notifications</span>
+  <span class="demo-spec">Tinted variant stack (max 2) · welcome pill · hover-pause · reduced-motion</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<div class="demo-stage">
+<div class="wrap">
+
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Toasts &amp; Notifications</h1>
+    <ul class="scope-list">
+      <li>Toast system — bottom-right, tinted, 4 semantic variants (success / error / warning / info)</li>
+      <li>Stack max 2 — newest pushes in, oldest evicts when 3rd arrives</li>
+      <li>Hover pauses the auto-dismiss timer; leave resumes with remaining time</li>
+      <li>Manual × close on every toast; <code style="font:500 11px var(--font-mono);color:var(--text-primary)">dismissAll()</code> for bulk clear</li>
+      <li>Welcome pill — top-center, tinted neutral fill, text-only, independent surface</li>
+      <li>Reduced motion — opacity-only fade, transforms suppressed</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SPEC TABLE                                                    -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Spec</h2>
+    <p style="font-size:12.5px;color:var(--text-tertiary);margin:4px 0 14px">Tokens from <code style="font:500 11px var(--font-mono);color:var(--text-secondary)">tokens/tokens.css</code> · deviations tracked in <code style="font:500 11px var(--font-mono);color:var(--text-secondary)">animations/Plan.md</code></p>
+    <table class="spec">
+      <thead>
+        <tr><th>Capability</th><th>Value</th><th>Token / API</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Variants</td><td>4</td><td>success / error / warning / info</td><td>Bg + border + icon color from <code>tokens.css</code> · info uses accent ink (no --info token).</td></tr>
+        <tr><td>Stack max</td><td>2</td><td><code>STACK_MAX = 2</code></td><td>3rd push evicts oldest with leave animation; bottom-right column. Caps visual weight in 880px doc; daily single-fire feels like a clean singleton.</td></tr>
+        <tr><td>Lifetime</td><td>4000ms</td><td><code>DEFAULT_LIFETIME</code></td><td>Variants carry semantic weight — read once, with a beat to register.</td></tr>
+        <tr><td>Hover pause</td><td>—</td><td><code>onmouseenter / leave</code></td><td>Timer paused on hover; resumes with remaining time on leave.</td></tr>
+        <tr><td>Manual close</td><td>—</td><td><code>×</code> button</td><td>16px hit target via 4px padding; <code>aria-label</code> "Dismiss".</td></tr>
+        <tr><td>Toast enter</td><td>220ms</td><td><code>--ease-out · --ease-ios</code></td><td>Opacity 0→1 + 8px translateY → 0.</td></tr>
+        <tr><td>Toast exit</td><td>220ms</td><td><code>--ease-out · --ease-ios</code></td><td>Opacity → 0 + -6px translateY · upward to hint at "consumed".</td></tr>
+        <tr><td>Welcome enter</td><td>240ms</td><td><code>--ease-out · --ease-ios</code></td><td>Top-center pill · opacity + -12px → 0 translateY.</td></tr>
+        <tr><td>Welcome exit</td><td>240ms</td><td><code>--ease-out · --ease-ios</code></td><td>Auto-dismiss 3000ms · independent timer from toast stack.</td></tr>
+        <tr><td>Reduced motion</td><td>120ms</td><td>linear</td><td>Opacity-only fade · transforms suppressed.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 1 · TOAST SYSTEM (bottom-right tinted variants)               -->
+  <!-- ============================================================ -->
+  <section class="divided">
+    <h2>Toast system — bottom-right</h2>
+    <dl class="section-meta">
+      <dt>Use</dt><dd>Semantic feedback after a discrete action: success confirmations, recoverable errors, transient warnings, ambient info.</dd>
+      <dt>Position</dt><dd>Fixed bottom-right · 22px inset · z-index 60 · stack column (oldest top, newest bottom)</dd>
+      <dt>Lifetime</dt><dd>4000ms default · hover pauses · manual × always available</dd>
+      <dt>Motion</dt><dd>Enter / exit 220ms · opacity + translateY · same vocabulary across all variants</dd>
+    </dl>
+
+    <h2 style="margin-top:28px;font-size:16px;font-style:normal;font-family:inherit;font-weight:600;color:var(--text-primary);letter-spacing:0">Variants</h2>
+    <div class="triggers">
+      <button class="trigger" type="button" onclick="showToast({variant:'success', message:'Post published — your followers were notified'})">
+        <span style="display:inline-flex;width:14px;height:14px;color:var(--success);align-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        Success
+      </button>
+      <button class="trigger" type="button" onclick="showToast({variant:'error', message:'Couldn’t reach the server. Your draft is saved locally.'})">
+        <span style="display:inline-flex;width:14px;height:14px;color:var(--danger);align-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+        Error
+      </button>
+      <button class="trigger" type="button" onclick="showToast({variant:'warning', message:'You’re offline — changes will sync when you reconnect'})">
+        <span style="display:inline-flex;width:14px;height:14px;color:var(--warning);align-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span>
+        Warning
+      </button>
+      <button class="trigger" type="button" onclick="showToast({variant:'info', message:'New issue digest available — published Sunday at 9am'})">
+        <span style="display:inline-flex;width:14px;height:14px;color:var(--accent);align-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+        Info
+      </button>
+    </div>
+
+    <h2 style="margin-top:28px;font-size:16px;font-style:normal;font-family:inherit;font-weight:600;color:var(--text-primary);letter-spacing:0">Stack &amp; controls</h2>
+    <dl class="section-meta">
+      <dt>Stack</dt><dd>Newest pushes in at bottom; oldest evicts when count &gt; 2.</dd>
+      <dt>Hover</dt><dd>Hover any toast to pause its lifetime timer; leave to resume with remaining time.</dd>
+      <dt>Close</dt><dd>× button dismisses immediately, regardless of timer.</dd>
+    </dl>
+    <div class="triggers">
+      <button class="trigger primary" type="button" onclick="stackDemo()">Push 3 in a row — overflow oldest</button>
+      <button class="trigger" type="button" onclick="showToast({variant:'info', message:'Hover me to pause the timer — leave to resume'})">Hover-pause demo</button>
+      <button class="trigger" type="button" onclick="dismissAllToasts()">Dismiss all</button>
+    </div>
+    <p class="hint">Single-fire usage feels like a singleton — most of the time only one toast is visible. The 2-deep stack only kicks in when actions land in the same window.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 2 · WELCOME PILL                                              -->
+  <!-- ============================================================ -->
+  <section class="divided">
+    <h2>Welcome pill — top-center</h2>
+    <dl class="section-meta">
+      <dt>Use</dt><dd>One-shot greeting after successful sign-in · independent of the toast stack</dd>
+      <dt>Position</dt><dd>Fixed top-center · 24px from top in production · z-index 80 (one tier above stack at 60)</dd>
+      <dt>Lifetime</dt><dd>3000ms · read-once message, no hover-pause needed</dd>
+      <dt>Motion</dt><dd>Enter / exit 240ms · <code>--ease-out</code> opacity · <code>--ease-ios</code> translateY -12px→0</dd>
+      <dt>Treatment</dt><dd>Tinted neutral fill (<code>--bg-surface</code> + 1px <code>--border-default</code>), text-only at 14.5px / 14px·26px padding — same color vocabulary as the bottom-right stack, but pill shape + top-center anchor + larger size keep the surface distinct without overpowering the page.</dd>
+    </dl>
+    <div class="triggers">
+      <button class="trigger primary" type="button" onclick="showWelcome('Welcome back, Alex — your feed is fresh')">Show welcome</button>
+      <button class="trigger" type="button" onclick="showWelcome('Welcome to Verita — your first digest arrives Sunday')">First-time copy</button>
+    </div>
+    <p class="hint">Pinned at <code>top:140px</code> in this demo so it doesn't overlap the fixed header bar; in production it sits at <code>top:24px</code>.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- React hint footer                                             -->
+  <!-- ============================================================ -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin:0 0 14px">
+      <strong style="color:var(--text-primary);font-weight:600">Toast system:</strong> <code>showToast({variant, message, lifetime?, action?})</code> returns toast id; <code>dismiss(id)</code> + <code>dismissAll()</code> for control. Stack capped at 2, hover pauses timer, manual close always available.
+      Files: <code>src/components/Toast.tsx</code> · <code>src/hooks/useToast.ts</code> · stack provider mounted once at app root.
+    </p>
+    <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin:0">
+      <strong style="color:var(--text-primary);font-weight:600">Welcome pill:</strong> <code>&lt;WelcomePill message lifetime onDismiss /&gt;</code> · independent component, top-center, tinted neutral fill, text-only at 14.5px, 3000ms. Mounted by the auth flow only — does not share state with the toast stack.
+      Reduced motion follows <code>tokens.css</code>'s global override: opacity-only fade at 120ms linear, transforms removed.
+    </p>
+  </div>
+
+</div>
+</div>
+
+
+<!-- =============================================================
+     TOAST STACK CONTAINER (bottom-right)
+     ============================================================= -->
+<div class="toast-stack" id="toastStack" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<!-- =============================================================
+     WELCOME PILL MARKUP (independent surface)
+     ============================================================= -->
+<div class="welcome-toast" id="welcomeToast" role="status" aria-live="polite">
+  <span class="welcome-msg">Welcome back, Alex — your feed is fresh</span>
+</div>
+
+<script>
+  /* =====================================================
+   * TOAST SYSTEM — semantic variants + stack + hover pause
+   * ===================================================== */
+  const STACK_MAX = 2;
+  const DEFAULT_LIFETIME = 4000;
+  const stackEl = document.getElementById('toastStack');
+  /** id -> { el, variant, message, lifetime, remaining, startedAt, timer, paused } */
+  const toasts = new Map();
+  let toastSeq = 0;
+
+  const ICONS = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    error:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+  };
+  const CLOSE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+  function showToast({ variant = 'info', message = '', lifetime = DEFAULT_LIFETIME } = {}){
+    const id = ++toastSeq;
+    const el = document.createElement('div');
+    el.className = 'toast-item';
+    el.dataset.variant = variant;
+    el.setAttribute('role', variant === 'error' ? 'alert' : 'status');
+    el.innerHTML =
+      '<span class="toast-icon" aria-hidden="true">' + (ICONS[variant] || ICONS.info) + '</span>' +
+      '<span class="toast-msg"></span>' +
+      '<button class="toast-close" type="button" aria-label="Dismiss">' + CLOSE_ICON + '</button>';
+    el.querySelector('.toast-msg').textContent = message;
+
+    el.querySelector('.toast-close').addEventListener('click', () => dismissToast(id));
+    el.addEventListener('mouseenter', () => pauseToast(id));
+    el.addEventListener('mouseleave', () => resumeToast(id));
+
+    stackEl.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+
+    const entry = { el, variant, message, lifetime, remaining: lifetime, startedAt: Date.now(), timer: null, paused: false };
+    toasts.set(id, entry);
+    scheduleDismiss(id);
+    enforceMax();
+    return id;
+  }
+
+  function scheduleDismiss(id){
+    const t = toasts.get(id);
+    if (!t) return;
+    clearTimeout(t.timer);
+    t.startedAt = Date.now();
+    t.paused = false;
+    t.timer = setTimeout(() => dismissToast(id), t.remaining);
+  }
+  function pauseToast(id){
+    const t = toasts.get(id);
+    if (!t || t.paused) return;
+    clearTimeout(t.timer);
+    t.remaining -= (Date.now() - t.startedAt);
+    if (t.remaining < 0) t.remaining = 0;
+    t.paused = true;
+  }
+  function resumeToast(id){
+    const t = toasts.get(id);
+    if (!t || !t.paused) return;
+    scheduleDismiss(id);
+  }
+  function dismissToast(id){
+    const t = toasts.get(id);
+    if (!t) return;
+    clearTimeout(t.timer);
+    t.el.classList.remove('show');
+    t.el.classList.add('leaving');
+    toasts.delete(id);
+    setTimeout(() => { if (t.el.parentNode) t.el.parentNode.removeChild(t.el); }, 240);
+  }
+  function dismissAllToasts(){
+    Array.from(toasts.keys()).forEach(dismissToast);
+  }
+  function enforceMax(){
+    const ids = Array.from(toasts.keys()); /* insertion order: oldest first */
+    while (ids.length > STACK_MAX){
+      dismissToast(ids.shift());
+    }
+  }
+
+  /* Demo-only: fire 3 variants quickly so the 1st evicts when 3rd arrives. */
+  function stackDemo(){
+    showToast({ variant: 'success', message: 'Saved · this one will be evicted when the 3rd arrives' });
+    setTimeout(() => showToast({ variant: 'warning', message: 'Rate-limited — backing off' }), 260);
+    setTimeout(() => showToast({ variant: 'error',   message: 'One request failed (oldest now evicting)' }), 520);
+  }
+
+  /* =====================================================
+   * WELCOME PILL — independent surface
+   * ===================================================== */
+  const welcome = document.getElementById('welcomeToast');
+  const welcomeMsg = welcome.querySelector('.welcome-msg');
+  let welcomeTimer;
+  function showWelcome(msg){
+    welcomeMsg.textContent = msg;
+    welcome.classList.add('show');
+    clearTimeout(welcomeTimer);
+    welcomeTimer = setTimeout(() => welcome.classList.remove('show'), 3000);
+  }
+</script>
+
+</body>
+</html>
