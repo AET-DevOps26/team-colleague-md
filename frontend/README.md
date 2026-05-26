@@ -25,8 +25,9 @@ App runs at `http://localhost:3000`.
 | `npm run dev` | Start Vite dev server on port 3000 |
 | `npm run build` | Type-check and build for production |
 | `npm run lint` | Run ESLint |
-| `npx playwright test` | Run all end-to-end tests |
-| `npx playwright test --update-snapshots` | Regenerate visual regression baselines |
+| `npm test` | Run all end-to-end tests |
+| `npm run test:ui` | Open Playwright's interactive debug UI |
+| `npm run test:update` | Regenerate visual regression baselines after UI changes |
 
 ---
 
@@ -125,13 +126,20 @@ Tests live in `frontend/tests/home.spec.ts`. Playwright starts the dev server au
 
 ```bash
 # Run all tests
-npx playwright test
+npm test
 
-# Run only layout / interaction tests (fast, no snapshots)
-npx playwright test --grep-invert "VR-"
+# Open interactive debug UI
+npm run test:ui
+
+# Run only a specific group (fast, no snapshots)
+npm test -- --grep "Layout"
+npm test -- --grep "Interactions"
+
+# Run only visual regression tests
+npm test -- --grep "Visual Regression"
 
 # Regenerate visual regression baselines after UI changes
-npx playwright test --grep "VR-" --update-snapshots
+npm run test:update -- --grep "Visual Regression"
 ```
 
 Visual snapshots are stored in `tests/snapshots/`. Commit them alongside any intentional visual change.
