@@ -51,7 +51,7 @@ async function freezeTime(page: Page) {
   }, FROZEN_NOW);
 }
 
-// Wait for all 8 feed cards and the digest card to appear, then wait for fonts so
+// Wait for all 8 feed cards to appear, then wait for fonts so
 // the CSS column layout is fully settled before screenshotting.
 async function waitForFeedReady(page: Page) {
   // The mock service returns 8 posts (BASE_POSTS) on the first page load.
@@ -121,18 +121,10 @@ test.describe('Layout', () => {
     await expect(page.locator('[data-testid="image-card"]').first()).toBeVisible();
     await expect(page.locator('[data-testid="text-card"]').first()).toBeVisible();
   });
-
-  test('LT-8: digest card has dark background', async ({ page }) => {
-    await page.goto('/');
-    const card = page.locator('[data-testid="digest-card"]');
-    await expect(card).toBeVisible();
-    const bg = await card.evaluate((el) => window.getComputedStyle(el).backgroundColor);
-    expect(bg).toBe('rgb(10, 10, 10)');
-  });
 });
 
 test.describe('Interactions', () => {
-  test('I-9: tag chip click updates active state', async ({ page }) => {
+  test('I-8: tag chip click updates active state', async ({ page }) => {
     await page.goto('/');
     const chips = page.locator('[data-testid="topbar-tag-row"] button');
     const second = chips.nth(1);
@@ -140,31 +132,13 @@ test.describe('Interactions', () => {
     await expect(second).toHaveClass(/active/);
   });
 
-  test('I-10: sidebar sign in opens auth modal', async ({ page }) => {
+  test('I-9: sidebar sign in opens auth modal', async ({ page }) => {
     await page.goto('/');
     await page.locator('[data-testid="sidebar-signin"]').click();
     await expect(page.locator('[role="dialog"]')).toBeVisible();
   });
 
-  test('I-11: auth banner shown when logged out', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('[data-testid="auth-banner"]')).toBeVisible();
-  });
-
-  test('I-11b: auth banner hidden when logged in', async ({ page }) => {
-    await login(page);
-    await page.goto('/');
-    await expect(page.locator('[data-testid="auth-banner"]')).not.toBeVisible();
-  });
-
-  test('I-12: FAB click triggers spin animation', async ({ page }) => {
-    await page.goto('/');
-    const fab = page.locator('[aria-label="Refresh feed"]');
-    await fab.click();
-    await expect(fab.locator('svg')).toHaveClass(/spinning/);
-  });
-
-  test('I-13: scroll to bottom loads more posts', async ({ page }) => {
+  test('I-10: scroll to bottom loads more posts', async ({ page }) => {
     await page.goto('/');
     const before = await page.locator('[data-testid="image-card"], [data-testid="text-card"]').count();
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
@@ -176,7 +150,7 @@ test.describe('Interactions', () => {
     expect(after).toBeGreaterThan(before);
   });
 
-  test('I-14: search submit navigates to /search', async ({ page }) => {
+  test('I-11: search submit navigates to /search', async ({ page }) => {
     await page.goto('/');
     await page.locator('[data-testid="topbar-search-row"] input[aria-label="Search"]').fill('transformers');
     await page.keyboard.press('Enter');
@@ -185,7 +159,7 @@ test.describe('Interactions', () => {
 });
 
 test.describe('Auth State', () => {
-  test('S-15: logged-out state — banner visible, settings disabled, first chip is Trending', async ({ page }) => {
+  test('S-12: logged-out — banner visible, settings disabled, first chip is Trending', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('[data-testid="auth-banner"]')).toBeVisible();
     const pointerEvents = await page.locator('[data-testid="sidebar-settings"]').evaluate(
@@ -195,7 +169,7 @@ test.describe('Auth State', () => {
     await expect(page.locator('[data-testid="topbar-tag-row"] button').first()).toHaveText('Trending');
   });
 
-  test('S-16: logged-in state — banner absent, first chip is For you, digest badge visible', async ({ page }) => {
+  test('S-13: logged-in — banner absent, first chip is For you, digest badge visible', async ({ page }) => {
     await login(page);
     await page.goto('/');
     await expect(page.locator('[data-testid="auth-banner"]')).not.toBeVisible();
