@@ -40,9 +40,9 @@ async function freezeTime(page: Page) {
     Date.now = () => frozenNow;
     // Override the no-arg Date constructor so `new Date()` also returns the frozen instant.
     const _OrigDate = window.Date;
-    // @ts-ignore
+    // @ts-expect-error reassigning global Date
     window.Date = function Date(...args: unknown[]) {
-      // @ts-ignore
+      // @ts-expect-error spreading unknown args into Date constructor
       return args.length === 0 ? new _OrigDate(frozenNow) : new _OrigDate(...args);
     };
     window.Date.now = () => frozenNow;

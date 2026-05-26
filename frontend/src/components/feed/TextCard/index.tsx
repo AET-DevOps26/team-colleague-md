@@ -11,7 +11,7 @@ interface Props {
   onTagClick: (tag: string) => void;
 }
 
-export default function TextCard({ post, onLike, onTagClick }: Props) {
+export default function TextCard({ post, onLike, _onTagClick }: Props) {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
   const navigate = useNavigate();
