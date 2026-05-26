@@ -8,7 +8,6 @@
   flex-direction: column;
   padding: 0 14px 16px;
   z-index: 30;
-  overflow: hidden;
 }
 
 .collapsed {
@@ -30,7 +29,7 @@
   align-items: baseline;
   line-height: 1;
   white-space: nowrap;
-  gap: 1px;
+  gap: 0;
 }
 
 .brandV {
@@ -39,8 +38,7 @@
   font-weight: 600;
   font-size: 38px;
   color: var(--text-primary);
-  letter-spacing: -0.02em;
-  transform: translateX(-2px);
+  letter-spacing: -0.025em;
   flex-shrink: 0;
 }
 
@@ -50,15 +48,19 @@
   font-weight: 500;
   font-size: 32px;
   color: var(--text-primary);
-  letter-spacing: -0.02em;
-  transition: opacity 150ms ease 60ms;
+  letter-spacing: -0.025em;
+  overflow: hidden;
+  max-width: 200px;
+  transition: max-width 200ms ease 60ms, opacity 150ms ease 60ms;
 }
 
 .collapsed .brandErita {
+  max-width: 0;
   opacity: 0;
 }
 
 .collapsed:hover .brandErita {
+  max-width: 200px;
   opacity: 1;
 }
 

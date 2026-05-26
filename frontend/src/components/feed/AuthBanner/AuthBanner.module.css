@@ -4,9 +4,9 @@
   justify-content: space-between;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 14px 18px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   gap: 16px;
 }
 
