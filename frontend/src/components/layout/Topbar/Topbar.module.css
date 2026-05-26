@@ -18,12 +18,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  height: var(--topbar-height);
-  padding: 0 24px 0 28px;
+  padding: 14px 24px 14px 28px;
 }
 
 .row2 {
-  border-top: 1px solid var(--border-subtle);
+  padding-bottom: 2px;
 }
 
 .search {

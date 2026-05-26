@@ -1,5 +1,3 @@
 .feedWrap {
-  padding: 24px clamp(24px, 4vw, 80px) 96px;
-  max-width: 1144px;
-  margin: 0 auto;
+  padding: 20px clamp(24px, 4vw, 80px) 96px;
 }
