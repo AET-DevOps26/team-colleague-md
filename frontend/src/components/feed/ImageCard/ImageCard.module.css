@@ -1,6 +1,6 @@
 .card {
   break-inside: avoid;
-  margin-bottom: 24px;
+  margin-bottom: 25px;
   cursor: pointer;
   transition: transform var(--motion-card-lift);
   display: block;
@@ -30,20 +30,26 @@
   display: block;
 }
 
-.badgeType {
+.badgeTl,
+.badgeTr {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 12px;
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.02em;
   background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: var(--radius-tag);
   color: var(--text-primary);
-  line-height: 1.4;
+  padding: 5px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.badgeTl {
+  left: 12px;
+}
+
+.badgeTr {
+  right: 12px;
 }
 
 .body {
@@ -51,7 +57,7 @@
 }
 
 .title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: -0.018em;

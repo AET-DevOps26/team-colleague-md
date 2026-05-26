@@ -6,12 +6,13 @@
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 14px 18px;
-  margin-bottom: 20px;
+  max-width: 1800px;
+  margin: 0 auto 20px;
   gap: 16px;
 }
 
 .text {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.45;
 }

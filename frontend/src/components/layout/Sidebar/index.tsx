@@ -96,7 +96,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       {isLoggedIn ? (
         <Link to="/post/new" className={styles.navCta}>
           <IconPlus />
-          <span className={styles.label}>New post</span>
+          <span className={styles.ctaLabel}>New post</span>
         </Link>
       ) : (
         <button
@@ -105,7 +105,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           data-testid="sidebar-signin"
         >
           <IconSignIn />
-          <span className={styles.label}>Sign in</span>
+          <span className={styles.ctaLabel}>Sign in</span>
         </button>
       )}
 

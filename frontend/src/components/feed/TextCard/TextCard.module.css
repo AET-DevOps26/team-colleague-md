@@ -1,6 +1,6 @@
 .card {
   break-inside: avoid;
-  margin-bottom: 24px;
+  margin-bottom: 25px;
   cursor: pointer;
   transition: transform var(--motion-card-lift);
   display: block;

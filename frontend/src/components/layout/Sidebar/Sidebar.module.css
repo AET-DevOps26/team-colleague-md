@@ -163,7 +163,7 @@
 }
 
 .navCta {
-  margin: 6px 0 10px;
+  margin: 6px 4px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -202,7 +202,7 @@
 }
 
 .navSignin {
-  margin: 6px 0 10px;
+  margin: 6px 4px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,6 +230,7 @@
   padding: 0;
   gap: 0;
   align-self: center;
+  border-radius: var(--radius-btn);
 }
 
 .collapsed:hover .navSignin {
@@ -238,6 +239,26 @@
   padding: 9px 12px;
   gap: 6px;
   align-self: stretch;
+}
+
+/* Label inside centered CTA buttons (navCta / navSignin).
+   Must NOT use flex:1 — that would push the icon to the far left.
+   Uses max-width animation for the collapsed sidebar. */
+.ctaLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 200px;
+  transition: max-width 150ms ease 60ms, opacity 150ms ease 60ms;
+}
+
+.collapsed .ctaLabel {
+  max-width: 0;
+  opacity: 0;
+}
+
+.collapsed:hover .ctaLabel {
+  max-width: 200px;
+  opacity: 1;
 }
 
 .navBottom {

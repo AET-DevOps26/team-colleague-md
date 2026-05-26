@@ -29,6 +29,7 @@ const BASE_POSTS: Post[] = [
     viewCount: 8920,
     isLikedByMe: false,
     createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 6,
   },
   {
     id: 'p2',
@@ -54,6 +55,7 @@ const BASE_POSTS: Post[] = [
     viewCount: 12300,
     isLikedByMe: false,
     createdAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 11,
   },
   {
     id: 'p4',
@@ -79,6 +81,7 @@ const BASE_POSTS: Post[] = [
     viewCount: 6800,
     isLikedByMe: false,
     createdAt: new Date(Date.now() - 30 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 14,
   },
   {
     id: 'p6',
@@ -116,6 +119,7 @@ const BASE_POSTS: Post[] = [
     viewCount: 11500,
     isLikedByMe: false,
     createdAt: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 9,
   },
 ];
 

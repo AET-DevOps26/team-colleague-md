@@ -113,7 +113,7 @@
 .signinBtn {
   display: inline-flex;
   align-items: center;
-  height: 34px;
+  height: 36px;
   padding: 0 16px;
   border-radius: var(--radius-btn);
   background: var(--accent);

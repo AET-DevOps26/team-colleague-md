@@ -1,6 +1,6 @@
 .masonry {
   column-count: 3;
-  column-gap: 32px;
+  column-gap: 40px;
   max-width: 1144px;
   margin: 0 auto;
 }

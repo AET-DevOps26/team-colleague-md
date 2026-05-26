@@ -31,7 +31,10 @@ export default function ImageCard({ post, onLike, onTagClick }: Props) {
     >
       <div className={styles.cover}>
         <img src={post.coverImageUrl} alt="" className={styles.coverImg} />
-        <span className={styles.badgeType}>{typeBadge}</span>
+        <span className={styles.badgeTl}>{typeBadge}</span>
+        {post.readTimeMinutes && (
+          <span className={styles.badgeTr}>{post.readTimeMinutes} min read</span>
+        )}
       </div>
       <div className={styles.body}>
         <h2 className={styles.title}>{post.title}</h2>
