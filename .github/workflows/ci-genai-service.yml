@@ -29,5 +29,9 @@ jobs:
 
       # Verifies that FastAPI app object is importable; catches missing deps and syntax errors
       - name: Verify application imports
-        run: python -c "from main import app"
+        run: python -c "from app.main import app"
+        working-directory: genai-service
+
+      - name: Run tests
+        run: pytest -q
         working-directory: genai-service
