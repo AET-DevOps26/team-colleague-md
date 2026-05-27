@@ -266,7 +266,7 @@ Before any CI workflow can run, a human must complete these steps once:
 
 **1. Generate an SSH key pair** (no passphrase — required for unattended CI use):
 ```bash
-ssh-keygen -t ed25519 -f verita_key -N ''
+ssh-keygen -t rsa -b 4096 -f verita_key
 ```
 
 **2. Add GitHub Secrets and Variables** — Settings → Secrets and variables → Actions:
