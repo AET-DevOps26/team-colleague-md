@@ -260,7 +260,43 @@ Verita's Azure infrastructure is defined in code using Terraform and Ansible. Th
 the environment reproducible: a full deployment can be recreated from scratch with two
 commands after completing the one-time bootstrap.
 
-### 6.1 Terraform
+### 6.1 First-time Setup
+
+Before any CI workflow can run, a human must complete these steps once:
+
+**1. Generate an SSH key pair** (no passphrase — required for unattended CI use):
+```bash
+ssh-keygen -t ed25519 -f verita_key -N ''
+```
+
+**2. Add GitHub Secrets and Variables** — Settings → Secrets and variables → Actions:
+
+| Type | Key | Value |
+|------|-----|-------|
+| Secret | `AZURE_PRIVATE_KEY` | Contents of `verita_key` |
+| Secret | `VM_SSH_PUBLIC_KEY` | Contents of `verita_key.pub` |
+| Variable | `AZURE_USER` | `azureuser` |
+
+**3. Run `bootstrap.sh`** to create the Terraform state backend and Service Principal:
+```bash
+az login
+bash infra/terraform/bootstrap.sh
+```
+
+**4. Add the four ARM secrets** printed by the script to GitHub Secrets:
+`ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_SUBSCRIPTION_ID`, `ARM_TENANT_ID`
+
+**5. After the first `terraform apply`**, set one more Variable:
+
+| Type | Key | Value |
+|------|-----|-------|
+| Variable | `AZURE_PUBLIC_IP` | IP printed by `terraform-deploy.yml` after apply |
+
+This value does not change for the lifetime of the VM.
+
+---
+
+### 6.2 Terraform
 
 Terraform provisions all Azure resources from `infra/terraform/`. State is stored remotely
 in an Azure Blob Storage container so the team shares a single source of truth.
@@ -291,7 +327,7 @@ four values that must be added as GitHub Secrets (`ARM_CLIENT_ID`, `ARM_CLIENT_S
 After the first `terraform apply`, copy the printed `vm_public_ip` value to the
 `AZURE_PUBLIC_IP` GitHub Variable. This value does not change for the lifetime of the VM.
 
-### 6.2 Ansible
+### 6.3 Ansible
 
 Ansible configures the VM and deploys all services from `infra/ansible/`. It connects over
 SSH using the key stored in the `AZURE_PRIVATE_KEY` GitHub Secret.
@@ -305,7 +341,7 @@ SSH using the key stored in the `AZURE_PRIVATE_KEY` GitHub Secret.
 `docker-compose.prod.yml` references pre-built images from `ghcr.io` instead of building
 on the VM, keeping the VM's resource usage low.
 
-### 6.3 GitHub Secrets and Variables
+### 6.4 GitHub Secrets and Variables
 
 | Type | Key | Purpose |
 |------|-----|---------|
