@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # --- LLM Provider ---
-    llm_provider: str = "openrouter" # "openrouter" or "google"
-    llm_model: str = "google/gemma-4-26b-a4b-it:free"
+    llm_provider: str = "nvidia"  # "openrouter", "nvidia", or "google"
+    llm_model: str = "moonshotai/kimi-k2.6"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 300
 
@@ -25,7 +25,6 @@ class Settings(BaseSettings):
     # --- Application ---
     app_name: str = "GenAI Service"
     app_version: str = "1.0.0"
-    debug: bool = False
 
     # --- CORS ---
     # Comma-separated list of allowed origins (e.g., "http://localhost:3000,http://localhost:8082")
