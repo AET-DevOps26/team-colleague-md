@@ -12,7 +12,11 @@ and observable cloud-native deployments.
 | Containerization            | Docker, Docker Compose               |
 | CI — build & test           | GitHub Actions                       |
 | CI — API contract           | GitHub Actions + Redocly             |
-| CD — deployment             | GitHub Actions + kubectl / Helm      |
+| Infrastructure provisioning | Terraform                            |
+| Application deployment      | Ansible                              |
+| CD — IaC                    | GitHub Actions + Terraform           |
+| CD — VM deployment          | GitHub Actions + Ansible             |
+| CD — K8s deployment         | GitHub Actions + kubectl / Helm      |
 | Kubernetes orchestration    | Rancher (local), Azure (cloud)       |
 | Metrics & alerting          | Prometheus, Grafana                  |
 
@@ -24,6 +28,7 @@ team-colleague-md/
 ├── .env.example
 ├── .pre-commit-config.yaml
 ├── docker-compose.yml
+├── docker-compose.prod.yml
 │
 ├── .github/
 │   └── workflows/
@@ -32,7 +37,9 @@ team-colleague-md/
 │       ├── ci-recommendation-service.yml
 │       ├── ci-genai-service.yml
 │       ├── ci-frontend.yml
-│       ├── cd-deploy.yml
+│       ├── docker-build.yml
+│       ├── terraform-deploy.yml
+│       ├── ansible-deploy.yml
 │       └── openapi-lint.yml
 │
 ├── backend/
@@ -58,6 +65,19 @@ team-colleague-md/
 │   └── Dockerfile
 │
 └── infra/
+    ├── terraform/
+    │   ├── bootstrap.sh
+    │   ├── providers.tf
+    │   ├── variables.tf
+    │   ├── main.tf
+    │   └── outputs.tf
+    │
+    ├── ansible/
+    │   ├── deploy.yml
+    │   ├── inventory.ini
+    │   └── group_vars/
+    │       └── all.yml
+    │
     ├── k8s/
     │   ├── namespace.yaml
     │   ├── user-service/
@@ -211,26 +231,144 @@ This matches the local pre-commit hook so developers get the same feedback local
 
 ...
 
+### 5.4 Docker Build and Publish
+
+`docker-build.yml` triggers on pull requests and pushes to `dev` when service source files change.
+It replaces the earlier `ci-docker.yml` and adds image publishing on merge.
+
+| Event | Action |
+|-------|--------|
+| Pull request to `dev` | Build all service images (validate only, no push) |
+| Push to `dev` (merge) | Build and push all images to `ghcr.io` |
+
+Images are published to `ghcr.io/aet-devops26/team-colleague-md/<service-name>:latest`.
+Authentication uses the automatic `GITHUB_TOKEN`; no additional secret is required.
+
+| Service | Build context |
+|---------|--------------|
+| `user-service` | `./backend/user-service` |
+| `content-service` | `./backend/content-service` |
+| `recommendation-service` | `./backend/recommendation-service` |
+| `genai-service` | `./genai-service` |
+| `frontend` | `./frontend` |
+
 ---
 
-## 6. GitHub Actions — Continuous Deployment
+## 6. Infrastructure as Code
+
+Verita's Azure infrastructure is defined in code using Terraform and Ansible. This makes
+the environment reproducible: a full deployment can be recreated from scratch with two
+commands after completing the one-time bootstrap.
+
+### 6.1 Terraform
+
+Terraform provisions all Azure resources from `infra/terraform/`. State is stored remotely
+in an Azure Blob Storage container so the team shares a single source of truth.
+
+**One-time bootstrap** (run before the first `terraform apply`):
+
+```bash
+az login
+bash infra/terraform/bootstrap.sh
+```
+
+The script creates the storage account for state and a Service Principal, then prints the
+four values that must be added as GitHub Secrets (`ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`,
+`ARM_SUBSCRIPTION_ID`, `ARM_TENANT_ID`).
+
+**Resources provisioned:**
+
+| Resource | Configuration |
+|----------|--------------|
+| Resource Group | `verita-rg`, Sweden Central |
+| Virtual Network | `10.0.0.0/16` |
+| Subnet | `10.0.1.0/24` |
+| Network Security Group | Inbound: SSH (22), HTTP (80), app ports 3000 / 8000 / 8081–8083 |
+| Public IP | Static, Standard SKU |
+| Network Interface | Bound to subnet, NSG, and public IP |
+| Virtual Machine | `Standard_D2s_v3`, Ubuntu 22.04 LTS, SSH key auth, 30 GB OS disk |
+
+After the first `terraform apply`, copy the printed `vm_public_ip` value to the
+`AZURE_PUBLIC_IP` GitHub Variable. This value does not change for the lifetime of the VM.
+
+### 6.2 Ansible
+
+Ansible configures the VM and deploys all services from `infra/ansible/`. It connects over
+SSH using the key stored in the `AZURE_PRIVATE_KEY` GitHub Secret.
+
+**`deploy.yml` — three phases:**
+
+1. **System preparation** — install Docker Engine and the Compose plugin; add `azureuser` to the `docker` group.
+2. **File sync** — copy `docker-compose.prod.yml` to `/home/azureuser/verita/` on the VM.
+3. **Service start** — log in to `ghcr.io`, pull the latest images, run `docker compose up -d --remove-orphans`.
+
+`docker-compose.prod.yml` references pre-built images from `ghcr.io` instead of building
+on the VM, keeping the VM's resource usage low.
+
+### 6.3 GitHub Secrets and Variables
+
+| Type | Key | Purpose |
+|------|-----|---------|
+| Secret | `ARM_CLIENT_ID` | Terraform — Azure Service Principal app ID |
+| Secret | `ARM_CLIENT_SECRET` | Terraform — Service Principal password |
+| Secret | `ARM_SUBSCRIPTION_ID` | Terraform — Azure subscription ID |
+| Secret | `ARM_TENANT_ID` | Terraform — Azure AD tenant ID |
+| Secret | `VM_SSH_PUBLIC_KEY` | Terraform — public key written to VM `authorized_keys` |
+| Secret | `AZURE_PRIVATE_KEY` | Ansible — private key for SSH access to the VM |
+| Variable | `AZURE_USER` | Ansible — VM admin username (`azureuser`) |
+| Variable | `AZURE_PUBLIC_IP` | Ansible — VM public IP (set after first `terraform apply`) |
+
+---
+
+## 7. GitHub Actions — Continuous Deployment
+
+### 7.1 Terraform Deploy
+
+`terraform-deploy.yml` triggers on changes to `infra/terraform/**`.
+
+| Event | Action |
+|-------|--------|
+| Pull request to `dev` | `terraform plan` — previews changes, output visible in CI logs |
+| Push to `dev` (merge) | `terraform apply -auto-approve` — creates or updates Azure resources |
+
+The workflow also runs `terraform fmt -check` and `terraform validate` on every run.
+After a successful apply, the VM public IP is printed as a workflow notice.
+
+### 7.2 Ansible Deploy
+
+`ansible-deploy.yml` deploys the latest images to the Azure VM.
+
+| Event | Action |
+|-------|--------|
+| `workflow_dispatch` | Manual trigger from the GitHub Actions UI |
+| `workflow_run` (after `docker-build.yml` on `dev`) | Automatic trigger when new images are pushed |
+
+The workflow generates `inventory.ini` at runtime from the `AZURE_PUBLIC_IP` variable,
+writes the SSH key from `AZURE_PRIVATE_KEY` to a temporary file, then runs
+`ansible-playbook infra/ansible/deploy.yml`.
+
+**End-to-end deployment flow:**
+
+```
+Code merged to dev
+  → docker-build.yml   builds and pushes images to ghcr.io
+  → ansible-deploy.yml pulls new images and restarts services on the VM
+```
+
+---
+
+## 8. Kubernetes
 
 ...
 
 ---
 
-## 7. Kubernetes
+## 9. Prometheus & Grafana
 
 ...
 
 ---
 
-## 8. Prometheus & Grafana
-
-...
-
----
-
-## 9. Contributor Checklist
+## 10. Contributor Checklist
 
 ...
