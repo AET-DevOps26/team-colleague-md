@@ -59,3 +59,9 @@ venv/
 
 ### basedpyright ###
 pyrightconfig.json
+# Claude Code instructions (local only)
+CLAUDE.md
+
+# Playwright failure artifacts (auto-generated, not for version control)
+frontend/test-results/
+frontend/playwright-report/

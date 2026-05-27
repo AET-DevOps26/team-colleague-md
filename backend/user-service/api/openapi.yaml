@@ -1,482 +1,302 @@
 openapi: 3.0.3
-
 info:
   title: Verita User Service API
   description: |
-    Comprehensive User Identity and Authentication Service for the Verita platform.
-    
-    This service manages:
-    - Secure JWT-based Authentication
-    - Detailed User Profiles
-    - Administrative Role Management
-    - Account Verification and Status
-    - User-specific Preferences (Theme, Language)
-    - Active Session Tracking and Revocation
-  version: 1.0.1
+    User identity, authentication, and profile management for the Verita platform.
+    Handles registration, login, profile updates, account preferences, and admin user management.
+  version: 1.1.0
   license:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
-
 servers:
-  - url: https://api.verita.io
-    description: Production server
-  - url: http://{host}:{port}
-    description: Local development environment
-    variables:
-      host:
-        default: localhost
-      port:
-        default: "8080"
-
-tags:
-  - name: Authentication
-    description: Endpoints for user registration, login, and token management.
-  - name: Users
-    description: Operations related to fetching and managing user profile data.
-  - name: Roles
-    description: Administrative endpoints for managing user permissions and roles.
-  - name: Preferences
-    description: Personalization settings like themes and language.
-  - name: Sessions
-    description: Management of active login sessions and device tracking.
-  - name: Verification
-    description: Account verification and status tracking.
-  - name: Health
-    description: Service monitoring and uptime checks.
+  - url: 'http://api.verita.local/user'
+    description: Production-style internal URL
 
 paths:
-  /health:
-    get:
-      tags:
-        - Health
-      summary: Health check
-      operationId: healthCheck
-      security: []
-      responses:
-        '200':
-          description: Service is healthy.
-        '503':
-          description: Service unavailable.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /auth/register:
+  # --- AUTHENTICATION ---
+  /api/v1/auth/register:
     post:
-      tags:
-        - Authentication
-      summary: Register a new user
       operationId: registerUser
+      summary: Register a new user
+      tags: [Authentication]
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
       responses:
         '201':
-          description: User registered successfully.
+          description: User registered successfully
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '409':
-          description: Conflict
+          description: Username or email already taken
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
-  /auth/login:
+  /api/v1/auth/login:
     post:
-      tags:
-        - Authentication
-      summary: Login user
       operationId: loginUser
+      summary: Log in and receive JWT tokens
+      tags: [Authentication]
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
+            schema: { $ref: '#/components/schemas/LoginRequest' }
       responses:
         '200':
-          description: Login successful.
+          description: Login successful
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /auth/logout:
+  /api/v1/auth/logout:
     post:
-      tags:
-        - Authentication
-      summary: Logout current session
       operationId: logoutUser
-      security:
-        - bearerAuth: []
+      summary: Invalidate the current session token
+      tags: [Authentication]
+      security: [{ bearerAuth: [] }]
       responses:
         '204':
-          description: Logged out successfully.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Logged out successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /auth/refresh:
+  /api/v1/auth/refresh:
     post:
-      tags:
-        - Authentication
-      summary: Refresh access token
       operationId: refreshToken
+      summary: Exchange a refresh token for a new access token
+      tags: [Authentication]
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshTokenRequest'
+            schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
       responses:
         '200':
-          description: Token refreshed.
+          description: Token refreshed
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /auth/forgot-password:
+  /api/v1/auth/forgot-password:
     post:
-      tags:
-        - Authentication
-      summary: Request password reset
       operationId: forgotPassword
+      summary: Request a password reset email
+      description: Not yet implemented. Reserved for future use.
+      tags: [Authentication]
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/ForgotPasswordRequest'
+            schema: { $ref: '#/components/schemas/ForgotPasswordRequest' }
       responses:
         '204':
-          description: Password reset email sent.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+          description: Password reset email sent if the address is registered
+        '400': { $ref: '#/components/responses/BadRequest' }
 
-  /auth/reset-password:
+  /api/v1/auth/reset-password:
     post:
-      tags:
-        - Authentication
-      summary: Reset password
       operationId: resetPassword
+      summary: Reset password using a token from the reset email
+      description: Not yet implemented. Reserved for future use.
+      tags: [Authentication]
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordRequest'
+            schema: { $ref: '#/components/schemas/ResetPasswordRequest' }
       responses:
         '204':
-          description: Password reset successful.
-        '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Password reset successful
+        '400': { $ref: '#/components/responses/BadRequest' }
 
-  /users/me:
+  # --- CURRENT USER ---
+  /api/v1/users/me:
     get:
-      tags:
-        - Users
-      summary: Get current user profile
       operationId: getCurrentUser
-      security:
-        - bearerAuth: []
+      summary: Get the current user's full profile
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Current user profile.
+          description: Current user profile
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     put:
-      tags:
-        - Users
-      summary: Update current user profile
       operationId: updateCurrentUser
-      security:
-        - bearerAuth: []
+      summary: Update the current user's profile
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateUserRequest'
+            schema: { $ref: '#/components/schemas/UpdateUserRequest' }
       responses:
         '200':
-          description: User updated successfully.
+          description: Profile updated
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
-      tags:
-        - Users
-      summary: Delete current user account
       operationId: deleteCurrentUser
-      security:
-        - bearerAuth: []
+      summary: Delete the current user's account
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
       responses:
         '204':
-          description: Account deleted.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Account deleted
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /users:
+  /api/v1/users/me/preferences:
     get:
-      tags:
-        - Users
-      summary: Get paginated list of users
-      operationId: getUsers
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/SizeParam'
-        - $ref: '#/components/parameters/SortParam'
-      responses:
-        '200':
-          description: Paginated users.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedUsers'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /users/search:
-    get:
-      tags:
-        - Users
-      summary: Search users
-      operationId: searchUsers
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: q
-          required: true
-          schema:
-            type: string
-            minLength: 1
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/SizeParam'
-      responses:
-        '200':
-          description: Search results.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedUsers'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /users/{userId}:
-    get:
-      tags:
-        - Users
-      summary: Get user by ID
-      operationId: getUserById
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserIdParam'
-      responses:
-        '200':
-          description: User found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /users/{userId}/roles:
-    get:
-      tags:
-        - Roles
-      summary: Get user roles
-      operationId: getUserRoles
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserIdParam'
-      responses:
-        '200':
-          description: User roles.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Role'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    put:
-      tags:
-        - Roles
-      summary: Update user roles
-      operationId: updateUserRoles
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserIdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateRolesRequest'
-      responses:
-        '200':
-          description: Roles updated.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /users/me/preferences:
-    get:
-      tags:
-        - Preferences
-      summary: Get user preferences
       operationId: getUserPreferences
-      security:
-        - bearerAuth: []
+      summary: Get the current user's preferences
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: User preferences.
+          description: User preferences
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/UserPreferences'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
+              schema: { $ref: '#/components/schemas/UserPreferences' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     put:
-      tags:
-        - Preferences
-      summary: Update user preferences
       operationId: updateUserPreferences
-      security:
-        - bearerAuth: []
+      summary: Update the current user's preferences
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/UserPreferences'
+            schema: { $ref: '#/components/schemas/UserPreferences' }
       responses:
         '200':
-          description: Preferences updated.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /users/me/sessions:
-    get:
-      tags:
-        - Sessions
-      summary: Get active sessions
-      operationId: getSessions
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Active sessions.
+          description: Preferences updated
           content:
             application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Session'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+              schema: { $ref: '#/components/schemas/UserPreferences' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /users/me/sessions/{sessionId}:
-    delete:
-      tags:
-        - Sessions
-      summary: Revoke session
-      operationId: revokeSession
-      security:
-        - bearerAuth: []
+  # --- PUBLIC USER PROFILES ---
+  /api/v1/users/{userId}:
+    get:
+      operationId: getUserById
+      summary: Get a user's public profile
+      tags: [Users]
+      security: []
       parameters:
-        - in: path
-          name: sessionId
+        - name: userId
+          in: path
           required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Session revoked.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /users/{userId}/verification-status:
-    get:
-      tags:
-        - Verification
-      summary: Get verification status
-      operationId: getVerificationStatus
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserIdParam'
+          schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Verification status.
+          description: User profile
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/VerificationStatus'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+              schema: { $ref: '#/components/schemas/User' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --- ADMIN ---
+  /api/v1/users:
+    get:
+      operationId: listUsers
+      summary: List all users with optional search filter (admin only)
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          description: Filter by username or display name (case-insensitive).
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedUsers' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/users/{userId}/role:
+    patch:
+      operationId: updateUserRole
+      summary: Change a user's role (admin only)
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoleRequest' }
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/users/{userId}/ban:
+    patch:
+      operationId: updateUserBanStatus
+      summary: Ban or unban a user (admin only)
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateBanStatusRequest' }
+      responses:
+        '200':
+          description: Ban status updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
 components:
   securitySchemes:
@@ -485,92 +305,60 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
-  parameters:
-    UserIdParam:
-      in: path
-      name: userId
-      required: true
-      schema:
-        type: string
-        format: uuid
-    PageParam:
-      in: query
-      name: page
-      schema:
-        type: integer
-        default: 0
-        minimum: 0
-    SizeParam:
-      in: query
-      name: size
-      schema:
-        type: integer
-        default: 20
-        minimum: 1
-        maximum: 100
-    SortParam:
-      in: query
-      name: sort
-      schema:
-        type: string
-        example: createdAt,desc
-
   responses:
     BadRequest:
-      description: Invalid request.
+      description: Invalid request
       content:
         application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
     Unauthorized:
-      description: Unauthorized.
+      description: Authentication failed
       content:
         application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
     Forbidden:
-      description: Forbidden.
+      description: Insufficient permissions
       content:
         application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
     NotFound:
-      description: Not Found.
+      description: Resource not found
       content:
         application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
+    UserRole:
+      type: string
+      enum: [USER, VERIFIED, ADMIN]
+
     User:
       type: object
+      required: [id, username, displayName, role, isBanned, postCount, followerCount, followingCount, likeReceivedCount, createdAt, updatedAt]
       properties:
-        id:
-          type: string
-          format: uuid
-        username:
-          type: string
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
         email:
           type: string
           format: email
-        verified:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-        roles:
+          description: Only returned for the authenticated user themselves or admins.
+        avatarUrl: { type: string, format: uri, nullable: true }
+        bio: { type: string, nullable: true }
+        website: { type: string, format: uri, nullable: true }
+        organization: { type: string, nullable: true }
+        expertiseAreas:
           type: array
-          items:
-            $ref: '#/components/schemas/Role'
-      example:
-        id: "550e8400-e29b-41d4-a716-446655440000"
-        username: "johndoe"
-        email: "john@verita.io"
-        verified: true
-        createdAt: "2026-05-13T12:00:00Z"
-        roles:
-          - id: "role_1"
-            name: "USER"
+          items: { type: string }
+          nullable: true
+        role: { $ref: '#/components/schemas/UserRole' }
+        isBanned: { type: boolean }
+        postCount: { type: integer }
+        followerCount: { type: integer }
+        followingCount: { type: integer }
+        likeReceivedCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     RegisterRequest:
       type: object
@@ -578,143 +366,96 @@ components:
       properties:
         username: { type: string, minLength: 3, maxLength: 30 }
         email: { type: string, format: email }
-        password: { type: string, format: password, minLength: 8 }
-      example:
-        username: "newuser123"
-        email: "hello@verita.io"
-        password: "securePassword123!"
+        password: { type: string, minLength: 8 }
 
     LoginRequest:
       type: object
       required: [email, password]
       properties:
         email: { type: string, format: email }
-        password: { type: string, format: password }
-      example:
-        email: "john@verita.io"
-        password: "securePassword123!"
+        password: { type: string }
 
     AuthResponse:
       type: object
+      required: [accessToken, refreshToken, tokenType, expiresIn, user]
       properties:
         accessToken: { type: string }
         refreshToken: { type: string }
         tokenType: { type: string, example: Bearer }
-        expiresIn: { type: integer, example: 3600 }
-      example:
-        accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        refreshToken: "def456-ghi789-jkl012"
-        tokenType: "Bearer"
-        expiresIn: 3600
+        expiresIn: { type: integer, description: Token lifetime in seconds., example: 3600 }
+        user: { $ref: '#/components/schemas/User' }
 
     RefreshTokenRequest:
       type: object
       required: [refreshToken]
       properties:
         refreshToken: { type: string }
-      example:
-        refreshToken: "def456-ghi789-jkl012"
 
     ForgotPasswordRequest:
       type: object
       required: [email]
       properties:
         email: { type: string, format: email }
-      example:
-        email: "john@verita.io"
 
     ResetPasswordRequest:
       type: object
       required: [token, newPassword]
       properties:
         token: { type: string }
-        newPassword: { type: string, format: password, minLength: 8 }
-      example:
-        token: "reset-token-777"
-        newPassword: "brandNewPassword2026!"
+        newPassword: { type: string, minLength: 8 }
 
     UpdateUserRequest:
       type: object
       properties:
-        username: { type: string, minLength: 3 }
-        bio: { type: string, maxLength: 250 }
-        avatarUrl: { type: string, format: uri }
-      example:
-        username: "john_updated"
-        bio: "Just a user navigating the Verita ecosystem."
-        avatarUrl: "https://verita.io/avatars/johndoe.png"
-
-    Role:
-      type: object
-      properties:
-        id: { type: string }
-        name: { type: string, enum: [USER, MODERATOR, ADMIN] }
-      example:
-        id: "role_admin"
-        name: "ADMIN"
-
-    UpdateRolesRequest:
-      type: object
-      required: [roles]
-      properties:
-        roles:
+        displayName: { type: string }
+        bio: { type: string, maxLength: 250, nullable: true }
+        avatarUrl: { type: string, format: uri, nullable: true }
+        website: { type: string, format: uri, nullable: true }
+        organization: { type: string, nullable: true }
+        expertiseAreas:
           type: array
-          items: { type: string, enum: [USER, MODERATOR, ADMIN] }
-      example:
-        roles: ["USER", "MODERATOR"]
+          items: { type: string }
+          nullable: true
+
+    DigestFrequency:
+      type: string
+      enum: [DAILY, WEEKLY, OFF]
 
     UserPreferences:
       type: object
+      required: [digestFrequency, showBookmarks, showLikes]
       properties:
-        theme: { type: string, enum: [light, dark, system] }
-        language: { type: string, enum: [en, es, fr, de, jp] }
-        notificationsEnabled: { type: boolean }
-      example:
-        theme: "dark"
-        language: "en"
-        notificationsEnabled: true
+        digestFrequency: { $ref: '#/components/schemas/DigestFrequency' }
+        showBookmarks:
+          type: boolean
+          description: Whether other users can see this user's bookmarks.
+        showLikes:
+          type: boolean
+          description: Whether other users can see this user's liked posts.
 
-    Session:
+    UpdateRoleRequest:
       type: object
+      required: [role]
       properties:
-        id: { type: string }
-        ipAddress: { type: string }
-        userAgent: { type: string }
-        createdAt: { type: string, format: date-time }
-      example:
-        id: "sess_999"
-        ipAddress: "192.168.1.50"
-        userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)..."
-        createdAt: "2026-05-13T10:30:00Z"
+        role: { $ref: '#/components/schemas/UserRole' }
 
-    VerificationStatus:
+    UpdateBanStatusRequest:
       type: object
+      required: [banned]
       properties:
-        verified: { type: boolean }
-        verifiedAt: { type: string, format: date-time, nullable: true }
-      example:
-        verified: true
-        verifiedAt: "2026-01-15T09:00:00Z"
+        banned: { type: boolean }
 
     PaginatedUsers:
       type: object
       properties:
-        content: { type: array, items: { $ref: '#/components/schemas/User' } }
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/User' }
         page: { type: integer }
         size: { type: integer }
-        totalElements: { type: integer }
         totalPages: { type: integer }
-      example:
-        content:
-          - id: "550e8400-e29b-41d4-a716-446655440000"
-            username: "johndoe"
-            email: "john@verita.io"
-            verified: true
-            createdAt: "2026-05-13T12:00:00Z"
-        page: 0
-        size: 20
-        totalElements: 1
-        totalPages: 1
+        totalElements: { type: integer, format: int64 }
+        hasNext: { type: boolean }
 
     ErrorResponse:
       type: object
@@ -723,10 +464,3 @@ components:
         status: { type: integer }
         error: { type: string }
         message: { type: string }
-        path: { type: string }
-      example:
-        timestamp: "2026-05-13T17:40:00Z"
-        status: 400
-        error: "Bad Request"
-        message: "The provided email format is invalid."
-        path: "/auth/register"

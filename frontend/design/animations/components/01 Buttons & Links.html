@@ -1,0 +1,938 @@
+<!doctype html>
+<!--
+  C01 — Buttons & Links
+  Scope:      All clickable primitives. Split into two tiers:
+                Production    — verified 1:1 against pages/*.html (button hover,
+                                disabled states, refresh FAB).
+                Extended      — proposals for components production hasn't
+                                codified yet (press scale, inline link underline,
+                                icon button toggle).
+              Audit findings (5 inconsistencies discovered during page-scan)
+              live in Plan.md "From C01" — not duplicated here.
+  Sources:    pages/Verita Home.html (.btn-primary, .btn-ghost, .refresh-fab)
+              pages/Verita Auth.html, Settings, Post Editor (disabled variants)
+              animations/Verita Transition.html (FAB spin keyframes)
+  Spec:       docs/Animation Spec.md  §  Buttons & Links
+  React hint: <Button variant="primary|ghost">, <Link>, <IconButton>, <Fab>
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Buttons & Links · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — matches C04 / C05) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .scope {
+    color: var(--text-secondary);
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+    /* no max-width — see Plan.md "Section paragraph width" */
+  }
+
+  /* Tier label — pinned at the top of each section, distinguishes production vs extended */
+  .tier {
+    display: inline-block;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    vertical-align: middle;
+  }
+  .tier.production {
+    color: var(--success);
+    background: color-mix(in oklab, var(--success) 14%, transparent);
+    border: 1px solid color-mix(in oklab, var(--success) 32%, transparent);
+  }
+  .tier.extended {
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Tier intro — the divider before each batch of sections */
+  .tier-divider {
+    margin-top: 80px;
+    padding-top: 28px;
+    border-top: 2px solid var(--border-default);
+  }
+  .tier-divider h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 28px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .tier-divider p {
+    color: var(--text-secondary);
+    font-size: 14.5px;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* Spec table */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 14%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 22%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+  table.spec tbody td .badge {
+    display: inline-block;
+    font: 500 9px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  table.spec tbody td .badge.prod {
+    color: var(--success);
+    background: color-mix(in oklab, var(--success) 14%, transparent);
+  }
+  table.spec tbody td .badge.ext {
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+  }
+
+  /* Inconsistency table — REMOVED (audit content moved to Plan.md) */
+
+  /* Scope list */
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  /* Section meta — compact dl */
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  /* Use-case row — REMOVED (deemed too heavy; section-meta dl already covers what's needed) */
+
+  /* Triggers row */
+  .triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 6px 0 4px;
+    align-items: center;
+  }
+  .press-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* React hint footer */
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd {
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.55;
+  }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ===========================================================
+   * BUTTON PRIMITIVES — verbatim from pages/Verita Home.html
+   * .btn-primary  — accent fill, 34px, 7px radius, 12.5px / 600
+   * .btn-ghost    — hairline border, ink text on hover
+   * 120ms background transition is a production literal — preserved 1:1.
+   * =========================================================== */
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 14px; border-radius: 7px;
+    background: var(--accent); color: #fff;
+    font-size: 12.5px; font-weight: 600;
+    transition: background 120ms;
+    cursor: pointer; border: 0;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled,
+  .btn-primary[aria-disabled="true"] {
+    background: var(--bg-elevated);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 14px; border-radius: 7px;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary); font-size: 12.5px; font-weight: 500;
+    background: transparent;
+    transition: background 120ms, color 120ms;
+    cursor: pointer;
+  }
+  .btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .btn-ghost:disabled,
+  .btn-ghost[aria-disabled="true"] {
+    color: var(--text-tertiary);
+    border-color: var(--border-subtle);
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* Press scale — Extended only; declared on a separate class so production
+     buttons in Section 1 don't pick it up by accident. */
+  .btn-primary.x-press,
+  .btn-ghost.x-press {
+    transition: background 120ms, color 120ms, transform 80ms ease-out;
+  }
+  .btn-primary.x-press:active,
+  .btn-ghost.x-press:active {
+    transform: scale(0.97);
+  }
+
+  /* Disabled cross-fade — wraps a primary that toggles aria-disabled.
+     Each state transitions across 160ms when the attribute flips. */
+  .toggle-disabled {
+    transition: background 160ms ease-out, color 160ms ease-out, opacity 160ms ease-out;
+  }
+
+  /* Disabled variants used in Section 2 — exact replicas of production patterns */
+  /* CTA variant — sized down from production's 38px primary fill to
+   * 34px ghost style so it sits visually closer to the toolbar / nav
+   * variants. The :disabled mechanism (the audit point) is preserved. */
+  .var-cta {
+    height: 34px; padding: 0 14px; border-radius: 7px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 12.5px; font-weight: 500;
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    transition: background 120ms ease-out, color 120ms, border-color 120ms;
+  }
+  .var-cta:hover:not(:disabled) {
+    background: var(--bg-elevated);
+    border-color: var(--border-strong);
+  }
+  .var-cta:disabled {
+    background: var(--bg-elevated);
+    color: var(--text-tertiary);
+    border-color: var(--border-default);
+    cursor: not-allowed;
+  }
+
+  /* Toolbar group — three buttons together so it reads as a real
+   * toolbar component, not an orphan letter. */
+  .var-tb-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+  }
+  .var-tb {
+    width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 0; cursor: pointer;
+    transition: background 120ms, color 120ms, opacity 160ms ease-out;
+  }
+  .var-tb:hover:not([disabled]) {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+  .var-tb[disabled] {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  .var-nav {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 32px; padding: 0 12px; border-radius: 6px;
+    color: var(--text-secondary); font-size: 13px;
+    transition: opacity 160ms ease-out, color 120ms;
+  }
+  .var-nav.disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    cursor: default;
+  }
+
+  /* Disabled-variant row layout — stages share a baseline so the
+   * three samples line up regardless of intrinsic button height. */
+  .dv-row {
+    display: flex;
+    gap: 28px;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .dv-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 120px;
+  }
+  .dv-label {
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .dv-label code {
+    font-size: 9.5px;
+    background: transparent;
+    padding: 0;
+    color: var(--text-tertiary);
+  }
+  .dv-stage {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 4px;
+  }
+
+  /* ===========================================================
+   * EXTENDED — Inline body-copy link.
+   * Production has no codified inline-link spec (most <a> are
+   * text-decoration:none, hiding the affordance). This section
+   * proposes the contract for <Link>: underline visible at rest
+   * (muted, 1px), hover/focus thickens it and brings the color
+   * to match the text. Affordance is never hidden.
+   * =========================================================== */
+  .link-row {
+    font-size: 15px; line-height: 1.7; color: var(--text-primary);
+    max-width: 60ch;
+  }
+  .v-link {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 2px;
+    transition: text-decoration-thickness 160ms ease-out,
+                text-decoration-color 160ms ease-out,
+                text-underline-offset 160ms ease-out;
+  }
+  .v-link:hover,
+  .v-link:focus-visible {
+    text-decoration-thickness: 2px;
+    text-decoration-color: currentColor;
+    text-underline-offset: 3px;
+  }
+  .v-link.accent { color: var(--accent); }
+  .v-link.accent { text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent); }
+  .v-link.accent:hover,
+  .v-link.accent:focus-visible { text-decoration-color: var(--accent); }
+
+  /* ===========================================================
+   * EXTENDED — Icon button hover surface + toggle.
+   * Production has no standalone <IconButton>; the closest are the
+   * Post Detail action-bar items (C12) and toolbar buttons in Post
+   * Editor. This section proposes the shared surface contract.
+   * =========================================================== */
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer; border: 0;
+    transition: background 160ms ease-out, color 160ms ease-out;
+  }
+  .icon-btn:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+  .icon-btn:active { transform: scale(0.94); transition: transform 80ms ease-out; }
+  .icon-btn svg {
+    width: 18px; height: 18px;
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .icon-btn.is-on:not(.toggle-fill) svg { transform: rotate(180deg); }
+  .icon-btn.toggle-fill { color: var(--text-secondary); }
+  .icon-btn.toggle-fill.is-on { color: var(--accent); }
+  .icon-btn.toggle-fill.is-on svg { fill: currentColor; }
+
+  /* ===========================================================
+   * FAB — sourced 1:1 from pages/Verita Home.html (.refresh-fab) +
+   * animations/Verita Transition.html (@keyframes refresh-fab-spin).
+   * =========================================================== */
+  .fab-stage {
+    position: relative;
+    height: 120px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .fab-stage .refresh-fab {
+    position: absolute; right: 18px; bottom: 18px; z-index: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff;
+    width: 52px; height: 52px; padding: 0; border-radius: 14px;
+    box-shadow: 0 10px 24px -8px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.12);
+    transition: transform 160ms ease-out, box-shadow 160ms ease-out, background 120ms ease-out;
+    cursor: pointer; border: 0;
+  }
+  .fab-stage .refresh-fab:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px -10px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.14);
+  }
+  .fab-stage .refresh-fab:active {
+    transform: translateY(0);
+    box-shadow: 0 6px 14px -8px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.12);
+  }
+  .fab-stage .refresh-fab svg { display: block; }
+  @keyframes refresh-fab-spin {
+    from { transform: rotate(0); }
+    to   { transform: rotate(360deg); }
+  }
+  .fab-stage .refresh-fab.spinning svg {
+    animation: refresh-fab-spin 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .fab-stage .fab-caption {
+    position: absolute; left: 18px; top: 18px;
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .btn-primary, .btn-ghost, .icon-btn, .v-link, .fab-stage .refresh-fab,
+    .var-cta, .var-tb, .var-nav { transition: none; }
+    .btn-primary.x-press:active, .btn-ghost.x-press:active,
+    .icon-btn:active { transform: none; }
+    .icon-btn svg { transition: none; }
+    .fab-stage .refresh-fab.spinning svg { animation: none; }
+    .fab-stage .refresh-fab:hover { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. tokens.css fixed bar -->
+<div class="demo-header">
+  <span class="demo-title">C01 · Buttons & Links</span>
+  <span class="demo-spec">Production (3) + Extended (3) + Inconsistency audit</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<!-- 2. Stage + content wrap -->
+<div class="demo-stage">
+<div class="wrap">
+
+  <!-- 3. Lead block -->
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Buttons &amp; Links</h1>
+    <ul class="scope-list">
+      <li><strong>Production tier</strong> — <code>.btn-primary</code>, <code>.btn-ghost</code> hover; disabled-state variants from Auth / Post Editor / Home; refresh FAB. All verified 1:1 against <code>pages/*.html</code>.</li>
+      <li><strong>Extended tier</strong> — proposals for surfaces production hasn't codified yet (button press scale, inline link underline, icon-button toggle). Each names the use case so React has a target shape.</li>
+      <li><strong>Inconsistency audit</strong> — five production discrepancies the scan surfaced (button height/radius drift, three disabled mechanisms, dual link patterns, missing button press feedback, hardcoded literals). Documented for follow-up.</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- =========================================================
+       Spec table
+       ========================================================= -->
+  <section>
+    <h2>Spec</h2>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge prod">prod</span>Button hover (bg tint)</td>
+          <td>120ms</td><td>linear</td>
+          <td><code>background</code> shift on <code>.btn-primary</code> / <code>.btn-ghost</code>. Production literal — Home line 209 / 218.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>Disabled (Auth CTA)</td>
+          <td>120ms</td><td>ease-out</td>
+          <td><code>:disabled</code> on <code>.cta</code> swaps <code>background</code> to <code>--border-default</code>. Auth line 148.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>Disabled (toolbar)</td>
+          <td>160ms</td><td>ease-out</td>
+          <td><code>[disabled]</code> on toolbar icons fades <code>opacity: 1 → 0.35</code>. Post Editor line 246.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>Disabled (nav)</td>
+          <td>160ms</td><td>ease-out</td>
+          <td><code>.disabled</code> class on nav items fades <code>opacity: 1 → 0.38</code>. Home line 77, Settings line 81.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>FAB hover lift</td>
+          <td>160ms</td><td>ease-out</td>
+          <td><code>translateY(-2px)</code> + shadow expansion. Background shifts at 120ms.</td>
+        </tr>
+        <tr>
+          <td><span class="badge prod">prod</span>FAB click spin</td>
+          <td>600ms</td><td><code>cubic-bezier(0.4, 0, 0.2, 1)</code></td>
+          <td>Material-standard easing. The only production button with this curve.</td>
+        </tr>
+        <tr>
+          <td><span class="badge ext">ext</span>Button press (scale)</td>
+          <td>80ms</td><td>ease-out</td>
+          <td>Extended — for <code>&lt;Button&gt;</code> tactile feedback when it lands. Symmetric in/out.</td>
+        </tr>
+        <tr>
+          <td><span class="badge ext">ext</span>Link underline enhance</td>
+          <td>160ms</td><td>ease-out</td>
+          <td>Extended — for inline body links. Underline visible at rest (1px muted); hover/focus thickens to 2px and brings color to <code>currentColor</code>.</td>
+        </tr>
+        <tr>
+          <td><span class="badge ext">ext</span>Icon button toggle</td>
+          <td>220ms</td><td><code>--ease-out</code></td>
+          <td>Extended — for <code>&lt;IconButton&gt;</code>. Rotate-180 chevron variant + color/fill swap variant.</td>
+        </tr>
+        <tr>
+          <td>Reduced motion</td>
+          <td>—</td><td>—</td>
+          <td><code>prefers-reduced-motion: reduce</code> disables transforms, FAB lift, FAB spin, press scale. Color / fill / underline-thickness states still apply.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =========================================================
+       PRODUCTION TIER divider
+       ========================================================= -->
+  <div class="tier-divider">
+    <h2>Production</h2>
+  </div>
+
+  <!-- =========================================================
+       SECTION 1 — Button hover (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · Verita Home line 206–220</span>
+    <h2>Button hover · background tint</h2>
+    <dl class="section-meta">
+      <dt>Property</dt><dd><code>background</code> only — no transform, no shadow change</dd>
+      <dt>Primary</dt><dd><code>var(--accent)</code> → <code>var(--accent-hover)</code> over 120ms linear</dd>
+      <dt>Ghost</dt><dd>transparent → <code>var(--bg-elevated)</code> · text <code>var(--text-secondary)</code> → <code>var(--text-primary)</code></dd>
+      <dt>Cursor</dt><dd>changes the instant the pointer enters — never delayed by the 120ms tint</dd>
+    </dl>
+    <p>Two production variants from Home: <code>.btn-primary</code> (accent fill, dominant action) and <code>.btn-ghost</code> (hairline border, every other action). Hover the buttons to see the tint shift.</p>
+    <div class="triggers">
+      <button class="btn-primary" type="button">Create account</button>
+      <button class="btn-ghost" type="button">Log in</button>
+      <button class="btn-primary" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        New post
+      </button>
+      <button class="btn-ghost" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        Filter
+      </button>
+    </div>
+    <p class="hint">120ms is preserved as a literal (not the <code>--dur-fast (180ms)</code> token) for 1:1 fidelity with production. Slowing to 180ms makes the surface feel sticky on rapid hover-passes.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 2 — Disabled state variants (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · 3 distinct mechanisms observed</span>
+    <h2>Disabled state · production variants</h2>
+    <dl class="section-meta">
+      <dt>Trigger</dt><dd>the boolean toggles all three disabled patterns at once so the cross-fade reads side-by-side</dd>
+      <dt>Why 3</dt><dd>production has not converged on a single disabled mechanism — each surface invented its own (audit detail in <code>Plan.md</code>)</dd>
+      <dt>Convergence</dt><dd>recommended unified contract is <code>.disabled { opacity: 0.38; pointer-events: none }</code> — picked because it's already the most-used variant and works on any element type</dd>
+    </dl>
+    <p>Three distinct mechanisms observed in production — Auth CTA's <code>:disabled</code> pseudo-class, Post Editor toolbar's <code>[disabled]</code> attribute (opacity 0.35), and Home/Settings nav's <code>.disabled</code> CSS class (opacity 0.38). The samples render <strong>disabled by default</strong> below — click "Toggle" to compare against the enabled state.</p>
+    <div class="dv-row">
+      <div class="dv-cell">
+        <span class="dv-label">Auth CTA · <code>:disabled</code></span>
+        <div class="dv-stage"><button class="var-cta" id="dv-cta" type="button">Sign in</button></div>
+      </div>
+      <div class="dv-cell">
+        <span class="dv-label">Toolbar · <code>[disabled]</code></span>
+        <div class="dv-stage">
+          <div class="var-tb-group" id="dv-tb-group">
+            <button class="var-tb" type="button" aria-label="Bold">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h8a4 4 0 0 1 0 8H6zM6 12h9a4 4 0 0 1 0 8H6z"/></svg>
+            </button>
+            <button class="var-tb" type="button" aria-label="Italic">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+            </button>
+            <button class="var-tb" type="button" aria-label="Underline">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v8a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="dv-cell">
+        <span class="dv-label">Nav item · <code>.disabled</code></span>
+        <div class="dv-stage"><span class="var-nav" id="dv-nav">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+          Home
+        </span></div>
+      </div>
+    </div>
+    <div class="triggers" style="margin-top: 20px;">
+      <button class="btn-ghost" id="dv-toggle" type="button">Toggle to enabled</button>
+    </div>
+    <p class="hint">Currently <code id="dv-state">disabled</code>. Each variant fades on a different timing curve and produces visually distinct "disabled" treatments — the inconsistency this audit calls out.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 3 — Refresh FAB (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier production">Production · Verita Home + Verita Transition</span>
+    <h2>Refresh FAB · hover lift + click spin</h2>
+    <dl class="section-meta">
+      <dt>Surface</dt><dd>52 × 52 · accent fill · 14px radius · double-layer shadow</dd>
+      <dt>Hover</dt><dd><code>translateY(-2px)</code> + shadow expansion — both 160ms <code>ease-out</code> · background shifts at 120ms</dd>
+      <dt>Click</dt><dd><code>spinning</code> class triggers a 600ms full rotation, removed at <code>animationend</code> so a re-click fires a fresh spin</dd>
+      <dt>Easing</dt><dd>spin uses <code>cubic-bezier(0.4, 0, 0.2, 1)</code> — Material-standard, the only place in the system we deviate from <code>--ease-out</code></dd>
+    </dl>
+    <p>The most visually weighted button in the product — only persistent shadow on the page, primary way users pull new posts. Sits <code>position: fixed</code> in production; the demo embeds it inside a stage so it stays in the section without escaping.</p>
+    <div class="fab-stage">
+      <span class="fab-caption">Click → 600ms spin</span>
+      <button class="refresh-fab" id="fab" type="button" aria-label="Refresh feed">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></svg>
+      </button>
+    </div>
+    <p class="hint">The brand wordmark click in production triggers the same spin (the <code>.refresh-fab.spinning</code> class is shared), and the masonry runs its own 120ms fade-out + 220ms fade-in alongside it. C01 owns the FAB itself; the masonry choreography lives in P01.</p>
+  </section>
+
+  <!-- =========================================================
+       EXTENDED TIER divider
+       ========================================================= -->
+  <div class="tier-divider">
+    <h2>Extended</h2>
+    <p>Proposals for components production hasn't codified yet — none of these appear in <code>pages/*.html</code> today.</p>
+  </div>
+
+  <!-- =========================================================
+       SECTION 4 — Button press scale (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier extended">Extended · proposed for &lt;Button&gt; component</span>
+    <h2>Button press · scale 0.97</h2>
+    <dl class="section-meta">
+      <dt>Down</dt><dd><code>transform: scale(0.97)</code> over 80ms <code>ease-out</code> on <code>:active</code></dd>
+      <dt>Up</dt><dd>same 80ms transition runs in reverse — symmetric, no spring</dd>
+      <dt>Origin</dt><dd>default <code>50% 50%</code> — visual center matches optical center for these heights</dd>
+    </dl>
+    <p>Hold the pointer (or tap and hold on touch) to see the scale. The buttons below carry the <code>.x-press</code> modifier so this section's behavior doesn't bleed into Section 1's production-fidelity samples.</p>
+    <div class="triggers press-row">
+      <button class="btn-primary x-press" type="button">Press &amp; hold me</button>
+      <button class="btn-ghost x-press" type="button">Press &amp; hold me</button>
+    </div>
+    <p class="hint">When this lands in production, also retire the standalone <code>.publish-btn</code> in Post Editor — its <code>translateY</code> on hover/active is doing the same job in a non-system way.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 5 — Inline body-copy link (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier extended">Extended · proposed for &lt;Link&gt; component</span>
+    <h2>Text link · underline visible, hover enhances</h2>
+    <dl class="section-meta">
+      <dt>Idle</dt><dd>1px underline · muted color (<code>--border-strong</code>) · 2px offset — affordance always present</dd>
+      <dt>Hover</dt><dd>thickness <code>1px → 2px</code> · color → <code>currentColor</code> · offset <code>2px → 3px</code> · 160ms <code>ease-out</code></dd>
+      <dt>Focus</dt><dd>same as hover on <code>:focus-visible</code> — keyboard parity is non-negotiable</dd>
+    </dl>
+    <p>Hover or tab through the links — the underline is visible at rest and thickens on interaction. Affordance is never hidden.</p>
+    <div class="link-row">
+      Read the <a class="v-link" href="#" onclick="event.preventDefault()">latest digest</a> for an editorial summary, or jump to the <a class="v-link accent" href="#" onclick="event.preventDefault()">community feed</a> for everything new today. You can also <a class="v-link" href="#" onclick="event.preventDefault()">subscribe to weekly digests</a>.
+    </div>
+    <p class="hint">Replaces Digest Post's current <code>text-decoration: underline</code> + <code>text-decoration-color</code> transition with a single shared contract. Migration is additive — drop <code>.v-link</code> on existing inline anchors and remove the page-local decoration rules.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 6 — Icon button & toggle (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <span class="tier extended">Extended · proposed for &lt;IconButton&gt; component</span>
+    <h2>Icon button · hover surface + toggle</h2>
+    <dl class="section-meta">
+      <dt>Idle</dt><dd>32 × 32 transparent surface · ink-secondary glyph · 8px radius</dd>
+      <dt>Hover</dt><dd><code>background: var(--bg-elevated)</code> · ink-primary glyph · 160ms <code>ease-out</code></dd>
+      <dt>Press</dt><dd><code>scale(0.94)</code> 80ms — slightly tighter than text-button 0.97 because the smaller surface needs more drama</dd>
+      <dt>Toggle</dt><dd>chevron rotates <code>180deg</code> over 220ms · fill variant swaps color + glyph fill instantly</dd>
+    </dl>
+    <p>Click each to see the toggle behavior. The like + bookmark here only show the surface contract — the like-button bounce (320ms <code>1 → 1.25 → 0.92 → 1</code>) and the post-detail action-bar layout live in <a class="v-link" href="12%20Post%20Detail%20Action%20Bar.html">C12</a>. Use this section for <code>&lt;IconButton&gt;</code> hover/press; use C12 for the action-bar choreography.</p>
+    <div class="triggers">
+      <button class="icon-btn" id="ib-chevron" type="button" aria-label="Toggle expand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <button class="icon-btn toggle-fill" id="ib-like" type="button" aria-label="Like" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <button class="icon-btn toggle-fill" id="ib-bookmark" type="button" aria-label="Bookmark" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <button class="icon-btn" type="button" aria-label="More">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
+      </button>
+    </div>
+    <p class="hint">When <code>&lt;IconButton&gt;</code> lands, the Post Editor toolbar can drop its custom 30px button class and adopt this 32px contract — the toolbar variant in Section 2 above is intentionally non-converged so the comparison stays visible.</p>
+  </section>
+
+  <!-- =========================================================
+       React hint footer
+       ========================================================= -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <dl>
+      <dt>Primary button</dt><dd><code>&lt;Button variant="primary"&gt;Create account&lt;/Button&gt;</code> — owns the 120ms hover tint + future 80ms press scale.</dd>
+      <dt>Ghost button</dt><dd><code>&lt;Button variant="ghost"&gt;Log in&lt;/Button&gt;</code></dd>
+      <dt>Disabled</dt><dd><code>&lt;Button disabled&gt;</code> — applies the unified <code>opacity: 0.38</code> contract; component owns the cross-fade so all surfaces converge.</dd>
+      <dt>Inline link</dt><dd><code>&lt;Link href="…"&gt;…&lt;/Link&gt;</code> — owns the visible-at-rest underline + 160ms hover enhancement (Extended). Use for body copy, never raw <code>&lt;a&gt;</code>.</dd>
+      <dt>Icon button</dt><dd><code>&lt;IconButton aria-label="…" toggle="chevron|fill" /&gt;</code> — exposes the rotate / fill toggle variants (Extended).</dd>
+      <dt>FAB</dt><dd><code>&lt;Fab onSpin={fn} aria-label="…" /&gt;</code> — owns the 600ms spin lifecycle internally; consumer calls <code>fab.spin()</code>.</dd>
+      <dt>Hook</dt><dd><code>useButtonInteraction()</code> — returns press / hover / disabled state for custom surfaces (e.g. card CTA arrow in C05).</dd>
+      <dt>Reduced motion</dt><dd><code>useReducedMotion()</code> short-circuits press scale and FAB lift / spin. Hover background tints + underline-thickness changes still run.</dd>
+    </dl>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // SECTION 2 — disabled variants (toggle all three at once)
+  // Defaults to DISABLED so visitors see the disabled treatment first;
+  // toggle flips to enabled for comparison.
+  (function(){
+    const cta    = document.getElementById('dv-cta');
+    const tbBtns = document.querySelectorAll('#dv-tb-group .var-tb');
+    const nav    = document.getElementById('dv-nav');
+    const toggle = document.getElementById('dv-toggle');
+    const state  = document.getElementById('dv-state');
+    let off = true;
+    const apply = () => {
+      cta.disabled = off;
+      tbBtns.forEach(b => { if (off) b.setAttribute('disabled', ''); else b.removeAttribute('disabled'); });
+      nav.classList.toggle('disabled', off);
+      state.textContent = off ? 'disabled' : 'enabled';
+      toggle.textContent = off ? 'Toggle to enabled' : 'Toggle to disabled';
+    };
+    apply();
+    toggle.addEventListener('click', () => { off = !off; apply(); });
+  })();
+
+  // SECTION 6 — icon-button toggles
+  (function(){
+    const chev = document.getElementById('ib-chevron');
+    chev.addEventListener('click', () => chev.classList.toggle('is-on'));
+
+    ['ib-like', 'ib-bookmark'].forEach((id) => {
+      const btn = document.getElementById(id);
+      btn.addEventListener('click', () => {
+        const on = btn.classList.toggle('is-on');
+        btn.setAttribute('aria-pressed', String(on));
+      });
+    });
+  })();
+
+  // SECTION 3 — FAB spin
+  (function(){
+    const fab = document.getElementById('fab');
+    fab.addEventListener('click', () => {
+      fab.classList.remove('spinning');
+      void fab.offsetWidth;
+      fab.classList.add('spinning');
+    });
+    fab.addEventListener('animationend', () => fab.classList.remove('spinning'));
+  })();
+</script>
+
+</body>
+</html>

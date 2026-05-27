@@ -1,0 +1,69 @@
+.card {
+  break-inside: avoid;
+  margin-bottom: 25px;
+  cursor: pointer;
+  transition: transform var(--motion-card-lift);
+  display: block;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+}
+
+.cover {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform var(--motion-card-lift), box-shadow var(--motion-card-lift);
+}
+
+.card:hover .cover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -10px rgba(0, 0, 0, 0.12);
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.badgeTl,
+.badgeTr {
+  position: absolute;
+  top: 12px;
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-primary);
+  padding: 5px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.badgeTl {
+  left: 12px;
+}
+
+.badgeTr {
+  right: 12px;
+}
+
+.body {
+  padding: 12px 8px 4px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.018em;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

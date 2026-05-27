@@ -2,26 +2,62 @@
 [![API Docs](https://img.shields.io/badge/API-Documentation-blue)](https://AET-DevOps26.github.io/team-colleague-md/)
 
 Technical documentation for all Verita microservices.
-## Quick Start
 
-This repository contains three main parts:
+## Docker Compose (Recommended)
 
-- `frontend` — Vite + React application (local dev server)
-- `backend/user-service` — Spring Boot (Java) service
-- `genai-service` — FastAPI (Python) service
+The fastest way to run the full platform. From the repository root:
+
+```bash
+docker compose up --build
+```
+
+This builds and starts all five services:
+
+| Service | URL | Description |
+|---|---|---|
+| `frontend` | http://localhost:3000 | React UI (served by nginx) |
+| `user-service` | http://localhost:8081 | Spring Boot — user identity & auth |
+| `content-service` | http://localhost:8082 | Spring Boot — posts & content |
+| `recommendation-service` | http://localhost:8083 | Spring Boot — feeds & notifications |
+| `genai-service` | http://localhost:8000 | FastAPI — AI features |
+
+To stop all services:
+
+```bash
+docker compose down
+```
+
+To start a single service only:
+
+```bash
+docker compose up --build user-service
+```
+
+### Health Checks
+
+All services are configured with Docker health checks that run automatically every 30 seconds. Once started, the Spring Boot services expose their health status at `/actuator/health`:
+
+```text
+http://localhost:8081/actuator/health   # user-service
+http://localhost:8082/actuator/health   # content-service
+http://localhost:8083/actuator/health   # recommendation-service
+http://localhost:8000/health            # genai-service
+```
+
+Health check activity is visible in the compose log output. The frontend (nginx) logs every health probe as an access log line (`GET / HTTP/1.1 200`). The Spring Boot services run their checks silently — no log line appears unless the check fails, which is expected behavior.
+
+---
+
+## Local Development
 
 ### Prerequisites
 
 - Node.js and npm (for frontend)
-- Java 21 (for backend)
+- Java 25 (for backend services)
 - Python 3.11+ and `pip` (for genai-service)
 - Docker & Docker Compose
 
----
-
-### Frontend (local)
-
-Install dependencies and start the dev server:
+### Frontend
 
 ```bash
 cd frontend
@@ -29,34 +65,44 @@ npm install
 npm run dev
 ```
 
-Default dev server URL:
-
-```text
-http://localhost:3000
-```
+Default dev server: `http://localhost:3000`
 
 ---
 
-### Backend — User Service (local)
-
-Run with the Gradle wrapper:
+### Backend — User Service
 
 ```bash
 cd backend/user-service
-./gradlew bootRun    # on Windows use .\gradlew.bat bootRun
+./gradlew bootRun    # Windows: .\gradlew.bat bootRun
 ```
 
-Service health check:
-
-```text
-http://localhost:8081/health
-```
+Health check: `http://localhost:8081/actuator/health`
 
 ---
 
-### GenAI Service (local)
+### Backend — Content Service
 
-Install dependencies and start the FastAPI app:
+```bash
+cd backend/content-service
+./gradlew bootRun    # Windows: .\gradlew.bat bootRun
+```
+
+Health check: `http://localhost:8082/actuator/health`
+
+---
+
+### Backend — Recommendation Service
+
+```bash
+cd backend/recommendation-service
+./gradlew bootRun    # Windows: .\gradlew.bat bootRun
+```
+
+Health check: `http://localhost:8083/actuator/health`
+
+---
+
+### GenAI Service
 
 ```bash
 cd genai-service
@@ -64,32 +110,6 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Health check:
-
-```text
-http://localhost:8000/health
-```
-
----
-
-### Docker Compose
-
-From the repository root you can build and run the services with Docker Compose:
-
-```bash
-docker compose up --build
-```
-
-This will build and start all three services (as defined in `docker-compose.yml`):
-
-- `frontend` → `http://localhost:3000`
-- `user-service` → `http://localhost:8081`
-- `genai-service` → `http://localhost:8000`
-
-To start a single service:
-
-```bash
-docker compose up --build frontend
-```
+Health check: `http://localhost:8000/health`
 
 ---

@@ -1,0 +1,1409 @@
+<!doctype html>
+<!--
+  C07 — Tooltips & Popovers
+  Scope:      Anchored hover and click overlays.
+              Production tier (3 sections, 1:1 from pages/*.html):
+                §1 .tb-btn-tip        — Post Editor toolbar tooltip (primary production)
+                §2 .sort-dropdown     — Post Detail comments sort menu (anchored popover)
+                §3 #manage-portal     — User Profile card menu (portaled dropdown)
+              Extended tier (5 sections, proposals for the unified <Tooltip>/<Popover>):
+                §4 Hover-delay tooltip (400ms in, instant out) — primary extended
+                §5 Edge-arrow tooltip (top/bottom/left/right placements)
+                §6 Anchored popover (scale-from-anchor 180ms via transform-origin)
+                §7 Dismiss governance (outside-click + Esc + scroll close)
+                §8 Reduced-motion fallback
+  Spec:       docs/Animation Spec.md  §  Tooltips & Popovers
+  React hint: <Tooltip>, <Popover>, useFloating(), useDismiss()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tooltips & Popovers · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — copied verbatim from C06) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .scope {
+    color: var(--text-secondary);
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+
+  .tier {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 8px;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    vertical-align: 2px;
+  }
+  .tier.prod {
+    background: color-mix(in oklab, var(--success) 12%, var(--bg-surface));
+    color: var(--success);
+    border: 1px solid color-mix(in oklab, var(--success) 28%, transparent);
+  }
+  .tier.ext {
+    background: color-mix(in oklab, var(--accent) 10%, var(--bg-surface));
+    color: var(--accent);
+    border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent);
+  }
+  .tier.primary {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 14%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 18%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  .triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0 0;
+    align-items: center;
+  }
+  .trigger {
+    appearance: none;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    border-radius: 7px;
+    padding: 8px 14px;
+    font: 500 12.5px var(--font-sans);
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+  }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger:active { background: var(--border-subtle); }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Stage shell — every section's interactive demo lives in one of these */
+  .stage {
+    margin: 14px 0 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+    overflow: visible;
+    padding: 32px 20px;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+  }
+  .stage.tall { min-height: 200px; }
+
+  /* ===========================================================
+   * §1 — .tb-btn-tip (Post Editor toolbar)
+   * Verbatim from pages/Verita Post Editor.html:248–257
+   * =========================================================== */
+  .tb-toolbar {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 6px 8px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+  }
+  .tb-btn {
+    width: 32px; height: 32px; border-radius: 6px;
+    display: grid; place-items: center;
+    color: var(--text-secondary);
+    background: transparent; border: none; cursor: pointer;
+    transition: background 120ms, color 120ms;
+    position: relative;
+  }
+  .tb-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .tb-btn svg { width: 15px; height: 15px; stroke-width: 1.8; }
+  .tb-btn-tip {
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent); color: #fff;
+    font-size: 10.5px; font-weight: 500; white-space: nowrap;
+    padding: 4px 7px; border-radius: 5px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 100ms;
+    z-index: 10;
+  }
+  .tb-btn:hover .tb-btn-tip { opacity: 1; }
+  .tb-sep { width: 1px; height: 20px; background: var(--border-subtle); margin: 0 4px; }
+
+  /* ===========================================================
+   * §2 — .sort-dropdown (Post Detail comments)
+   * Verbatim from pages/Verita Post Detail.html:764–803
+   * =========================================================== */
+  .sort-anchor-row { display: inline-flex; align-items: center; gap: 8px; }
+  .sort-trigger {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 11px; border-radius: 7px;
+    background: var(--bg-base); border: 1px solid var(--border-default);
+    font-size: 12.5px; font-weight: 500; color: var(--text-primary);
+    cursor: pointer; transition: background 120ms;
+  }
+  .sort-trigger:hover { background: var(--bg-elevated); }
+  .sort-trigger svg { width: 12px; height: 12px; stroke-width: 1.6; }
+  .sort-dropdown-wrap { position: relative; }
+  .sort-dropdown {
+    position: absolute; top: calc(100% + 4px); right: 0;
+    background: #fff;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    padding: 4px;
+    min-width: 160px;
+    z-index: 30;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 140ms, transform 140ms;
+  }
+  .sort-dropdown.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .sort-dropdown button {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12.5px; font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent; border: none; cursor: pointer;
+    text-align: left; font-family: inherit;
+    transition: background 100ms, color 100ms;
+  }
+  .sort-dropdown button:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .sort-dropdown button.active { color: var(--text-primary); font-weight: 600; }
+  .sort-dropdown button.active::after {
+    content: "";
+    margin-left: auto;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ===========================================================
+   * §3 — #manage-portal (User Profile card menu)
+   * Verbatim from pages/Verita User Profile.html:317–341
+   * =========================================================== */
+  .manage-row { display: inline-flex; align-items: center; gap: 12px; }
+  .manage-trigger {
+    width: 32px; height: 32px; border-radius: 7px;
+    display: grid; place-items: center;
+    background: var(--bg-base); border: 1px solid var(--border-default);
+    color: var(--text-secondary); cursor: pointer;
+    transition: background 120ms, color 120ms;
+  }
+  .manage-trigger:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .manage-trigger svg { width: 14px; height: 14px; stroke-width: 1.8; }
+  .manage-portal {
+    position: absolute;
+    z-index: 50;
+    min-width: 148px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px -8px rgba(0,0,0,0.18);
+    padding: 4px;
+    display: none;
+    animation: dropIn 120ms ease-out;
+  }
+  .manage-portal.open { display: block; }
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .manage-dropdown-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 7px;
+    font-size: 13px; font-weight: 500; color: var(--text-primary);
+    cursor: pointer; border: none; background: transparent;
+    width: 100%; text-align: left; font-family: var(--font-sans);
+    transition: background 100ms;
+  }
+  .manage-dropdown-item:hover { background: var(--bg-elevated); }
+  .manage-dropdown-item.danger { color: var(--danger); }
+  .manage-dropdown-item.danger:hover { background: #FEF2F2; }
+  .manage-dropdown-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .manage-dropdown-sep { height: 1px; background: var(--border-subtle); margin: 3px 6px; }
+
+  /* ===========================================================
+   * §4 — <Tooltip> proposal — hover delay (400ms in, instant out)
+   * Production §1 fires on plain :hover with 100ms fade. Anywhere
+   * tooltips would otherwise spam the user (sidebar nav rail, dense
+   * icon clusters), use this hover-delay variant.
+   * =========================================================== */
+  .x-tip-row {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+  }
+  .x-icon-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: grid; place-items: center;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 120ms, color 120ms;
+    position: relative;
+  }
+  .x-icon-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .x-icon-btn svg { width: 18px; height: 18px; stroke-width: 1.6; }
+  .x-tip {
+    position: absolute;
+    bottom: calc(100% + 8px); left: 50%;
+    transform: translate(-50%, 4px);
+    background: oklch(20% 0.012 70);
+    color: #fff;
+    font-size: 11.5px; font-weight: 500; white-space: nowrap;
+    padding: 5px 9px; border-radius: 6px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 80ms ease-out, transform 80ms ease-out;
+    z-index: 10;
+  }
+  .x-tip::after {
+    content: "";
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: oklch(20% 0.012 70);
+  }
+  .x-icon-btn.tip-shown .x-tip {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+  }
+
+  /* ===========================================================
+   * §5 — Edge-arrow tooltip (top/bottom/left/right)
+   * =========================================================== */
+  .placements {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    width: 100%;
+  }
+  .placement-cell {
+    display: grid; place-items: center;
+    padding: 36px 12px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    position: relative;
+  }
+  .placement-cell .label {
+    position: absolute; top: 8px; left: 10px;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .x-anchor {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--bg-elevated); border: 1px dashed var(--border-default);
+    cursor: pointer;
+    display: grid; place-items: center;
+    color: var(--text-secondary);
+    font: 500 11px var(--font-mono);
+    position: relative;
+  }
+  .x-anchor:hover { color: var(--text-primary); }
+  .x-tip-edge {
+    position: absolute;
+    background: oklch(20% 0.012 70);
+    color: #fff;
+    font-size: 11px; font-weight: 500; white-space: nowrap;
+    padding: 5px 9px; border-radius: 6px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+    z-index: 10;
+  }
+  .x-tip-edge::after {
+    content: "";
+    position: absolute;
+    border: 4px solid transparent;
+  }
+
+  /* Top */
+  .x-anchor.top .x-tip-edge {
+    bottom: calc(100% + 8px); left: 50%;
+    transform: translate(-50%, 4px);
+  }
+  .x-anchor.top:hover .x-tip-edge { opacity: 1; transform: translate(-50%, 0); }
+  .x-anchor.top .x-tip-edge::after {
+    top: 100%; left: 50%; transform: translateX(-50%);
+    border-top-color: oklch(20% 0.012 70);
+  }
+  /* Bottom */
+  .x-anchor.bottom .x-tip-edge {
+    top: calc(100% + 8px); left: 50%;
+    transform: translate(-50%, -4px);
+  }
+  .x-anchor.bottom:hover .x-tip-edge { opacity: 1; transform: translate(-50%, 0); }
+  .x-anchor.bottom .x-tip-edge::after {
+    bottom: 100%; left: 50%; transform: translateX(-50%);
+    border-bottom-color: oklch(20% 0.012 70);
+  }
+  /* Right */
+  .x-anchor.right .x-tip-edge {
+    left: calc(100% + 8px); top: 50%;
+    transform: translate(-4px, -50%);
+  }
+  .x-anchor.right:hover .x-tip-edge { opacity: 1; transform: translate(0, -50%); }
+  .x-anchor.right .x-tip-edge::after {
+    right: 100%; top: 50%; transform: translateY(-50%);
+    border-right-color: oklch(20% 0.012 70);
+  }
+  /* Left */
+  .x-anchor.left .x-tip-edge {
+    right: calc(100% + 8px); top: 50%;
+    transform: translate(4px, -50%);
+  }
+  .x-anchor.left:hover .x-tip-edge { opacity: 1; transform: translate(0, -50%); }
+  .x-anchor.left .x-tip-edge::after {
+    left: 100%; top: 50%; transform: translateY(-50%);
+    border-left-color: oklch(20% 0.012 70);
+  }
+
+  /* ===========================================================
+   * §6 — <Popover> proposal — scale-from-anchor (180ms)
+   * =========================================================== */
+  .x-pop-row { display: inline-flex; align-items: center; gap: 12px; position: relative; }
+  .x-pop-trigger {
+    padding: 8px 14px;
+    background: var(--text-primary); color: #fff;
+    border: 1px solid var(--text-primary); border-radius: 7px;
+    font: 500 12.5px var(--font-sans);
+    cursor: pointer;
+    transition: background 120ms;
+  }
+  .x-pop-trigger:hover { background: oklch(28% 0 0); }
+  .x-pop {
+    position: absolute;
+    top: calc(100% + 8px); left: 0;
+    min-width: 240px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px -8px rgba(0,0,0,0.18);
+    padding: 14px 16px;
+    z-index: 30;
+    opacity: 0;
+    transform: scale(0.95);
+    transform-origin: top left;
+    pointer-events: none;
+    transition: opacity 180ms ease-out, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .x-pop.open {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
+  .x-pop h4 {
+    margin: 0 0 6px;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 15px;
+    color: var(--text-primary);
+  }
+  .x-pop p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ===========================================================
+   * §7 — Dismiss governance (outside-click + Esc + scroll)
+   * =========================================================== */
+  .dismiss-stage {
+    width: 100%;
+    height: 280px;
+    overflow-y: auto;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+  }
+  .dismiss-spacer {
+    height: 600px;
+    background: linear-gradient(
+      to bottom,
+      var(--bg-elevated) 0%,
+      var(--bg-base) 40%
+    );
+    border-radius: 8px;
+    margin-top: 60px;
+    display: grid; place-items: center;
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .dismiss-trigger {
+    padding: 8px 14px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: 7px;
+    font: 500 12.5px var(--font-sans);
+    color: var(--text-primary);
+    cursor: pointer;
+    position: relative;
+    z-index: 5;
+  }
+  .dismiss-pop {
+    position: absolute;
+    top: 56px; left: 16px;
+    min-width: 260px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px -8px rgba(0,0,0,0.18);
+    padding: 12px 14px;
+    z-index: 20;
+    opacity: 0;
+    transform: scale(0.97) translateY(-2px);
+    transform-origin: top left;
+    pointer-events: none;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+  }
+  .dismiss-pop.open {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: auto;
+  }
+  .dismiss-pop p {
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    color: var(--text-primary);
+  }
+  .dismiss-pop .triggers-list {
+    display: grid;
+    gap: 4px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+  }
+  .dismiss-pop kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    border: 1px solid var(--border-default);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    font: 500 10px var(--font-mono);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    margin-right: 4px;
+  }
+  .dismiss-log {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    min-height: 36px;
+  }
+  .dismiss-log .item { display: block; }
+  .dismiss-log .item.fresh { color: var(--text-primary); }
+
+  /* ===========================================================
+   * §8 — Reduced motion side-by-side
+   * =========================================================== */
+  .rm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+  }
+  .rm-cell {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 24px 16px;
+    text-align: center;
+    position: relative;
+    min-height: 200px;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 14px;
+    padding-top: 36px;
+  }
+  .rm-cell .label {
+    position: absolute; top: 8px; left: 10px;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .rm-pop {
+    position: absolute;
+    top: calc(100% + 8px); left: 50%;
+    transform: translate(-50%, 4px) scale(0.95);
+    transform-origin: top center;
+    min-width: 200px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    font-size: 12px; color: var(--text-secondary);
+    opacity: 0; pointer-events: none;
+    transition: opacity 180ms ease-out, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 10;
+  }
+  .rm-cell.full .rm-pop.open {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  .rm-cell.reduced .rm-pop {
+    transition: opacity 120ms linear;
+    transform: translate(-50%, 0) scale(1);
+  }
+  .rm-cell.reduced .rm-pop.open { opacity: 1; }
+
+  .rm-anchor-wrap { position: relative; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .x-tip,
+    .x-tip-edge,
+    .x-pop,
+    .dismiss-pop,
+    .sort-dropdown,
+    .manage-portal,
+    .rm-cell.full .rm-pop {
+      transition: opacity 120ms linear !important;
+      transform: none !important;
+      animation: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. tokens.css fixed bar -->
+<div class="demo-header">
+  <span class="demo-title">C07 · Tooltips & Popovers</span>
+  <span class="demo-spec">Toolbar tip · Sort menu · Card menu · Hover-delay · Edge-arrow · Anchored · Dismiss · Reduced</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<!-- 2. Stage + content wrap -->
+<div class="demo-stage">
+<div class="wrap">
+
+  <!-- 3. Lead block -->
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Tooltips &amp; Popovers</h1>
+    <ul class="scope-list">
+      <li>Three production primitives — Post Editor toolbar tip, Post Detail sort menu, User Profile card menu — sourced 1:1 from <code>pages/*.html</code></li>
+      <li>Five Extended-tier proposals for the unified <code>&lt;Tooltip&gt;</code> / <code>&lt;Popover&gt;</code> contract — hover delay, edge placements, scale-from-anchor, dismiss governance, reduced-motion fallback</li>
+      <li>The plan also lists <em>sidebar collapsed labels</em> (P01 Home) and <em>action hints</em> (P08 Admin) as consumers — neither exists in production today; both are Extended consumers blocked on this component</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- 4. Spec table -->
+  <section>
+    <h2>Spec</h2>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Toolbar tooltip</td>
+          <td>100ms</td><td>linear</td>
+          <td>Pure <code>opacity 0 → 1</code> on parent <code>:hover</code>. No delay, no transform. Production §1.</td>
+        </tr>
+        <tr>
+          <td>Sort dropdown</td>
+          <td>140ms</td><td>linear</td>
+          <td><code>opacity</code> + <code>translateY(-4px → 0)</code> on <code>.open</code>. Production §2.</td>
+        </tr>
+        <tr>
+          <td>Manage portal</td>
+          <td>120ms</td><td>ease-out</td>
+          <td><code>@keyframes dropIn</code> — opacity + <code>translateY(-4px) scale(0.97)</code>. Production §3.</td>
+        </tr>
+        <tr>
+          <td>Hover-delay tooltip</td>
+          <td>400ms in / 0ms out</td><td>ease-out</td>
+          <td>JS-managed <code>setTimeout(400)</code> on enter; immediate hide on leave. Extended §4.</td>
+        </tr>
+        <tr>
+          <td>Edge-arrow tooltip</td>
+          <td>160ms</td><td>ease-out</td>
+          <td>Same primitive, four placements. CSS triangle via <code>::after</code> + <code>border</code>. Extended §5.</td>
+        </tr>
+        <tr>
+          <td>Anchored popover</td>
+          <td>180ms</td><td>cubic-bezier(0.16,1,0.3,1)</td>
+          <td><code>opacity</code> + <code>scale(0.95 → 1)</code>; <code>transform-origin</code> set to anchor edge. Extended §6.</td>
+        </tr>
+        <tr>
+          <td>Dismiss</td>
+          <td>—</td><td>—</td>
+          <td>Outside-click, Esc, and scroll-on-ancestor all close. Same exit transition as enter. Extended §7.</td>
+        </tr>
+        <tr>
+          <td>Reduced motion</td>
+          <td>120ms</td><td>linear</td>
+          <td>All transforms collapsed. Opacity-only crossfade. <code>@keyframes dropIn</code> disabled. Extended §8.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =========================================================
+       SECTION 1 — Toolbar tooltip (PRODUCTION, primary)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Toolbar tooltip<span class="tier prod primary">Production · Primary</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Post Editor.html</code> · lines 248–257</dd>
+      <dt>Markup</dt><dd><code>.tb-btn &gt; .tb-btn-tip</code> — sibling absolute span; CSS-only, no JS</dd>
+      <dt>Trigger</dt><dd><code>.tb-btn:hover .tb-btn-tip { opacity: 1 }</code></dd>
+      <dt>Motion</dt><dd><code>transition: opacity 100ms</code> — no delay, no transform</dd>
+    </dl>
+    <p>The only tooltip primitive in production. Accent-colored ink pill above the button. Hover any toolbar button to see it — no delay, instant fade. The brand-bright accent fill is intentional: this is a confirmation cue, not an explanation, so loud is correct here.</p>
+    <div class="stage">
+      <div class="tb-toolbar" role="toolbar" aria-label="Editor toolbar">
+        <button class="tb-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5h6a3.5 3.5 0 010 7H7zM7 12h7a3.5 3.5 0 010 7H7z"/></svg>
+          <span class="tb-btn-tip">Bold · ⌘B</span>
+        </button>
+        <button class="tb-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 4h-9M14 20H5M15 4l-6 16"/></svg>
+          <span class="tb-btn-tip">Italic · ⌘I</span>
+        </button>
+        <button class="tb-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <span class="tb-btn-tip">Code · ⌘E</span>
+        </button>
+        <span class="tb-sep"></span>
+        <button class="tb-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          <span class="tb-btn-tip">Insert link · ⌘K</span>
+        </button>
+        <button class="tb-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4-4-7 7"/></svg>
+          <span class="tb-btn-tip">Insert image</span>
+        </button>
+        <button class="tb-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
+          <span class="tb-btn-tip">Heading</span>
+        </button>
+      </div>
+    </div>
+    <p class="hint">Hover a button to see the production tip. <code>opacity 100ms</code> — same value used everywhere a toolbar button needs disclosure. No <code>transform</code>, no <code>delay</code>: the production primitive optimizes for "tell me what this is" rather than "don't distract me from typing."</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 2 — Sort dropdown (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Sort dropdown<span class="tier prod">Production</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Post Detail.html</code> · lines 764–803</dd>
+      <dt>Markup</dt><dd><code>.sort-dropdown-wrap &gt; button + .sort-dropdown[.open]</code> — anchor-relative, no portal</dd>
+      <dt>Trigger</dt><dd>Click button → JS toggles <code>.open</code> on dropdown</dd>
+      <dt>Motion</dt><dd><code>opacity 140ms</code> + <code>translateY(-4px → 0) 140ms</code></dd>
+    </dl>
+    <p>The Comments section's sort menu (Newest / Oldest / Most Liked). Click the trigger; click again or click outside to dismiss. Active item gets the dot suffix and primary text color.</p>
+    <div class="stage tall">
+      <div class="sort-anchor-row">
+        <span style="font-size:12.5px;color:var(--text-secondary);">Sort by</span>
+        <div class="sort-dropdown-wrap">
+          <button class="sort-trigger" type="button" id="sort-trigger" aria-haspopup="menu" aria-expanded="false">
+            <span id="sort-current">Newest</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="sort-dropdown" id="sort-dropdown" role="menu">
+            <button type="button" data-sort="Newest" class="active" role="menuitemradio" aria-checked="true">Newest</button>
+            <button type="button" data-sort="Oldest" role="menuitemradio" aria-checked="false">Oldest</button>
+            <button type="button" data-sort="Most Liked" role="menuitemradio" aria-checked="false">Most Liked</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">140ms is fast enough to feel responsive but slow enough that the <code>translateY(-4px → 0)</code> reads as motion rather than a snap. The 4px offset is just enough to show direction — don't lengthen it.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 3 — Manage portal (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Manage portal<span class="tier prod">Production</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita User Profile.html</code> · lines 317–341</dd>
+      <dt>Markup</dt><dd><code>#manage-portal</code> portaled to <code>document.body</code> in production; demoed inline here</dd>
+      <dt>Trigger</dt><dd>Click <code>.card-manage-inline</code> → portal opens, anchored to button rect</dd>
+      <dt>Motion</dt><dd><code>@keyframes dropIn 120ms ease-out</code> — opacity + <code>translateY(-4px) scale(0.97) → (0, 1)</code></dd>
+    </dl>
+    <p>Card-level menu on User Profile (Edit, Unpublish, Delete). Demoed inline here — production portals to <code>body</code> to escape masonry overflow clipping. Note the danger variant: the <em>Delete</em> item flips to red on hover with a tinted bg.</p>
+    <div class="stage tall">
+      <div class="manage-row">
+        <span style="font-size:12.5px;color:var(--text-secondary);">Card</span>
+        <button class="manage-trigger" type="button" id="manage-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="More actions">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        </button>
+      </div>
+      <div class="manage-portal" id="manage-portal" role="menu">
+        <button class="manage-dropdown-item" type="button" role="menuitem">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.5 2.5L11.5 4.5M2 12h2L10.5 4.5 8.5 2.5 2 9v3z"/></svg>
+          Edit post
+        </button>
+        <button class="manage-dropdown-item" type="button" role="menuitem">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="10" height="10" rx="2"/></svg>
+          Unpublish
+        </button>
+        <div class="manage-dropdown-sep"></div>
+        <button class="manage-dropdown-item danger" type="button" role="menuitem">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5h10M5 3.5V2.5h4v1M11.5 3.5l-.7 8H3.2l-.7-8"/><path d="M5.5 6v3.5M8.5 6v3.5"/></svg>
+          Delete post
+        </button>
+      </div>
+    </div>
+    <p class="hint">The <code>dropIn</code> keyframe is the only place in production where a popover combines opacity + translate + scale. It's not redundant — the scale is what gives the menu a sense of expanding from its trigger; without it the open reads as "appears" rather than "unfolds."</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 4 — Hover-delay tooltip (EXTENDED, primary)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Hover-delay tooltip<span class="tier ext primary">Extended · Primary</span></h2>
+    <dl class="section-meta">
+      <dt>Need</dt><dd>Sidebar nav rail (P01 Home) and Admin action hints (P08) need tooltips that don't fire on every casual mouse pass. Production §1's instant 100ms is right for editor toolbars, wrong for navigation.</dd>
+      <dt>Trigger</dt><dd><code>mouseenter</code> → <code>setTimeout(400)</code> → add <code>.tip-shown</code>; <code>mouseleave</code> cancels timer + removes class immediately</dd>
+      <dt>Motion</dt><dd>Enter: <code>opacity 0 → 1</code>, <code>translateY(4px → 0)</code>, 160ms ease-out · Exit: <code>opacity 1 → 0</code>, 80ms — asymmetric on purpose</dd>
+    </dl>
+    <p>Asymmetric timing — 400ms in, near-instant out — is the standard for ambient tooltips. Hover and hold to reveal; flick across the row and nothing fires. Try both: a quick swipe across the icons, then settle on one.</p>
+    <div class="stage" style="padding-top: 64px;">
+      <div class="x-tip-row" id="hover-delay-row">
+        <button class="x-icon-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+          <span class="x-tip">Home</span>
+        </button>
+        <button class="x-icon-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span class="x-tip">Search</span>
+        </button>
+        <button class="x-icon-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/></svg>
+          <span class="x-tip">Notifications</span>
+        </button>
+        <button class="x-icon-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          <span class="x-tip">Bookmarks</span>
+        </button>
+        <button class="x-icon-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          <span class="x-tip">Settings</span>
+        </button>
+      </div>
+    </div>
+    <p class="hint">Implementation: <code>setTimeout</code> on enter, <code>clearTimeout</code> + immediate hide on leave. Storing the timer per-element handles fast hover-jumps cleanly. The 400ms threshold is what Apple, Material, and Floating UI converged on — short enough to feel responsive when intentional, long enough to ignore casual sweeps.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 5 — Edge-arrow tooltip (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Edge-arrow tooltip<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Need</dt><dd>Anchors near the viewport edge can't always show a tooltip above. The contract: declare <code>placement="top|bottom|left|right"</code>, the arrow follows.</dd>
+      <dt>Implementation</dt><dd>One <code>.x-tip-edge</code> primitive; placement-specific positioning via parent class. CSS <code>::after</code> draws the triangle with <code>border</code>.</dd>
+      <dt>Motion</dt><dd>Same 160ms ease-out as §4, with the slide direction flipped per placement</dd>
+    </dl>
+    <p>Hover each anchor to see its placement. In production, <code>useFloating()</code> would auto-flip when the viewport edge is close — these four are the canonical placements it falls back to.</p>
+    <div class="stage tall" style="padding: 28px 18px;">
+      <div class="placements">
+        <div class="placement-cell">
+          <span class="label">top</span>
+          <div class="x-anchor top">
+            ⌘
+            <span class="x-tip-edge">Above the anchor</span>
+          </div>
+        </div>
+        <div class="placement-cell">
+          <span class="label">bottom</span>
+          <div class="x-anchor bottom">
+            ⌘
+            <span class="x-tip-edge">Below the anchor</span>
+          </div>
+        </div>
+        <div class="placement-cell">
+          <span class="label">right</span>
+          <div class="x-anchor right">
+            ⌘
+            <span class="x-tip-edge">To the right</span>
+          </div>
+        </div>
+        <div class="placement-cell">
+          <span class="label">left</span>
+          <div class="x-anchor left">
+            ⌘
+            <span class="x-tip-edge">To the left</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">The <code>::after</code> triangle uses border-color tricks — no SVG, no separate element. Each placement only paints one of the four <code>border-*-color</code> properties to make the arrow point back at the anchor.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 6 — Anchored popover (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Anchored popover<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Need</dt><dd>Popovers richer than a menu — multi-paragraph hints, mini forms, share targets. Production §3 uses translate + scale on a fixed origin; this proposes setting <code>transform-origin</code> from the anchor edge so the open motion physically reads from the trigger.</dd>
+      <dt>Trigger</dt><dd>Click trigger → toggles <code>.open</code></dd>
+      <dt>Motion</dt><dd><code>opacity 180ms ease-out</code> + <code>scale(0.95 → 1) 180ms cubic-bezier(0.16, 1, 0.3, 1)</code></dd>
+    </dl>
+    <p>The "spring-out" curve <code>cubic-bezier(0.16, 1, 0.3, 1)</code> is gentler than the production <code>linear</code> sort-dropdown — appropriate for richer popovers where the surface itself has visual weight. <code>transform-origin: top left</code> grounds the scale to the trigger's bottom-left corner.</p>
+    <div class="stage tall" style="padding: 32px 24px; align-items: flex-start;">
+      <div class="x-pop-row">
+        <button class="x-pop-trigger" type="button" id="pop-trigger" aria-expanded="false" aria-haspopup="dialog">Show details</button>
+        <div class="x-pop" id="x-pop" role="dialog" aria-label="Details">
+          <h4>Anchored to trigger</h4>
+          <p>Notice how the open motion appears to expand from the button's lower-left corner — that's <code>transform-origin: top left</code> doing its job. Click the trigger again, click outside, or press Esc to close.</p>
+        </div>
+      </div>
+    </div>
+    <p class="hint">For popovers anchored on the right of the viewport, switch to <code>transform-origin: top right</code>; for ones above, <code>bottom left|right</code>. The four canonical origins map 1:1 to the four placements in §5.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 7 — Dismiss governance (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Dismiss governance<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Need</dt><dd>Production §2 and §3 each implement outside-click independently — different selector roots, different stop-propagation rules. The unified contract: every popover dismisses on <em>outside-click</em>, <em>Esc</em>, and <em>scroll-on-ancestor</em>.</dd>
+      <dt>Triggers</dt><dd>
+        <kbd>Esc</kbd> — global keydown listener<br>
+        Outside click — <code>document.addEventListener('click', …, true)</code> capture phase<br>
+        Scroll — <code>scroll</code> on the popover's nearest scroll ancestor
+      </dd>
+    </dl>
+    <p>Open the popover, then try each dismissal: scroll the inner area, press Esc, or click any whitespace. The log records what triggered the close.</p>
+    <div class="stage" style="padding: 16px;">
+      <div class="dismiss-stage" id="dismiss-stage">
+        <button class="dismiss-trigger" type="button" id="dismiss-trigger" aria-expanded="false" aria-haspopup="dialog">Open popover</button>
+        <div class="dismiss-pop" id="dismiss-pop" role="dialog" aria-label="Dismiss demo">
+          <p style="font-weight:600;">Try a dismissal</p>
+          <div class="triggers-list">
+            <div><kbd>Esc</kbd> — close from keyboard</div>
+            <div>Click anywhere outside this card</div>
+            <div>Scroll the gradient area below</div>
+          </div>
+        </div>
+        <div class="dismiss-spacer">scroll me</div>
+      </div>
+    </div>
+    <div class="dismiss-log" id="dismiss-log">
+      <span class="item">Awaiting interaction…</span>
+    </div>
+    <p class="hint">Capture-phase outside-click avoids the bug where a stop-propagated inner click swallows the dismiss. Scroll-dismiss is essential because anchored popovers don't track scroll — the alternative is repositioning on every frame, which is heavier than just closing.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 8 — Reduced motion (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Reduced motion<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Rule</dt><dd>Inside <code>@media (prefers-reduced-motion: reduce)</code>: all <code>transform</code> animations collapse, transitions become opacity-only 120ms linear, and <code>@keyframes dropIn</code> disables.</dd>
+      <dt>Why opacity stays</dt><dd>Pure on/off makes popovers feel "stuck"; a fade still communicates state change while respecting the user's preference for less motion.</dd>
+    </dl>
+    <p>Side-by-side comparison. Click each trigger to compare the full and reduced variants. The reduced cell uses an opacity-only fade; no scale, no translate, no easing curve.</p>
+    <div class="stage tall">
+      <div class="rm-grid">
+        <div class="rm-cell full">
+          <span class="label">Full motion</span>
+          <div class="rm-anchor-wrap">
+            <button class="trigger" type="button" id="rm-full-trigger" aria-expanded="false">Show popover</button>
+            <div class="rm-pop" id="rm-full-pop">scale + translate · 180ms spring</div>
+          </div>
+        </div>
+        <div class="rm-cell reduced">
+          <span class="label">Reduced</span>
+          <div class="rm-anchor-wrap">
+            <button class="trigger" type="button" id="rm-reduced-trigger" aria-expanded="false">Show popover</button>
+            <div class="rm-pop" id="rm-reduced-pop">opacity-only · 120ms linear</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">The <code>@media (prefers-reduced-motion: reduce)</code> rule at the bottom of the stylesheet applies to all six tooltip/popover primitives in this file simultaneously. One declaration, full coverage.</p>
+  </section>
+
+  <!-- React hint footer -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <dl>
+      <dt>&lt;Tooltip&gt;</dt>
+      <dd>
+        <code>&lt;Tooltip label="Bold · ⌘B" placement="top" delay={400}&gt;</code>. Renders <code>.x-tip</code> primitive (§4). Placement maps to §5. <code>delay={0}</code> recovers the production §1 instant variant for editor toolbars.
+      </dd>
+      <dt>&lt;Popover&gt;</dt>
+      <dd>
+        <code>&lt;Popover anchor={ref} placement="bottom-start" /&gt;</code>. Renders the §6 surface. <code>useDismiss()</code> wires §7's outside-click + Esc + scroll-close. Production §2 and §3 are <code>variant="menu"</code> and <code>variant="portal"</code> respectively.
+      </dd>
+      <dt>useFloating()</dt>
+      <dd>
+        Wraps anchor measurement, auto-flip, and scroll-tracking. The four placements in §5 are the fallback set when the requested placement collides with the viewport edge.
+      </dd>
+      <dt>useDismiss()</dt>
+      <dd>
+        Returns <code>{ onKeyDown, onOutsideClick, onScroll }</code>. The §7 demo is a hardcoded subset; the real hook also handles focus-loss dismiss for keyboard users.
+      </dd>
+      <dt>useReducedMotion()</dt>
+      <dd>
+        Returns boolean from <code>matchMedia('(prefers-reduced-motion: reduce)')</code>. The §8 fallback should be CSS-driven (one media query covers everything) — only fall through to JS when geometry changes can't be expressed in CSS.
+      </dd>
+    </dl>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* =================================================================
+ * §2 — Sort dropdown
+ * ================================================================= */
+(function () {
+  const trigger = document.getElementById('sort-trigger');
+  const dropdown = document.getElementById('sort-dropdown');
+  const current = document.getElementById('sort-current');
+
+  function setOpen(open) {
+    dropdown.classList.toggle('open', open);
+    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(!dropdown.classList.contains('open'));
+  });
+
+  dropdown.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      dropdown.querySelectorAll('button').forEach((b) => {
+        b.classList.remove('active');
+        b.setAttribute('aria-checked', 'false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-checked', 'true');
+      current.textContent = btn.dataset.sort;
+      setOpen(false);
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
+      setOpen(false);
+    }
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && dropdown.classList.contains('open')) {
+      setOpen(false);
+      trigger.focus();
+    }
+  });
+})();
+
+/* =================================================================
+ * §3 — Manage portal
+ * ================================================================= */
+(function () {
+  const trigger = document.getElementById('manage-trigger');
+  const portal = document.getElementById('manage-portal');
+
+  function position() {
+    const r = trigger.getBoundingClientRect();
+    const stage = trigger.closest('.stage');
+    const sr = stage.getBoundingClientRect();
+    portal.style.top = (r.bottom - sr.top + 6) + 'px';
+    portal.style.left = (r.left - sr.left) + 'px';
+  }
+
+  function setOpen(open) {
+    if (open) {
+      position();
+      portal.classList.add('open');
+    } else {
+      portal.classList.remove('open');
+    }
+    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(!portal.classList.contains('open'));
+  });
+
+  portal.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => setOpen(false));
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!trigger.contains(e.target) && !portal.contains(e.target)) {
+      setOpen(false);
+    }
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && portal.classList.contains('open')) {
+      setOpen(false);
+      trigger.focus();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (portal.classList.contains('open')) position();
+  });
+})();
+
+/* =================================================================
+ * §4 — Hover-delay tooltip
+ * ================================================================= */
+(function () {
+  const buttons = document.querySelectorAll('#hover-delay-row .x-icon-btn');
+  const DELAY = 400;
+  const timers = new WeakMap();
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('mouseenter', () => {
+      const t = setTimeout(() => btn.classList.add('tip-shown'), DELAY);
+      timers.set(btn, t);
+    });
+    btn.addEventListener('mouseleave', () => {
+      clearTimeout(timers.get(btn));
+      btn.classList.remove('tip-shown');
+    });
+    btn.addEventListener('focus', () => btn.classList.add('tip-shown'));
+    btn.addEventListener('blur', () => btn.classList.remove('tip-shown'));
+  });
+})();
+
+/* =================================================================
+ * §6 — Anchored popover
+ * ================================================================= */
+(function () {
+  const trigger = document.getElementById('pop-trigger');
+  const pop = document.getElementById('x-pop');
+
+  function setOpen(open) {
+    pop.classList.toggle('open', open);
+    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(!pop.classList.contains('open'));
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!trigger.contains(e.target) && !pop.contains(e.target)) {
+      setOpen(false);
+    }
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pop.classList.contains('open')) {
+      setOpen(false);
+      trigger.focus();
+    }
+  });
+})();
+
+/* =================================================================
+ * §7 — Dismiss governance
+ * ================================================================= */
+(function () {
+  const trigger = document.getElementById('dismiss-trigger');
+  const pop = document.getElementById('dismiss-pop');
+  const stage = document.getElementById('dismiss-stage');
+  const log = document.getElementById('dismiss-log');
+
+  function announce(reason) {
+    const item = document.createElement('span');
+    item.className = 'item fresh';
+    item.textContent = `Closed via ${reason}`;
+    log.innerHTML = '';
+    log.appendChild(item);
+    setTimeout(() => item.classList.remove('fresh'), 600);
+  }
+
+  function setOpen(open, reason) {
+    const wasOpen = pop.classList.contains('open');
+    pop.classList.toggle('open', open);
+    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (wasOpen && !open && reason) announce(reason);
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(!pop.classList.contains('open'));
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!pop.classList.contains('open')) return;
+    if (!trigger.contains(e.target) && !pop.contains(e.target)) {
+      setOpen(false, 'outside click');
+    }
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pop.classList.contains('open')) {
+      setOpen(false, 'Esc key');
+      trigger.focus();
+    }
+  });
+
+  stage.addEventListener('scroll', () => {
+    if (pop.classList.contains('open')) {
+      setOpen(false, 'ancestor scroll');
+    }
+  });
+})();
+
+/* =================================================================
+ * §8 — Reduced-motion comparison
+ * ================================================================= */
+(function () {
+  function bind(triggerId, popId) {
+    const trigger = document.getElementById(triggerId);
+    const pop = document.getElementById(popId);
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = !pop.classList.contains('open');
+      pop.classList.toggle('open', open);
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', (e) => {
+      if (!trigger.contains(e.target) && !pop.contains(e.target)) {
+        pop.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    }, true);
+  }
+  bind('rm-full-trigger', 'rm-full-pop');
+  bind('rm-reduced-trigger', 'rm-reduced-pop');
+})();
+</script>
+
+</body>
+</html>

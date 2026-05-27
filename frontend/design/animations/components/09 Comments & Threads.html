@@ -1,0 +1,733 @@
+<!doctype html>
+<!--
+  C09 — Comments & Threads
+  Scope:      Threaded comment list interactions on Post Detail.
+              Production tier (4 sections, 1:1 from pages/Verita Post Detail.html):
+                §1 Comment list (avatar, head, text, actions, replies)        — primary production
+                §2 Reply inline (.reply-inline + @keyframes fadeIn 180ms)     — primary production motion
+                §3 Composer focus expand (240ms cubic-bezier(0.22,1,0.36,1))
+                §4 Per-comment like toggle (.cmt-actions button.liked)
+              Extended tier (4 sections, proposals):
+                §5 Initial-load stagger (40ms per item, 240ms in)
+                §6 Show-more-replies expand (height auto, 240ms)
+                §7 New-comment slide-in (from composer position)
+                §8 Reduced-motion fallback
+  Spec:       docs/Animation Spec.md  §  Comments & Threads
+  React hint: <CommentList>, <CommentThread>, <ReplyComposer>, <Composer>, useThread()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Comments & Threads · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — copied verbatim from C08) ---------- */
+  body { background: var(--bg-base); color: var(--text-primary); overflow: auto; }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: color-mix(in oklab, var(--success) 12%, var(--bg-surface)); color: var(--success); border: 1px solid color-mix(in oklab, var(--success) 28%, transparent); }
+  .tier.ext { background: color-mix(in oklab, var(--accent) 10%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent); }
+  .tier.primary { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  table.spec { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.spec thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.spec tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.45; }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 14%; white-space: nowrap; }
+  table.spec tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-secondary); width: 18%; }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  ul.scope-list { list-style: none; padding: 0; margin: 14px 0 18px; display: grid; gap: 6px; }
+  ul.scope-list li { font-size: 14px; color: var(--text-secondary); line-height: 1.5; padding-left: 18px; position: relative; }
+  ul.scope-list li::before { content: "·"; position: absolute; left: 6px; color: var(--text-tertiary); font-weight: 700; }
+
+  .section-meta { display: grid; grid-template-columns: 86px 1fr; gap: 6px 14px; margin: 8px 0 14px; font-size: 12.5px; line-height: 1.55; }
+  .section-meta dt { font: 500 10px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding-top: 1px; }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code { font: 500 11px var(--font-mono); color: var(--text-primary); }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 0; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms, border-color 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+  .trigger.solid:hover { background: oklch(28% 0 0); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 140px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  /* Stage shell */
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 28px 24px; }
+
+  /* ===========================================================
+   * §1 — Comment list — VERBATIM from pages/Verita Post Detail.html:560–630
+   * =========================================================== */
+  .comments-head { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .comments-head h2.head-title { font-family: var(--font-sans); font-style: normal; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+  .comments-head .count { font-size: 12.5px; color: var(--text-tertiary); font-weight: 500; }
+
+  .cmt { display: flex; gap: 10px; padding: 14px 0; }
+  .cmt + .cmt { border-top: 1px solid var(--border-subtle); }
+  .cmt .av-sm { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg,#ccc,#888); color: #fff; display: grid; place-items: center; font-size: 10.5px; font-weight: 700; flex-shrink: 0; }
+  .cmt-body { flex: 1; min-width: 0; }
+  .cmt-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 4px; }
+  .cmt-head .who { color: var(--text-primary); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+  .cmt-head .role { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); background: var(--bg-elevated); padding: 1px 5px; border-radius: 3px; }
+  .cmt-head .op { font-size: 9.5px; font-weight: 600; color: var(--text-primary); background: #fff; border: 1px solid var(--border-default); padding: 0 4px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .cmt-text { font-size: 13.5px; line-height: 1.6; color: var(--text-primary); text-wrap: pretty; }
+  .cmt-text > p + p { margin-top: 6px; }
+  .cmt-text > * { margin: 0; }
+  .cmt-actions { display: flex; align-items: center; gap: 14px; margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+  .cmt-actions button { display: inline-flex; align-items: center; gap: 5px; color: var(--text-secondary); background: none; border: 0; cursor: pointer; font-size: 12px; padding: 0; transition: color 120ms; }
+  .cmt-actions button:hover { color: var(--text-primary); }
+  .cmt-actions button.liked { color: var(--text-primary); font-weight: 600; }
+  .cmt-actions button.liked svg { fill: currentColor; }
+  .cmt-actions svg { width: 13px; height: 13px; }
+  .cmt-replies { margin-top: 10px; padding-left: 14px; border-left: 2px solid var(--border-subtle); }
+  .cmt-replies .cmt { padding: 10px 0 10px; }
+  .cmt-replies .cmt + .cmt { border-top: 1px solid var(--border-subtle); }
+  .cmt-replies .av-sm { width: 22px; height: 22px; font-size: 9px; }
+  .cmt-replies .cmt-text { font-size: 13px; }
+
+  /* ===========================================================
+   * §2 — Inline reply — VERBATIM from pages/Verita Post Detail.html:805–868
+   * =========================================================== */
+  .reply-inline { margin-top: 10px; display: flex; align-items: flex-start; gap: 8px; animation: fadeIn 180ms ease-out; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reply-inline .av-sm { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg,#d4d4d4,#6b6b6b); color: #fff; display: grid; place-items: center; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+  .reply-inline-box { flex: 1; border: 1px solid var(--border-subtle); border-radius: 10px; background: #fff; overflow: hidden; transition: border-color 120ms; }
+  .reply-inline-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,10,10,0.05); }
+  .reply-inline textarea { width: 100%; border: 0; outline: 0; padding: 8px 12px; font: 400 13px var(--font-sans); color: var(--text-primary); resize: none; min-height: 36px; max-height: 120px; line-height: 1.5; box-sizing: border-box; }
+  .reply-inline textarea::placeholder { color: var(--text-tertiary); }
+  .reply-inline-actions { display: flex; align-items: center; gap: 6px; padding: 4px 8px 6px; justify-content: flex-end; }
+  .reply-inline-actions button { font-size: 11.5px; font-weight: 500; padding: 5px 10px; border-radius: 6px; border: 0; cursor: pointer; transition: all 120ms; }
+  .reply-inline-actions .reply-cancel { color: var(--text-secondary); background: transparent; }
+  .reply-inline-actions .reply-cancel:hover { color: var(--text-primary); }
+  .reply-inline-actions .reply-submit { background: var(--accent); color: #fff; }
+  .reply-inline-actions .reply-submit:hover { background: var(--accent-hover); }
+  .reply-inline-actions .reply-submit.disabled { background: var(--bg-elevated); color: var(--text-tertiary); pointer-events: none; }
+
+  /* ===========================================================
+   * §3 — Composer (focus expand)
+   * Production: pages/Verita Post Detail.html:668–727
+   * Demo strips the floating-bottom-bar positioning and renders
+   * the composer inline inside the stage so its expand can be
+   * triggered without scrolling.
+   * =========================================================== */
+  .composer-stage { display: flex; justify-content: center; }
+  .composer {
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border: 0.5px solid var(--border-default);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    border-radius: 14px;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 16px;
+    transition: all 240ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .composer.expanded {
+    padding: 12px 14px 10px;
+    flex-direction: column; align-items: stretch; gap: 8px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.14);
+  }
+  .composer .av-sm { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg,#d4d4d4,#6b6b6b); color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .composer-row1 { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; width: 100%; }
+  .composer.expanded .composer-row1 { flex: none; }
+  .composer .input { flex: 1; height: 32px; border: 0; background: none; outline: 0; font: 400 13.5px var(--font-sans); color: var(--text-primary); min-width: 0; resize: none; box-sizing: border-box; }
+  .composer .input::placeholder { color: var(--text-tertiary); }
+  .composer.expanded .input { height: 88px; line-height: 1.55; padding-top: 4px; }
+  .composer-foot { display: none; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-tertiary); width: 100%; }
+  .composer.expanded .composer-foot { display: flex; }
+  .composer-foot .char-count { margin-left: auto; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 10.5px; }
+  .composer-foot .char-count.warn { color: var(--warning); }
+  .composer-foot .send-cta { font-size: 12px; font-weight: 600; color: #fff; background: var(--accent); padding: 6px 14px; border-radius: 8px; border: 0; cursor: pointer; transition: background 120ms; }
+  .composer-foot .send-cta:hover { background: var(--accent-hover); }
+  .composer-foot .send-cta.disabled { background: var(--bg-elevated); color: var(--text-tertiary); pointer-events: none; }
+
+  /* ===========================================================
+   * §5 — Initial-load stagger (Extended)
+   * =========================================================== */
+  .stagger-stage .cmt {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  .stagger-stage.run .cmt {
+    animation: cmtIn 240ms ease-out forwards;
+  }
+  .stagger-stage.run .cmt:nth-child(1) { animation-delay: 0ms; }
+  .stagger-stage.run .cmt:nth-child(2) { animation-delay: 40ms; }
+  .stagger-stage.run .cmt:nth-child(3) { animation-delay: 80ms; }
+  .stagger-stage.run .cmt:nth-child(4) { animation-delay: 120ms; }
+  .stagger-stage.run .cmt:nth-child(5) { animation-delay: 160ms; }
+  .stagger-stage.run .cmt:nth-child(6) { animation-delay: 200ms; }
+  @keyframes cmtIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===========================================================
+   * §6 — Show-more-replies expand (Extended)
+   * Uses the grid-template-rows 0fr → 1fr trick so height: auto
+   * can transition without measuring.
+   * =========================================================== */
+  .more-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 240ms cubic-bezier(0.22,1,0.36,1);
+    overflow: hidden;
+  }
+  .more-wrap.open { grid-template-rows: 1fr; }
+  .more-wrap > div { min-height: 0; }
+  .more-toggle {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 10px;
+    cursor: pointer;
+    transition: all 120ms;
+  }
+  .more-toggle:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+  /* ===========================================================
+   * §7 — New-comment slide-in (Extended)
+   * =========================================================== */
+  .new-cmt {
+    animation: newCmtIn 320ms cubic-bezier(0.16,1,0.3,1);
+    background: color-mix(in oklab, var(--accent) 6%, transparent);
+    border-radius: 8px;
+    padding: 14px 12px;
+    margin-left: -12px;
+    margin-right: -12px;
+    transition: background-color 600ms ease 800ms;
+  }
+  .new-cmt.cooled { background: transparent; }
+  @keyframes newCmtIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===========================================================
+   * §8 — Reduced-motion comparison
+   * =========================================================== */
+  .rm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .rm-cell { padding: 16px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 10px; }
+  .rm-label { font: 500 10px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; display: block; }
+  .rm-cell.reduced .reply-inline { animation: none; opacity: 1; transform: none; }
+  .rm-cell.reduced .new-cmt { animation: none; }
+  .rm-cell.reduced .stagger-stage.run .cmt { animation: none; opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reply-inline,
+    .new-cmt,
+    .stagger-stage.run .cmt {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .composer { transition: padding 0ms, box-shadow 120ms linear !important; }
+    .more-wrap { transition: grid-template-rows 0ms linear !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. tokens.css fixed bar -->
+<div class="demo-header">
+  <span class="demo-title">C09 · Comments & Threads</span>
+  <span class="demo-spec">List · Reply expand · Composer focus · Per-comment like · Stagger · Show-more · New-comment · Reduced</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<!-- 2. Stage + content wrap -->
+<div class="demo-stage">
+<div class="wrap">
+
+  <!-- 3. Lead block -->
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Comments &amp; Threads</h1>
+    <ul class="scope-list">
+      <li>Four production primitives — comment list, inline reply, composer, per-comment like — sourced 1:1 from <code>pages/Verita Post Detail.html</code></li>
+      <li>Four Extended-tier proposals — initial-load stagger, show-more-replies expand, new-comment slide-in, reduced-motion fallback</li>
+      <li>Production already ships <code>@keyframes fadeIn</code> for the inline reply (180ms ease-out, opacity + 4px translate). C09 establishes that as the canonical comment-area enter motion and reuses its tempo for the Extended proposals</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- 4. Spec table -->
+  <section>
+    <h2>Spec</h2>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Reply expand</td><td>180ms</td><td>ease-out</td><td><code>@keyframes fadeIn</code> — opacity + <code>translateY(4px → 0)</code>. Production §2.</td></tr>
+        <tr><td>Composer expand</td><td>240ms</td><td>cubic-bezier(0.22,1,0.36,1)</td><td><code>transition: all</code> on padding, box-shadow, flex direction. Production §3.</td></tr>
+        <tr><td>Like-on-comment</td><td>120ms</td><td>linear</td><td>Color + fill toggle on <code>.cmt-actions button.liked</code>. <strong>No bounce</strong> in production. Production §4.</td></tr>
+        <tr><td>List stagger</td><td>240ms / 40ms step</td><td>ease-out</td><td>Per-item animation-delay; <code>opacity 0 → 1</code> + <code>translateY(-8px → 0)</code>. Extended §5.</td></tr>
+        <tr><td>Show-more replies</td><td>240ms</td><td>cubic-bezier(0.22,1,0.36,1)</td><td>Grid <code>0fr → 1fr</code> row trick — animates from 0 to natural height. Extended §6.</td></tr>
+        <tr><td>New-comment slide</td><td>320ms in / 600ms cool</td><td>cubic-bezier(0.16,1,0.3,1)</td><td><code>opacity 0 → 1</code> + <code>translateY(16px → 0)</code>; tinted background fades out after 800ms. Extended §7.</td></tr>
+        <tr><td>Reduced motion</td><td>—</td><td>—</td><td>All animations collapse; composer keeps shadow crossfade only; show-more becomes instant. Extended §8.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =========================================================
+       SECTION 1 — Comment list (PRODUCTION, primary)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Comment list<span class="tier prod primary">Production · Primary</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Post Detail.html</code> · lines 560–630, rendered at lines 1228–1369</dd>
+      <dt>Markup</dt><dd><code>.cmt &gt; .av-sm + .cmt-body</code> · body has <code>.cmt-head</code>, <code>.cmt-text</code>, <code>.cmt-actions</code></dd>
+      <dt>Density</dt><dd>Top-level: 28px avatar, 13.5px text, 14px vertical padding · Replies: 22px avatar, 13px text, 10px padding</dd>
+    </dl>
+    <p>The base comment vocabulary. No motion at rest — this section establishes the surface so §2/§4/§5 have something to compose against.</p>
+    <div class="stage">
+      <div class="comments-head">
+        <h2 class="head-title">Comments</h2>
+        <span class="count">62 comments</span>
+      </div>
+      <div class="cmt">
+        <div class="av-sm">JD</div>
+        <div class="cmt-body">
+          <div class="cmt-head"><span class="who">Jordan Diaz</span><span class="role">researcher</span><span>· 4h</span></div>
+          <div class="cmt-text"><p>The lock-in here is real. Most teams will end up writing wrappers around wrappers because the <code>useTransition</code> contract changes between every minor.</p></div>
+          <div class="cmt-actions">
+            <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>12</button>
+            <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+          </div>
+          <div class="cmt-replies">
+            <div class="cmt">
+              <div class="av-sm">SP</div>
+              <div class="cmt-body">
+                <div class="cmt-head"><span class="who">Sam Park</span><span class="op">OP</span><span>· 3h</span></div>
+                <div class="cmt-text"><p>Agreed — the wrapper-on-wrapper pattern is exactly what we hit at scale.</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cmt">
+        <div class="av-sm">RK</div>
+        <div class="cmt-body">
+          <div class="cmt-head"><span class="who">Riya Kapoor</span><span>· 2h</span></div>
+          <div class="cmt-text"><p>Curious how this plays out in apps that haven't migrated to suspense yet — feels like a lot of the timing assumptions only hold there.</p></div>
+          <div class="cmt-actions">
+            <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>5</button>
+            <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 2 — Inline reply (PRODUCTION, primary motion)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Inline reply<span class="tier prod primary">Production · Primary motion</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Post Detail.html</code> · lines 805–868 (CSS), 1511–1542 (createReplyInput)</dd>
+      <dt>Trigger</dt><dd>Click the <em>Reply</em> button on any <code>.cmt-actions</code></dd>
+      <dt>Motion</dt><dd><code>@keyframes fadeIn 180ms ease-out</code> — opacity + <code>translateY(4px → 0)</code>; auto-focus after mount</dd>
+      <dt>Submit</dt><dd>Disabled while empty (<code>.disabled</code>); button enables on first non-whitespace char</dd>
+    </dl>
+    <p>Click <em>Reply</em> on any comment to open the inline composer. The 180ms fadeIn keyframe is production's only comment-area entry motion, and C09 reuses its tempo for the Extended-tier list stagger and new-comment slide.</p>
+    <div class="stage" id="reply-stage">
+      <div class="cmt">
+        <div class="av-sm">JD</div>
+        <div class="cmt-body">
+          <div class="cmt-head"><span class="who">Jordan Diaz</span><span class="role">researcher</span><span>· 4h</span></div>
+          <div class="cmt-text"><p>Try replying to me — the input below should fade in over 180ms with a small upward translate.</p></div>
+          <div class="cmt-actions">
+            <button type="button" class="reply-trigger" data-target="reply-target-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+          </div>
+          <div id="reply-target-1"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 3 — Composer focus expand (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Composer focus expand<span class="tier prod">Production</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Post Detail.html</code> · lines 668–727 (CSS), 1615–1650 (initComposer)</dd>
+      <dt>Trigger</dt><dd>Click into the input — <code>.composer.expanded</code> class is added</dd>
+      <dt>Motion</dt><dd><code>transition: all 240ms cubic-bezier(0.22,1,0.36,1)</code> on padding · flex-direction · box-shadow</dd>
+      <dt>Collapse</dt><dd>Outside-click while empty restores; with content, stays expanded</dd>
+    </dl>
+    <p>Click the input to expand. The 240ms transition crossfades the box-shadow from a subtle 4-20 to a heavier 12-36 while the input grows from 32px to 88px and the footer reveals. Click outside to collapse (only if empty).</p>
+    <div class="stage composer-stage">
+      <div class="composer" id="composer">
+        <div class="composer-row1">
+          <div class="av-sm">YO</div>
+          <textarea class="input" id="composer-input" placeholder="Add a comment…" rows="1"></textarea>
+        </div>
+        <div class="composer-foot">
+          <span>Markdown supported</span>
+          <span class="char-count" id="char-count">0/2000</span>
+          <button class="send-cta disabled" id="send-cta" type="button">Post</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 4 — Per-comment like (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Per-comment like<span class="tier prod">Production</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Post Detail.html</code> · lines 611–619 (CSS), 1490–1509 (toggle handler)</dd>
+      <dt>Markup</dt><dd><code>.cmt-actions button</code> · <code>.liked</code> swaps color + fill</dd>
+      <dt>Motion</dt><dd><code>transition: color 120ms</code> only — <strong>no scale animation</strong></dd>
+    </dl>
+    <p>Production explicitly does not bounce per-comment likes. The bounce primitive lives only on the post-detail action bar (C12). Click the heart to toggle.</p>
+    <div class="stage">
+      <div class="cmt">
+        <div class="av-sm">RK</div>
+        <div class="cmt-body">
+          <div class="cmt-head"><span class="who">Riya Kapoor</span><span>· 2h</span></div>
+          <div class="cmt-text"><p>Click the heart — color swaps over 120ms, no scale.</p></div>
+          <div class="cmt-actions">
+            <button type="button" class="like-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span class="lc">5</span></button>
+            <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>Reply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 5 — Initial-load stagger (EXTENDED, primary)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Initial-load stagger<span class="tier ext primary">Extended · Primary</span></h2>
+    <dl class="section-meta">
+      <dt>Status</dt><dd>Proposed; no production source — comments today appear instantly on page load</dd>
+      <dt>Tempo</dt><dd>240ms per item · 40ms step delay (top-down)</dd>
+      <dt>Motion</dt><dd><code>opacity 0 → 1</code> + <code>translateY(-8px → 0)</code></dd>
+      <dt>When</dt><dd>Only on first mount, not on lazy-loaded "load more" batches (those use §6 instead)</dd>
+    </dl>
+    <p>Press <em>Replay</em> to retrigger. Cap at 6 items so a high-traffic thread doesn't accumulate visible wait — items beyond 6 fade in together.</p>
+    <div class="stage">
+      <div class="stagger-stage" id="stagger-stage">
+        <div class="cmt"><div class="av-sm">A</div><div class="cmt-body"><div class="cmt-head"><span class="who">Alex Tan</span><span>· 6h</span></div><div class="cmt-text">First comment.</div></div></div>
+        <div class="cmt"><div class="av-sm">B</div><div class="cmt-body"><div class="cmt-head"><span class="who">Beth Lin</span><span>· 5h</span></div><div class="cmt-text">Second comment.</div></div></div>
+        <div class="cmt"><div class="av-sm">C</div><div class="cmt-body"><div class="cmt-head"><span class="who">Chris Yu</span><span>· 4h</span></div><div class="cmt-text">Third comment.</div></div></div>
+        <div class="cmt"><div class="av-sm">D</div><div class="cmt-body"><div class="cmt-head"><span class="who">Dani Mor</span><span>· 3h</span></div><div class="cmt-text">Fourth comment.</div></div></div>
+        <div class="cmt"><div class="av-sm">E</div><div class="cmt-body"><div class="cmt-head"><span class="who">Eve Saro</span><span>· 2h</span></div><div class="cmt-text">Fifth comment.</div></div></div>
+        <div class="cmt"><div class="av-sm">F</div><div class="cmt-body"><div class="cmt-head"><span class="who">Finn Ko</span><span>· 1h</span></div><div class="cmt-text">Sixth comment.</div></div></div>
+      </div>
+      <div class="triggers"><button class="trigger solid" type="button" id="stagger-replay">Replay stagger</button></div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 6 — Show-more-replies expand (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Show-more replies<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Status</dt><dd>Proposed; production currently re-renders without animation</dd>
+      <dt>Technique</dt><dd>CSS Grid <code>grid-template-rows: 0fr → 1fr</code> — animates to natural height with no JS measurement</dd>
+      <dt>Tempo</dt><dd>240ms · cubic-bezier(0.22,1,0.36,1)</dd>
+    </dl>
+    <p>Click the toggle to open / close the hidden reply branch.</p>
+    <div class="stage">
+      <div class="cmt">
+        <div class="av-sm">RK</div>
+        <div class="cmt-body">
+          <div class="cmt-head"><span class="who">Riya Kapoor</span><span>· 2h</span></div>
+          <div class="cmt-text"><p>Comment with three nested replies, the bottom two hidden behind a toggle.</p></div>
+          <div class="cmt-replies">
+            <div class="cmt"><div class="av-sm">M</div><div class="cmt-body"><div class="cmt-head"><span class="who">Manu</span><span>· 2h</span></div><div class="cmt-text">First visible reply.</div></div></div>
+            <div class="more-wrap" id="more-wrap">
+              <div>
+                <div class="cmt"><div class="av-sm">N</div><div class="cmt-body"><div class="cmt-head"><span class="who">Nia</span><span>· 2h</span></div><div class="cmt-text">Hidden reply two.</div></div></div>
+                <div class="cmt"><div class="av-sm">O</div><div class="cmt-body"><div class="cmt-head"><span class="who">Oren</span><span>· 1h</span></div><div class="cmt-text">Hidden reply three.</div></div></div>
+              </div>
+            </div>
+            <button class="more-toggle" type="button" id="more-toggle">Show 2 more replies</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Browser support note: <code>grid-template-rows: 0fr → 1fr</code> animates in modern Chrome, Edge, Firefox, and Safari 17+. Older browsers fall through to the instant <code>display: block</code> swap, which is still functional.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 7 — New-comment slide-in (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>New-comment slide-in<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Status</dt><dd>Proposed; production simply prepends without motion</dd>
+      <dt>Tempo</dt><dd>320ms enter · 600ms background cool-down (delay 800ms)</dd>
+      <dt>Motion</dt><dd><code>opacity 0 → 1</code> + <code>translateY(16px → 0)</code> + tinted bg fades out after a beat</dd>
+    </dl>
+    <p>Type something and submit — the new comment will appear at the top with a brief accent tint that fades away.</p>
+    <div class="stage">
+      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <input class="trigger" id="new-cmt-input" placeholder="What did you think?" style="flex: 1;">
+        <button class="trigger solid" type="button" id="new-cmt-submit">Post</button>
+      </div>
+      <div id="new-cmt-list">
+        <div class="cmt">
+          <div class="av-sm">JD</div>
+          <div class="cmt-body">
+            <div class="cmt-head"><span class="who">Jordan Diaz</span><span>· 4h</span></div>
+            <div class="cmt-text">Existing comment for context. New ones will land above this.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 8 — Reduced motion (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Reduced motion<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Coverage</dt><dd>Reply expand · stagger · show-more · new-comment slide — all collapse</dd>
+      <dt>Retained</dt><dd>Composer's box-shadow crossfade (state change must remain visible)</dd>
+      <dt>Why</dt><dd>The information conveyed by motion (which comment is new, which thread expanded) is still available via background tint on §7 and class swap on §6</dd>
+    </dl>
+    <p>Side-by-side: full-motion left, reduced-motion right. Click the buttons to retrigger.</p>
+    <div class="stage">
+      <div class="rm-grid">
+        <div class="rm-cell">
+          <span class="rm-label">Full motion</span>
+          <button class="trigger" type="button" id="rm-full-trigger" style="margin-bottom: 12px;">Toggle reply</button>
+          <div id="rm-full-target"></div>
+        </div>
+        <div class="rm-cell reduced">
+          <span class="rm-label">Reduced motion</span>
+          <button class="trigger" type="button" id="rm-reduced-trigger" style="margin-bottom: 12px;">Toggle reply</button>
+          <div id="rm-reduced-target"></div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">The <code>@media (prefers-reduced-motion: reduce)</code> rule at the bottom of the stylesheet kills the animations on every primitive in this file at once. The composer's shadow crossfade is the only animation preserved — it's a state-change indicator, not a flourish.</p>
+  </section>
+
+  <!-- React hint footer -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <dl>
+      <dt>&lt;CommentList&gt;</dt>
+      <dd><code>&lt;CommentList items={...} stagger={true} /&gt;</code>. Stagger is a render-time prop — only true on first mount. <code>useThread()</code> exposes <code>insert(comment)</code> which triggers §7's slide-in.</dd>
+      <dt>&lt;CommentThread&gt;</dt>
+      <dd><code>&lt;CommentThread parent={c} replies={[...]} /&gt;</code>. Holds the §6 grid-row trick internally; exposes <code>showMore()</code>.</dd>
+      <dt>&lt;ReplyComposer&gt;</dt>
+      <dd>Inline reply input. CSS-only entry via <code>animation: fadeIn 180ms</code>. Auto-focuses on mount; submit-disabled until non-empty.</dd>
+      <dt>&lt;Composer&gt;</dt>
+      <dd>The bottom-bar composer. <code>focused</code> state class controls §3's expand. Outside-click collapses only when empty.</dd>
+      <dt>useThread()</dt>
+      <dd><code>const &#123; insert, like, reply &#125; = useThread(threadId)</code>. <code>insert</code> emits an item with a <code>fresh: true</code> flag for 800ms so §7's tinted bg can read it.</dd>
+      <dt>useReducedMotion()</dt>
+      <dd>The CSS query handles all four animations in this file. Only consult the JS hook if a higher-level component (e.g. a modal-confirm-on-submit) needs to skip its own choreography.</dd>
+    </dl>
+  </div>
+
+</div><!-- /wrap -->
+</div><!-- /demo-stage -->
+
+<script>
+/* =================================================================
+ * §2 — Inline reply
+ * ================================================================= */
+(function () {
+  document.querySelectorAll('.reply-trigger').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target.firstElementChild) { target.innerHTML = ''; return; }
+      target.innerHTML = `
+        <div class="reply-inline">
+          <div class="av-sm">YO</div>
+          <div class="reply-inline-box">
+            <textarea placeholder="Write a reply…" rows="1"></textarea>
+            <div class="reply-inline-actions">
+              <button type="button" class="reply-cancel">Cancel</button>
+              <button type="button" class="reply-submit disabled">Reply</button>
+            </div>
+          </div>
+        </div>
+      `;
+      const ta = target.querySelector('textarea');
+      const submit = target.querySelector('.reply-submit');
+      ta.addEventListener('input', () => {
+        submit.classList.toggle('disabled', !ta.value.trim());
+      });
+      target.querySelector('.reply-cancel').addEventListener('click', () => {
+        target.innerHTML = '';
+      });
+      submit.addEventListener('click', () => {
+        if (submit.classList.contains('disabled')) return;
+        target.innerHTML = '';
+      });
+      ta.focus();
+    });
+  });
+})();
+
+/* =================================================================
+ * §3 — Composer focus expand
+ * ================================================================= */
+(function () {
+  const composer = document.getElementById('composer');
+  const input = document.getElementById('composer-input');
+  const charCount = document.getElementById('char-count');
+  const sendCta = document.getElementById('send-cta');
+
+  function expand() {
+    composer.classList.add('expanded');
+  }
+  function collapse() {
+    if (input.value.trim()) return;
+    composer.classList.remove('expanded');
+  }
+  input.addEventListener('focus', expand);
+  input.addEventListener('click', expand);
+  input.addEventListener('input', () => {
+    const len = input.value.length;
+    charCount.textContent = `${len}/2000`;
+    charCount.classList.toggle('warn', len > 1800);
+    sendCta.classList.toggle('disabled', !input.value.trim());
+  });
+  document.addEventListener('click', (e) => {
+    if (!composer.contains(e.target)) collapse();
+  });
+})();
+
+/* =================================================================
+ * §4 — Per-comment like
+ * ================================================================= */
+(function () {
+  document.querySelectorAll('.like-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const counter = btn.querySelector('.lc');
+      const liked = btn.classList.toggle('liked');
+      counter.textContent = parseInt(counter.textContent, 10) + (liked ? 1 : -1);
+    });
+  });
+})();
+
+/* =================================================================
+ * §5 — Initial-load stagger
+ * ================================================================= */
+(function () {
+  const stage = document.getElementById('stagger-stage');
+  const replay = document.getElementById('stagger-replay');
+  function play() {
+    stage.classList.remove('run');
+    void stage.offsetWidth;
+    stage.classList.add('run');
+  }
+  replay.addEventListener('click', play);
+  play();
+})();
+
+/* =================================================================
+ * §6 — Show-more replies
+ * ================================================================= */
+(function () {
+  const wrap = document.getElementById('more-wrap');
+  const toggle = document.getElementById('more-toggle');
+  toggle.addEventListener('click', () => {
+    const open = wrap.classList.toggle('open');
+    toggle.textContent = open ? 'Hide replies' : 'Show 2 more replies';
+  });
+})();
+
+/* =================================================================
+ * §7 — New-comment slide-in
+ * ================================================================= */
+(function () {
+  const input = document.getElementById('new-cmt-input');
+  const submit = document.getElementById('new-cmt-submit');
+  const list = document.getElementById('new-cmt-list');
+  function post() {
+    const text = input.value.trim();
+    if (!text) return;
+    const node = document.createElement('div');
+    node.className = 'cmt new-cmt';
+    node.innerHTML = `<div class="av-sm">YO</div><div class="cmt-body"><div class="cmt-head"><span class="who">You</span><span>· now</span></div><div class="cmt-text">${text.replace(/[<>&]/g, (c) => ({ '<':'&lt;','>':'&gt;','&':'&amp;' }[c]))}</div></div>`;
+    list.prepend(node);
+    setTimeout(() => node.classList.add('cooled'), 50);
+    input.value = '';
+  }
+  submit.addEventListener('click', post);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); post(); }
+  });
+})();
+
+/* =================================================================
+ * §8 — Reduced-motion comparison
+ * ================================================================= */
+(function () {
+  function bind(triggerId, targetId) {
+    const trigger = document.getElementById(triggerId);
+    const target = document.getElementById(targetId);
+    trigger.addEventListener('click', () => {
+      if (target.firstElementChild) { target.innerHTML = ''; return; }
+      target.innerHTML = `
+        <div class="reply-inline">
+          <div class="av-sm">YO</div>
+          <div class="reply-inline-box">
+            <textarea placeholder="Reduced reply…" rows="1"></textarea>
+            <div class="reply-inline-actions">
+              <button type="button" class="reply-cancel">Cancel</button>
+              <button type="button" class="reply-submit disabled">Reply</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+  bind('rm-full-trigger', 'rm-full-target');
+  bind('rm-reduced-trigger', 'rm-reduced-target');
+})();
+</script>
+
+</body>
+</html>

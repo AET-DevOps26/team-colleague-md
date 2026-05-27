@@ -1,0 +1,1456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Verita — Design Spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens/tokens.css">
+<style>
+  :root {
+    --bg2: #F9F9F9;
+    --bg3: #F0F0F0;
+    --fg2: #6B6B6B;
+    --fg3: #ABABAB;
+    --border2: #D4D4D4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans); font-size: 13.5px; line-height: 1.65;
+    color: var(--fg); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Layout */
+  .doc { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--bg2); border-right: 1px solid var(--border);
+    padding: 24px 16px 40px; font-size: 12px;
+    scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .sidebar-brand {
+    font-family: var(--serif); font-style: italic; font-weight: 500;
+    font-size: 20px; letter-spacing: -0.02em; margin-bottom: 4px;
+  }
+  .sidebar-sub { font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg3); margin-bottom: 20px; }
+  .toc-section {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--fg3); margin: 16px 0 6px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .toc-section:first-of-type { border-top: 0; margin-top: 0; }
+  .toc-link {
+    display: block; padding: 4px 8px; border-radius: 5px;
+    color: var(--fg2); font-weight: 500; text-decoration: none;
+    transition: background 100ms, color 100ms; line-height: 1.4;
+  }
+  .toc-link:hover { background: var(--bg3); color: var(--fg); }
+
+  .content { padding: 40px 48px 120px; max-width: 920px; min-width: 0; }
+  h1 {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15;
+    margin: 0 0 6px;
+  }
+  .doc-meta { font-size: 12px; color: var(--fg3); margin-bottom: 40px; font-family: var(--mono); }
+  h2 {
+    font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25;
+    margin: 48px 0 6px; padding-top: 28px; border-top: 1px solid var(--border);
+  }
+  h2:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+  h3 {
+    font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+    margin: 28px 0 8px; color: var(--fg);
+  }
+  h4 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.01em; text-transform: uppercase;
+    color: var(--fg2); margin: 20px 0 6px;
+  }
+  p { margin: 0 0 12px; }
+  p + ul, p + ol { margin-top: -4px; }
+  ul, ol { padding-left: 20px; margin: 0 0 12px; }
+  li { margin: 3px 0; }
+  li::marker { color: var(--fg3); }
+  code {
+    font-family: var(--mono); font-size: 12px;
+    background: var(--bg2); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--fg); color: #f0f0f0;
+    padding: 16px 18px; border-radius: 10px;
+    font: 400 12.5px/1.6 var(--mono);
+    overflow-x: auto; margin: 0 0 16px;
+  }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; }
+
+  /* Token table */
+  .token-table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 12.5px; }
+  .token-table th {
+    text-align: left; font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg3);
+    padding: 8px 10px; border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .token-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .token-table td:first-child { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  .swatch {
+    display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+    vertical-align: middle; margin-right: 6px; border: 1px solid var(--border);
+  }
+
+  /* State table */
+  .state-table { width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 12.5px; }
+  .state-table th {
+    text-align: left; font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg3);
+    padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg2);
+  }
+  .state-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+
+  .callout {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 16px; margin: 0 0 16px; font-size: 12.5px; color: var(--fg2);
+  }
+  .callout strong { color: var(--fg); }
+  .divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+  /* Responsive */
+  @media (max-width: 860px) {
+    .doc { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+    .content { padding: 28px 20px 80px; }
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+
+<!-- ============ SIDEBAR / TOC ============ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">Verita</div>
+  <div class="sidebar-sub">Design Spec</div>
+
+  <div class="toc-section">1 · Design Tokens</div>
+  <a class="toc-link" href="#colors">Colors</a>
+  <a class="toc-link" href="#typography">Typography</a>
+  <a class="toc-link" href="#spacing">Spacing &amp; Radius</a>
+  <a class="toc-link" href="#elevation">Elevation &amp; Shadows</a>
+  <a class="toc-link" href="#motion">Motion</a>
+
+  <div class="toc-section">2 · Global Components</div>
+  <a class="toc-link" href="#sidebar-comp">Sidebar</a>
+  <a class="toc-link" href="#topbar-comp">Top Bar</a>
+  <a class="toc-link" href="#post-card">Post Card</a>
+  <a class="toc-link" href="#auth-modal">Auth Modal</a>
+  <a class="toc-link" href="#settings-modal">Settings Modal</a>
+  <a class="toc-link" href="#toast">Toast</a>
+  <a class="toc-link" href="#skeleton">Skeleton</a>
+  <a class="toc-link" href="#avatars">Avatars</a>
+  <a class="toc-link" href="#buttons">Buttons</a>
+  <a class="toc-link" href="#inputs">Inputs &amp; Fields</a>
+
+  <div class="toc-section">3 · Page Specs</div>
+  <a class="toc-link" href="#page-home">Home Feed</a>
+  <a class="toc-link" href="#page-post-detail">Post Detail</a>
+  <a class="toc-link" href="#page-post-editor">Post Editor</a>
+  <a class="toc-link" href="#page-search">Search Results</a>
+  <a class="toc-link" href="#page-user-profile">User Profile</a>
+  <a class="toc-link" href="#page-digest-mgmt">Digest Management</a>
+  <a class="toc-link" href="#page-digest-post">Digest Post</a>
+  <a class="toc-link" href="#page-admin">Admin</a>
+  <a class="toc-link" href="#page-settings">Settings</a>
+  <a class="toc-link" href="#page-404">404</a>
+
+  <div class="toc-section">4 · Interaction Patterns</div>
+  <a class="toc-link" href="#auth-gate">Auth Gate</a>
+  <a class="toc-link" href="#back-nav">Back Navigation</a>
+  <a class="toc-link" href="#modal-dismiss">Modal Dismiss</a>
+  <a class="toc-link" href="#sidebar-behavior">Sidebar Behavior</a>
+  <a class="toc-link" href="#autosave">Auto-save</a>
+  <a class="toc-link" href="#reading-progress">Reading Progress</a>
+</aside>
+
+<!-- ============ CONTENT ============ -->
+<main class="content">
+
+<h1>Verita Design Spec</h1>
+<div class="doc-meta">Generated from HTML prototypes · v2.0 · 2026-05-20</div>
+
+<h2 id="1-design-tokens">1. Design Tokens</h2>
+<h2 id="colors">1.1 Colors</h2>
+<h3>Backgrounds</h3>
+<table class="token-table">
+<thead>
+<tr>
+<th>Token</th>
+<th>Value</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--bg-base</code></td>
+<td><span class="swatch" style="background:#FFFFFF"></span><code>#FFFFFF</code></td>
+<td>Page background, card surfaces</td>
+</tr>
+<tr>
+<td><code>--bg-surface</code></td>
+<td><span class="swatch" style="background:#F9F9F9"></span><code>#F9F9F9</code></td>
+<td>Sidebar bg, input resting bg, AI panel bg</td>
+</tr>
+<tr>
+<td><code>--bg-elevated</code></td>
+<td><span class="swatch" style="background:#F0F0F0"></span><code>#F0F0F0</code></td>
+<td>Search bar bg, tag pills, hover fills, skeleton base</td>
+</tr>
+<tr>
+<td><code>--bg-paper</code></td>
+<td><span class="swatch" style="background:oklch(97% 0.012 80)"></span><code>oklch(97% 0.012 80)</code></td>
+<td>Home v3 cream block: text-only post card pull-quote panel, digest history card</td>
+</tr>
+</tbody>
+</table>
+<h3>Foreground / Text</h3>
+<table class="token-table">
+<thead>
+<tr>
+<th>Token</th>
+<th>Value</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--text-primary</code></td>
+<td><span class="swatch" style="background:#0A0A0A"></span><code>#0A0A0A</code></td>
+<td>Headings, body text, active nav</td>
+</tr>
+<tr>
+<td><code>--text-secondary</code></td>
+<td><span class="swatch" style="background:#6B6B6B"></span><code>#6B6B6B</code></td>
+<td>Supporting copy, meta text, inactive nav</td>
+</tr>
+<tr>
+<td><code>--text-tertiary</code></td>
+<td><span class="swatch" style="background:#ABABAB"></span><code>#ABABAB</code></td>
+<td>Placeholders, timestamps, disabled labels</td>
+</tr>
+</tbody>
+</table>
+<h3>Borders</h3>
+<table class="token-table">
+<thead>
+<tr>
+<th>Token</th>
+<th>Value</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--border-subtle</code></td>
+<td><span class="swatch" style="background:#EBEBEB"></span><code>#EBEBEB</code></td>
+<td>Card borders, section dividers, topbar border</td>
+</tr>
+<tr>
+<td><code>--border-default</code></td>
+<td><span class="swatch" style="background:#D4D4D4"></span><code>#D4D4D4</code></td>
+<td>Input borders, button outlines, toggle borders</td>
+</tr>
+</tbody>
+</table>
+<h3>Accent &amp; Semantic</h3>
+<table class="token-table">
+<thead>
+<tr>
+<th>Token</th>
+<th>Value</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--accent</code></td>
+<td><span class="swatch" style="background:#0A0A0A"></span><code>#0A0A0A</code></td>
+<td>Primary CTA, active toggle, focus ring</td>
+</tr>
+<tr>
+<td><code>--accent-hover</code></td>
+<td><span class="swatch" style="background:#333333"></span><code>#333333</code></td>
+<td>Hover state for accent-colored elements</td>
+</tr>
+<tr>
+<td><code>--success</code></td>
+<td><span class="swatch" style="background:#16A34A"></span><code>#16A34A</code></td>
+<td>Saved status dot, positive deltas</td>
+</tr>
+<tr>
+<td><code>--warning</code></td>
+<td><span class="swatch" style="background:#CA8A04"></span><code>#CA8A04</code></td>
+<td>Saving status dot, draft label, ban button</td>
+</tr>
+<tr>
+<td><code>--danger</code></td>
+<td><span class="swatch" style="background:#DC2626"></span><code>#DC2626</code></td>
+<td>Error states, delete actions, admin flag badge</td>
+</tr>
+</tbody>
+</table>
+<div class="callout"><strong>Note:</strong> Verita uses a monochrome accent system. The primary interactive color is <code>#0A0A0A</code> (near-black). All semantic colors (success/warning/danger) are reserved for status indicators only.</div>
+<hr>
+<h2 id="typography">1.2 Typography</h2>
+<h3>Font Families</h3>
+<table class="token-table">
+<thead>
+<tr>
+<th>Token</th>
+<th>Family</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--font-sans</code></td>
+<td><code>"Inter", system-ui, sans-serif</code></td>
+<td>Body text, UI labels, nav items, buttons</td>
+</tr>
+<tr>
+<td><code>--font-mono</code></td>
+<td><code>"JetBrains Mono", monospace</code></td>
+<td>Code blocks, timestamps, stat pills, tag chips in editor</td>
+</tr>
+<tr>
+<td><code>--font-serif</code></td>
+<td><code>"Newsreader", Georgia, serif</code></td>
+<td>Brand wordmark (italic 500), pull quotes (italic), digest titles, 404 numeral</td>
+</tr>
+</tbody>
+</table>
+<h3>Type Scale</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>Element</th>
+<th>Size</th>
+<th>Weight</th>
+<th>Tracking</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Page title (Post Detail)</td>
+<td>32px</td>
+<td>700</td>
+<td>-0.025em</td>
+</tr>
+<tr>
+<td>Section heading (md h2)</td>
+<td>22px</td>
+<td>700</td>
+<td>-0.02em</td>
+</tr>
+<tr>
+<td>Subheading (md h3)</td>
+<td>16px</td>
+<td>600</td>
+<td>-0.01em</td>
+</tr>
+<tr>
+<td>Body text (md)</td>
+<td>15px</td>
+<td>400</td>
+<td>-0.005em</td>
+</tr>
+<tr>
+<td>Card title (Home v3)</td>
+<td>19px</td>
+<td>700</td>
+<td>-0.015em</td>
+</tr>
+<tr>
+<td>Card title (legacy framed cards)</td>
+<td>15px</td>
+<td>600</td>
+<td>default</td>
+</tr>
+<tr>
+<td>UI label / nav</td>
+<td>15px</td>
+<td>500</td>
+<td>default</td>
+</tr>
+<tr>
+<td>Meta / caption</td>
+<td>13–13.5px</td>
+<td>500</td>
+<td>default</td>
+</tr>
+<tr>
+<td>Section label (uppercase)</td>
+<td>10–10.5px</td>
+<td>600</td>
+<td>0.06–0.08em</td>
+</tr>
+<tr>
+<td>Brand wordmark (Home v3)</td>
+<td>32px</td>
+<td>500 italic</td>
+<td>-0.02em (lead "V" rendered at 38px)</td>
+</tr>
+<tr>
+<td>Base body</td>
+<td>13px</td>
+<td>400</td>
+<td>default</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>1.3 Spacing &amp; Radius</h2>
+<h3>Spacing Scale</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>Use</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sidebar width (full-width pages) — token <code>--sidebar-w</code></td>
+<td>240px</td>
+</tr>
+<tr>
+<td>Sidebar rail width (collapsed pages) — token <code>--sidebar-rail</code></td>
+<td>60px collapsed → 240px expanded on hover</td>
+</tr>
+<tr>
+<td>Sidebar padding</td>
+<td>0 top, 14px sides, 16px bottom (top space owned by brand block)</td>
+</tr>
+<tr>
+<td>Brand block height</td>
+<td>88px, content <code>align-items: flex-end</code>, <code>padding-bottom: 16px</code> (V/Verita sits 16px above first nav-item)</td>
+</tr>
+<tr>
+<td>Topbar padding</td>
+<td>14px vertical, 24–28px horizontal</td>
+</tr>
+<tr>
+<td>Feed wrap (masonry area)</td>
+<td><code>clamp(24px, 4vw, 80px)</code> horizontal, max-width 1920px</td>
+</tr>
+<tr>
+<td>Reader column padding</td>
+<td>28px top, 32px sides, 200px bottom</td>
+</tr>
+<tr>
+<td>Card body padding (image card, below cover)</td>
+<td>12px top, 2px sides, 4px bottom</td>
+</tr>
+<tr>
+<td>Card body padding (text card, below cream block)</td>
+<td>12px top, 2px sides, 4px bottom</td>
+</tr>
+<tr>
+<td>Cream block (text card) internal padding</td>
+<td>18px</td>
+</tr>
+<tr>
+<td>Masonry column gap</td>
+<td>20px</td>
+</tr>
+<tr>
+<td>Masonry card gap (vertical)</td>
+<td>20px (margin-bottom)</td>
+</tr>
+<tr>
+<td>Masonry stagger</td>
+<td>5n+2 / 7n+4 organic offset (16–24px)</td>
+</tr>
+<tr>
+<td>Nav item gap</td>
+<td>4px</td>
+</tr>
+<tr>
+<td>Nav item internal gap</td>
+<td>13px (icon to label)</td>
+</tr>
+<tr>
+<td>Nav item padding</td>
+<td>16px 14px (hover-expanded / static); collapsed rail uses <code>16px 0</code> + <code>justify-content: center</code></td>
+</tr>
+<tr>
+<td>Nav icon size</td>
+<td>24×24px</td>
+</tr>
+</tbody>
+</table>
+<h3>Border Radius</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>Element</th>
+<th>Radius</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cards (Home v3 cover + cream block)</td>
+<td>12px</td>
+</tr>
+<tr>
+<td>Cards (legacy framed)</td>
+<td>10px</td>
+</tr>
+<tr>
+<td>Modals</td>
+<td>14px</td>
+</tr>
+<tr>
+<td>Buttons (primary, ghost)</td>
+<td>7–8px</td>
+</tr>
+<tr>
+<td>Search bar</td>
+<td>10px</td>
+</tr>
+<tr>
+<td>Input fields</td>
+<td>8px</td>
+</tr>
+<tr>
+<td>Tag pills</td>
+<td>4px</td>
+</tr>
+<tr>
+<td>Badge pills</td>
+<td>999px (full round)</td>
+</tr>
+<tr>
+<td>Avatars (topbar)</td>
+<td>10–12px (squircle)</td>
+</tr>
+<tr>
+<td>Avatars (profile)</td>
+<td>50% (circle)</td>
+</tr>
+<tr>
+<td>FAB / Refresh</td>
+<td>14px</td>
+</tr>
+<tr>
+<td>Code blocks</td>
+<td>10px</td>
+</tr>
+<tr>
+<td>Toast</td>
+<td>10px</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="elevation">1.4 Elevation &amp; Shadows</h2>
+<table class="state-table">
+<thead>
+<tr>
+<th>Level</th>
+<th>Shadow</th>
+<th>Used on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Subtle hover</td>
+<td><code>0 6px 20px -10px rgba(0,0,0,0.12)</code></td>
+<td>Card hover lift</td>
+</tr>
+<tr>
+<td>Floating bar</td>
+<td><code>0 4px 20px rgba(0,0,0,0.10)</code></td>
+<td>Actions pill, composer pill</td>
+</tr>
+<tr>
+<td>Modal</td>
+<td><code>0 24px 60px -12px rgba(0,0,0,0.32)</code></td>
+<td>Auth modal, settings modal</td>
+</tr>
+<tr>
+<td>Toast</td>
+<td><code>0 10px 30px rgba(0,0,0,0.25)</code></td>
+<td>Toast notification</td>
+</tr>
+<tr>
+<td>FAB</td>
+<td><code>0 10px 24px -8px rgba(0,0,0,0.35)</code></td>
+<td>Refresh FAB</td>
+</tr>
+<tr>
+<td>Dropdown</td>
+<td><code>0 8px 24px rgba(0,0,0,0.10)</code></td>
+<td>Sort dropdown, manage menu</td>
+</tr>
+</tbody>
+</table>
+<div class="callout"><strong>Topbar blur:</strong> <code>background: rgba(255,255,255,0.85); backdrop-filter: saturate(160%) blur(10px);</code> — used on all sticky topbars.</div>
+<hr>
+<h2 id="motion">1.5 Motion</h2>
+<table class="state-table">
+<thead>
+<tr>
+<th>Property</th>
+<th>Duration</th>
+<th>Easing</th>
+<th>Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hover bg/color</td>
+<td>120ms</td>
+<td>ease-out</td>
+<td>Nav items, buttons, cards</td>
+</tr>
+<tr>
+<td>Card lift</td>
+<td>160ms</td>
+<td>ease-out</td>
+<td>translateY(-1px) on hover</td>
+</tr>
+<tr>
+<td>Modal enter</td>
+<td>200ms</td>
+<td>cubic-bezier(0.16,1,0.3,1)</td>
+<td>Scale 0.98→1 + translateY(8→0)</td>
+</tr>
+<tr>
+<td>Sidebar width</td>
+<td>200ms</td>
+<td>ease</td>
+<td>60px ↔ 240px expand/collapse (rail pages)</td>
+</tr>
+<tr>
+<td>AI panel expand</td>
+<td>280ms</td>
+<td>cubic-bezier(0.22,1,0.36,1)</td>
+<td>max-height 0→900px</td>
+</tr>
+<tr>
+<td>Toast show/hide</td>
+<td>200ms</td>
+<td>ease</td>
+<td>opacity + translateY(8px)</td>
+</tr>
+<tr>
+<td>FAB spin</td>
+<td>600ms</td>
+<td>cubic-bezier(0.4,0,0.2,1)</td>
+<td>rotate(360deg) on click</td>
+</tr>
+<tr>
+<td>Sidebar label appear</td>
+<td>150ms</td>
+<td>ease, 60ms delay</td>
+<td>opacity 0→1 on sidebar hover</td>
+</tr>
+<tr>
+<td>Skeleton shimmer</td>
+<td>1.4s</td>
+<td>ease-in-out, infinite</td>
+<td>opacity 1→0.45→1 pulse</td>
+</tr>
+<tr>
+<td>OTP caret blink</td>
+<td>1s</td>
+<td>steps(2), infinite</td>
+<td>opacity toggle</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-global-components">2. Global Components</h2>
+<h2 id="sidebar-comp">2.1 Sidebar</h2>
+<p>Two structural variants depending on page context:</p>
+<table class="state-table">
+<thead>
+<tr>
+<th>Property</th>
+<th>Mode A — Static (Home / Search / Settings / Home+Settings)</th>
+<th>Mode B — Rail (Post Detail / Editor / Profile / Digest Post / Digest Mgmt / Admin)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Width</td>
+<td>240px (<code>var(--sidebar-w)</code>), static</td>
+<td>60px (<code>var(--sidebar-rail)</code>) collapsed → 240px on hover</td>
+</tr>
+<tr>
+<td>Brand block</td>
+<td>88px tall block, content centered horizontally + flex-end vertically with <code>padding-bottom: 16px</code></td>
+<td>Same 88px block; collapsed shows only "V" (38px serif italic 600, <code>transform: translateX(-2px)</code> for optical centering of italic glyph); JS swaps <code>textContent</code> to "Verita" on hover</td>
+</tr>
+<tr>
+<td>Brand swap mechanism</td>
+<td>Static "Verita" wordmark, no swap</td>
+<td>JS: on <code>mouseenter</code> of <code>#sidebar</code>, set <code>#brandWord</code> textContent to "Verita"; on <code>mouseleave</code>, restore "V"</td>
+</tr>
+<tr>
+<td>Nav labels</td>
+<td>Always visible, 15px / 500</td>
+<td>Hidden in collapsed (<code>width: 0</code>); fade in on hover (150ms, 60ms delay)</td>
+</tr>
+<tr>
+<td>Nav icons</td>
+<td>24×24px</td>
+<td>24×24px (collapsed icon centered in 60px rail via <code>justify-content: center</code> + <code>padding: 16px 0</code>)</td>
+</tr>
+<tr>
+<td>Nav item padding</td>
+<td>16px 14px, 4px gap between items, 13px icon-to-label gap</td>
+<td>16px 0 collapsed → 16px 14px on hover</td>
+</tr>
+<tr>
+<td>Badge (Digest count)</td>
+<td>Always visible (10.5px)</td>
+<td>Hidden in collapsed (<code>width: 0</code>); fade in on hover</td>
+</tr>
+<tr>
+<td>Active indicator</td>
+<td>3px left bar (accent) + elevated bg</td>
+<td>Same, only on hover-expanded state</td>
+</tr>
+<tr>
+<td>FAB (New post / Sign in CTA)</td>
+<td>Full-width button with icon + label, sits at bottom</td>
+<td>Collapsed: 36×36 icon button, centered horizontally in rail. Hover-expanded: morphs to full-width "+ New post" button matching Mode A.</td>
+</tr>
+<tr>
+<td>Auth state toggle (prototype)</td>
+<td>In sidebar spacer (segmented control)</td>
+<td>Moved to top bar center (<code>left: 50%; transform: translate(-50%, -50%)</code>) so collapsed rail is unobstructed</td>
+</tr>
+</tbody>
+</table>
+<h3>Nav Items</h3>
+<ul>
+<li><strong>Primary:</strong> Explore (compass icon) · Digest (lightning icon, badge count)</li>
+<li><strong>CTA (logged-in):</strong> "New post" — accent bg, white text, rounded 8px</li>
+<li><strong>CTA (logged-out):</strong> "Sign in" — same visual as New post, different label + arrow icon</li>
+<li><strong>Bottom:</strong> Settings (gear icon) — greyed out + disabled when logged out</li>
+</ul>
+<h3>Auth State Toggle (prototype only)</h3>
+<p>Segmented control "Logged out" | "Logged in" with active segment getting accent bg + white text. <strong>Mode A</strong> pages render this in the sidebar spacer (sidebar always wide, has space). <strong>Mode B</strong> pages render it absolute-positioned in the top bar center (<code>left: 50%; transform: translate(-50%, -50%)</code>) so the collapsed rail isn't pushed around. Prototype-only control; not shipped to production.</p>
+<hr>
+<h2 id="topbar-comp">2.2 Top Bar</h2>
+<p>Sticky at top, z-index 20. Frosted-glass effect (<code>backdrop-filter: blur(10px)</code>). Five layout variants:</p>
+<table class="state-table">
+<thead>
+<tr>
+<th>Page</th>
+<th>Layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Home / Search</td>
+<td>Full-width search input (flex:1) · avatar or "Sign in" button · Tag filter bar below (Home only)</td>
+</tr>
+<tr>
+<td>Post Detail / Digest Post</td>
+<td>← Back label (left) · compact search (280px) + avatar (right)</td>
+</tr>
+<tr>
+<td>Post Editor</td>
+<td>← Back label · spacer · word count pill (mono) · status pill · Publish button · avatar</td>
+</tr>
+<tr>
+<td>User Profile</td>
+<td>← Back label · full search · avatar</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>"Admin" title (serif italic) · "ADMIN ROLE REQUIRED" badge · auth state toggle</td>
+</tr>
+</tbody>
+</table>
+<h3>Scroll Shadow</h3>
+<p>Home/Search topbar gains a subtle bottom shadow (<code>linear-gradient(180deg, rgba(0,0,0,0.04), transparent)</code>, 8px pseudo-element) once <code>scrollY &gt; 6</code>.</p>
+<hr>
+<h2 id="post-card">2.3 Post Card</h2>
+<p>Home v3 cards are <strong>frameless</strong> — no background, no border, no card chrome on the wrapper. Differentiation between card types comes from the <strong>colored block</strong> (cover photo or cream pull-quote panel), not from card outlines. All variants share the same scan rhythm: <code>[colored block] → [title (bare text)] → [author row (bare text)]</code>.</p>
+<table class="state-table">
+<thead>
+<tr>
+<th>Variant</th>
+<th>Visual</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Image card</td>
+<td>12px-radius cover image, 4:3 aspect-ratio, overlay badges (TL: type, TR: read time). No card chrome around the cover.</td>
+<td>Title (3-line clamp, 19px / 700) <strong>below cover</strong> as bare text · author row · no inline tag pill (cover badge serves as type indicator)</td>
+</tr>
+<tr>
+<td>Text card</td>
+<td>12px-radius cream block (<code>oklch(97% 0.012 80)</code>, 18px internal padding). No card chrome around the block.</td>
+<td>Inside block: small uppercase eyebrow (10px / 600 / 0.08em tracking, e.g. <code>OPINION</code>, <code>METHODOLOGY</code>) + serif italic pull-quote (16px) with 2px solid left bar + 12px padding-left, clamp 3 or 4 lines depending on length. Outside block: title (19px / 700) + author row, both bare text below the block</td>
+</tr>
+<tr>
+<td>Digest card</td>
+<td>Curator's break-the-rhythm card. <code>#0A0A0A</code> dark bg, white text, own 12px radius, internal 20px padding.</td>
+<td>Label + date · title (serif italic 22–28px) · bullet summary · CTA link with <code>margin-top: auto</code> to bottom-pin</td>
+</tr>
+<tr>
+<td>Code card (Home + Settings only)</td>
+<td>Black <code>code-preview</code> panel as cover-equivalent (12px radius, mono inside)</td>
+<td>Same posture as image card: code panel + title outside + author row</td>
+</tr>
+<tr>
+<td>Thread card (Home + Settings, Search)</td>
+<td>Cream block holds eyebrow + thread snippet inside; title + author below</td>
+<td>Same structural rule as text card</td>
+</tr>
+</tbody>
+</table>
+<h3>Author Row (Home v3)</h3>
+<p><code>28px</code> circle avatar (initials, gradient bg) · Name (14px / 500) · "·" · Time ago (13px / <code>--text-secondary</code>) · Heart icon (16px) + like count (13.5px tabular-nums, right-aligned). No top divider on either image or text cards.</p>
+<p>User Profile and Search Results use slightly different scales — see page specs below.</p>
+<h3>Card States</h3>
+<ul>
+<li><strong>Hover (image card):</strong> colored block lifts with soft drop-shadow <code>0 8px 24px -12px rgba(0,0,0,0.18)</code>; whole card translates -1px</li>
+<li><strong>Hover (text card):</strong> cream block lifts with same shadow; whole card translates -1px</li>
+<li><strong>Hover (digest card):</strong> subtle bg darken</li>
+<li><strong>Pressed:</strong> No explicit active state (navigates immediately)</li>
+</ul>
+<div class="callout"><strong>Frameless rule of thumb:</strong> if you find yourself adding a <code>border</code> or <code>background</code> to <code>.card</code>, you're re-introducing chrome. The colored block (cover or cream) is what carries the silhouette.</div>
+<hr>
+<h2 id="auth-modal">2.4 Auth Modal</h2>
+<p>Centered overlay with blurred backdrop. Four screens within one modal shell:</p>
+<ol>
+<li><strong>Login:</strong> Email + password fields, "Log in" CTA, "Forgot password?" link, tab to Sign up</li>
+<li><strong>Sign up:</strong> Username + email + password, "Create account" CTA, terms notice, tab to Log in</li>
+<li><strong>Forgot password:</strong> Back arrow → login, email field, "Send reset link" CTA</li>
+<li><strong>OTP verification:</strong> 6-digit code input grid (mono 22px), auto-advance, auto-submit on fill</li>
+</ol>
+<h3>Modal Shell</h3>
+<ul>
+<li>Width: <code>380px</code>, padding: <code>24px 28px 26px</code>, radius: <code>14px</code></li>
+<li>Shadow: <code>0 24px 60px -12px rgba(0,0,0,0.32)</code></li>
+<li>Entry animation: <code>translateY(8px) scale(0.98) → 0 scale(1)</code>, 200ms spring curve</li>
+<li>Close button: top-right 28×28px, hover → elevated bg</li>
+<li>Backdrop: <code>rgba(10,10,10,0.36)</code> + <code>blur(2px)</code></li>
+</ul>
+<hr>
+<h2 id="settings-modal">2.5 Settings Modal</h2>
+<p>Overlay modal, 440px wide. Three sections:</p>
+<ul>
+<li><strong>Account:</strong> Email (read-only) · Username (read-only) · "Edit Profile →" link</li>
+<li><strong>Digest:</strong> Email frequency segmented control (Daily / Weekly / Off) · "Manage Topics →" link</li>
+<li><strong>Privacy:</strong> "Show Bookmarks to others" toggle · "Show Likes to others" toggle</li>
+</ul>
+<hr>
+<h2 id="toast">2.6 Toast</h2>
+<ul>
+<li>Fixed bottom-right, 22px offset, z-index 60</li>
+<li>Accent bg (<code>#0A0A0A</code>), white text, 12.5px 500 weight</li>
+<li>Icon: green checkmark (<code>#9ce0a0</code>) or contextual</li>
+<li>Auto-dismiss: 2.4s (show → fade out)</li>
+<li>Entry: <code>translateY(8px) → 0</code>, opacity 0→1, 200ms</li>
+</ul>
+<hr>
+<h2 id="skeleton">2.7 Skeleton Loader</h2>
+<ul>
+<li>Background: <code>--bg-elevated</code> (<code>#F0F0F0</code>)</li>
+<li>Radius: 6px (generic blocks), matches component shape otherwise</li>
+<li>Animation: <code>shimmer</code> — opacity pulse 1 → 0.45 → 1, 1.4s ease-in-out infinite</li>
+<li>Structure mirrors card layout: optional cover slab + 2–4 line blocks at varying widths (100%, 80%, 60%, 40%)</li>
+</ul>
+<hr>
+<h2 id="avatars">2.8 Avatars</h2>
+<table class="state-table">
+<thead>
+<tr>
+<th>Context</th>
+<th>Size</th>
+<th>Shape</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Topbar (own user)</td>
+<td>34–44px</td>
+<td>Squircle (10–12px radius)</td>
+<td>Gradient bg with CSS face illustration</td>
+</tr>
+<tr>
+<td>Author row (Home v3 cards)</td>
+<td>28px</td>
+<td>Circle</td>
+<td>Initials, gradient bg</td>
+</tr>
+<tr>
+<td>Author row (User Profile cards)</td>
+<td>26px</td>
+<td>Circle</td>
+<td>Initials, gradient bg</td>
+</tr>
+<tr>
+<td>Post Detail author</td>
+<td>36px</td>
+<td>Circle</td>
+<td>Initials, gradient bg</td>
+</tr>
+<tr>
+<td>Comment author</td>
+<td>28px (top) / 22px (reply)</td>
+<td>Circle</td>
+<td>Initials, gradient bg</td>
+</tr>
+<tr>
+<td>User Profile header</td>
+<td>80px</td>
+<td>Circle</td>
+<td>Initials or photo, 3px border + 1.5px ring</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="buttons">2.9 Buttons</h2>
+<table class="state-table">
+<thead>
+<tr>
+<th>Variant</th>
+<th>Style</th>
+<th>Height</th>
+<th>Radius</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary (CTA)</td>
+<td>Accent bg, white text, 600 weight</td>
+<td>34–44px</td>
+<td>7–8px</td>
+</tr>
+<tr>
+<td>Ghost</td>
+<td>Transparent, border-default, secondary text</td>
+<td>34px</td>
+<td>7px</td>
+</tr>
+<tr>
+<td>Danger</td>
+<td>Red-tinted bg (<code>#FEF2F2</code>), red text, red border</td>
+<td>30px</td>
+<td>6px</td>
+</tr>
+<tr>
+<td>Warn</td>
+<td>Yellow-tinted bg (<code>#FEFCE8</code>), yellow text</td>
+<td>30px</td>
+<td>6px</td>
+</tr>
+<tr>
+<td>Success</td>
+<td>Green-tinted bg (<code>#F0FDF4</code>), green text</td>
+<td>30px</td>
+<td>6px</td>
+</tr>
+<tr>
+<td>Icon-only (toolbar)</td>
+<td>32×32px, hover → elevated bg</td>
+<td>32px</td>
+<td>6px</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="inputs">2.10 Inputs &amp; Fields</h2>
+<ul>
+<li><strong>Height:</strong> 38–44px. <strong>Radius:</strong> 8px. <strong>Border:</strong> <code>--border-subtle</code> resting, <code>--accent</code> on focus.</li>
+<li><strong>Focus ring:</strong> <code>box-shadow: 0 0 0 3–4px rgba(10,10,10,0.06)</code>. Background transitions from <code>--bg-elevated</code>/<code>--bg-surface</code> to <code>#fff</code>.</li>
+<li><strong>Error state:</strong> Border becomes <code>--danger</code>. Error message below: 11.5px, danger color, with alert icon.</li>
+<li><strong>Search bar:</strong> Left-aligned search icon (16px, tertiary color), no border on inner input.</li>
+<li><strong>Tags input:</strong> Flex-wrap container holding tag chips + trailing text input. Chips: mono font, <code>--bg-elevated</code> bg, 4px radius, × remove button.</li>
+</ul>
+<hr>
+<h2 id="3-page-specs">3. Page Specs</h2>
+<h2 id="page-home">3.1 Home Feed</h2>
+<p><strong>Route:</strong> <code>/</code></p>
+<h3>Layout</h3>
+<ul>
+<li>Grid: <code>240px sidebar | 1fr main</code></li>
+<li>Sidebar: Mode A static 240px, brand block 88px tall with "Verita" wordmark centered horizontally + bottom (16px above first nav-item)</li>
+<li>Topbar: Search bar + avatar + tag filter bar</li>
+<li>Feed: Masonry via <strong>CSS columns</strong> (<code>column-count</code>), responsive: 3 cols ≥1280, 2 cols 880–1279, 1 col &lt;880. Column gap 20px, card margin-bottom 20px.</li>
+<li><strong>Stagger:</strong> every 5n+2 and 7n+4 card gets a 16–24px <code>margin-top</code> offset for organic, non-stair-step rhythm</li>
+<li>Max content width: 1920px, centered</li>
+<li>Feed-wrap horizontal padding: <code>clamp(24px, 4vw, 80px)</code></li>
+</ul>
+<h3>Components</h3>
+<ul>
+<li>Tag filter bar: horizontal scroll, first chip = "For you" (logged-in) / "Trending" (logged-out), active = bold text</li>
+<li>Auth banner (logged-out): rounded card above feed, "Browsing as guest" text + Log in / Create account buttons</li>
+<li>Refresh FAB: fixed bottom-right, 52×52px, accent bg, rotate animation on click, reshuffles cards</li>
+<li>Digest card: always first position in feed</li>
+</ul>
+<h3>States</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>State</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logged-in</td>
+<td>"For you" first chip · digest badge visible · New Post CTA · avatar in topbar · no auth banner</td>
+</tr>
+<tr>
+<td>Logged-out</td>
+<td>"Trending" first chip · no digest badge · Sign In CTA · Sign in button in topbar · auth banner shown · Settings disabled</td>
+</tr>
+<tr>
+<td>Hover (card)</td>
+<td>translateY(-1px), border darken, shadow appear</td>
+</tr>
+<tr>
+<td>Hover (nav)</td>
+<td>Elevated bg, text → primary</td>
+</tr>
+<tr>
+<td>Scroll &gt; 6px</td>
+<td>Topbar gains subtle bottom shadow</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="page-post-detail">3.2 Post Detail</h2>
+<p><strong>Route:</strong> <code>/post/:id</code></p>
+<h3>Layout</h3>
+<ul>
+<li>Grid: <code>60px sidebar (collapsed) | 1fr main</code></li>
+<li>Topbar: ← Back label + compact search + avatar</li>
+<li>Reader column: centered, max-width 720px</li>
+<li>Reading progress bar: 2px fixed at top of viewport, accent color</li>
+</ul>
+<h3>Components</h3>
+<ul>
+<li><strong>Author block:</strong> 36px avatar · name + verified badge · org · time ago · publish date</li>
+<li><strong>AI summary:</strong> Collapsed toggle button (pill shape, chevron icon). Expands to panel with 4–6 bullets, source refs, regenerate link. Panel: <code>--bg-surface</code> bg, subtle border, 12px radius.</li>
+<li><strong>Markdown body:</strong> Full rich-text rendering — headings, code blocks (dark bg), blockquotes (left border, serif italic), figures, stat tables</li>
+<li><strong>Meta row:</strong> Tag pills + external source link at article end</li>
+<li><strong>Engage strip:</strong> Like count · Comment count · Save count · View count</li>
+<li><strong>Floating bottom bar:</strong> Two pill components — actions pill (Like/Save/Share/Jump to comments) + composer pill (comment input, expands on click)</li>
+<li><strong>Comments:</strong> Sort dropdown (Newest/Oldest/Most Liked) · threaded at one level (replies indented with left border) · inline reply input · OP badge · role badge (mono)</li>
+</ul>
+<h3>States</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>State</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logged-in</td>
+<td>All actions work. Composer shows avatar + input. New Post CTA in sidebar.</td>
+</tr>
+<tr>
+<td>Logged-out</td>
+<td>Like/Save → auth gate. Composer replaced with "Sign in to comment" bar. Sign In CTA in sidebar.</td>
+</tr>
+<tr>
+<td>AI panel open</td>
+<td>Chevron rotates 180°, panel animates open with max-height transition 280ms</td>
+</tr>
+<tr>
+<td>Composer expanded</td>
+<td>Single-line → multi-line textarea + char count + send button</td>
+</tr>
+<tr>
+<td>Like toggled</td>
+<td>Icon fills, weight goes to 600, count increments</td>
+</tr>
+<tr>
+<td>Share clicked</td>
+<td>Toast: "Link copied to clipboard"</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="page-post-editor">3.3 Post Editor</h2>
+<p><strong>Route:</strong> <code>/post/new</code> · <code>/post/:id/edit</code></p>
+<h3>Layout</h3>
+<ul>
+<li>Grid: <code>60px sidebar (collapsed) | 1fr main</code></li>
+<li>Topbar: ← Back + word count pill + status pill + Publish btn + avatar</li>
+<li>Canvas: centered, max-width 760px</li>
+</ul>
+<h3>Components</h3>
+<ul>
+<li><strong>Cover zone:</strong> Add cover image button (dashed border) → file picker → 3:2 preview with remove button</li>
+<li><strong>Title input:</strong> 32px, 700 weight, auto-resize textarea</li>
+<li><strong>Toolbar:</strong> Bold · Italic · Code · Code block | Link · Image | H1 · H2 · H3 · Blockquote · Divider | Edit/Preview toggle. Each button 32×32px, tooltip on hover.</li>
+<li><strong>Editor area:</strong> Mono font textarea (14px, line-height 1.7). Preview mode renders markdown with full .md styles.</li>
+<li><strong>Meta section:</strong> Sources (multi-URL, add/remove rows) + Tags (chip input, max 10)</li>
+<li><strong>Modals:</strong> Link insert, Image insert, Publish confirmation</li>
+</ul>
+<h3>States</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>State</th>
+<th>Visual</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Draft</td>
+<td>Grey dot in status pill, label "Draft"</td>
+</tr>
+<tr>
+<td>Saving</td>
+<td>Yellow dot (<code>--warning</code>), label "Saving…" — triggers 2s after last keystroke</td>
+</tr>
+<tr>
+<td>Saved</td>
+<td>Green dot (<code>--success</code>), label "Saved"</td>
+</tr>
+<tr>
+<td>Published</td>
+<td>Green dot, label "Published", toast "Post published to Verita"</td>
+</tr>
+<tr>
+<td>Publish confirm</td>
+<td>Centered modal: icon + "Ready to publish?" + "Keep editing" / "Publish now" buttons</td>
+</tr>
+<tr>
+<td>Preview mode</td>
+<td>Toolbar buttons disabled, markdown rendered in .md styles, "Preview" badge shown</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="page-search">3.4 Search Results</h2>
+<p><strong>Route:</strong> <code>/search?q=</code></p>
+<h3>Layout</h3>
+<ul>
+<li>Grid: <code>240px sidebar (full) | 1fr main</code></li>
+<li>Same Home v3 masonry rules (CSS columns, 3/2/1 cols at 1280 / 880 breakpoints, organic stagger), no tag filter bar</li>
+<li>Search input pre-filled with query, has clear (×) button</li>
+</ul>
+<h3>Components</h3>
+<ul>
+<li><strong>Results header:</strong> "{N} results for {query}" — count in 600 weight, query in mono code pill</li>
+<li><strong>Masonry grid:</strong> Same Home v3 frameless card variants (image, text-quote, thread). Skeletons alternate between cover-style and cream-block-style during load.</li>
+</ul>
+<h3>States</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>State</th>
+<th>Visual</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Results</td>
+<td>Results header + masonry grid of matching cards</td>
+</tr>
+<tr>
+<td>Loading</td>
+<td>"Searching…" header + skeleton card grid (shimmer pulse)</td>
+</tr>
+<tr>
+<td>Empty</td>
+<td>"0 results" header + centered empty state: search icon, "No results found" title, description with query echo, Clear search / Browse feed buttons</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="page-user-profile">3.5 User Profile</h2>
+<p><strong>Route:</strong> <code>/profile/:username</code></p>
+<h3>Layout</h3>
+<ul>
+<li>Grid: <code>60px sidebar (collapsed) | 1fr main</code></li>
+<li>Topbar: ← Back + full search + avatar</li>
+<li>Profile content: max-width 900px, centered</li>
+</ul>
+<h3>Components</h3>
+<ul>
+<li><strong>Profile header:</strong> 80px circle avatar (with edit pencil on own profile) · display name + verified badge · @handle · bio · meta row (org, joined date, website) · stats row (posts, followers, following, likes received)</li>
+<li><strong>Tabs (sticky):</strong> Posts (count) · Bookmarks (count) · Drafts (count) · Likes (count). Active tab: accent underline + accent count badge.</li>
+<li><strong>Posts grid:</strong> 3-column masonry of frameless post cards (Home v3 system) — cover image with own 12px radius and 4:3 aspect-ratio, title 19px / 700 below cover, 26px avatar in author row, no card chrome, no internal divider. Text-only posts use the cream block (<code>oklch(97% 0.012 80)</code>) applied to <code>.card-body</code> so the eyebrow + title + summary live inside the cream and the footer (likes/views/manage) sits below as bare text. Own profile shows ⋯ manage button anchored top-right of the cover.</li>
+<li><strong>Draft cards:</strong> Dashed border kept (functional cue: "not published yet"), yellow "DRAFT" status label, 3 action buttons inline (Publish/Edit/Delete), title scaled to v3 17px / 700.</li>
+<li><strong>Edit Profile modal:</strong> Avatar section + form fields (Display Name, Bio, Organization, Website, Research Interests) + save/cancel.</li>
+<li><strong>Delete confirmation modal:</strong> Red icon + title + description + post preview snippet + Cancel/Delete buttons.</li>
+</ul>
+<h3>States</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>State</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Own profile</td>
+<td>All tabs visible. Edit pencil on avatar. ⋯ manage on published posts. Draft tab shown.</td>
+</tr>
+<tr>
+<td>Other profile</td>
+<td>Only Posts tab guaranteed. Bookmarks/Likes visibility depends on privacy settings.</td>
+</tr>
+<tr>
+<td>Logged-out</td>
+<td>Only Posts tab visible. No edit controls.</td>
+</tr>
+<tr>
+<td>Manage menu</td>
+<td>Portaled dropdown (fixed position): Edit → Editor, Unpublish → converts to draft, Delete → confirmation modal.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="page-digest-mgmt">3.6 Digest Management</h2>
+<p><strong>Route:</strong> <code>/digest</code></p>
+<h3>Layout</h3>
+<ul>
+<li>Grid: <code>60px sidebar (collapsed) | 1fr main</code></li>
+<li>Topbar: ← Back + centered search + avatar/sign-in</li>
+<li>Tab bar: "Past Digests" | "Manage Topics"</li>
+</ul>
+<h3>Past Digests Tab</h3>
+<ul>
+<li><strong>Today hero (logged-in):</strong> Dark card (<code>#0A0A0A</code>), serif italic title, subtitle, meta row (events/mins/generated time), "Read →" CTA. Toggle between Generated/Generating states.</li>
+<li><strong>Sign-in hero (logged-out):</strong> Dark card with upsell — "Sign in for your personalised digest" + Log in / Create account buttons.</li>
+<li><strong>Digest grid:</strong> 4-column grid of <strong>frameless cream blocks</strong> (<code>oklch(97% 0.012 80)</code>, 12px radius, 18px internal padding) holding date eyebrow (mono uppercase) + title as the in-block "pull quote" parallel. Topic pills, footer meta (events + mins), and "Read →" link sit BELOW the cream block as bare text — same scan rhythm as Home v3 text cards.</li>
+<li><strong>Load more:</strong> Button below grid, paginates by 10.</li>
+</ul>
+<h3>Manage Topics Tab</h3>
+<ul>
+<li><strong>Logged-in:</strong> Category groups (Research, Models &amp; Labs, Applications, Engineering) with 5-column topic cards. Each card: tag name, post count, activity bar, follow/unfollow button, follower count. Expand for more topics per category.</li>
+<li><strong>Logged-out:</strong> Gate screen — "Sign in to manage your topics" + Log in / Create account.</li>
+<li><strong>Save bar:</strong> Fixed bottom, "Following N topics" + Reset / Save preferences buttons.</li>
+</ul>
+<hr>
+<h2 id="page-digest-post">3.7 Digest Post</h2>
+<p><strong>Route:</strong> <code>/digest/:date</code></p>
+<h3>Layout</h3>
+<p>Same reader-column layout as Post Detail (720px max). Reading progress bar at top.</p>
+<h3>Differences from Post Detail</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>Element</th>
+<th>Digest Post</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Author row</td>
+<td>"Verita AI Digest" badge (dark bg) + date + read time (mono pill)</td>
+</tr>
+<tr>
+<td>Title</td>
+<td>"Your Monday Digest" (logged-in) / "Today's Digest — May 13" (logged-out)</td>
+</tr>
+<tr>
+<td>Topic pills row</td>
+<td>Horizontal tag pills below title</td>
+</tr>
+<tr>
+<td>Personalization slot</td>
+<td>Logged-in: subtle callout "Personalised from 4 topics · Manage →". Logged-out: dark upsell banner.</td>
+</tr>
+<tr>
+<td>Body</td>
+<td>Structured topic events: headline + source (domain + time) + bullet list + external link</td>
+</tr>
+<tr>
+<td>Comments</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Floating bar</td>
+<td>Save + Share only (no Like, no Comment)</td>
+</tr>
+<tr>
+<td>Footer</td>
+<td>"Generated by Verita AI" + "Manage Digest →" link (logged-in only)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="page-admin">3.8 Admin</h2>
+<p><strong>Route:</strong> <code>/admin</code></p>
+<h3>Layout</h3>
+<ul>
+<li>Grid: <code>60px sidebar (collapsed) | 1fr main</code></li>
+<li>Topbar: "Admin" title (serif italic) + ADMIN badge + auth state toggle</li>
+<li>Tab bar: Moderation (count badge) | Users</li>
+</ul>
+<h3>Moderation Tab</h3>
+<p>Table: Type (post/comment pill) · Content preview (2-line clamp) + author · Reporter count (warning color) · Flagged date (mono) · Actions (Delete / Dismiss).</p>
+<h3>Users Tab</h3>
+<p>Table: User (avatar + name + @handle) · Email (mono) · Role pill (user/verified/admin) · Joined date · Status (active/banned) · Actions (role dropdown + ban/unban button).</p>
+<p>Searchable via top-right search input. Empty state shown when no results.</p>
+<h3>States</h3>
+<table class="state-table">
+<thead>
+<tr>
+<th>State</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Admin role</td>
+<td>Full table UI shown</td>
+</tr>
+<tr>
+<td>Non-admin / Guest</td>
+<td>Access Denied screen: lock icon, "Access denied" heading, "← Back to Home" CTA</td>
+</tr>
+<tr>
+<td>Delete action</td>
+<td>Confirmation dialog overlay with content snippet preview. On confirm: row fades with red flash, toast "Content deleted permanently."</td>
+</tr>
+<tr>
+<td>Dismiss action</td>
+<td>Row fades with yellow flash, toast "Flag dismissed — content preserved."</td>
+</tr>
+<tr>
+<td>Role change</td>
+<td>Immediate re-render, toast "@handle role changed: old → new"</td>
+</tr>
+<tr>
+<td>Ban/unban</td>
+<td>Immediate re-render, toast message</td>
+</tr>
+<tr>
+<td>All flags cleared</td>
+<td>Empty state: checkmark icon, "No flagged content" message</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="page-settings">3.9 Settings</h2>
+<p><strong>Type:</strong> Modal overlay (no dedicated route)</p>
+<p>Triggered by sidebar Settings item (logged-in only). Rendered as a modal over whatever page is currently active. See <a href="#25-settings-modal">2.5 Settings Modal</a> for component spec.</p>
+<hr>
+<h2 id="page-404">3.10 404</h2>
+<p><strong>Route:</strong> <code>*</code> (catch-all)</p>
+<h3>Layout</h3>
+<p>Full-viewport centered, no sidebar. Single card (max-width 520px) on <code>--bg-surface</code> bg:</p>
+<ul>
+<li><strong>Kicker:</strong> "route not found · error 404" (mono, 11px, uppercase)</li>
+<li><strong>Numeral:</strong> "404" (serif italic, 72–120px responsive clamp)</li>
+<li><strong>Headline:</strong> "This page has gone off the record." (serif italic 22px)</li>
+<li><strong>Body:</strong> Explanation copy (14px, secondary color)</li>
+<li><strong>Actions:</strong> "Go back" (primary btn with ← arrow) + "Back to Home" (ghost link)</li>
+<li><strong>Wordmark</strong> below card</li>
+</ul>
+<hr>
+<h2 id="4-interaction-patterns">4. Interaction Patterns</h2>
+<h2 id="auth-gate">4.1 Auth Gate</h2>
+<p>Any auth-gated action performed while logged out triggers the Auth Modal instead of executing the action. Gated actions:</p>
+<ul>
+<li>Like/Save a post or comment (Post Detail, Digest Post)</li>
+<li>Submit a comment or reply (Post Detail)</li>
+<li>Create a new post (sidebar CTA)</li>
+<li>Open Settings</li>
+<li>Manage digest topics</li>
+</ul>
+<p>The Auth Modal stores the intended action and executes it after successful login (e.g., auto-focus comment input).</p>
+<hr>
+<h2 id="back-nav">4.2 Back Navigation</h2>
+<p>Sub-pages show a <code>← Label</code> button in the top-left of the topbar. Label reflects the previous page context:</p>
+<pre><code>← Explore     (from Home Feed)
+← Search      (from Search Results)
+← Digest      (from Digest Management)
+← Post        (from Post Detail → Profile)
+</code></pre>
+<ul>
+<li>Set via <code>location.state.from</code> when navigating via React Router</li>
+<li>Fallback: <code>← Explore</code> when state is absent (direct URL access)</li>
+<li>Click action: <code>navigate(-1)</code> (history back)</li>
+</ul>
+<hr>
+<h2 id="modal-dismiss">4.3 Modal Dismiss</h2>
+<p>All modals (Auth, Settings, Edit Profile, Delete Confirm, Link Insert, Image Insert, Publish Confirm) support three dismiss methods:</p>
+<ol>
+<li>Click backdrop (outside modal)</li>
+<li>Press <code>Escape</code></li>
+<li>Click explicit × close button (where present)</li>
+</ol>
+<p>Auth Modal close returns to current page. Settings modal close just hides it. Destructive modals (Delete) require explicit action — backdrop/Escape also dismisses without action.</p>
+<hr>
+<h2 id="sidebar-behavior">4.4 Sidebar Behavior</h2>
+<table class="state-table">
+<thead>
+<tr>
+<th>Behavior</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mode A — Static (full-width)</td>
+<td>Home Feed, Search Results, Settings, Home + Settings: sidebar is always <strong>240px</strong> wide, no collapse/expand. Brand block (88px tall, content centered horizontally + flex-end vertically with 16px bottom padding) renders the "Verita" wordmark always.</td>
+</tr>
+<tr>
+<td>Mode B — Rail (hover-expand)</td>
+<td>All others (Post Detail, Post Editor, Digest Post, User Profile, Admin, Digest Management): sidebar is <strong>60px</strong> rail. On hover, grid column transitions to <strong>240px</strong>, sidebar width expands, labels and badges fade in (150ms, 60ms delay). Brand block always 88px; collapsed shows only "V" (38px serif italic 600, optical-centered with <code>transform: translateX(-2px)</code>); JS swaps <code>textContent</code> from "V" to "Verita" on <code>mouseenter</code> of the sidebar.</td>
+</tr>
+<tr>
+<td>Grid transition</td>
+<td><code>grid-template-columns</code> transitions via <code>:has(.sidebar:hover)</code> — 200ms ease.</td>
+</tr>
+<tr>
+<td>CTA / FAB</td>
+<td>Mode A: full-width "+ New post" / "Sign in" button. Mode B collapsed: 36×36 icon button centered horizontally in the rail. Mode B hover-expanded: morphs to full-width "+ New post" matching Mode A.</td>
+</tr>
+<tr>
+<td>Auth toggle (prototype)</td>
+<td>Mode A: in sidebar spacer. Mode B: in top bar center (<code>left:50%; transform: translate(-50%, -50%)</code>) so the rail stays clean.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="autosave">4.5 Auto-save</h2>
+<p>Post Editor specific:</p>
+<ul>
+<li><strong>Debounced:</strong> triggers 2 seconds after user stops typing</li>
+<li><strong>Status progression:</strong> <strong>Draft</strong> (grey dot) → <strong>Saving…</strong> (yellow dot) → <strong>Saved</strong> (green dot)</li>
+<li><strong>Nav guard:</strong> if status is Draft and content is non-empty, attempting to navigate away triggers "Discard unsaved changes?" dialog</li>
+<li>If status is Saving…, wait for save completion then navigate silently</li>
+<li>If status is Saved, navigate freely</li>
+</ul>
+<hr>
+<h2 id="reading-progress">4.6 Reading Progress</h2>
+<ul>
+<li>2px fixed bar at very top of viewport (z-index 100)</li>
+<li>Background: transparent. Bar: <code>--accent</code> (<code>#0A0A0A</code>)</li>
+<li>Width: percentage of article scroll position. Transitions at 60ms linear for smooth tracking.</li>
+<li>Used on: Post Detail, Digest Post</li>
+</ul>
+
+</main>
+</div>
+</body>
+</html>

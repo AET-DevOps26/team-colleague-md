@@ -1,0 +1,380 @@
+<!doctype html>
+<!--
+  P10 — Auth & Sign-in Flow
+  Scope:      Modal-bound auth choreography. Composes C01 (CTA), C02 (field-box,
+              error reveal, shake), C03 (modal mount), C04 (welcome toast),
+              C10 (avatar morph on success) and orchestrates a multi-step
+              email → password OR email → OTP flow.
+  Spec:       docs/Animation Spec.md  §  Pages · Auth
+  Source:     pages/Verita Auth.html
+  React hint: <AuthFlow>, useAuthStep(), useOTPInput(), useSubmitState()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Auth & Sign-in Flow · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; }
+  .stage h4 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 10px; }
+
+  /* ─── Field-box (1:1 from Verita Auth.html:128–139) ─────────── */
+  .ax-field { margin: 0 0 12px; }
+  .ax-field-header { font: 500 12px var(--font-sans); color: var(--text-secondary); margin-bottom: 6px; }
+  .field-box {
+    height: 44px; border-radius: 8px; background: var(--bg-elevated);
+    border: 1px solid var(--border-default); display: flex; align-items: center;
+    gap: 8px; padding: 0 14px; transition: border-color 120ms;
+  }
+  .field-box:focus-within { border-color: var(--text-primary); }
+  .field-box.error { border-color: var(--danger); }
+  .field-box input { flex: 1; min-width: 0; font: 400 13.5px var(--font-sans); background: transparent; border: 0; outline: 0; color: var(--text-primary); }
+  .field-box input::placeholder { color: var(--text-tertiary); }
+  .field-error { margin-top: 6px; font-size: 11.5px; color: var(--danger); font-weight: 500; opacity: 0; max-height: 0; overflow: hidden; transition: opacity 160ms ease-out, max-height 160ms ease-out; }
+  .ax-field.has-error .field-error { opacity: 1; max-height: 24px; }
+
+  /* ─── Step panel transition (mirrors Verita Auth.html:97 modalIn) ── */
+  .step-panel {
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: #fff;
+    padding: 22px; min-height: 230px;
+  }
+  .step-panel .step { display: none; animation: stepIn 200ms cubic-bezier(0.16,1,0.3,1) both; }
+  .step-panel .step.active { display: block; }
+  @keyframes stepIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .step-title { font: 600 17px var(--font-sans); letter-spacing: -0.01em; margin: 0 0 6px; }
+  .step-sub { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; margin: 0 0 16px; }
+
+  /* ─── OTP grid (1:1 from Verita Auth.html:159–175) ──────────── */
+  .otp-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 8px; margin: 14px 0 4px; }
+  .otp-cell {
+    height: 52px; border-radius: 8px;
+    background: var(--bg-elevated); border: 1px solid var(--border-default);
+    display: grid; place-items: center; position: relative;
+    font-family: var(--font-mono); font-size: 22px; font-weight: 500;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .otp-cell.focused { border-color: var(--text-primary); box-shadow: 0 0 0 4px rgba(10,10,10,0.06); background: #fff; }
+  .otp-cell input {
+    position: absolute; inset: 0; opacity: 0;
+    text-align: center; font-family: var(--font-mono); font-size: 22px;
+    background: none; border: 0; outline: 0; cursor: default; caret-color: transparent;
+  }
+  .otp-cell.filled input { opacity: 1; background: none; }
+  .otp-caret { width: 1.5px; height: 22px; background: var(--text-primary); animation: caret 1s steps(2) infinite; }
+  @keyframes caret { 0%,50% { opacity:1; } 51%,100% { opacity:0; } }
+
+  /* ─── Submit / CTA (1:1 from Verita Auth.html:142–148) ──────── */
+  .cta {
+    width: 100%; height: 44px; border-radius: 8px;
+    background: var(--text-primary); color: #fff; font: 600 13.5px var(--font-sans);
+    border: 0; cursor: pointer; transition: background 120ms; margin-top: 4px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .cta:hover { background: #333; }
+  .cta:disabled { background: var(--border-default); cursor: not-allowed; }
+  .cta .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; border-radius: 999px; animation: spin 700ms linear infinite; display: none; }
+  .cta.pending .spinner { display: inline-block; }
+  .cta.pending .label { opacity: 0.85; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Field shake (Extended — proposed in C02 §Extended) ────── */
+  @keyframes field-shake {
+    0%,100% { transform: translateX(0); }
+    20%,60% { transform: translateX(-4px); }
+    40%,80% { transform: translateX(4px); }
+  }
+  .field-box.shake { animation: field-shake 320ms var(--ease-out, cubic-bezier(0.22,1,0.36,1)); }
+
+  /* ─── Success morph (Extended) ──────────────────────────────── */
+  .cta.success { background: var(--success, #2f9e58); }
+  .cta.success .label { display: none; }
+  .cta .check { display: none; }
+  .cta.success .check { display: inline-block; animation: checkDraw 280ms ease-out both; }
+  @keyframes checkDraw { from { stroke-dashoffset: 22; } to { stroke-dashoffset: 0; } }
+
+  /* ─── Triggers / hint ───────────────────────────────────────── */
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  .back { margin-top: 80px; display: inline-block; color: var(--text-secondary); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; transition: color 120ms, border-color 120ms; }
+  .back:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .step-panel .step { animation: none !important; }
+    .field-box.shake { animation: none !important; }
+    .cta.success .check { animation: none !important; }
+    .otp-caret { animation: none !important; opacity: 1; }
+    .field-error { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+
+    <header class="lead-block">
+      <div class="wordmark"><span class="lead">V</span>erita</div>
+      <h1>Auth &amp; Sign-in Flow</h1>
+      <ul class="scope">
+        <li>Page-level orchestration of the modal-bound auth flow — field focus, step transitions, OTP entry, and submit feedback.</li>
+        <li>Composes <a href="../components/01 Buttons & Links.html">C01</a>, <a href="../components/02 Form Fields & Validation.html">C02</a>, <a href="../components/03 Modals & Dialogs.html">C03</a>, <a href="../components/04 Toasts & Notifications.html">C04</a>, <a href="../components/10 Avatars & Identity.html">C10</a>.</li>
+        <li>Field-box focus (production), step panel `modalIn` (production), OTP cell focus shift (production), submit pending + error shake + success morph (extended).</li>
+      </ul>
+      <span class="status live">Status: Live</span>
+    </header>
+
+    <section>
+      <h2>Choreography timeline</h2>
+      <p>Time origin (<code>t=0</code>) is the moment the auth modal mounts. The flow is single-pane — internal step changes re-fire the same <code>modalIn</code> keyframe rather than sliding sideways.</p>
+      <table class="timeline">
+        <thead><tr><th>t=</th><th>Actor</th><th>Motion</th><th>Source / component</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Modal card</td><td>opacity 0→1 + translateY(8px)→0 + scale(0.98)→1, 200ms cubic-bezier(0.16,1,0.3,1)</td><td>Production · <code>Verita Auth.html:97</code> · C03 §1</td></tr>
+          <tr><td>onFocus email</td><td>Field-box</td><td>border-color 120ms → <code>--text-primary</code>, no bg flip</td><td>Production · <code>Verita Auth.html:128–132</code> · C02 §1</td></tr>
+          <tr><td>onClick submit</td><td>CTA</td><td>background 120ms → <code>--border-default</code> (disabled), inline spinner fades in</td><td>Extended · proposed in C01 §pending</td></tr>
+          <tr><td>onSubmitError</td><td>Field-box</td><td>border-color → <code>--danger</code> + 320ms shake (3 cycles, ±4px)</td><td>Production border (<code>Auth:133</code>) + Extended shake (C02 §error-shake)</td></tr>
+          <tr><td>onSubmitOk → step OTP</td><td>Step panel</td><td><code>display:none</code> swap + <code>animation:none</code> reflow → <code>stepIn</code> (= modalIn) re-fires 200ms</td><td>Production · <code>Verita Auth.html:327–330</code></td></tr>
+          <tr><td>step OTP onFocus</td><td>OTP cell</td><td>border-color + box-shadow 0 0 0 4px rgba(10,10,10,0.06), bg → #fff, 120ms</td><td>Production · <code>Verita Auth.html:165–174</code></td></tr>
+          <tr><td>onInput OTP</td><td>Caret + cell</td><td><code>.focused</code> shifts to next cell (border + 4px shadow), 1s steps(2) blink retires</td><td>Production · <code>Verita Auth.html:174–175, 403–416</code></td></tr>
+          <tr><td>onVerify ok</td><td>CTA</td><td>background 280ms → <code>--success</code>, label hides, ✓ stroke-draws 280ms</td><td>Extended — success morph proposal</td></tr>
+          <tr><td>+200ms</td><td>Modal</td><td>Dismiss → C03 close keyframe; in parallel: avatar morph (C10), welcome toast (C04)</td><td>Cross-component — orchestration only</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="divided">
+      <h2>Field-box focus <span class="tier prod">Production</span></h2>
+      <p>The <code>.field-box</code> is the densest motion contract in the auth flow — and the divergent one in the system. 44px height, 8px radius, <code>--bg-elevated</code> background that <em>does not</em> flip on focus (every other field family on a tinted surface does). Only the border-color animates, 120ms linear. Cited 1:1 from <code>pages/Verita Auth.html:128–139</code>; canonicalized in <a href="../components/02 Form Fields & Validation.html">C02 §1</a>.</p>
+      <div class="stage">
+        <div class="ax-field">
+          <div class="ax-field-header">Email</div>
+          <div class="field-box"><input type="email" placeholder="you@domain.com" value="alex@verita.app"></div>
+        </div>
+        <div class="ax-field" id="pwField">
+          <div class="ax-field-header">Password</div>
+          <div class="field-box" id="pwBox"><input type="password" placeholder="••••••••" id="pwInput"></div>
+          <div class="field-error">Please enter your password</div>
+        </div>
+        <p class="hint">Tab through to compare focus rings: the field-box has none — only a border swap. Why no bg-flip: the modal already sits on <code>#fff</code>, so flipping the field bg from elevated to white would close the contrast against its container. See Plan.md §From P10 audit.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Step panel transition <span class="tier prod">Production</span></h2>
+      <p>The auth modal is a single pane that re-mounts its content per step (login → forgot → OTP). Production does not slide sideways — it forces a reflow and re-fires the same <code>modalIn</code> keyframe (200ms cubic-bezier(0.16,1,0.3,1), opacity + translateY(8px) + scale(0.98)). Cited from <code>Verita Auth.html:97–100</code> (keyframe) and <code>:327–330</code> (the reflow trick).</p>
+      <div class="stage">
+        <div class="step-panel" id="stepPanel">
+          <div class="step active" data-step="email">
+            <div class="step-title">Log in</div>
+            <div class="step-sub">Enter the email tied to your account.</div>
+            <div class="ax-field">
+              <div class="ax-field-header">Email</div>
+              <div class="field-box"><input type="email" placeholder="you@domain.com" value="alex@verita.app"></div>
+            </div>
+            <button class="cta" id="goOtp"><span class="label">Continue</span></button>
+          </div>
+          <div class="step" data-step="otp">
+            <div class="step-title">Verify your email</div>
+            <div class="step-sub">Enter the 6-digit code we sent to <strong>alex@verita.app</strong>.</div>
+            <div class="otp-grid" id="otpGrid"></div>
+            <button class="cta" id="goBack" style="margin-top:14px;background:transparent;color:var(--text-secondary);border:1px solid var(--border-default);">← Back</button>
+          </div>
+        </div>
+        <p class="hint"><code>useAuthStep()</code> exposes <code>{ step, goTo(step) }</code>; <code>goTo</code> sets the active class then re-flushes <code>animation</code> via <code>el.offsetHeight</code>.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>OTP cell focus shift <span class="tier prod">Production</span></h2>
+      <p>Each cell is 52px / 8px / <code>--bg-elevated</code>. The <code>.focused</code> modifier (applied JS-side when the underlying input has focus and the cell is empty) flips border to <code>--text-primary</code>, paints a 4px shadow <code>rgba(10,10,10,0.06)</code>, and the bg to <code>#fff</code>. A 1.5px caret blinks at 1s <code>steps(2)</code>. Cited 1:1 from <code>Verita Auth.html:160–175</code>.</p>
+      <div class="stage">
+        <div class="otp-grid" id="otpDemoGrid"></div>
+        <div class="triggers"><button class="trigger" id="otpFocus">Focus first cell</button><button class="trigger" id="otpFill">Type "428193"</button></div>
+        <p class="hint"><code>useOTPInput(length=6)</code> returns <code>{ cells, value, isComplete }</code>. The hook owns the focus-shift logic; cells are presentational.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Submit + error states <span class="tier ext">Extended</span></h2>
+      <p>Production wires error reveal as a <code>display: flex</code> flip on <code>.field-error</code> + <code>.error</code> class on <code>.field-box</code> (border → danger). No shake, no spinner, no success morph exist in production — these are extended proposals that line up with C01 §press and C02 §error-shake (320ms 3-cycle, ±4px). The success ✓ stroke-draw (280ms) replaces the route-change confirmation that today is silent.</p>
+      <div class="stage">
+        <div class="ax-field" id="submitField">
+          <div class="ax-field-header">Password</div>
+          <div class="field-box" id="submitBox"><input type="password" placeholder="••••••••" id="submitInput" value=""></div>
+          <div class="field-error">Please enter your password</div>
+        </div>
+        <button class="cta" id="submitBtn">
+          <span class="spinner"></span>
+          <span class="label">Log in</span>
+          <svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="22"><path d="m5 12 5 5L20 7"/></svg>
+        </button>
+        <div class="triggers">
+          <button class="trigger" id="simErr">Simulate error</button>
+          <button class="trigger" id="simOk">Simulate success</button>
+          <button class="trigger" id="reset">Reset</button>
+        </div>
+        <p class="hint"><code>useSubmitState()</code> returns <code>{ status, submit() }</code> — status flows <code>idle → pending → (error|success) → idle</code>. The shake is a one-shot class swap; success persists 600ms then bubbles up to the parent for the close-and-update sequence.</p>
+      </div>
+    </section>
+
+    <div class="react-hint">
+      <h3>React contract</h3>
+      <dl>
+        <dt>Layout</dt><dd><code>&lt;AuthFlow initialStep="email" onSuccess={(user) =&gt; ...} /&gt;</code> — owns the step state + submit lifecycle; renders inside <code>&lt;Modal&gt;</code> (C03).</dd>
+        <dt>Hooks</dt><dd><code>useAuthStep()</code>, <code>useOTPInput(6)</code>, <code>useSubmitState()</code></dd>
+        <dt>Composes</dt>
+        <dd>
+          <div class="composes">
+            <a href="../components/01 Buttons & Links.html">C01 Button (CTA)</a>
+            <a href="../components/02 Form Fields & Validation.html">C02 FieldBox</a>
+            <a href="../components/03 Modals & Dialogs.html">C03 Modal</a>
+            <a href="../components/04 Toasts & Notifications.html">C04 WelcomeToast</a>
+            <a href="../components/10 Avatars & Identity.html">C10 AvatarMorph</a>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <a class="back" href="../00 Index.html">← Back to Index</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ─── Step panel: production reflow trick (Auth:327–330) ────────
+  const panel = document.getElementById('stepPanel');
+  function goStep(name) {
+    panel.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.dataset.step === name));
+    panel.style.animation = 'none'; panel.offsetHeight; panel.style.animation = '';
+    if (name === 'otp') buildOtp(document.getElementById('otpGrid'));
+  }
+  document.getElementById('goOtp')?.addEventListener('click', () => goStep('otp'));
+  document.getElementById('goBack')?.addEventListener('click', () => goStep('email'));
+
+  // ─── OTP grid (production logic, Auth:386–416) ─────────────────
+  function buildOtp(grid) {
+    grid.innerHTML = '';
+    const inputs = [];
+    for (let i = 0; i < 6; i++) {
+      const cell = document.createElement('div'); cell.className = 'otp-cell';
+      const inp = document.createElement('input'); inp.maxLength = 1; inp.inputMode = 'numeric';
+      cell.appendChild(inp); grid.appendChild(cell);
+      inputs.push({ cell, inp });
+    }
+    function update() {
+      inputs.forEach(({ cell, inp }) => {
+        const filled = inp.value !== '';
+        const focused = document.activeElement === inp;
+        cell.classList.toggle('filled', filled);
+        cell.classList.toggle('focused', focused && !filled);
+        let caret = cell.querySelector('.otp-caret');
+        if (focused && !filled) {
+          if (!caret) { caret = document.createElement('span'); caret.className = 'otp-caret'; cell.appendChild(caret); }
+        } else if (caret) caret.remove();
+      });
+    }
+    inputs.forEach(({ cell, inp }, i) => {
+      inp.addEventListener('focus', update); inp.addEventListener('blur', update);
+      inp.addEventListener('input', () => { if (inp.value && i < 5) inputs[i+1].inp.focus(); update(); });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !inp.value && i > 0) { inputs[i-1].inp.focus(); e.preventDefault(); }
+      });
+      cell.addEventListener('click', () => inp.focus());
+    });
+    return inputs;
+  }
+  const demoGrid = document.getElementById('otpDemoGrid');
+  const demoInputs = buildOtp(demoGrid);
+  document.getElementById('otpFocus')?.addEventListener('click', () => demoInputs[0].inp.focus());
+  document.getElementById('otpFill')?.addEventListener('click', () => {
+    const code = '428193';
+    demoInputs.forEach(({ inp }, i) => { inp.value = code[i]; });
+    demoInputs[5].inp.focus();
+    demoInputs.forEach(({ cell, inp }) => {
+      cell.classList.toggle('filled', inp.value !== '');
+      cell.classList.remove('focused');
+      cell.querySelector('.otp-caret')?.remove();
+    });
+  });
+
+  // ─── Submit + error states ────────────────────────────────────
+  const sBtn = document.getElementById('submitBtn');
+  const sBox = document.getElementById('submitBox');
+  const sField = document.getElementById('submitField');
+  function reset() {
+    sBtn.classList.remove('pending', 'success'); sBtn.disabled = false;
+    sBox.classList.remove('error', 'shake'); sField.classList.remove('has-error');
+  }
+  document.getElementById('reset')?.addEventListener('click', reset);
+  document.getElementById('simErr')?.addEventListener('click', () => {
+    reset(); sBtn.classList.add('pending'); sBtn.disabled = true;
+    setTimeout(() => {
+      sBtn.classList.remove('pending'); sBtn.disabled = false;
+      sBox.classList.add('error'); sField.classList.add('has-error');
+      sBox.classList.remove('shake'); sBox.offsetHeight; sBox.classList.add('shake');
+    }, 700);
+  });
+  document.getElementById('simOk')?.addEventListener('click', () => {
+    reset(); sBtn.classList.add('pending'); sBtn.disabled = true;
+    setTimeout(() => {
+      sBtn.classList.remove('pending'); sBtn.classList.add('success');
+    }, 700);
+  });
+  document.getElementById('submitInput')?.addEventListener('input', () => {
+    sBox.classList.remove('error'); sField.classList.remove('has-error');
+  });
+})();
+</script>
+</body>
+</html>

@@ -5,9 +5,8 @@
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  border-top: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.85);
   gap: 0;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .tagbar::-webkit-scrollbar {
@@ -22,7 +21,7 @@
   color: var(--text-tertiary);
   font-weight: 500;
   white-space: nowrap;
-  transition: color 120ms ease-out;
+  transition: color var(--motion-hover);
   background: none;
   border: none;
   cursor: pointer;
@@ -39,7 +38,4 @@
 .chip.active {
   color: var(--text-primary);
   font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: 2px;
 }
