@@ -1,0 +1,353 @@
+<!doctype html>
+<!--
+  P01 — Home
+  Scope:      Logged-in feed home choreography. Composes C01 (FAB), C05 (cards),
+              C06 (tags), C07 (tooltips), C08 (loading). Page-layer is concerned
+              with sequencing and stickiness — not redefining motion.
+
+              Sections:
+                §1 Initial mount — greeting/hero entry
+                §2 Topbar shadow on scroll (production)
+                §3 Sidebar rail collapse/expand (proposal — pairs with C07)
+                §4 Tag filter row sticky behavior (production)
+                §5 Refresh — FAB spin + masonry feed cross-fade (production + extended)
+  Spec:       docs/Animation Spec.md  §  Pages · Home
+  Source:     pages/Verita Home.html
+  React hint: <HomeLayout>, <FeedRefresh>, useTopbarShadow(), useSidebarRail()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); overflow: auto; }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  /* ---- Mini Home storyboard ---- */
+  .home-mock {
+    display: grid;
+    grid-template-columns: var(--mock-side, 80px) 1fr;
+    height: 280px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-surface);
+    transition: grid-template-columns 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .home-mock.expanded { --mock-side: 180px; }
+  .home-mock .mock-side {
+    background: var(--bg-elevated);
+    padding: 12px 10px;
+    border-right: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column; gap: 8px;
+    overflow: hidden;
+  }
+  .mock-side .navitem {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px; border-radius: 6px;
+    font: 500 11.5px var(--font-sans); color: var(--text-secondary);
+    white-space: nowrap;
+    transition: opacity 200ms, padding 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .mock-side .navitem .ico { width: 14px; height: 14px; border-radius: 3px; background: var(--text-tertiary); flex-shrink: 0; }
+  .mock-side .navitem .lbl { transition: opacity 160ms; }
+  .home-mock:not(.expanded) .navitem .lbl { opacity: 0; }
+
+  .home-mock .mock-main { display: flex; flex-direction: column; min-width: 0; }
+  .mock-topbar {
+    height: 40px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid transparent;
+    position: relative;
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+  .mock-topbar.scrolled { border-bottom-color: var(--border-subtle); box-shadow: 0 4px 12px -8px rgba(0,0,0,0.12); }
+  .mock-topbar .search-input { flex: 1; max-width: 220px; height: 26px; border-radius: 7px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); }
+  .mock-topbar .signin { font: 500 10.5px var(--font-mono); padding: 4px 8px; border-radius: 5px; background: var(--text-primary); color: #fff; }
+
+  .mock-tagbar { display: flex; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 11px; color: var(--text-secondary); position: sticky; top: 0; background: var(--bg-surface); z-index: 1; }
+  .mock-tagbar .chip.active { color: var(--text-primary); font-weight: 600; }
+
+  .mock-feed { padding: 12px 14px; overflow-y: auto; flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mock-card { height: 60px; border-radius: 8px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); transition: opacity 220ms, transform 220ms; }
+  .mock-card.image { background: linear-gradient(135deg, oklch(72% 0.05 240), oklch(62% 0.08 270)); }
+  .mock-card.text { background: oklch(95% 0.02 70); }
+  .mock-card.digest { background: oklch(20% 0.01 250); }
+  .home-mock.refreshing .mock-card { opacity: 0; transform: translateY(8px); }
+
+  .mock-fab {
+    position: absolute;
+    right: 14px; bottom: 14px;
+    width: 38px; height: 38px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    display: grid; place-items: center;
+    box-shadow: 0 8px 22px -6px rgba(0,0,0,0.28);
+    cursor: pointer;
+    border: 0;
+  }
+  .mock-fab svg { width: 16px; height: 16px; transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1); }
+  .mock-fab.spinning svg { transform: rotate(360deg); }
+  .mock-main { position: relative; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-mock, .mock-side .navitem, .mock-topbar, .mock-card, .mock-fab svg { transition: none !important; animation: none !important; }
+    .home-mock.refreshing .mock-card { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-header">
+  <span class="demo-title">P01 · Home</span>
+  <span class="demo-spec">hero entry · topbar shadow · sidebar rail · sticky tagbar · refresh choreography</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<div class="demo-stage">
+<div class="wrap">
+
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Home</h1>
+    <ul class="scope">
+      <li>Logged-in feed home — page-level <strong>choreography</strong>, not motion redefinition.</li>
+      <li>Composes C01 (FAB), C05 (cards), C06 (tags), C07 (tooltips), C08 (loading skeletons).</li>
+      <li>Production source of truth: <code>pages/Verita Home.html</code>.</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+    <div class="composes">
+      <a href="../components/01 Buttons & Links.html">C01 Buttons</a>
+      <a href="../components/05 Cards & Hover.html">C05 Cards</a>
+      <a href="../components/06 Tags & Filters.html">C06 Tags</a>
+      <a href="../components/07 Tooltips & Popovers.html">C07 Tooltips</a>
+      <a href="../components/08 Skeletons & Loading.html">C08 Loading</a>
+    </div>
+  </div>
+
+  <section>
+    <h2>§1 Initial mount — hero entry <span class="tier ext">Extended</span></h2>
+    <p>Production currently mounts content with no entry animation. Proposal: greeting + hero copy fade-up over 360ms on first visit (not on subsequent route returns — store a session flag).</p>
+    <table class="timeline">
+      <thead><tr><th>t</th><th>Actor</th><th>Motion</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>0ms</td><td>Sidebar + topbar</td><td>opacity 1 instant</td><td>Chrome paints first; never animated.</td></tr>
+        <tr><td>40ms</td><td>Greeting copy</td><td>translateY 8 → 0 · opacity 0 → 1 · 360ms ease-out</td><td>"Good morning, Yaroslav" or equivalent.</td></tr>
+        <tr><td>120ms</td><td>Tag bar</td><td>fade-in 240ms</td><td>80ms after greeting starts.</td></tr>
+        <tr><td>200ms</td><td>First feed row</td><td>cards fade up 320ms total, 40ms stagger</td><td>Stagger uses C05's hover-lift transform; cards at rest after.</td></tr>
+        <tr><td>520ms</td><td>FAB</td><td>scale 0.8 → 1 · 200ms ease-out</td><td>FAB lands last so it doesn't compete with content.</td></tr>
+      </tbody>
+    </table>
+    <p class="hint"><code>prefers-reduced-motion</code>: collapse all entries to opacity 0 → 1 over 100ms; preserve stagger order so screen readers still announce in sequence.</p>
+  </section>
+
+  <section class="divided">
+    <h2>§2 Topbar shadow on scroll <span class="tier prod">Production</span></h2>
+    <p>1:1 from <code>pages/Verita Home.html</code>: <code>.topbar::after</code> is a hairline gradient that fades in when <code>.topbar.scrolled</code> applies. Toggle threshold: page <code>scrollY &gt; 4</code>.</p>
+    <table class="timeline">
+      <thead><tr><th>Trigger</th><th>Actor</th><th>Motion</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>scroll &gt; 4</td><td><code>.topbar::after</code></td><td>opacity 0 → 1 · 200ms ease-out</td><td><code>linear-gradient(180deg, rgba(0,0,0,0.04), transparent)</code>, 8px tall.</td></tr>
+        <tr><td>scroll ≤ 4</td><td><code>.topbar::after</code></td><td>opacity 1 → 0 · 200ms ease-out</td><td>Symmetric. No hysteresis.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="divided">
+    <h2>§3 Sidebar rail collapse / expand <span class="tier ext">Extended</span></h2>
+    <p>Production today is fixed at 240px. The master demo (<code>Verita Transition.html</code>) collapses the sidebar to a 52px rail when the post-detail surface mounts; that motion is the proposed contract for Home as well, gated on user preference or viewport width.</p>
+    <table class="timeline">
+      <thead><tr><th>t</th><th>Actor</th><th>Motion</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>0ms</td><td>Grid template</td><td><code>grid-template-columns: 240px → 60px</code> · 320ms <code>--ease-ios</code></td><td>The container holds; the column width is what animates.</td></tr>
+        <tr><td>0ms</td><td>Nav-item labels</td><td>opacity 1 → 0 · 160ms ease-out</td><td>Labels fade before width settles, so the rail never shows clipped text.</td></tr>
+        <tr><td>160ms</td><td>Tooltips</td><td>arm (per C07 §1)</td><td>Once collapsed, hovering an icon shows the C07 tooltip with the label.</td></tr>
+        <tr><td>320ms</td><td>—</td><td>steady</td><td>Reverse runs symmetrically; tooltips disarm at <code>200ms</code>.</td></tr>
+      </tbody>
+    </table>
+    <div class="stage">
+      <div class="home-mock expanded" id="homeMock1">
+        <div class="mock-side">
+          <div class="navitem"><span class="ico"></span><span class="lbl">Home</span></div>
+          <div class="navitem"><span class="ico"></span><span class="lbl">Search</span></div>
+          <div class="navitem"><span class="ico"></span><span class="lbl">Profile</span></div>
+          <div class="navitem"><span class="ico"></span><span class="lbl">Digests</span></div>
+          <div class="navitem"><span class="ico"></span><span class="lbl">Settings</span></div>
+        </div>
+        <div class="mock-main">
+          <div class="mock-topbar"><div class="search-input"></div><div class="signin">Sign in</div></div>
+          <div class="mock-tagbar"><span class="chip active">All</span><span class="chip">Politics</span><span class="chip">Tech</span><span class="chip">Climate</span></div>
+          <div class="mock-feed">
+            <div class="mock-card image"></div>
+            <div class="mock-card text"></div>
+            <div class="mock-card digest"></div>
+            <div class="mock-card image"></div>
+            <div class="mock-card text"></div>
+            <div class="mock-card image"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="triggers">
+      <button class="trigger" id="toggleSidebar">Toggle sidebar</button>
+      <span class="hint">320ms <code>cubic-bezier(0.22, 0.61, 0.36, 1)</code> on grid template; labels fade 160ms.</span>
+    </div>
+  </section>
+
+  <section class="divided">
+    <h2>§4 Tag bar sticky behavior <span class="tier prod">Production</span></h2>
+    <p>1:1 from production: the tag chip row sticks below the topbar (<code>position: sticky; top: var(--topbar-h)</code>). It does not animate on stick. The chip <code>.active</code> swap is C06's responsibility.</p>
+    <table class="timeline">
+      <thead><tr><th>Trigger</th><th>Actor</th><th>Motion</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>scroll past hero</td><td><code>.tagbar</code></td><td>none — sticky positioning</td><td>The bar is always rendered; sticking is layout, not motion.</td></tr>
+        <tr><td>chip click</td><td><code>.chip</code></td><td>color 120ms ease-out (C06 §1)</td><td>Page filters the masonry instantly; no entry animation on filtered cards (production has no filter motion today).</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="divided">
+    <h2>§5 Refresh — FAB spin + masonry cross-fade <span class="tier prod">Production</span> + <span class="tier ext">Extended</span></h2>
+    <p>FAB spin is production (<code>animations/Verita Transition.html</code> <code>@keyframes refresh-fab-spin</code>). Masonry cross-fade is the proposed companion — production today swaps content instantly.</p>
+    <table class="timeline">
+      <thead><tr><th>t</th><th>Actor</th><th>Motion</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>0ms</td><td>FAB icon</td><td>rotate 0 → 360° · 600ms <code>cubic-bezier(0.4, 0, 0.2, 1)</code></td><td>Material curve — only place in Verita using it (see C01 deviations).</td></tr>
+        <tr><td>0ms</td><td>Existing cards</td><td>opacity 1 → 0 · translateY 0 → 8 · 220ms ease-out</td><td>Outgoing cards leave first.</td></tr>
+        <tr><td>220ms</td><td>—</td><td>(gap)</td><td>80ms beat lets the user feel the refresh land.</td></tr>
+        <tr><td>300ms</td><td>New cards</td><td>opacity 0 → 1 · translateY 8 → 0 · 320ms ease-out · 40ms stagger</td><td>Stagger order top-to-bottom, left-to-right.</td></tr>
+        <tr><td>600ms</td><td>FAB icon</td><td>spin completes</td><td>FAB and last card land within 100ms of each other.</td></tr>
+      </tbody>
+    </table>
+    <div class="stage">
+      <div class="home-mock expanded" id="homeMock2">
+        <div class="mock-side">
+          <div class="navitem"><span class="ico"></span><span class="lbl">Home</span></div>
+          <div class="navitem"><span class="ico"></span><span class="lbl">Search</span></div>
+          <div class="navitem"><span class="ico"></span><span class="lbl">Profile</span></div>
+        </div>
+        <div class="mock-main">
+          <div class="mock-topbar" id="mockTopbar"><div class="search-input"></div><div class="signin">Sign in</div></div>
+          <div class="mock-feed" id="mockFeed">
+            <div class="mock-card image"></div>
+            <div class="mock-card text"></div>
+            <div class="mock-card digest"></div>
+            <div class="mock-card image"></div>
+            <div class="mock-card text"></div>
+            <div class="mock-card image"></div>
+          </div>
+          <button class="mock-fab" id="mockFab" aria-label="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="triggers">
+      <button class="trigger" id="refreshBtn">Trigger refresh</button>
+      <button class="trigger" id="scrollBtn">Toggle topbar shadow</button>
+    </div>
+  </section>
+
+  <div class="react-hint">
+    <h3>React mapping</h3>
+    <dl>
+      <dt>&lt;HomeLayout&gt;</dt>            <dd>Top-level grid: sidebar + main column. Owns sidebar collapse state.</dd>
+      <dt>useTopbarShadow()</dt>             <dd>Hook — returns <code>scrolled: boolean</code>; toggles at <code>scrollY &gt; 4</code>. Applies <code>.scrolled</code> class.</dd>
+      <dt>useSidebarRail()</dt>              <dd>Hook — returns <code>{ collapsed, toggle }</code>; persists to <code>localStorage</code>. Drives §3.</dd>
+      <dt>&lt;FeedRefresh&gt;</dt>            <dd>Wraps the masonry. Props: <code>onRefresh</code>, returns Promise. Orchestrates §5 timeline (FAB spin + cards out + cards in).</dd>
+      <dt>composes</dt>                       <dd><code>&lt;Fab&gt;</code> (C01), <code>&lt;PostCard&gt;</code> (C05), <code>&lt;TagChip&gt;</code> (C06), <code>&lt;Tooltip&gt;</code> (C07), <code>&lt;Skeleton&gt;</code> (C08).</dd>
+    </dl>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // §3 sidebar toggle
+  document.getElementById('toggleSidebar').addEventListener('click', () => {
+    document.getElementById('homeMock1').classList.toggle('expanded');
+  });
+
+  // §5 refresh
+  const fab = document.getElementById('mockFab');
+  const feed = document.getElementById('mockFeed');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const mock2 = document.getElementById('homeMock2');
+  function runRefresh() {
+    fab.classList.add('spinning');
+    mock2.classList.add('refreshing');
+    setTimeout(() => {
+      mock2.classList.remove('refreshing');
+    }, 220 + 80);
+    setTimeout(() => {
+      fab.classList.remove('spinning');
+      // reset transform so next click re-triggers
+      const svg = fab.querySelector('svg');
+      svg.style.transition = 'none';
+      svg.style.transform = 'rotate(0)';
+      requestAnimationFrame(() => { svg.style.transition = ''; });
+    }, 620);
+  }
+  fab.addEventListener('click', runRefresh);
+  refreshBtn.addEventListener('click', runRefresh);
+
+  // §2 topbar shadow toggle
+  document.getElementById('scrollBtn').addEventListener('click', () => {
+    document.getElementById('mockTopbar').classList.toggle('scrolled');
+  });
+</script>
+
+</body>
+</html>

@@ -1,17 +1,20 @@
 .masonry {
-  column-count: 4;
-  column-gap: 14px;
+  column-count: 3;
+  column-gap: 40px;
+  max-width: 1144px;
+  margin: 0 auto;
 }
 
-@media (max-width: 1440px) {
-  .masonry { column-count: 3; }
+@media (min-width: 1144px) {
+  .masonry > *:nth-child(5n+2) { margin-top: 10px; }
+  .masonry > *:nth-child(7n+4) { margin-top: 16px; }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1143px) {
   .masonry { column-count: 2; }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 759px) {
   .masonry { column-count: 1; }
 }
 

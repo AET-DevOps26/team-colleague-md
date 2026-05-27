@@ -1,0 +1,246 @@
+<!doctype html>
+<!--
+  P02 — Post Detail
+  Scope:      Reading view choreography. Composes C07 (sort dropdown),
+              C08 (skeleton + reading progress), C09 (comments + composer),
+              C10 (avatars), C12 (action bar).
+  Spec:       docs/Animation Spec.md  §  Pages · Post Detail
+  Source:     pages/Verita Post Detail.html
+  React hint: <PostDetailLayout>, useReadingProgress(), useStickyActionBar()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Post Detail · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; }
+  .stage h4 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 10px; }
+
+  /* --- Mini reading-progress mock --- */
+  .reading-mock { position: relative; height: 280px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); overflow: hidden; }
+  .reading-mock .progress { position: absolute; top: 0; left: 0; height: 2px; background: var(--accent); width: 0; transition: width 60ms linear; }
+  .reading-mock .topbar { height: 44px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; padding: 0 16px; font: 500 12.5px var(--font-sans); color: var(--text-secondary); position: sticky; top: 0; background: var(--bg-surface); }
+  .reading-mock .body { padding: 18px; font-size: 13px; line-height: 1.7; color: var(--text-primary); }
+  .reading-mock .body p { margin: 0 0 10px; color: var(--text-secondary); }
+
+  /* --- Sticky action bar mock --- */
+  .actbar-mock { display: flex; gap: 6px; padding: 10px 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 999px; align-items: center; transition: box-shadow 200ms ease, transform 200ms ease; }
+  .actbar-mock.stuck { box-shadow: 0 4px 18px rgba(10,10,10,0.06); transform: translateY(0); }
+  .actbar-mock .pill { padding: 4px 10px; font: 500 11.5px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border-radius: 999px; }
+
+  /* --- Comment list stagger mock --- */
+  .comments-mock { display: grid; gap: 12px; }
+  .comments-mock .row { display: flex; gap: 10px; padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); opacity: 0; transform: translateY(4px); animation: fadeIn 180ms ease-out forwards; }
+  .comments-mock .row:nth-child(1) { animation-delay: 0ms; }
+  .comments-mock .row:nth-child(2) { animation-delay: 60ms; }
+  .comments-mock .row:nth-child(3) { animation-delay: 120ms; }
+  .comments-mock .row:nth-child(4) { animation-delay: 180ms; }
+  @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+  .comments-mock .av { width: 32px; height: 32px; border-radius: 999px; background: var(--bg-elevated); flex-shrink: 0; }
+  .comments-mock .body { flex: 1; }
+  .comments-mock .name { font: 600 12.5px var(--font-sans); margin-bottom: 4px; }
+  .comments-mock .text { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  .back { margin-top: 80px; display: inline-block; color: var(--text-secondary); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; transition: color 120ms, border-color 120ms; }
+  .back:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .comments-mock .row { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .reading-mock .progress { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+
+    <header class="lead-block">
+      <div class="wordmark"><span class="lead">V</span>erita</div>
+      <h1>Post Detail</h1>
+      <ul class="scope">
+        <li>Page-level orchestration of reading flow — from arrival through scroll to engagement.</li>
+        <li>Composes <a href="../components/07 Tooltips & Popovers.html">C07</a>, <a href="../components/08 Skeletons & Loading.html">C08</a>, <a href="../components/09 Comments & Threads.html">C09</a>, <a href="../components/10 Avatars & Identity.html">C10</a>, <a href="../components/12 Post Detail Action Bar.html">C12</a>.</li>
+        <li>Reading-progress bar (production), AI summary collapse (production), comment stagger (production), sticky action bar (production), back transition (extended).</li>
+      </ul>
+      <span class="status live">Status: Live</span>
+    </header>
+
+    <section>
+      <h2>Choreography timeline</h2>
+      <p>Time origin (<code>t=0</code>) is the moment <code>onLoad</code> fires after route transition completes. Negative offsets describe motion already in progress from the route change.</p>
+      <table class="timeline">
+        <thead><tr><th>t=</th><th>Actor</th><th>Motion</th><th>Source / component</th></tr></thead>
+        <tbody>
+          <tr><td>−460ms</td><td>Route container</td><td>translateX(100%) → 0, ease-ios</td><td>Extended — push transition (deferred)</td></tr>
+          <tr><td>0</td><td>Title + body</td><td>Static — already painted</td><td>Production · <code>pages/Verita Post Detail.html:923</code></td></tr>
+          <tr><td>0</td><td>Action bar</td><td>Static — bottom-anchored, opacity 1</td><td>C12 §1 (production)</td></tr>
+          <tr><td>scroll&gt;0</td><td>Reading progress</td><td>width 0 → N%, 60ms linear</td><td>Production · <code>.reading-progress-bar</code></td></tr>
+          <tr><td>scroll&gt;titleEnd</td><td>Topbar</td><td>border-bottom + sticky engages</td><td>Production · <code>.topbar.scrolled</code></td></tr>
+          <tr><td>scroll into comments</td><td>Comment list</td><td>fadeIn 180ms, stagger 60ms</td><td>C09 §1 · <code>@keyframes fadeIn</code></td></tr>
+          <tr><td>onClick AI summary</td><td>Summary panel</td><td>max-height 280ms cubic-bezier(0.22,1,0.36,1) + opacity 200ms</td><td>Production · <code>.summary-panel</code></td></tr>
+          <tr><td>onClick sort</td><td>Sort dropdown</td><td>opacity + translateY(4px), 140ms</td><td>C07 §2 (production)</td></tr>
+          <tr><td>onClick like</td><td>Like icon</td><td>scale 1 → 1.18 → 1, 240ms</td><td>C12 §2 (production)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="divided">
+      <h2>Reading progress <span class="tier prod">Production</span></h2>
+      <p>Top-edge 2px hairline tracks scroll position via <code>useReadingProgress()</code>. <code>width 60ms linear</code> keeps the bar perceptually synchronized with frame-paced scroll events without lag-feel from heavier easing.</p>
+      <div class="stage">
+        <div class="reading-mock" id="readingMock">
+          <div class="progress" id="readingProgress"></div>
+          <div class="topbar">Reading: How to design quiet interfaces</div>
+          <div class="body" id="readingBody">
+            <p>Scroll inside this panel — the top hairline tracks reading position. The motion is intentionally instant (60ms linear) so the bar feels mechanically locked to the scroll surface.</p>
+            <p>Long-form content continues. The hairline only appears once you have moved past the title — opacity is gated on <code>scrollY &gt; titleHeight</code>.</p>
+            <p>Body lorem ipsum continues to fill height so the scroll mechanic has somewhere to go.</p>
+            <p>Body lorem ipsum continues to fill height so the scroll mechanic has somewhere to go.</p>
+            <p>Body lorem ipsum continues to fill height so the scroll mechanic has somewhere to go.</p>
+            <p>End of post.</p>
+          </div>
+        </div>
+        <p class="hint">Hook: <code>useReadingProgress(targetRef)</code> returns <code>{ pct, visible }</code> — bind <code>pct</code> to <code>style.width</code> and <code>visible</code> to <code>opacity</code>.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Comment stagger <span class="tier prod">Production</span></h2>
+      <p>When the comment block intersects the viewport, each row plays <code>@keyframes fadeIn</code> (180ms ease-out, opacity + translateY 4px → 0) with a 60ms stagger. Defined inline in <code>pages/Verita Post Detail.html:811</code>; canonicalized in C09.</p>
+      <div class="stage">
+        <div class="comments-mock" id="commentsMock">
+          <div class="row"><div class="av"></div><div class="body"><div class="name">Margot</div><div class="text">The decision to use width-only progress instead of a full bar fill is the right call here.</div></div></div>
+          <div class="row"><div class="av"></div><div class="body"><div class="name">Henrik</div><div class="text">Curious whether AI summary should auto-expand on first visit or stay collapsed by default.</div></div></div>
+          <div class="row"><div class="av"></div><div class="body"><div class="name">Soraya</div><div class="text">+1 for sticky action bar — the floating treatment in v2 felt overengineered.</div></div></div>
+          <div class="row"><div class="av"></div><div class="body"><div class="name">Junpei</div><div class="text">Comment stagger could go to 80ms if list ever exceeds 8 items — 60ms compounds visibly.</div></div></div>
+        </div>
+        <div class="triggers"><button class="trigger" id="replayComments">Replay stagger</button></div>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Sticky action bar <span class="tier prod">Production</span></h2>
+      <p>Action bar lives at the bottom of the article body. When the title leaves viewport, it transitions to <code>position: sticky; bottom: 24px</code> with a subtle box-shadow fade (200ms ease). Content underneath gains <code>padding-bottom</code> equal to the bar height to avoid overlap.</p>
+      <div class="stage">
+        <div class="actbar-mock" id="actbarMock">
+          <span class="pill">142 likes</span>
+          <span class="pill">38 comments</span>
+          <span class="pill">12 saves</span>
+        </div>
+        <div class="triggers">
+          <button class="trigger" id="actbarToggle">Toggle stuck state</button>
+        </div>
+        <p class="hint">In production, <code>useStickyActionBar()</code> watches the title element via <code>IntersectionObserver</code> and toggles the <code>.stuck</code> class — never measures scroll directly.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Back transition <span class="tier ext">Extended</span></h2>
+      <p>Reverse of forward push: detail slides right (translateX 0 → 100%, 460ms ease-ios), Home slides in from left, scroll position restored from <code>history.state.scrollY</code>. The action bar fades out at <code>t=0</code> rather than translating with the surface, so it doesn't smear during the slide.</p>
+      <p class="hint">Not yet implemented — Plan calls this Phase B (page transitions). Currently the back button is a hard route swap.</p>
+    </section>
+
+    <div class="react-hint">
+      <h3>React contract</h3>
+      <dl>
+        <dt>Layout</dt><dd><code>&lt;PostDetailLayout post={post} comments={comments} /&gt;</code> — owns reading-progress + sticky-actbar instrumentation.</dd>
+        <dt>Hooks</dt><dd><code>useReadingProgress(ref)</code>, <code>useStickyActionBar(titleRef)</code>, <code>useCommentStagger(listRef, 60)</code></dd>
+        <dt>Composes</dt>
+        <dd>
+          <div class="composes">
+            <a href="../components/07 Tooltips & Popovers.html">C07 SortDropdown</a>
+            <a href="../components/08 Skeletons & Loading.html">C08 ReadingProgress</a>
+            <a href="../components/09 Comments & Threads.html">C09 CommentList</a>
+            <a href="../components/10 Avatars & Identity.html">C10 Avatar</a>
+            <a href="../components/12 Post Detail Action Bar.html">C12 ActionBar</a>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <a class="back" href="../00 Index.html">← Back to Index</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  const body = document.getElementById('readingBody');
+  const bar  = document.getElementById('readingProgress');
+  if (body && bar) {
+    body.parentElement.addEventListener('scroll', () => {
+      const max = body.scrollHeight - body.parentElement.clientHeight;
+      const pct = Math.max(0, Math.min(100, (body.parentElement.scrollTop / max) * 100));
+      bar.style.width = pct + '%';
+    });
+  }
+
+  const replay = document.getElementById('replayComments');
+  const list   = document.getElementById('commentsMock');
+  replay?.addEventListener('click', () => {
+    list.querySelectorAll('.row').forEach(r => {
+      r.style.animation = 'none';
+      r.offsetHeight; // force reflow
+      r.style.animation = '';
+    });
+  });
+
+  const toggle = document.getElementById('actbarToggle');
+  const bar2   = document.getElementById('actbarMock');
+  toggle?.addEventListener('click', () => bar2.classList.toggle('stuck'));
+})();
+</script>
+</body>
+</html>

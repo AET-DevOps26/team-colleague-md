@@ -1,0 +1,315 @@
+<!doctype html>
+<!--
+  P06 — Digest Management
+  Scope:      Page-level choreography for the digest hero and history list. Composes
+              C08 (gen-spinner — production loading vocabulary), C06 (chip toggle —
+              extended), C10 (follow-state pill — production color cross-fade).
+  Spec:       docs/Animation Spec.md  ·  Pages · Digest Management
+  Source:     pages/Verita Digest Management.html
+  React hint: <DigestManagementLayout>, useDigestGenerate(), useTopicFollow()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Digest Management · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; }
+  .stage h4 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 10px; }
+
+  /* ===== DIGEST MANAGEMENT mocks ===== */
+
+  /* --- Hero gen-spinner mock (C08 §2, gen-spinner 1:1) ---
+     Source: pages/Verita Digest Management.html:117–118
+       width:18px;height:18px; border:2px solid rgba(255,255,255,.15);
+       border-top-color:rgba(255,255,255,.7); animation:spin 1s linear infinite. */
+  .hero-mock { background: #0A0A0A; color: #fff; border-radius: 14px; padding: 18px 20px; position: relative; overflow: hidden; }
+  .hero-mock::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.04) 0%, transparent 60%); pointer-events: none; }
+  .hero-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #ABABAB; margin-bottom: 8px; }
+  .hero-eyebrow .dot { width: 6px; height: 6px; background: #fff; border-radius: 50%; box-shadow: 0 0 0 4px rgba(255,255,255,0.1); }
+  .hero-title { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 6px; }
+  .hero-meta { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .gen-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; color: rgba(255,255,255,0.55); font-size: 13px; }
+  .gen-spinner { width: 18px; height: 18px; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.15); border-top-color: rgba(255,255,255,0.7); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hero-cta { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: #0A0A0A; padding: 8px 14px; border-radius: 8px; font: 600 12.5px var(--font-sans); margin-top: 4px; cursor: pointer; border: 0; transition: background 120ms; }
+  .hero-cta:hover { background: rgba(255,255,255,0.9); }
+
+  /* --- Status pill (Generated ↔ Generating) state toggle --- */
+  .pill-row { display: inline-flex; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; overflow: hidden; margin-top: 12px; }
+  .pill-btn { padding: 4px 10px; font: 500 10.5px var(--font-sans); color: rgba(255,255,255,0.5); background: transparent; transition: background 100ms, color 100ms; border: 0; cursor: pointer; }
+  .pill-btn + .pill-btn { border-left: 1px solid rgba(255,255,255,0.15); }
+  .pill-btn.active { background: rgba(255,255,255,0.12); color: #fff; }
+  .hero-body { display: none; }
+  .hero-body.show { display: block; animation: fadeIn 180ms ease-out both; }
+
+  /* --- Digest list mock (production fadeIn entry) --- */
+  .digest-list { display: grid; gap: 10px; }
+  .digest-row { display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 14px; padding: 12px 14px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 10px; opacity: 0; transform: translateY(6px) scale(0.97); animation: cardAppear 180ms ease-out forwards; }
+  .digest-row:nth-child(1) { animation-delay: 0ms; }
+  .digest-row:nth-child(2) { animation-delay: 35ms; }
+  .digest-row:nth-child(3) { animation-delay: 70ms; }
+  .digest-row:nth-child(4) { animation-delay: 105ms; }
+  .digest-row:nth-child(5) { animation-delay: 140ms; }
+  @keyframes cardAppear { to { opacity: 1; transform: none; } }
+  @keyframes fadeIn { to { opacity: 1; transform: none; } }
+  .digest-row .date { font: 500 10px var(--font-mono); color: var(--text-tertiary); letter-spacing: 0.06em; text-transform: uppercase; }
+  .digest-row .title { font: 600 13.5px var(--font-sans); color: var(--text-primary); line-height: 1.35; }
+  .digest-row .meta { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; }
+  .digest-row .read { font: 500 11.5px var(--font-sans); color: var(--text-secondary); transition: color 120ms; }
+  .digest-row:hover .read { color: var(--text-primary); }
+
+  /* --- Schedule chip toggle (Extended — proposes C06 §4 cross-fade applied to schedule chips) --- */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .schip { appearance: none; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-default); background: var(--bg-surface); color: var(--text-secondary); font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; }
+  .schip:hover { color: var(--text-primary); }
+  .schip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* --- Follow-state pill (production C10 §3, 120ms transition all) --- */
+  .topic-mock { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 10px; }
+  .topic-mock .tag { font: 600 13px var(--font-sans); color: var(--text-primary); flex: 1; }
+  .topic-mock .tag .hash { color: var(--text-tertiary); font-weight: 600; margin-right: 1px; }
+  .follow-btn { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; font: 600 12px var(--font-sans); border: 1px solid var(--border-default); background: transparent; color: var(--text-secondary); transition: all 120ms; cursor: pointer; }
+  .follow-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .follow-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  .back { margin-top: 80px; display: inline-block; color: var(--text-secondary); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; transition: color 120ms, border-color 120ms; }
+  .back:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gen-spinner { animation: none !important; border-top-color: rgba(255,255,255,0.45) !important; }
+    .digest-row { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .hero-body.show { animation: none !important; }
+    .schip, .follow-btn { transition: background 120ms linear, color 120ms linear !important; }
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+
+    <header class="lead-block">
+      <div class="wordmark"><span class="lead">V</span>erita</div>
+      <h1>Digest Management</h1>
+      <ul class="scope">
+        <li>Page-level choreography for the daily-digest hero and the history list — generation status, list mount, schedule selection.</li>
+        <li>Composes <a href="../components/06 Tags & Filters.html">C06</a>, <a href="../components/08 Skeletons & Loading.html">C08</a>, <a href="../components/10 Avatars & Identity.html">C10</a>.</li>
+        <li>Gen-spinner (production), status pill toggle (production), digest-list entry (production cardAppear + stagger), schedule chip toggle (extended).</li>
+      </ul>
+      <span class="status live">Status: Live</span>
+    </header>
+
+    <section>
+      <h2>Choreography timeline</h2>
+      <p>Time origin (<code>t=0</code>) is the moment the Digest tab paints. The hero state is server-driven; the list mounts after the hero's first paint is committed.</p>
+      <table class="timeline">
+        <thead><tr><th>t=</th><th>Actor</th><th>Motion</th><th>Source / component</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Hero panel</td><td>Static — already painted dark</td><td>Production · <code>pages/Verita Digest Management.html:104</code></td></tr>
+          <tr><td>0</td><td>Status pill row</td><td>Static — Generated/Generating toggle visible</td><td>Production · <code>.hero-state-toggle</code> :119</td></tr>
+          <tr><td>+0</td><td>Gen-spinner (if generating)</td><td><code>spin 1s linear infinite</code>, 18px / 2px ring</td><td>Production · C08 §2 · <code>:117–118</code></td></tr>
+          <tr><td>+20ms</td><td>Digest list rows</td><td>opacity 0→1 + translateY(6px) + scale(0.97)→1, 180ms ease-out, 35ms stagger</td><td>Production · <code>@keyframes card-appear</code> :187</td></tr>
+          <tr><td>onClick state pill</td><td>Hero body</td><td>Cross-fade — old hidden, new <code>fadeIn 180ms ease-out</code></td><td>Production · <code>.hidden</code> swap :545–551</td></tr>
+          <tr><td>onClick "Generate"</td><td>CTA button</td><td>Background 120ms → spinner row swaps in (<code>.hidden</code> flip)</td><td>Production · <code>.today-cta</code> :114</td></tr>
+          <tr><td>onClick schedule chip</td><td>Chip</td><td>bg + color + border-color 160ms ease-out</td><td>Extended · proposes C06 §4 cross-fade</td></tr>
+          <tr><td>onClick follow</td><td>Topic pill</td><td><code>transition: all 120ms</code> on bg/color/border</td><td>Production · C10 §3 · <code>.follow-btn</code> :198–200</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="divided">
+      <h2>Generate spinner <span class="tier prod">Production</span></h2>
+      <p>The hero's "Generating…" state shows a single 18px ring spinner with a 2px border (15%-white background, 70%-white top arc) running <code>spin 1s linear infinite</code>. Sourced 1:1 from <code>pages/Verita Digest Management.html:117–118</code>; canonicalized as the production loading vocabulary in <a href="../components/08 Skeletons & Loading.html">C08 §2</a>. This is the only spinner in the production app — it lives on a dark surface, so the rgba whites are baked in rather than tokenized.</p>
+      <div class="stage">
+        <div class="hero-mock" id="heroMock">
+          <div class="pill-row" role="group">
+            <button class="pill-btn active" id="pillGenerated" type="button">Generated</button>
+            <button class="pill-btn" id="pillGenerating" type="button">Generating</button>
+          </div>
+          <div class="hero-body show" id="bodyGenerated" style="margin-top:12px">
+            <div class="hero-eyebrow"><span class="dot"></span>Today · Mon May 13, 2026</div>
+            <div class="hero-title">Your Monday Digest</div>
+            <div class="hero-meta">8 events · ~8 min read · Generated 06:00 AM</div>
+            <button class="hero-cta" type="button" id="genCta">Read →</button>
+          </div>
+          <div class="hero-body" id="bodyGenerating" style="margin-top:12px">
+            <div class="hero-eyebrow"><span class="dot"></span>Today · Mon May 13, 2026</div>
+            <div class="gen-row"><div class="gen-spinner" aria-hidden="true"></div><span>Generating your digest — check back later</span></div>
+            <div class="hero-meta">~8 min read when ready · Usually ready by 06:00 AM</div>
+          </div>
+        </div>
+        <div class="triggers">
+          <button class="trigger" id="triggerGen">Click "Generate" CTA</button>
+          <button class="trigger" id="triggerReset">Reset to Generated</button>
+        </div>
+        <p class="hint">Hook: <code>useDigestGenerate()</code> returns <code>{ status, generate }</code>. Map <code>status === 'generating'</code> to the spinner row; on transition back to <code>'ready'</code> the body cross-fades via the production <code>.hidden</code> class swap.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Status pill state toggle <span class="tier prod">Production</span></h2>
+      <p>The Generated ↔ Generating toggle in the hero corner uses a 100ms <code>background</code> + <code>color</code> transition on each pill (<code>pages/Verita Digest Management.html:120</code>). The body swap itself is a <code>display:none</code> class flip — the demo layers an <code>animation: fadeIn 180ms ease-out</code> on the new body so the swap reads as a deliberate state change rather than a flicker. This is the same pattern P02 uses for AI-summary panel reveals.</p>
+      <div class="stage">
+        <p class="hint" style="margin-top:0">Click either pill above to see the state toggle. The pill itself uses production's 100ms color swap; the body content cross-fades via <code>fadeIn</code> applied on <code>.show</code>.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Digest list entry <span class="tier prod">Production</span></h2>
+      <p>The history list mounts row-by-row with a 180ms <code>card-appear</code> keyframe (opacity 0→1, translateY 6px→0, scale 0.97→1) — sourced 1:1 from <code>pages/Verita Digest Management.html:186–187</code>. Production uses this for the topic-card overflow expand and on <code>loadMoreDigests()</code> via inline <code>style.animation</code> at <code>:521</code>. The page demo applies a 35ms stagger across rows on initial mount only; subsequent re-renders should not re-fire (gate via <code>firstPaint</code> flag in React).</p>
+      <div class="stage">
+        <div class="digest-list" id="digestList">
+          <div class="digest-row"><span class="date">Sun May 12</span><div><div class="title">GPT-5o sets new reasoning benchmarks</div><div class="meta">6 events · ~7 min</div></div><span class="read">Read →</span></div>
+          <div class="digest-row"><span class="date">Sat May 11</span><div><div class="title">Anthropic publishes Constitutional AI 2.0 update</div><div class="meta">5 events · ~5 min</div></div><span class="read">Read →</span></div>
+          <div class="digest-row"><span class="date">Fri May 10</span><div><div class="title">Agents week: 10 teams ship autonomous coding tools</div><div class="meta">9 events · ~10 min</div></div><span class="read">Read →</span></div>
+          <div class="digest-row"><span class="date">Thu May 09</span><div><div class="title">RLHF under scrutiny — alignment researchers push back</div><div class="meta">7 events · ~8 min</div></div><span class="read">Read →</span></div>
+          <div class="digest-row"><span class="date">Wed May 08</span><div><div class="title">Gemini 3.5 Flash launches with 2M context window</div><div class="meta">10 events · ~11 min</div></div><span class="read">Read →</span></div>
+        </div>
+        <div class="triggers"><button class="trigger" id="replayList">Replay mount</button></div>
+        <p class="hint">Production's <code>renderDigestGrid()</code> bulk-replaces innerHTML so the whole grid restages at once. <code>loadMoreDigests()</code> uses the same keyframe per appended card (<code>:521</code>) — same tempo, no stagger because rows arrive one at a time.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Schedule chip toggle <span class="tier ext">Extended</span></h2>
+      <p>Production has no schedule selector today — the digest is always generated at 06:00 AM. This section proposes a schedule-chip row using <a href="../components/06 Tags & Filters.html">C06 §4</a>'s 160ms cross-fade contract (background + color + border-color, ease-out). Chips share dimensions across off/on so toggling does not shift the row layout. Multi-select is disabled here (single schedule); the mock enforces it with a click handler.</p>
+      <div class="stage">
+        <div class="chip-row" id="chipRow">
+          <button class="schip on" type="button" data-v="06:00">06:00 AM</button>
+          <button class="schip" type="button" data-v="08:00">08:00 AM</button>
+          <button class="schip" type="button" data-v="12:00">Noon</button>
+          <button class="schip" type="button" data-v="18:00">06:00 PM</button>
+          <button class="schip" type="button" data-v="off">Off</button>
+        </div>
+        <p class="hint">Pair with <code>useDigestSchedule()</code>; the C06 §4 contract is identical so this surface and Search filter chips share one <code>&lt;TagChip&gt;</code> primitive. Reduced-motion fallback: 120ms linear color/bg only.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Follow toggle <span class="tier prod">Production</span></h2>
+      <p>The Manage Topics surface uses a 28px <code>.follow-btn</code> with <code>transition: all 120ms</code> covering background, color, and border-color (<code>pages/Verita Digest Management.html:198–200</code>). Idle is hollow with <code>--border-default</code>; followed flips to <code>--accent</code> fill + white text + matching border — no scale, no haptic flash. C10 §3 documents why: bulk-action territory rewards quiet feedback. The label flip (Follow ↔ Following) shares the same 120ms window.</p>
+      <div class="stage">
+        <div class="topic-mock"><span class="tag"><span class="hash">#</span>alignment</span><button class="follow-btn on" type="button">Following</button></div>
+        <div class="topic-mock" style="margin-top:8px"><span class="tag"><span class="hash">#</span>mech-interp</span><button class="follow-btn" type="button">Follow</button></div>
+        <p class="hint">Click either pill — color and border cross-fade together over 120ms. No bounce, no toast confirmation; the visual flip is the entire feedback contract.</p>
+      </div>
+    </section>
+
+    <div class="react-hint">
+      <h3>React contract</h3>
+      <dl>
+        <dt>Layout</dt><dd><code>&lt;DigestManagementLayout digests={list} topics={cats} /&gt;</code> — owns hero status, history list, and topic categories.</dd>
+        <dt>Hooks</dt><dd><code>useDigestGenerate()</code>, <code>useTopicFollow(tag)</code>, <code>useDigestSchedule()</code> (extended)</dd>
+        <dt>Composes</dt>
+        <dd>
+          <div class="composes">
+            <a href="../components/06 Tags & Filters.html">C06 TagChip</a>
+            <a href="../components/08 Skeletons & Loading.html">C08 Spinner (gen-spinner)</a>
+            <a href="../components/10 Avatars & Identity.html">C10 FollowButton</a>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <a class="back" href="../00 Index.html">← Back to Index</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  const pillG  = document.getElementById('pillGenerated');
+  const pillGn = document.getElementById('pillGenerating');
+  const bodyG  = document.getElementById('bodyGenerated');
+  const bodyGn = document.getElementById('bodyGenerating');
+  function setState(s) {
+    const gen = s === 'generated';
+    pillG.classList.toggle('active', gen);
+    pillGn.classList.toggle('active', !gen);
+    bodyG.classList.toggle('show', gen);
+    bodyGn.classList.toggle('show', !gen);
+  }
+  pillG?.addEventListener('click', () => setState('generated'));
+  pillGn?.addEventListener('click', () => setState('generating'));
+
+  document.getElementById('triggerGen')?.addEventListener('click', () => setState('generating'));
+  document.getElementById('triggerReset')?.addEventListener('click', () => setState('generated'));
+  document.getElementById('genCta')?.addEventListener('click', () => setState('generating'));
+
+  const list = document.getElementById('digestList');
+  document.getElementById('replayList')?.addEventListener('click', () => {
+    list.querySelectorAll('.digest-row').forEach(r => {
+      r.style.animation = 'none';
+      r.offsetHeight; // reflow
+      r.style.animation = '';
+    });
+  });
+
+  document.getElementById('chipRow')?.addEventListener('click', (e) => {
+    const t = e.target.closest('.schip');
+    if (!t) return;
+    document.querySelectorAll('#chipRow .schip').forEach(c => c.classList.remove('on'));
+    t.classList.add('on');
+  });
+
+  document.querySelectorAll('.follow-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      const on = b.classList.toggle('on');
+      b.textContent = on ? 'Following' : 'Follow';
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!doctype html>
+<!--
+  P05 — Post Editor
+  Scope:      Composing flow choreography. Composes C02 (meta-input + modal-field +
+              borderless title/body), C07 (tb-btn-tip toolbar tooltip), C04 (autosave
+              toast via status pill), C01 (publish-btn).
+  Spec:       docs/Animation Spec.md  ·  Pages · Post Editor
+  Source:     pages/Verita Post Editor.html
+  React hint: <PostEditorLayout>, useDraftAutosave(), useToolbarTooltip()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Post Editor · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; }
+  .stage h4 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 10px; }
+
+  /* ===== POST EDITOR mocks ===== */
+
+  /* --- Toolbar tooltip mock (C07 §1, tb-btn-tip 1:1) --- */
+  .tb-mock { display: flex; align-items: center; gap: 2px; padding: 6px 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
+  .tb-btn-mock { width: 32px; height: 32px; border-radius: 6px; display: grid; place-items: center; color: var(--text-secondary); transition: background 120ms, color 120ms; position: relative; cursor: default; background: transparent; border: 0; font: 600 13px var(--font-sans); }
+  .tb-btn-mock:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .tb-btn-mock .tip { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 500; white-space: nowrap; padding: 4px 7px; border-radius: 5px; opacity: 0; pointer-events: none; transition: opacity 100ms; z-index: 10; }
+  .tb-btn-mock:hover .tip { opacity: 1; }
+  .tb-sep-mock { width: 1px; height: 20px; background: var(--border-subtle); margin: 0 4px; }
+
+  /* --- Meta-input focus mock (C02 §3, meta-input 1:1) --- */
+  .meta-mock { display: flex; flex-direction: column; gap: 7px; }
+  .meta-mock label { font: 600 11px var(--font-sans); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.07em; }
+  .meta-mock input { height: 38px; width: 100%; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-surface); padding: 0 12px; font-size: 13px; color: var(--text-primary); outline: 0; transition: border-color 120ms, background 120ms, box-shadow 120ms; font-family: var(--font-sans); }
+  .meta-mock input::placeholder { color: var(--text-tertiary); }
+  .meta-mock input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+
+  /* --- Inline modal mock (C03 + C02 §5 modal-field 1:1) --- */
+  .modal-mock { position: relative; height: 240px; border-radius: var(--radius-card); border: 1px solid var(--border-subtle); background: var(--bg-elevated); overflow: hidden; }
+  .modal-mock .backdrop { position: absolute; inset: 0; background: rgba(10,10,10,0.32); opacity: 0; transition: opacity 160ms ease-out; pointer-events: none; }
+  .modal-mock.open .backdrop { opacity: 1; }
+  .modal-mock .panel { position: absolute; left: 50%; top: 50%; width: 320px; transform: translate(-50%, calc(-50% + 8px)) scale(0.97); opacity: 0; transition: opacity 180ms ease-out, transform 180ms ease-out; background: #fff; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); padding: 18px; }
+  .modal-mock.open .panel { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .modal-mock .panel h5 { margin: 0 0 12px; font: 600 13px var(--font-sans); }
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-tertiary); margin-bottom: 5px; }
+  .modal-field input { width: 100%; height: 36px; border: 1px solid var(--border-default); border-radius: 7px; background: var(--bg-surface); padding: 0 10px; font-size: 13px; color: var(--text-primary); outline: 0; transition: border-color 120ms, box-shadow 120ms; font-family: var(--font-sans); box-sizing: border-box; }
+  .modal-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+
+  /* --- Save state morph (Extended) --- */
+  .save-mock { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 16px; border-radius: 8px; background: var(--accent); color: #fff; font: 600 12.5px var(--font-sans); border: 0; cursor: pointer; transition: background 240ms ease-out, padding 240ms ease-out; min-width: 88px; justify-content: center; }
+  .save-mock:hover { background: var(--accent-hover); }
+  .save-mock .label { transition: opacity 120ms; }
+  .save-mock .check { width: 14px; height: 14px; opacity: 0; transform: scale(0.7); transition: opacity 160ms ease-out 80ms, transform 160ms ease-out 80ms; }
+  .save-mock.is-saving .label::after { content: '…'; }
+  .save-mock.is-saved { background: var(--success); }
+  .save-mock.is-saved .check { opacity: 1; transform: scale(1); }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  .back { margin-top: 80px; display: inline-block; color: var(--text-secondary); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; transition: color 120ms, border-color 120ms; }
+  .back:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tb-btn-mock .tip { transition: none !important; }
+    .modal-mock .panel { transition: opacity 120ms linear !important; transform: translate(-50%, -50%) scale(1) !important; }
+    .modal-mock:not(.open) .panel { transform: translate(-50%, -50%) scale(1) !important; }
+    .save-mock, .save-mock .check { transition: background 120ms linear, opacity 120ms linear !important; }
+    .meta-mock input { transition: border-color 120ms linear, background 120ms linear !important; box-shadow: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+
+    <header class="lead-block">
+      <div class="wordmark"><span class="lead">V</span>erita</div>
+      <h1>Post Editor</h1>
+      <ul class="scope">
+        <li>Page-level orchestration of composing flow — from editor mount through field focus, toolbar interaction, and save cadence.</li>
+        <li>Composes <a href="../components/01 Buttons %26 Links.html">C01</a>, <a href="../components/02 Form Fields %26 Validation.html">C02</a>, <a href="../components/04 Toasts %26 Notifications.html">C04</a>, <a href="../components/07 Tooltips %26 Popovers.html">C07</a>, <a href="../components/08 Skeletons %26 Loading.html">C08</a>.</li>
+        <li>Toolbar tooltip (production), meta-input focus ring (production), inline modal-field (production), save state morph (extended).</li>
+      </ul>
+      <span class="status live">Status: Live</span>
+    </header>
+
+    <section>
+      <h2>Choreography timeline</h2>
+      <p>Time origin (<code>t=0</code>) is the moment the editor canvas mounts after route transition. The editor is a low-chrome surface — most motion is field-local (focus rings, hover tooltips) rather than page-wide.</p>
+      <table class="timeline">
+        <thead><tr><th>t=</th><th>Actor</th><th>Motion</th><th>Source / component</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Editor canvas</td><td>Static — title + body painted, no entry animation</td><td>Production · <code>pages/Verita Post Editor.html:181</code></td></tr>
+          <tr><td>0</td><td>Status pill</td><td>Static — "Saved" label, dot at <code>--success</code></td><td>Production · <code>.status-pill.saved</code> (line 137)</td></tr>
+          <tr><td>onFocus title</td><td>Title textarea</td><td>No transition — borderless, no focus ring</td><td>Production · <code>.title-input</code> (line 189)</td></tr>
+          <tr><td>onFocus body</td><td>Body textarea</td><td>No transition — borderless mono</td><td>Production · <code>.ed-textarea</code> (line 278)</td></tr>
+          <tr><td>onFocus meta</td><td>Meta input</td><td>border-color + bg + 3px shadow, 120ms</td><td>C02 §3 · <code>.meta-input:focus</code> (line 343)</td></tr>
+          <tr><td>onHover toolbar btn</td><td>Tooltip</td><td>opacity 0 → 1, 100ms (no delay)</td><td>C07 §1 · <code>.tb-btn-tip</code> (line 248)</td></tr>
+          <tr><td>onClick "Add link"</td><td>Modal</td><td>backdrop fade 160ms + panel scale 0.97 → 1, 180ms</td><td>C03 §1 · <code>@keyframes modalIn</code> (line 414)</td></tr>
+          <tr><td>typing &gt; 600ms idle</td><td>Status pill</td><td>"Saved" → "Saving…" (dot fades to <code>--warning</code>), 200ms</td><td>Production · <code>.status-pill.saving</code> (line 138)</td></tr>
+          <tr><td>autosave resolved</td><td>Status pill</td><td>"Saving…" → "Saved" (dot to <code>--success</code>), 200ms</td><td>Production · <code>.status-pill.saved</code></td></tr>
+          <tr><td>onClick Publish</td><td>Save button</td><td>label → checkmark scale-in, 240ms ease-out</td><td>Extended — proposed save morph (this file)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="divided">
+      <h2>Toolbar tooltip <span class="tier prod">Production</span></h2>
+      <p>The editor toolbar is the only surface in the product where tooltips ship today. <code>.tb-btn-tip</code> is an accent-fill ink pill positioned <code>bottom: calc(100% + 6px)</code> with <code>translateX(-50%)</code> centering. Pure CSS — <code>transition: opacity 100ms</code> triggered by parent <code>:hover</code>. No delay, no transform, no scale. The 100ms instant fade is intentional: this is a confirmation cue (<em>yes, this button is Bold</em>), not an explanation, so loud-and-immediate is correct here.</p>
+      <div class="stage">
+        <div class="tb-mock" id="tbMock">
+          <button class="tb-btn-mock" type="button"><strong>B</strong><span class="tip">Bold (⌘B)</span></button>
+          <button class="tb-btn-mock" type="button"><em>I</em><span class="tip">Italic (⌘I)</span></button>
+          <span class="tb-sep-mock"></span>
+          <button class="tb-btn-mock" type="button">H1<span class="tip">Heading 1</span></button>
+          <button class="tb-btn-mock" type="button">H2<span class="tip">Heading 2</span></button>
+          <span class="tb-sep-mock"></span>
+          <button class="tb-btn-mock" type="button">&#8220;<span class="tip">Blockquote</span></button>
+          <button class="tb-btn-mock" type="button">—<span class="tip">Divider</span></button>
+        </div>
+        <p class="hint">Hover any button. Tooltip is the production primary tooltip (C07 §1). For ambient navigation tooltips (sidebar collapsed labels, icon-only nav) use the Extended hover-delay variant in C07 §4 instead — different intent, different tempo.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Meta-input focus ring <span class="tier prod">Production</span></h2>
+      <p>The metadata strip below the body (Subtitle, Tags, Source URL) uses <code>.meta-input</code> 1:1 from <code>pages/Verita Post Editor.html:335</code>. 38px height, 8px radius, <code>--bg-surface</code> rest → <code>#fff</code> on focus, plus a 3px <code>rgba(10,10,10,0.06)</code> shadow ring. Three properties co-transition over 120ms: <code>border-color</code>, <code>background</code>, <code>box-shadow</code>. Distinct from the inline modal-field family (no bg-flip there) — see C02 §3 vs §5 for the surface-context split.</p>
+      <div class="stage">
+        <div class="meta-mock">
+          <label for="metaSubtitle">Subtitle</label>
+          <input id="metaSubtitle" type="text" placeholder="A short framing line (optional)" />
+        </div>
+        <div class="meta-mock" style="margin-top: 14px;">
+          <label for="metaTags">Tags</label>
+          <input id="metaTags" type="text" placeholder="design, motion, systems" />
+        </div>
+        <p class="hint">Tab into either field, or click. The 3px shadow is the widest part of the focus expression — it carries the affordance even when border-color shifts are subtle on the cream surface.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Inline modal — Add link <span class="tier prod">Production</span></h2>
+      <p>Toolbar Link / Image actions open a 320px modal hosting <code>.modal-field</code> inputs. Backdrop fades in (160ms ease-out), panel scales 0.97 → 1 with translateY 8px → 0 (180ms ease-out, see C03 §1). Modal-field inputs are 36px / 7px radius / 3px shadow on focus — visually similar to <code>.meta-input</code> but with <strong>no bg-flip</strong>, since the modal is already on a white surface; flipping would be redundant chrome.</p>
+      <div class="stage">
+        <div class="modal-mock" id="modalMock">
+          <div class="backdrop"></div>
+          <div class="panel">
+            <h5>Insert link</h5>
+            <div class="modal-field">
+              <label for="modalUrl">URL</label>
+              <input id="modalUrl" type="url" placeholder="https://" />
+            </div>
+            <div class="modal-field">
+              <label for="modalText">Display text</label>
+              <input id="modalText" type="text" placeholder="Link text" />
+            </div>
+          </div>
+        </div>
+        <div class="triggers">
+          <button class="trigger" id="modalToggle">Toggle modal</button>
+        </div>
+        <p class="hint">Notice the modal-field focus state has the 3px ring but the input bg stays <code>--bg-surface</code> (not flipping to <code>#fff</code>) — the meta-input vs modal-field surface-context distinction.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Save state morph <span class="tier ext">Extended</span></h2>
+      <p>Production today routes save state through the topbar <code>.status-pill</code> (idle / saving / saved) — a passive indicator next to the publish button. This Extended proposal keeps the status pill but adds an active confirmation on the publish/save button itself: 240ms morph from "Save" label → checkmark scale-in (160ms, 80ms delay) with the button background fading from <code>--accent</code> → <code>--success</code>. After 1400ms the button reverts to the idle "Save" label. Why morph instead of toast: the action and confirmation share a surface, so the user's eye doesn't need to track to a corner toast to verify the save landed.</p>
+      <div class="stage">
+        <button class="save-mock" id="saveMock" type="button">
+          <span class="label">Save</span>
+          <svg class="check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.5 L6 11 L11.5 4"/></svg>
+        </button>
+        <div class="triggers" style="margin-top: 18px;">
+          <button class="trigger" id="saveTrigger">Trigger save</button>
+        </div>
+        <p class="hint">Total cycle: <code>240ms morph in → 1400ms hold → 200ms revert</code>. Reduced-motion fallback collapses to a 120ms color swap and instant checkmark — same information, no transform.</p>
+      </div>
+    </section>
+
+    <div class="react-hint">
+      <h3>React contract</h3>
+      <dl>
+        <dt>Layout</dt><dd><code>&lt;PostEditorLayout draft={draft} onPublish={…} /&gt;</code> — owns autosave instrumentation + toolbar tooltip provider + modal stack.</dd>
+        <dt>Hooks</dt><dd><code>useDraftAutosave(draft, { idleMs: 600 })</code>, <code>useToolbarTooltip()</code> (CSS-only — no JS hook needed for production primary), <code>useModalStack()</code> for link/image dialogs.</dd>
+        <dt>Composes</dt>
+        <dd>
+          <div class="composes">
+            <a href="../components/01 Buttons %26 Links.html">C01 PublishButton</a>
+            <a href="../components/02 Form Fields %26 Validation.html">C02 MetaInput</a>
+            <a href="../components/02 Form Fields %26 Validation.html">C02 ModalField</a>
+            <a href="../components/04 Toasts %26 Notifications.html">C04 SaveToast</a>
+            <a href="../components/07 Tooltips %26 Popovers.html">C07 ToolbarTooltip</a>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <a class="back" href="../00 Index.html">← Back to Index</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  const modal = document.getElementById('modalMock');
+  document.getElementById('modalToggle')?.addEventListener('click', () => {
+    modal.classList.toggle('open');
+  });
+
+  const saveBtn = document.getElementById('saveMock');
+  const saveTrigger = document.getElementById('saveTrigger');
+  let saveTimer = null;
+  const runSave = () => {
+    if (!saveBtn) return;
+    clearTimeout(saveTimer);
+    saveBtn.classList.remove('is-saved');
+    saveBtn.classList.add('is-saving');
+    saveTimer = setTimeout(() => {
+      saveBtn.classList.remove('is-saving');
+      saveBtn.classList.add('is-saved');
+      saveTimer = setTimeout(() => {
+        saveBtn.classList.remove('is-saved');
+      }, 1400);
+    }, 600);
+  };
+  saveBtn?.addEventListener('click', runSave);
+  saveTrigger?.addEventListener('click', runSave);
+})();
+</script>
+</body>
+</html>

@@ -53,7 +53,7 @@ Health check activity is visible in the compose log output. The frontend (nginx)
 ### Prerequisites
 
 - Node.js and npm (for frontend)
-- Java 21 (for backend services)
+- Java 25 (for backend services)
 - Python 3.11+ and `pip` (for genai-service)
 - Docker & Docker Compose
 

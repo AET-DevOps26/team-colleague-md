@@ -49,8 +49,8 @@ The system follows a microservices architecture consisting of:
 ### 2.1 Backend Services
 
 ```yaml
-Framework: Spring Boot 3.5.10
-Language: Java 21
+Framework: Spring Boot 4.0.6
+Language: Java 25
 Build Tool: Gradle (Groovy DSL)
 Database Access: Spring Data JPA + Hibernate
 Authentication: JWT (JSON Web Tokens)

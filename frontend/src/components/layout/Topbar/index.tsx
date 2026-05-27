@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import type { FormEvent } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
@@ -14,17 +14,22 @@ function IconSearch() {
   );
 }
 
-function AvatarButton({ username }: { username: string }) {
-  return (
-    <Link to={`/profile/${username}`} className={styles.avatarBtn} aria-label="Your profile" />
-  );
+interface TopbarProps {
+  bottomRow?: ReactNode;
 }
 
-export default function Topbar() {
+export default function Topbar({ bottomRow }: TopbarProps) {
   const { isLoggedIn, user } = useAuth();
   const { open: openAuth } = useAuthModal();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 6);
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
 
   function handleSearch(e: FormEvent) {
     e.preventDefault();
@@ -34,8 +39,12 @@ export default function Topbar() {
   }
 
   return (
-    <header className={styles.topbar}>
-      <div className={styles.topbarRow}>
+    <header
+      className={styles.topbar}
+      data-scrolled={scrolled || undefined}
+      data-testid="topbar"
+    >
+      <div className={styles.row1} data-testid="topbar-search-row">
         <form className={styles.search} onSubmit={handleSearch} role="search">
           <IconSearch />
           <input
@@ -47,7 +56,7 @@ export default function Topbar() {
         </form>
         <div className={styles.topbarRight}>
           {isLoggedIn && user ? (
-            <AvatarButton username={user.username} />
+            <Link to={`/profile/${user.username}`} className={styles.avatarBtn} aria-label="Your profile" />
           ) : (
             <button className={styles.signinBtn} onClick={() => openAuth('login')}>
               Sign in
@@ -55,6 +64,11 @@ export default function Topbar() {
           )}
         </div>
       </div>
+      {bottomRow && (
+        <div className={styles.row2} data-testid="topbar-tag-row">
+          {bottomRow}
+        </div>
+      )}
     </header>
   );
 }

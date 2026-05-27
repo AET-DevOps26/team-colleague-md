@@ -126,11 +126,11 @@ A two-stage build keeps the final image small: the builder stage compiles the fa
 Gradle; the runtime stage copies only the JAR into a lean JRE image.
 
 ```
-Stage 1 (builder)  eclipse-temurin:21-jdk
+Stage 1 (builder)  eclipse-temurin:25-jdk
   COPY gradle wrapper + build scripts
   RUN  ./gradlew bootJar          → build/libs/*.jar
 
-Stage 2 (runtime)  eclipse-temurin:21-jre
+Stage 2 (runtime)  eclipse-temurin:25-jre
   COPY --from=builder *.jar app.jar
   EXPOSE 8081
   ENTRYPOINT java -jar app.jar

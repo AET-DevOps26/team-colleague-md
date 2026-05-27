@@ -1,42 +1,66 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap');
 
 :root {
-  /* Backgrounds */
-  --bg-base:     #FFFFFF;
-  --bg-surface:  #F9F9F9;
+  /* Surfaces */
+  --bg-base: #FFFFFF;
+  --bg-surface: #F9F9F9;
   --bg-elevated: #F0F0F0;
+  --bg-paper: oklch(97% 0.012 80);
 
   /* Text */
-  --text-primary:   #0A0A0A;
+  --text-primary: #0A0A0A;
   --text-secondary: #6B6B6B;
-  --text-tertiary:  #ABABAB;
+  --text-tertiary: #ABABAB;
 
   /* Borders */
-  --border-subtle:  #EBEBEB;
+  --border-subtle: #EBEBEB;
   --border-default: #D4D4D4;
 
-  /* Accent */
-  --accent:       #0A0A0A;
+  /* Accent + semantic */
+  --accent: #0A0A0A;
   --accent-hover: #333333;
-
-  /* Status */
-  --success:    #16A34A;
+  --success: #16A34A;
   --success-bg: #F0FDF4;
-  --warning:    #CA8A04;
+  --warning: #CA8A04;
   --warning-bg: #FEFCE8;
-  --danger:     #DC2626;
-  --danger-bg:  #FEF2F2;
+  --danger: #DC2626;
+  --danger-bg: #FEF2F2;
+
+  /* Radii */
+  --radius-card: 12px;
+  --radius-btn: 8px;
+  --radius-modal: 14px;
+  --radius-input: 8px;
+  --radius-tag: 4px;
 
   /* Typography */
-  --font-sans:  "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono:  "JetBrains Mono", ui-monospace, monospace;
-  --font-serif: "Newsreader", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
 
   /* Layout */
-  --sidebar-width: 220px;
+  --sidebar-width: 240px;
+  --rail-width: 60px;
   --topbar-height: 56px;
-  --card-radius:   10px;
-  --btn-radius:    8px;
+
+  /* Motion */
+  --ease-ios: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-hover: 120ms ease-out;
+  --motion-card-lift: 160ms ease-out;
+  --motion-modal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-sidebar: 200ms ease;
+  --motion-fab-spin: 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-skeleton: 1.4s ease-in-out;
+
+  /* Focus */
+  --focus-ring: 2px solid var(--accent);
+  --focus-ring-offset: 2px;
+  --focus-ring-glow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+
+  /* Aliases for backward compat */
+  --card-radius: var(--radius-card);
+  --btn-radius: var(--radius-btn);
 }
 
 *, *::before, *::after {
@@ -73,4 +97,12 @@ button {
 
 input, textarea {
   font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

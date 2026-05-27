@@ -10,10 +10,9 @@ interface Props {
   loading: boolean;
   onLoadMore: () => void;
   onLike: (id: string) => void;
-  onTagClick: (tag: string) => void;
 }
 
-export default function FeedGrid({ posts, hasMore, loading, onLoadMore, onLike, onTagClick }: Props) {
+export default function FeedGrid({ posts, hasMore, loading, onLoadMore, onLike }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,7 +37,7 @@ export default function FeedGrid({ posts, hasMore, loading, onLoadMore, onLike, 
       <div className={styles.masonry}>
         <DigestCard />
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} onLike={onLike} onTagClick={onTagClick} />
+          <PostCard key={post.id} post={post} onLike={onLike} />
         ))}
       </div>
       <div ref={sentinelRef} className={styles.sentinel}>

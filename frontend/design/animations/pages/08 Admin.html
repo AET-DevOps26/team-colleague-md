@@ -1,0 +1,325 @@
+<!doctype html>
+<!--
+  P08 — Admin
+  Scope:      Dashboard-style admin surface — moderation queue, user management,
+              tabbed sections, search, role select, destructive-action affordances.
+              Composes C02 (search-input), C06 (tab-item + tab-count), C07
+              (manage-portal popover), C10 (avatar identity).
+  Spec:       docs/Animation Spec.md  §  Pages · Admin
+  Source:     pages/Verita Admin.html
+  React hint: <AdminLayout>, useUserSearch(), useRoleManager()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; }
+
+  /* --- Search-input mock (production §6 from C02) --- */
+  .search-mock { position: relative; display: inline-flex; align-items: center; }
+  .search-mock svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); pointer-events: none; }
+  .search-input {
+    height: 34px; border-radius: 8px; border: 1px solid var(--border-default);
+    background: var(--bg-surface); padding: 0 12px 0 32px;
+    font: 400 13px var(--font-sans); color: var(--text-primary);
+    width: 240px; outline: none;
+    transition: border-color 120ms, box-shadow 120ms, background 120ms;
+  }
+  .search-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+
+  /* --- Tab bar mock (production — C06 §3 pattern) --- */
+  .tab-bar-mock { display: flex; gap: 0; border-bottom: 1px solid var(--border-subtle); padding: 0; }
+  .tab-btn {
+    appearance: none; background: transparent; cursor: pointer;
+    display: flex; align-items: center; gap: 7px;
+    padding: 14px 2px; margin-right: 24px;
+    font: 500 13.5px var(--font-sans); color: var(--text-tertiary);
+    border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color 120ms, border-color 120ms;
+  }
+  .tab-btn:hover { color: var(--text-primary); }
+  .tab-btn.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+  .tab-btn .tab-count {
+    font: 600 11px var(--font-mono); font-variant-numeric: tabular-nums;
+    background: var(--bg-elevated); color: var(--text-secondary);
+    padding: 2px 7px; border-radius: 999px; line-height: 1.4;
+    transition: background 120ms, color 120ms;
+  }
+  .tab-btn.active .tab-count { background: var(--accent); color: #fff; }
+  .tab-panel-mock { display: none; padding: 16px 0 4px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+  .tab-panel-mock.active { display: block; }
+
+  /* --- Role select mock (production) --- */
+  .role-row { display: flex; align-items: center; gap: 14px; }
+  .role-select-wrap { position: relative; display: inline-flex; align-items: center; }
+  .role-select {
+    height: 30px; padding: 0 26px 0 10px; border-radius: 6px;
+    border: 1px solid var(--border-default); background: var(--bg-surface);
+    font: 500 12px var(--font-sans); color: var(--text-primary);
+    cursor: pointer; outline: none; appearance: none;
+    transition: border-color 120ms, background 120ms;
+  }
+  .role-select:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+  .role-select-wrap::after {
+    content: ""; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 10px; height: 10px; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236B6B6B' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-size: contain; background-repeat: no-repeat;
+  }
+
+  /* --- Stat card mock (Extended) --- */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .stat-card {
+    padding: 16px; background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    transition: transform 160ms ease-out, box-shadow 220ms ease-out, border-color 160ms ease-out;
+  }
+  .stat-card:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(10,10,10,0.06); border-color: var(--border-default); }
+  .stat-label { font: 500 10.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
+  .stat-value { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 28px; line-height: 1.1; margin-top: 6px; }
+  .stat-delta { font: 500 11px var(--font-mono); color: var(--success); margin-top: 4px; }
+  .stat-delta.warn { color: var(--warning); }
+
+  /* --- Action menu (manage-portal pattern from C07 §3) --- */
+  .menu-wrap { position: relative; display: inline-block; }
+  .menu-trigger {
+    appearance: none; background: var(--bg-surface); border: 1px solid var(--border-default);
+    width: 30px; height: 30px; border-radius: 6px; cursor: pointer; color: var(--text-secondary);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 120ms, color 120ms;
+  }
+  .menu-trigger:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .action-menu {
+    position: absolute; top: calc(100% + 6px); right: 0;
+    min-width: 160px; background: #fff; border: 1px solid var(--border-subtle);
+    border-radius: 8px; padding: 4px; box-shadow: 0 12px 28px -12px rgba(0,0,0,0.18);
+    display: none; z-index: 10;
+    transform-origin: top right;
+  }
+  .action-menu.open { display: block; animation: dropIn 120ms ease-out; }
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .action-menu button {
+    appearance: none; background: transparent; border: 0; width: 100%;
+    text-align: left; padding: 7px 10px; border-radius: 6px;
+    font: 500 12.5px var(--font-sans); color: var(--text-primary); cursor: pointer;
+    transition: background 100ms;
+  }
+  .action-menu button:hover { background: var(--bg-elevated); }
+  .action-menu button.danger { color: #B91C1C; }
+  .action-menu button.danger:hover { background: #FEF2F2; }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  .back { margin-top: 80px; display: inline-block; color: var(--text-secondary); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; transition: color 120ms, border-color 120ms; }
+  .back:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stat-card { transition: box-shadow 120ms linear, border-color 120ms linear !important; }
+    .stat-card:hover { transform: none !important; }
+    .action-menu.open { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+
+    <header class="lead-block">
+      <div class="wordmark"><span class="lead">V</span>erita</div>
+      <h1>Admin</h1>
+      <ul class="scope">
+        <li>Dashboard surface — quiet table chrome with field-local focus and explicit destructive-action affordances.</li>
+        <li>Composes <a href="../components/02 Form Fields & Validation.html">C02</a>, <a href="../components/06 Tags & Filters.html">C06</a>, <a href="../components/07 Tooltips & Popovers.html">C07</a>, <a href="../components/10 Avatars & Identity.html">C10</a>.</li>
+        <li>Search-input focus (production), tab switch (production), role-select focus (production), action menu (production), stat-card hover (extended).</li>
+      </ul>
+      <span class="status live">Status: Live</span>
+    </header>
+
+    <section>
+      <h2>Choreography timeline</h2>
+      <p>Time origin (<code>t=0</code>) is mount of <code>&lt;AdminLayout&gt;</code> after route resolves and the JWT admin claim is verified. Admin is a low-motion surface — chrome stays still; affordances are field-local and explicit.</p>
+      <table class="timeline">
+        <thead><tr><th>t=</th><th>Actor</th><th>Motion</th><th>Source / component</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Topbar + tab bar</td><td>Static — already painted, no entry</td><td>Production · <code>pages/Verita Admin.html:106,162</code></td></tr>
+          <tr><td>0</td><td>Stat row</td><td>Static — proposed; no production source</td><td>Extended — <code>&lt;StatCard&gt;</code></td></tr>
+          <tr><td>0</td><td>Tab panel</td><td>Static — Moderation table already rendered</td><td>Production · <code>:186 .tab-panel.active</code></td></tr>
+          <tr><td>onHover stat</td><td>Stat card</td><td>translateY(-1px) + shadow, 160ms / 220ms</td><td>Extended — mirrors C05 card hover</td></tr>
+          <tr><td>onClick tab</td><td>Tab item + count</td><td>color 120ms + border-bottom-color 120ms; count bg flips to <code>--accent</code></td><td>C06 §3 (production) · <code>:173</code></td></tr>
+          <tr><td>onFocus search</td><td>.search-input</td><td>border → accent, bg → #fff, 3px shadow, 120ms × 3 props</td><td>C02 §6 (production) · <code>:204–212</code></td></tr>
+          <tr><td>onFocus role</td><td>.role-select</td><td>border → accent, bg → #fff, 3px shadow, 120ms × 2 props</td><td>Production · <code>:331–338</code></td></tr>
+          <tr><td>onClick ⋯</td><td>Action menu</td><td>opacity 0→1 + translateY(-4px)→0 + scale(.97)→1, 120ms ease-out</td><td>C07 §3 (production) · <code>@keyframes dropIn</code></td></tr>
+          <tr><td>onClick Delete</td><td>Row + confirm overlay</td><td>backdrop fade + dialog (C03); on confirm: <code>rowFade 400ms</code></td><td>Production · <code>:349 @keyframes rowFade</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="divided">
+      <h2>Stat card hover <span class="tier ext">Extended</span></h2>
+      <p>Production has no admin overview row today — moderation lands directly on the Flagged-content table. This proposes a 3-up KPI strip mirroring C05's card-hover signature (160ms <code>translateY(-1px)</code> + 220ms shadow) so future admin dashboards inherit the same hover vocabulary as feed cards. Border-color also lifts to <code>--border-default</code> to add a hairline anchor under reduced-motion (where the translate collapses).</p>
+      <div class="stage">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-label">Flagged content</div><div class="stat-value">12</div><div class="stat-delta warn">+3 vs. last 24h</div></div>
+          <div class="stat-card"><div class="stat-label">Active users</div><div class="stat-value">1,248</div><div class="stat-delta">+18 this week</div></div>
+          <div class="stat-card"><div class="stat-label">Banned</div><div class="stat-value">7</div><div class="stat-delta">+0 this week</div></div>
+        </div>
+        <p class="hint">Hover any card. The motion is identical to C05 — page-level admin overview should not invent its own hover vocabulary.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Search-input focus <span class="tier prod">Production</span></h2>
+      <p>34px height, 8px radius, 3px focus shadow at <code>rgba(10,10,10,0.06)</code> — the shortest field in the system, sourced 1:1 from <code>pages/Verita Admin.html:204–212</code>. Co-transitions <code>border-color</code>, <code>background</code>, and <code>box-shadow</code> over 120ms. Cited from C02 §6.</p>
+      <div class="stage">
+        <div class="search-mock">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="search-input" type="search" placeholder="Search by name or email…" id="userSearch" />
+        </div>
+        <p class="hint">Tab into the field or click it. Width-cap is 240px in production; the bg flip from <code>--bg-surface</code> → <code>#fff</code> is the surface-context cue (admin sits on tinted base, so flipping to white reads as "active").</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Tab switch <span class="tier prod">Production</span></h2>
+      <p>Moderation ↔ Users tab swap is an instant <code>display:none</code> flip on <code>.tab-panel</code> — no panel slide. The animated parts are the <code>.tab-btn</code> (color + border-bottom-color, 120ms) and the inline <code>.tab-count</code> (background <code>--bg-elevated</code> → <code>--accent</code>, color → <code>#fff</code>, 120ms). Sourced 1:1 from <code>pages/Verita Admin.html:168–182</code>; canonicalized in C06 §3.</p>
+      <div class="stage">
+        <div class="tab-bar-mock" id="tabBar">
+          <button class="tab-btn active" type="button" data-panel="mod">Moderation <span class="tab-count">12</span></button>
+          <button class="tab-btn" type="button" data-panel="users">Users <span class="tab-count">248</span></button>
+        </div>
+        <div class="tab-panel-mock active" data-panel="mod">12 flagged items — posts (8) and comments (4) awaiting review.</div>
+        <div class="tab-panel-mock" data-panel="users">248 users · search by name or email above. Role and status are inline-editable on each row.</div>
+        <p class="hint">The panel itself does not transition — the active count badge flipping to accent is what carries the state change. Adding a panel slide here would fight the table's identity (tables don't migrate).</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Role select &amp; action menu <span class="tier prod">Production</span></h2>
+      <p>Two anchored affordances on a Users-table row. The native <code>&lt;select&gt;</code> (<code>:331–338</code>) reuses the search-input focus signature (3px shadow, bg flip, accent border) — one focus vocabulary across all admin fields. The <code>⋯</code> action menu mirrors C07 §3's <code>manage-portal</code>: <code>@keyframes dropIn 120ms</code> over opacity + translateY(-4px) + scale(0.97). Destructive items get the only red hover surface in the system (<code>#FEF2F2</code>).</p>
+      <div class="stage">
+        <div class="role-row">
+          <div class="role-select-wrap">
+            <select class="role-select" aria-label="Role">
+              <option>User</option>
+              <option>Verified</option>
+              <option>Admin</option>
+            </select>
+          </div>
+          <div class="menu-wrap">
+            <button class="menu-trigger" id="menuBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Row actions">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+            </button>
+            <div class="action-menu" id="actionMenu" role="menu">
+              <button type="button" role="menuitem">View profile</button>
+              <button type="button" role="menuitem">Reset password</button>
+              <button type="button" role="menuitem" class="danger">Ban user…</button>
+            </div>
+          </div>
+        </div>
+        <div class="triggers"><button class="trigger" id="toggleMenu" type="button">Toggle action menu</button></div>
+        <p class="hint">In production the menu is portaled to <code>document.body</code> to escape table <code>overflow</code>; demoed inline. Destructive items fire C03's confirm dialog (<code>320px .modal--narrow</code>) before the row plays <code>@keyframes rowFade 400ms</code> and collapses.</p>
+      </div>
+    </section>
+
+    <div class="react-hint">
+      <h3>React contract</h3>
+      <dl>
+        <dt>Layout</dt><dd><code>&lt;AdminLayout&gt;</code> — owns tab state, JWT-gated render, and the topbar admin-role badge.</dd>
+        <dt>Hooks</dt><dd><code>useUserSearch(query, 250)</code> (debounced filter — production fires per-keystroke; 250ms is aspirational), <code>useRoleManager(userId)</code> (optimistic role update + revert on error toast).</dd>
+        <dt>Composes</dt>
+        <dd>
+          <div class="composes">
+            <a href="../components/02 Form Fields & Validation.html">C02 SearchInput §6</a>
+            <a href="../components/06 Tags & Filters.html">C06 Tabs §3</a>
+            <a href="../components/07 Tooltips & Popovers.html">C07 ManagePortal §3</a>
+            <a href="../components/10 Avatars & Identity.html">C10 Avatar</a>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <a class="back" href="../00 Index.html">← Back to Index</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  // Tab switch
+  const bar = document.getElementById('tabBar');
+  bar?.addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn'); if (!btn) return;
+    bar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    const which = btn.dataset.panel;
+    document.querySelectorAll('.tab-panel-mock').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === which);
+    });
+  });
+
+  // Action menu
+  const menuBtn = document.getElementById('menuBtn');
+  const menu    = document.getElementById('actionMenu');
+  const toggle  = document.getElementById('toggleMenu');
+  const open  = () => { menu.classList.add('open'); menuBtn.setAttribute('aria-expanded', 'true'); };
+  const close = () => { menu.classList.remove('open'); menuBtn.setAttribute('aria-expanded', 'false'); };
+  menuBtn?.addEventListener('click', e => { e.stopPropagation(); menu.classList.contains('open') ? close() : open(); });
+  toggle?.addEventListener('click',  e => { e.stopPropagation(); menu.classList.contains('open') ? close() : open(); });
+  document.addEventListener('click', e => { if (!menu.contains(e.target) && e.target !== menuBtn) close(); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+})();
+</script>
+</body>
+</html>
