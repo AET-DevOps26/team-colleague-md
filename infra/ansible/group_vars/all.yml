@@ -1,0 +1,4 @@
+# Shared variables for all Ansible hosts
+registry: ghcr.io/aet-devops26/team-colleague-md
+image_tag: latest
+deploy_dir: /home/azureuser/verita
