@@ -1,0 +1,986 @@
+<!doctype html>
+<!--
+  C06 — Tags & Filters
+  Scope:      Tag and filter primitives across the product.
+              Production tier (3 sections, 1:1 from pages/*.html):
+                §1 Topbar chip row (Home — single-active text chips, primary)
+                §2 Decorative .tag-pill (feed-card metadata, Home + Search)
+                §3 Tab-item + count badge (User Profile filter tabs)
+              Extended tier (5 sections, proposals for the unified <TagChip>):
+                §4 Filled/outline cross-fade chip (primary)
+                §5 Count-badge increment (1.0 → 1.1 peak → 1.0)
+                §6 Chip remove (collapse width + fade)
+                §7 Filter applied state (subtle pill highlight)
+                §8 Masonry filter exit (.card-slot.hidden 220ms — pairs with C05)
+  Spec:       docs/Animation Spec.md  §  Tags & Filters
+  React hint: <TagChip>, <FilterTabs>, <FilterChipRow>
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tags & Filters · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — copied verbatim from C05) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .scope {
+    color: var(--text-secondary);
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+
+  /* Tier badges — production vs extended */
+  .tier {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 8px;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    vertical-align: 2px;
+  }
+  .tier.prod {
+    background: color-mix(in oklab, var(--success) 12%, var(--bg-surface));
+    color: var(--success);
+    border: 1px solid color-mix(in oklab, var(--success) 28%, transparent);
+  }
+  .tier.ext {
+    background: color-mix(in oklab, var(--accent) 10%, var(--bg-surface));
+    color: var(--accent);
+    border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent);
+  }
+  .tier.primary {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+
+  /* Spec table */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 14%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 18%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  .triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0 0;
+    align-items: center;
+  }
+  .trigger {
+    appearance: none;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    border-radius: 7px;
+    padding: 8px 14px;
+    font: 500 12.5px var(--font-sans);
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+  }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger:active { background: var(--border-subtle); }
+  .trigger.primary {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+  .trigger.primary:hover { background: oklch(28% 0 0); }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* React hint footer */
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ===========================================================
+   * §1 — Topbar chip row (Home tagbar) — verbatim from
+   * pages/Verita Home.html:177–191
+   * =========================================================== */
+  .stage {
+    margin: 14px 0 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+    overflow: hidden;
+  }
+  .tagbar-stage {
+    display: flex; align-items: center; gap: 0;
+    padding: 14px 20px; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
+    background: rgba(255,255,255,0.85);
+  }
+  .tagbar-stage::-webkit-scrollbar { display: none; }
+  .tagbar-stage .chip {
+    display: inline-flex; align-items: center; padding: 4px 14px;
+    font-size: 13.5px; color: var(--text-tertiary); font-weight: 500;
+    white-space: nowrap; transition: color 120ms ease-out;
+    background: none; border: none; cursor: pointer; font-family: inherit;
+  }
+  .tagbar-stage .chip:first-child { padding-left: 0; }
+  .tagbar-stage .chip:hover { color: var(--text-primary); }
+  .tagbar-stage .chip.active { color: var(--text-primary); font-weight: 600; }
+
+  /* ===========================================================
+   * §2 — Decorative .tag-pill (feed cards) — verbatim from
+   * pages/Verita Home.html:285–290 / Search Results.html:224–229
+   * =========================================================== */
+  .pill-stage { padding: 18px 20px; }
+  .meta-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag-pill {
+    font-size: 10.5px; font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 3px 7px; border-radius: 4px;
+  }
+  .tag-pill.accent { background: var(--text-primary); color: #fff; }
+
+  /* ===========================================================
+   * §3 — Tab-item + count badge (User Profile) — verbatim from
+   * pages/Verita User Profile.html:226–236
+   * =========================================================== */
+  .tabs-stage { padding: 0 20px; }
+  .profile-tabs {
+    display: flex; gap: 0; overflow-x: auto; scrollbar-width: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .profile-tabs::-webkit-scrollbar { display: none; }
+  .tab-item {
+    display: flex; align-items: center; gap: 6px; padding: 14px 16px;
+    font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
+    cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+    transition: color 120ms, border-color 120ms; position: relative; top: 1px;
+    background: none; border-left: none; border-right: none; border-top: none; border-radius: 0;
+    font-family: inherit;
+  }
+  .tab-item:hover { color: var(--text-primary); }
+  .tab-item.active {
+    color: var(--text-primary); font-weight: 600;
+    border-bottom-color: var(--accent);
+  }
+  .tab-count {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+    padding: 1px 5px; border-radius: 4px;
+    transition: background 120ms, color 120ms;
+  }
+  .tab-item.active .tab-count {
+    background: var(--accent); color: #fff;
+  }
+
+  /* ===========================================================
+   * §4 — Unified <TagChip> proposal — filled/outline cross-fade
+   * 160ms ease-out. Two states share same dimensions to avoid layout
+   * shift; only background, color, and border-color cross-fade.
+   * =========================================================== */
+  .chiprow-stage { padding: 18px 20px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .x-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 11px;
+    font-size: 12.5px; font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 999px;
+    cursor: pointer; font-family: inherit;
+    transition: background 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out;
+    line-height: 1;
+  }
+  .x-chip:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+  .x-chip.is-on {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+  .x-chip .x-chip-hash {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-tertiary);
+    transition: color 160ms ease-out;
+  }
+  .x-chip.is-on .x-chip-hash { color: rgba(255,255,255,0.6); }
+
+  /* ===========================================================
+   * §5 — Count-badge increment animation
+   * Triggered by adding .x-bump-on-change (which then auto-removes).
+   * 240ms scale 1.0 → 1.1 → 1.0, ease-out.
+   * =========================================================== */
+  @keyframes x-count-bump {
+    0%   { transform: scale(1.0); }
+    35%  { transform: scale(1.10); }
+    100% { transform: scale(1.0); }
+  }
+  .x-count {
+    display: inline-block;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+    padding: 1px 5px; border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    transform-origin: center;
+  }
+  .x-count.is-bumping { animation: x-count-bump 240ms ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .x-count.is-bumping { animation: none; }
+  }
+
+  /* ===========================================================
+   * §6 — Chip remove (collapse width + fade)
+   * 220ms ease-out. Uses max-width + opacity + padding to avoid
+   * the "snap" you get with display:none.
+   * =========================================================== */
+  .x-removable-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 18px 20px; align-items: center;
+  }
+  .x-rchip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 8px 5px 11px;
+    font-size: 12.5px; font-weight: 500;
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+    border-radius: 999px;
+    line-height: 1;
+    overflow: hidden;
+    max-width: 220px; opacity: 1;
+    transition:
+      max-width 220ms ease-out,
+      opacity 220ms ease-out,
+      padding 220ms ease-out,
+      margin 220ms ease-out;
+  }
+  .x-rchip.is-leaving {
+    max-width: 0;
+    opacity: 0;
+    padding-left: 0; padding-right: 0;
+    margin-left: -8px; /* collapse the row gap as well */
+  }
+  .x-rchip > .label { white-space: nowrap; }
+  .x-rchip > .x {
+    width: 16px; height: 16px;
+    display: inline-grid; place-items: center;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 120ms, color 120ms;
+  }
+  .x-rchip > .x:hover {
+    background: var(--border-default);
+    color: var(--text-primary);
+  }
+  .x-rchip > .x svg { width: 10px; height: 10px; }
+  @media (prefers-reduced-motion: reduce) {
+    .x-rchip { transition: opacity 120ms linear; }
+    .x-rchip.is-leaving { max-width: 0; padding: 0; margin: 0; }
+  }
+
+  /* ===========================================================
+   * §7 — Filter applied state
+   * A subtle pill highlight communicating "this chip participates
+   * in the active filter set". Distinct from on/off (§4) because
+   * it is multi-state — many chips can be applied at once.
+   * =========================================================== */
+  .x-applied-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 18px 20px; align-items: center;
+  }
+  .x-filter-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 11px;
+    font-size: 12.5px; font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 999px;
+    cursor: pointer; font-family: inherit;
+    transition:
+      background 160ms ease-out,
+      color 160ms ease-out,
+      border-color 160ms ease-out,
+      box-shadow 160ms ease-out;
+    line-height: 1;
+  }
+  .x-filter-chip.is-applied {
+    background: color-mix(in oklab, var(--accent) 8%, var(--bg-surface));
+    border-color: color-mix(in oklab, var(--accent) 38%, var(--border-default));
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 0 color-mix(in oklab, var(--accent) 0%, transparent);
+  }
+  .x-filter-chip .x-tick {
+    display: inline-flex; align-items: center;
+    width: 0; opacity: 0; overflow: hidden;
+    transition: width 160ms ease-out, opacity 160ms ease-out;
+    color: var(--accent);
+  }
+  .x-filter-chip.is-applied .x-tick { width: 12px; opacity: 1; margin-right: 1px; }
+  .x-filter-chip .x-tick svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+  /* ===========================================================
+   * §8 — Masonry filter exit (.card-slot.hidden)
+   * Pairs with C05. When a filter chip removes a slot from the
+   * masonry, the slot fades + scales to 0.97 over 220ms ease-out.
+   * After the exit, the demo collapses the slot to 0 height so
+   * neighbors reflow.
+   * =========================================================== */
+  .x-masonry {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    padding: 20px;
+    background: var(--bg-surface);
+  }
+  .x-card-slot {
+    background: var(--bg-elevated);
+    border-radius: 10px;
+    height: 88px;
+    display: grid; place-items: center;
+    font: 500 11px var(--font-mono);
+    color: var(--text-tertiary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition:
+      opacity 220ms ease-out,
+      transform 220ms ease-out;
+  }
+  .x-card-slot.is-hiding {
+    opacity: 0;
+    transform: scale(0.97);
+    pointer-events: none;
+  }
+  /* After the 220ms exit, JS adds .is-collapsed which reflows the grid */
+  .x-card-slot.is-collapsed {
+    height: 0;
+    margin: 0; padding: 0;
+    grid-column: span 0;
+    transform: none;
+    transition: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .x-card-slot { transition: opacity 120ms linear; }
+    .x-card-slot.is-hiding { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. tokens.css fixed bar -->
+<div class="demo-header">
+  <span class="demo-title">C06 · Tags & Filters</span>
+  <span class="demo-spec">Topbar · Pills · Tabs · Chip · Count · Remove · Applied · Masonry-exit</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<!-- 2. Stage + content wrap -->
+<div class="demo-stage">
+<div class="wrap">
+
+  <!-- 3. Lead block -->
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Tags &amp; Filters</h1>
+    <ul class="scope-list">
+      <li>Three production primitives — Home topbar chip row, decorative <code>.tag-pill</code>, User Profile filter tabs — sourced 1:1 from <code>pages/*.html</code></li>
+      <li>Five Extended-tier proposals for the unified <code>&lt;TagChip&gt;</code> contract — cross-fade, count bump, remove, applied state, masonry exit</li>
+      <li>The masonry exit (§8) is what <a href="05%20Cards%20%26%20Hover.html">C05</a> delegated here — same 220ms timing, ensures the two demos read as one motion vocabulary</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- 4. Spec table -->
+  <section>
+    <h2>Spec</h2>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Topbar chip color shift</td>
+          <td>120ms</td><td>ease-out</td>
+          <td>Color + font-weight only. <code>color 120ms</code> on <code>.tagbar .chip</code>; <code>font-weight</code> shifts instantly on <code>.active</code>. Production §1.</td>
+        </tr>
+        <tr>
+          <td>Tab-item color + border</td>
+          <td>120ms</td><td>linear</td>
+          <td><code>color 120ms, border-color 120ms</code> on <code>.tab-item</code>; <code>.tab-count</code> bg/color shift in parallel. Production §3.</td>
+        </tr>
+        <tr>
+          <td>Chip filled/outline</td>
+          <td>160ms</td><td>ease-out</td>
+          <td>Background + color + border-color cross-fade on toggle. Same-dimension states avoid layout shift. Extended §4.</td>
+        </tr>
+        <tr>
+          <td>Count-badge bump</td>
+          <td>240ms</td><td>ease-out</td>
+          <td><code>scale(1) → scale(1.1) → scale(1)</code> peak at 35%. Triggered by value change, not chip toggle. Extended §5.</td>
+        </tr>
+        <tr>
+          <td>Chip remove</td>
+          <td>220ms</td><td>ease-out</td>
+          <td>Symmetric collapse: <code>max-width</code>, <code>opacity</code>, <code>padding</code>, <code>margin</code> all 220ms. Avoids the snap of <code>display:none</code>. Extended §6.</td>
+        </tr>
+        <tr>
+          <td>Filter applied tick</td>
+          <td>160ms</td><td>ease-out</td>
+          <td>Tick <code>width 0 → 12px</code> + opacity 160ms; chip bg/border tints in parallel. Extended §7.</td>
+        </tr>
+        <tr>
+          <td>Masonry slot exit</td>
+          <td>220ms</td><td>ease-out</td>
+          <td><code>opacity 1 → 0</code> + <code>scale(1) → scale(0.97)</code>. Matches C05's <code>.cover</code> shadow timing for vocabulary parity. Extended §8.</td>
+        </tr>
+        <tr>
+          <td>Reduced motion</td>
+          <td>—</td><td>—</td>
+          <td>Cross-fades become opacity-only 120ms linear; bump and scale collapse to no-op; remove keeps the geometry collapse but skips the bezier.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =========================================================
+       SECTION 1 — Topbar chip row (PRODUCTION, primary)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Topbar chip row<span class="tier prod primary">Production · Primary</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Home.html</code> · lines 177–191</dd>
+      <dt>Markup</dt><dd><code>.tagbar &gt; button.chip[.active]</code> — single-active row, scrollable</dd>
+      <dt>States</dt><dd>rest <code>--text-tertiary</code> · hover <code>--text-primary</code> · active <code>--text-primary</code> + <code>font-weight: 600</code></dd>
+      <dt>Motion</dt><dd><code>transition: color 120ms ease-out</code> only — no bg, no border, no underline</dd>
+    </dl>
+    <p>Production's primary tag-filter primitive. Pure text chips: no fill, no border, no underline. Single-active by design — clicking a chip swaps which item carries <code>.active</code>. Click any chip to see the color + weight swap in isolation.</p>
+    <div class="stage">
+      <div class="tagbar-stage" id="tagbar-stage">
+        <button class="chip active" type="button">For you</button>
+        <button class="chip" type="button">alignment</button>
+        <button class="chip" type="button">agents</button>
+        <button class="chip" type="button">mech-interp</button>
+        <button class="chip" type="button">rag</button>
+        <button class="chip" type="button">eval</button>
+        <button class="chip" type="button">reasoning</button>
+        <button class="chip" type="button">open-source</button>
+      </div>
+    </div>
+    <p class="hint">Note: in production this row does <em>not</em> filter the masonry — it is a navigation-style category row. Real filtering (with masonry exit motion) is an Extended-tier proposal — see §8.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 2 — Decorative .tag-pill (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Decorative <code>.tag-pill</code><span class="tier prod">Production</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Home.html</code> · 285–290 + <code>Search Results.html</code> · 224–229</dd>
+      <dt>Markup</dt><dd><code>.meta-tags &gt; .tag-pill[.accent]</code> — render-time only, no toggle</dd>
+      <dt>Sizing</dt><dd>10.5px / 500 · <code>padding: 3px 7px</code> · <code>border-radius: 4px</code></dd>
+      <dt>Variants</dt><dd>default <code>--bg-elevated</code> on <code>--text-secondary</code> · <code>.accent</code> first-child <code>--text-primary</code> on white</dd>
+      <dt>Motion</dt><dd>None. Static metadata — no hover, no toggle, no enter motion.</dd>
+    </dl>
+    <p>Used inside feed-card metadata strips on Home and Search Results. The <code>.accent</code> variant on the first pill is rendered server-side; there is no transition between accent and default in production. Surfaced here so the visual vocabulary is documented even though it carries no motion.</p>
+    <div class="stage pill-stage">
+      <div class="meta-tags">
+        <span class="tag-pill accent">#mech-interp</span>
+        <span class="tag-pill">paper</span>
+        <span class="tag-pill">long-context</span>
+      </div>
+      <div class="meta-tags" style="margin-top:10px;">
+        <span class="tag-pill accent">#rag</span>
+        <span class="tag-pill">opinion</span>
+      </div>
+    </div>
+    <p class="hint">If the React <code>&lt;PostCardMeta&gt;</code> ever needs a hover or click on these, treat that as a <em>new</em> primitive (the unified <code>&lt;TagChip&gt;</code> in §4) rather than retrofitting motion onto the static pill.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 3 — Tab-item + count badge (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Filter tabs<span class="tier prod">Production</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita User Profile.html</code> · 226–236</dd>
+      <dt>Markup</dt><dd><code>.profile-tabs &gt; button.tab-item[.active] &gt; .tab-count</code></dd>
+      <dt>States</dt><dd>rest <code>--text-secondary</code> · hover <code>--text-primary</code> · active <code>--text-primary</code> + <code>font-weight: 600</code> + 2px <code>--accent</code> bottom border</dd>
+      <dt>Badge</dt><dd>11px / 600 · 4px radius · <code>--bg-elevated</code> → <code>--accent</code> + white when parent <code>.active</code></dd>
+      <dt>Motion</dt><dd><code>transition: color 120ms, border-color 120ms</code> on the tab; <code>background 120ms, color 120ms</code> on the count badge</dd>
+    </dl>
+    <p>The actual filter primitive in the product. Click any tab to switch the active filter — the bottom border, label color, and count-badge fill all transition in parallel over 120ms. Counts themselves are static <code>&lt;span&gt;</code> in production (see §5 for the proposed bump).</p>
+    <div class="stage tabs-stage">
+      <div class="profile-tabs" id="profile-tabs">
+        <button class="tab-item active" type="button">Posts <span class="tab-count">47</span></button>
+        <button class="tab-item" type="button">Bookmarks <span class="tab-count">28</span></button>
+        <button class="tab-item" type="button">Drafts <span class="tab-count">3</span></button>
+        <button class="tab-item" type="button">Likes <span class="tab-count">312</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 4 — Filled/outline cross-fade chip (EXTENDED, primary)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Filled/outline cross-fade<span class="tier ext primary">Extended · Primary</span></h2>
+    <dl class="section-meta">
+      <dt>Proposal</dt><dd>Unified <code>&lt;TagChip&gt;</code> contract — single component for any toggleable tag</dd>
+      <dt>States</dt><dd>off: <code>--bg-surface</code> + <code>--text-secondary</code> + 1px <code>--border-default</code><br>on: <code>--text-primary</code> bg + white text + matching border</dd>
+      <dt>Motion</dt><dd><code>background 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out</code></dd>
+      <dt>Why 160ms</dt><dd>Slow enough to read as a state shift; fast enough that batch-toggling 3–4 chips doesn't feel sluggish</dd>
+      <dt>Why same dimensions</dt><dd>Off and on share padding + border-width — only colors swap. No layout shift, so neighbors don't reflow.</dd>
+    </dl>
+    <p>The unified primitive production has not codified yet. Click any chip to toggle — multiple can be active at once (multi-select), unlike the topbar's single-active row. Hash glyph (<code>#</code>) carries its own color transition for visual depth without bleed.</p>
+    <div class="stage chiprow-stage" id="chip-row">
+      <button class="x-chip" type="button"><span class="x-chip-hash">#</span>alignment</button>
+      <button class="x-chip is-on" type="button"><span class="x-chip-hash">#</span>mech-interp</button>
+      <button class="x-chip" type="button"><span class="x-chip-hash">#</span>agents</button>
+      <button class="x-chip is-on" type="button"><span class="x-chip-hash">#</span>rag</button>
+      <button class="x-chip" type="button"><span class="x-chip-hash">#</span>eval</button>
+      <button class="x-chip" type="button"><span class="x-chip-hash">#</span>long-context</button>
+      <button class="x-chip" type="button"><span class="x-chip-hash">#</span>safety</button>
+    </div>
+    <p class="hint">Why not a bounce on toggle? A bounce would lie about the action — toggling a tag is a passive filter selection, not a celebratory event. Save bounce for true successes (like-on-post, see <a href="12%20Post%20Detail%20Action%20Bar.html">C12</a>).</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 5 — Count-badge increment bump (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Count-badge increment<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Proposal</dt><dd>Subtle scale bump when a count value changes in place</dd>
+      <dt>Trigger</dt><dd>Add <code>.is-bumping</code> on value change; remove after 240ms</dd>
+      <dt>Keyframes</dt><dd>0% <code>scale(1.0)</code> → 35% <code>scale(1.1)</code> → 100% <code>scale(1.0)</code> · ease-out</dd>
+      <dt>Why 1.1, not 1.2</dt><dd>11px text — bigger peaks read as a glitch at this size. 10% peak is enough to draw the eye without being noisy.</dd>
+    </dl>
+    <p>Click "Increment" to bump the count. The badge stays visually anchored (transform-origin: center) and only scales — no color shift, no slide. Reduced-motion fallback skips the bump entirely; the value still updates instantly.</p>
+    <div class="triggers">
+      <button class="trigger primary" type="button" id="bump-inc">Increment count</button>
+      <button class="trigger" type="button" id="bump-dec">Decrement</button>
+      <button class="trigger" type="button" id="bump-reset">Reset to 47</button>
+      <span style="margin-left:8px; display:inline-flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-secondary);">
+        Posts <span class="x-count" id="bump-count">47</span>
+      </span>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 6 — Chip remove (collapse + fade) (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Chip remove<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Proposal</dt><dd>Symmetric collapse on dismiss — geometry and opacity fade together</dd>
+      <dt>Sequence</dt><dd>Click × → <code>.is-leaving</code> applied → 220ms collapse → DOM removal</dd>
+      <dt>Properties</dt><dd><code>max-width</code> · <code>opacity</code> · <code>padding</code> · <code>margin</code> all transition 220ms ease-out</dd>
+      <dt>Why max-width, not width</dt><dd>Real chip widths vary with label length. <code>max-width</code> animates from the actual content width down to 0 without measuring.</dd>
+    </dl>
+    <p>Each chip has an × dismiss. Click it to see the collapse — width and opacity ease together, neighbors slide left to fill the gap. Click "Restore all" to reset.</p>
+    <div class="triggers">
+      <button class="trigger" type="button" id="rm-restore">Restore all</button>
+    </div>
+    <div class="stage x-removable-row" id="rm-row" style="margin-top:12px;">
+      <span class="x-rchip"><span class="label">#alignment</span><span class="x" data-x="alignment" role="button" tabindex="0" aria-label="Remove"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      <span class="x-rchip"><span class="label">#mech-interp</span><span class="x" data-x="mech-interp" role="button" tabindex="0" aria-label="Remove"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      <span class="x-rchip"><span class="label">#agents</span><span class="x" data-x="agents" role="button" tabindex="0" aria-label="Remove"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      <span class="x-rchip"><span class="label">#rag</span><span class="x" data-x="rag" role="button" tabindex="0" aria-label="Remove"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      <span class="x-rchip"><span class="label">#long-context</span><span class="x" data-x="long-context" role="button" tabindex="0" aria-label="Remove"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 7 — Filter applied state (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Filter applied state<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Proposal</dt><dd>Multi-select highlight communicating "this chip is in the active filter set"</dd>
+      <dt>Distinct from §4</dt><dd>§4's on/off is a discrete chip-level toggle. <code>.is-applied</code> here is a <em>filter-set membership</em> indicator: chips can be applied, hovered, or off independently.</dd>
+      <dt>Visual</dt><dd>8% accent tint bg · 38% accent border · accent tick glyph slides in (<code>width 0 → 12px</code>)</dd>
+      <dt>Motion</dt><dd>160ms ease-out on bg, color, border, tick width — all in parallel</dd>
+    </dl>
+    <p>Click chips to add/remove them from the filter set. The accent tick reveals on apply, retracts on remove. Useful when the filter set persists across pagination (e.g. Search Results filter pills).</p>
+    <div class="stage x-applied-row" id="applied-row">
+      <button class="x-filter-chip is-applied" type="button">
+        <span class="x-tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 6l2.5 2.5L9.5 3.5"/></svg></span>
+        gpt4o
+      </button>
+      <button class="x-filter-chip is-applied" type="button">
+        <span class="x-tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 6l2.5 2.5L9.5 3.5"/></svg></span>
+        eval
+      </button>
+      <button class="x-filter-chip" type="button">
+        <span class="x-tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 6l2.5 2.5L9.5 3.5"/></svg></span>
+        mech-interp
+      </button>
+      <button class="x-filter-chip" type="button">
+        <span class="x-tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 6l2.5 2.5L9.5 3.5"/></svg></span>
+        long-context
+      </button>
+      <button class="x-filter-chip" type="button">
+        <span class="x-tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 6l2.5 2.5L9.5 3.5"/></svg></span>
+        safety
+      </button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 8 — Masonry filter exit (EXTENDED, pairs with C05)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Masonry filter exit<span class="tier ext">Extended · pairs with C05</span></h2>
+    <dl class="section-meta">
+      <dt>Proposal</dt><dd>When a filter chip removes cards from the feed, slots fade + scale-out before reflow</dd>
+      <dt>Why here, not C05</dt><dd>C05 owns hover and entry; filtering removes cards, which is a chip action. C05's deviation explicitly delegates this motion home.</dd>
+      <dt>Sequence</dt><dd>Click filter → matching slots get <code>.is-hiding</code> → 220ms exit → JS adds <code>.is-collapsed</code> → grid reflows neighbors</dd>
+      <dt>Motion</dt><dd><code>opacity 1 → 0</code> + <code>scale(1) → scale(0.97)</code>, both 220ms ease-out — same timing as C05's <code>.cover</code> shadow for vocabulary parity</dd>
+    </dl>
+    <p>Six placeholder slots tagged with category labels. Click a category to hide matching slots; click "Show all" to bring them back. Neighbors reflow after the exit completes, so you see the full 220ms before the grid collapses the gap.</p>
+    <div class="triggers">
+      <button class="trigger primary" type="button" data-cat="paper">Filter: paper</button>
+      <button class="trigger" type="button" data-cat="essay">Filter: essay</button>
+      <button class="trigger" type="button" data-cat="benchmark">Filter: benchmark</button>
+      <button class="trigger" type="button" id="show-all">Show all</button>
+    </div>
+    <div class="stage" style="margin-top:12px;">
+      <div class="x-masonry" id="masonry">
+        <div class="x-card-slot" data-cat="paper">PAPER · A</div>
+        <div class="x-card-slot" data-cat="essay">ESSAY · B</div>
+        <div class="x-card-slot" data-cat="paper">PAPER · C</div>
+        <div class="x-card-slot" data-cat="benchmark">BENCHMARK · D</div>
+        <div class="x-card-slot" data-cat="essay">ESSAY · E</div>
+        <div class="x-card-slot" data-cat="paper">PAPER · F</div>
+      </div>
+    </div>
+    <p class="hint">React: when <code>&lt;FilterChipRow&gt;</code> drives the masonry, gate the DOM removal behind a 220ms timeout so the exit gets to play. Reduced-motion shortens to opacity-only 120ms linear.</p>
+  </section>
+
+  <!-- =========================================================
+       React hint footer
+       ========================================================= -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <dl>
+      <dt>Topbar</dt><dd><code>&lt;CategoryRow active={k} onSelect=… /&gt;</code> — single-active text chips, mirrors §1.</dd>
+      <dt>Tabs</dt><dd><code>&lt;FilterTabs items=[{id, label, count}] active=… /&gt;</code> — accent bottom-border + count badge, mirrors §3.</dd>
+      <dt>Chip</dt><dd><code>&lt;TagChip on=… onChange=… removable=… applied=… /&gt;</code> — unified §4/§6/§7 contract. <code>removable</code> exposes the × dismiss; <code>applied</code> exposes the tick.</dd>
+      <dt>Count</dt><dd><code>useCountBump(value)</code> — returns <code>{ref, isBumping}</code>. Animates §5 whenever value changes.</dd>
+      <dt>Masonry</dt><dd><code>&lt;FilterableMasonry items=… filter=… /&gt;</code> — drives §8. Slots get <code>data-cat</code>; component owns the 220ms exit timing before un-mounting.</dd>
+    </dl>
+  </div>
+
+</div>
+</div>
+
+<script>
+(function(){
+  // §1 — Topbar chip row: single-active toggle.
+  const tagbar = document.getElementById('tagbar-stage');
+  if (tagbar) {
+    tagbar.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      tagbar.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  }
+
+  // §3 — Filter tabs: single-active toggle.
+  const tabs = document.getElementById('profile-tabs');
+  if (tabs) {
+    tabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab-item');
+      if (!tab) return;
+      tabs.querySelectorAll('.tab-item.active').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  }
+
+  // §4 — Unified TagChip: multi-select toggle.
+  const chipRow = document.getElementById('chip-row');
+  if (chipRow) {
+    chipRow.addEventListener('click', (e) => {
+      const chip = e.target.closest('.x-chip');
+      if (!chip) return;
+      chip.classList.toggle('is-on');
+    });
+  }
+
+  // §5 — Count bump.
+  const countEl = document.getElementById('bump-count');
+  let countVal = 47;
+  function setCount(v) {
+    countVal = v;
+    countEl.textContent = String(v);
+    // Force restart of animation by toggling class with a frame in between.
+    countEl.classList.remove('is-bumping');
+    void countEl.offsetWidth;
+    countEl.classList.add('is-bumping');
+  }
+  document.getElementById('bump-inc').addEventListener('click', () => setCount(countVal + 1));
+  document.getElementById('bump-dec').addEventListener('click', () => setCount(Math.max(0, countVal - 1)));
+  document.getElementById('bump-reset').addEventListener('click', () => setCount(47));
+  countEl.addEventListener('animationend', () => countEl.classList.remove('is-bumping'));
+
+  // §6 — Chip remove + restore.
+  const rmRow = document.getElementById('rm-row');
+  const rmInitial = rmRow.innerHTML;
+  rmRow.addEventListener('click', (e) => {
+    const x = e.target.closest('.x');
+    if (!x) return;
+    const chip = x.closest('.x-rchip');
+    if (!chip || chip.classList.contains('is-leaving')) return;
+    chip.classList.add('is-leaving');
+    setTimeout(() => { if (chip.parentNode) chip.parentNode.removeChild(chip); }, 230);
+  });
+  rmRow.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('x')) {
+      e.preventDefault();
+      e.target.click();
+    }
+  });
+  document.getElementById('rm-restore').addEventListener('click', () => {
+    rmRow.innerHTML = rmInitial;
+  });
+
+  // §7 — Filter applied multi-select.
+  const appliedRow = document.getElementById('applied-row');
+  if (appliedRow) {
+    appliedRow.addEventListener('click', (e) => {
+      const chip = e.target.closest('.x-filter-chip');
+      if (!chip) return;
+      chip.classList.toggle('is-applied');
+    });
+  }
+
+  // §8 — Masonry filter exit.
+  const masonry = document.getElementById('masonry');
+  function applyFilter(cat) {
+    masonry.querySelectorAll('.x-card-slot').forEach(slot => {
+      // Reset first (in case of repeated filtering)
+      slot.classList.remove('is-collapsed');
+      // Force reflow so re-shown slots re-paint cleanly.
+      void slot.offsetWidth;
+    });
+    const slots = Array.from(masonry.querySelectorAll('.x-card-slot'));
+    slots.forEach(slot => {
+      const matches = (cat === '__all__') || (slot.dataset.cat === cat);
+      if (matches && cat !== '__all__') {
+        // Hide matching slots
+        slot.classList.add('is-hiding');
+        setTimeout(() => slot.classList.add('is-collapsed'), 230);
+      } else {
+        slot.classList.remove('is-hiding');
+      }
+    });
+  }
+  document.querySelectorAll('[data-cat]').forEach(btn => {
+    if (btn.classList.contains('x-card-slot')) return; // skip slots, only triggers
+    btn.addEventListener('click', () => applyFilter(btn.dataset.cat));
+  });
+  document.getElementById('show-all').addEventListener('click', () => applyFilter('__all__'));
+})();
+</script>
+
+</body>
+</html>

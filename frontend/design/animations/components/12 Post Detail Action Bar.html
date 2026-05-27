@@ -1,0 +1,691 @@
+<!doctype html>
+<!--
+  C12 — Post Detail Action Bar
+  Scope:      The floating .actions-pill at the bottom of the post-detail
+              page. Four affordances live here: comments (jump), like
+              (toggle + bounce), bookmark (toggle, no animation), share
+              (copy + toast). All markup, sizing, padding sourced 1:1
+              from pages/Verita Post Detail.html.
+  Spec:       docs/Animation Spec.md  §  Post Detail Action Bar
+  React hint: <ActionsPill>, <LikeButton>, <BookmarkButton>, <ShareButton>
+  Note:       Like-bounce was originally drafted into C05; moved here
+              because the feed cards in C05 only show static like counts —
+              the like *button* exists exclusively on this surface, so
+              this is the only place the animation is reachable.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Post Detail Action Bar · Verita Animation Demo</title>
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — copied verbatim from C04/C05) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+
+  /* Spec table — compact */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 16%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 24%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  .triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 4px;
+  }
+  .trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    transition:
+      transform 160ms var(--ease-out),
+      background 160ms var(--ease-out),
+      border-color 160ms var(--ease-out);
+  }
+  .trigger:hover {
+    background: var(--bg-elevated);
+    border-color: var(--text-primary);
+  }
+  .trigger:active { transform: translateY(1px); }
+  .trigger.primary {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+  .trigger.primary:hover { background: #333; }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* React hint footer */
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ===========================================================
+   * ACTION BAR — verbatim from pages/Verita Post Detail.html.
+   * In production this floats at the bottom of the page next to
+   * the comment composer; here we centre it inside a stage row.
+   * =========================================================== */
+
+  .stage-row {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    position: relative;
+  }
+  .stage-row::before {
+    content: "Floating bar (preview)";
+    position: absolute;
+    top: 12px; left: 16px;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+
+  /* Action pill — Detail.html line 654-664 */
+  .actions-pill {
+    display: flex; align-items: center;
+    background: #fff;
+    border: 0.5px solid var(--border-default);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    border-radius: 14px;
+    padding: 4px 6px;
+    gap: 0;
+  }
+
+  /* Action button — Detail.html line 537-547 */
+  .cact {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 10px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 500; color: var(--text-secondary);
+    background: transparent; border: 0; cursor: pointer;
+    transition: background 120ms ease-out, color 120ms ease-out;
+  }
+  .cact:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .cact svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .cact.on { color: var(--text-primary); font-weight: 600; }
+  .cact.on svg { fill: currentColor; }
+  .cact-sep {
+    width: 1px; height: 18px;
+    background: var(--border-subtle);
+    margin: 0 2px; flex-shrink: 0;
+  }
+  .cact-group { display: flex; }
+
+  /* Like-bounce keyframe — canonical in C12. Master defines color + fill on
+     .cact.on but no scale animation; the 320ms 1 → 1.25 → 0.92 → 1 spring
+     is introduced here as the spec the React <LikeButton> should target.
+     Fires only when transitioning off → on; off-toggle and count-tick
+     do not animate. */
+  @keyframes like-bounce {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.25); }
+    65%  { transform: scale(0.92); }
+    100% { transform: scale(1); }
+  }
+  .cact.bouncing svg {
+    animation: like-bounce 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: center;
+  }
+
+  /* Toast — minimal version of Detail.html's #toast for share confirmation */
+  .toast-mini {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(20px);
+    bottom: 90px;
+    background: var(--text-primary); color: #fff;
+    border-radius: 999px;
+    padding: 10px 16px 10px 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    opacity: 0; pointer-events: none;
+    transition: opacity 200ms ease-out, transform 200ms ease-out;
+    z-index: 80;
+  }
+  .toast-mini.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast-mini svg { width: 14px; height: 14px; }
+
+  /* Reduced motion — collapse to color/fill state changes only. */
+  @media (prefers-reduced-motion: reduce) {
+    .cact.bouncing svg { animation: none; }
+    .toast-mini { transition: opacity 80ms linear; transform: translateX(-50%) translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. tokens.css fixed bar -->
+<div class="demo-header">
+  <span class="demo-title">C12 · Post Detail Action Bar</span>
+  <span class="demo-spec">Comments · Like-bounce · Bookmark · Share · Reduced-motion</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<!-- 2. Stage + content wrap -->
+<div class="demo-stage">
+<div class="wrap">
+
+  <!-- 3. Lead block -->
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Post Detail Action Bar</h1>
+    <ul class="scope-list">
+      <li>The floating <code>.actions-pill</code> at the bottom of the post-detail page — four affordances grouped behind hairline separators</li>
+      <li>Like is the only animated control: 320ms spring bounce on off → on, no animation on off-toggle or count tick</li>
+      <li>Bookmark stays still on toggle — color + fill swap only, no scale (master-faithful)</li>
+      <li>Share copies the link and confirms with a small toast</li>
+      <li>Markup, sizing, padding sourced 1:1 from <code>pages/Verita Post Detail.html</code></li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- 4. Spec table -->
+  <section>
+    <h2>Spec</h2>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Like bounce</td>
+          <td>320ms</td><td>cubic-bezier(0.34, 1.56, 0.64, 1)</td>
+          <td>Keyframe <code>1 → 1.25 → 0.92 → 1</code> on <code>.cact svg</code> when transitioning off → on. Fires once. Off-toggle and count-tick do not animate.</td>
+        </tr>
+        <tr>
+          <td>Like color/fill</td>
+          <td>120ms</td><td>ease-out</td>
+          <td>Color → <code>--text-primary</code> + heart fill via <code>currentColor</code> when <code>.cact.on</code> is set. Always animates regardless of motion preference.</td>
+        </tr>
+        <tr>
+          <td>Bookmark toggle</td>
+          <td>120ms</td><td>ease-out</td>
+          <td>Color + fill swap on <code>.cact.on svg</code> via <code>currentColor</code>. <strong>No scale animation.</strong> Master-faithful — the bookmark stays still.</td>
+        </tr>
+        <tr>
+          <td>Share confirmation</td>
+          <td>200ms in / 200ms out</td><td>ease-out</td>
+          <td>Bottom-centered ink pill toast. Auto-dismisses after 1800ms. Fires from any successful copy-link gesture.</td>
+        </tr>
+        <tr>
+          <td>Hover</td>
+          <td>120ms</td><td>ease-out</td>
+          <td>Each <code>.cact</code> picks up <code>--bg-elevated</code> background and <code>--text-primary</code> color on hover. Applies to all four buttons identically.</td>
+        </tr>
+        <tr>
+          <td>Reduced motion</td>
+          <td>—</td><td>—</td>
+          <td><code>prefers-reduced-motion: reduce</code> disables the like-bounce keyframe and shortens the toast transition to 80ms linear. Color/fill state changes still apply.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =========================================================
+       SECTION 1 — Live action bar (interactive demo)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Live action bar · all four affordances</h2>
+    <dl class="section-meta">
+      <dt>Markup</dt><dd><code>.actions-pill</code> &gt; <code>.cact</code> · <code>.cact-sep</code> · <code>.cact-group</code> &gt; <code>.cact</code> ×4</dd>
+      <dt>Surface</dt><dd>floating pill with <code>0.5px</code> hairline border + <code>0 4px 20px rgba(0,0,0,.10)</code> shadow at <code>border-radius: 14px</code></dd>
+      <dt>Layout</dt><dd>flex row · 4 buttons separated by 1px / 18px-tall <code>.cact-sep</code> dividers · 4px 6px outer pad · 6px 10px inner pad</dd>
+    </dl>
+    <p>This is the production bar — same markup as the floating pill at the bottom of <code>pages/Verita Post Detail.html</code>, just dropped into a centred stage so you can interact with it. Click each control to see its real behavior.</p>
+
+    <div class="stage-row">
+      <div class="actions-pill" role="toolbar" aria-label="Post actions">
+        <button class="cact" id="commentsBtn" type="button" aria-label="Jump to comments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span id="commentCount">62</span>
+        </button>
+        <div class="cact-sep"></div>
+        <div class="cact-group" id="likeGroup">
+          <button class="cact" id="likeBtn" type="button" aria-label="Like" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <span id="likeCount">487</span>
+          </button>
+        </div>
+        <div class="cact-sep"></div>
+        <div class="cact-group" id="bookmarkGroup">
+          <button class="cact" id="bookmarkBtn" type="button" aria-label="Save" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <span>Save</span>
+          </button>
+        </div>
+        <div class="cact-sep"></div>
+        <button class="cact" id="shareBtn" type="button" aria-label="Copy link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v14"/></svg>
+          <span>Share</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="triggers">
+      <button class="trigger primary" id="toggleLikeTrigger">Toggle like (off ↔ on)</button>
+      <button class="trigger" id="toggleBookmarkTrigger">Toggle bookmark</button>
+      <button class="trigger" id="fireShareTrigger">Fire share toast</button>
+      <button class="trigger" id="resetBar">Reset</button>
+    </div>
+    <p class="hint">Comments button jumps to the comments thread in the real page; here it just scrolls the demo. Like-bounce only fires on off → on — toggle off and back on to see it again. Bookmark icon never animates.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 2 — Like bounce isolated
+       ========================================================= -->
+  <section class="divided">
+    <h2>Like bounce · off → on only</h2>
+    <dl class="section-meta">
+      <dt>Trigger</dt><dd>only on <code>liked: false → true</code> · never on toggle-off · never on count tick</dd>
+      <dt>Curve</dt><dd>spring <code>cubic-bezier(0.34, 1.56, 0.64, 1)</code> · scale <code>1 → 1.25 → 0.92 → 1</code> over 320ms</dd>
+      <dt>Cleanup</dt><dd><code>.bouncing</code> class removed on <code>animationend</code> so re-clicks restart cleanly</dd>
+      <dt>Origin</dt><dd>master defined heart fill but no scale; the bounce was previously drafted into C05's feed-card spec, where it isn't reachable in the product. Canonical home is here.</dd>
+    </dl>
+    <p>Click the heart repeatedly to confirm the gesture: bounce on off → on, silent unfill on on → off, no flicker on count tick.</p>
+
+    <div class="stage-row">
+      <div class="actions-pill" style="padding: 4px 8px">
+        <button class="cact" id="likeBtnSolo" type="button" aria-label="Like" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span id="likeCountSolo">2,403</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="triggers">
+      <button class="trigger primary" id="bounceLikeSolo">Click to like</button>
+      <button class="trigger" id="bumpCountSolo">Bump count (no animation)</button>
+      <button class="trigger" id="resetSolo">Reset</button>
+    </div>
+    <p class="hint">"Bump count" demonstrates that count changes alone never trigger the bounce — only the off → on state transition does. This matters for incoming socket updates: another reader liking the post should not animate the local viewer's heart.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 3 — Bookmark deliberate stillness
+       ========================================================= -->
+  <section class="divided">
+    <h2>Bookmark · color + fill, no animation</h2>
+    <dl class="section-meta">
+      <dt>Behavior</dt><dd>color → <code>--text-primary</code> · weight → 600 · SVG <code>fill: currentColor</code> · <strong>no scale</strong></dd>
+      <dt>Why no animation</dt><dd>save is a quieter commitment than like. Master ships it without motion deliberately — adding bounce would draw the eye away from the headline post content.</dd>
+      <dt>Idle</dt><dd>outline icon · <code>--text-secondary</code> · weight 500</dd>
+    </dl>
+    <p>The bookmark is the master-faithful counterpoint to the like. Click to see the state change without the gesture.</p>
+
+    <div class="stage-row">
+      <div class="actions-pill" style="padding: 4px 8px">
+        <button class="cact" id="bookmarkBtnSolo" type="button" aria-label="Save" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          <span>Save</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="triggers">
+      <button class="trigger primary" id="toggleBookmarkSolo">Toggle bookmark</button>
+    </div>
+    <p class="hint">There is no <code>.bouncing</code> equivalent for bookmark. The React <code>&lt;BookmarkButton&gt;</code> should expose <code>saved</code> only — no animation hook, no spring config, no progress.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 4 — Share toast (copy link)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Share · copy link confirmation</h2>
+    <dl class="section-meta">
+      <dt>Trigger</dt><dd>click the share button → write the post URL to clipboard → fire toast</dd>
+      <dt>Toast</dt><dd>ink pill at bottom-centre (<code>bottom: 90px</code> to clear the bar) · <code>200ms</code> in/out · <code>1800ms</code> visible</dd>
+      <dt>Variant</dt><dd>this is the post-detail-specific success toast — distinct from the C04 stack and from the welcome pill</dd>
+    </dl>
+    <p>Verita's detail page has a single share path: copy link. Other share targets live behind a <code>…</code> overflow menu (out of scope here).</p>
+
+    <div class="triggers">
+      <button class="trigger primary" id="fireShareSolo">Simulate copy link</button>
+    </div>
+    <p class="hint">In the real page the toast lives at <code>bottom: 90px</code> so it sits above the floating pill. Here we keep the same offset so the demo reads true; you'll see it appear near the bottom of the viewport.</p>
+  </section>
+
+  <!-- 6. React hint footer -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <dl>
+      <dt>Bar</dt><dd><code>&lt;ActionsPill postId&gt;{children}&lt;/ActionsPill&gt;</code> — provides toolbar role + handles keyboard arrow navigation between buttons</dd>
+      <dt>Comments</dt><dd><code>&lt;CommentsJumpButton count onClick={scrollToComments} /&gt;</code></dd>
+      <dt>Like</dt><dd><code>&lt;LikeButton liked count onToggle /&gt;</code> — animates only on <code>liked: false → true</code>; cleans up via <code>animationend</code> so re-clicks restart cleanly. Count changes alone never trigger animation.</dd>
+      <dt>Bookmark</dt><dd><code>&lt;BookmarkButton saved onToggle /&gt;</code> — color/fill only, <strong>no animation</strong>. Master-faithful.</dd>
+      <dt>Share</dt><dd><code>&lt;ShareButton url onCopied={() =&gt; toast({variant:'success', text:'Link copied'})} /&gt;</code></dd>
+      <dt>Reduced motion</dt><dd><code>useReducedMotion()</code> short-circuits the like-bounce only. Color/fill state changes always apply.</dd>
+    </dl>
+  </div>
+
+</div>
+</div>
+
+<!-- Toast (rendered outside .demo-stage so it floats above everything) -->
+<div class="toast-mini" id="shareToast" role="status" aria-live="polite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+  <span>Link copied to clipboard</span>
+</div>
+
+<script>
+  // ── Section 1: full bar ─────────────────────────────────────────────────────
+  const likeBtn   = document.getElementById('likeBtn');
+  const likeCount = document.getElementById('likeCount');
+  const likeIcon  = likeBtn.querySelector('svg');
+  let liked = false;
+  let baseLikes = parseInt(likeCount.textContent.replace(/,/g, ''), 10);
+
+  function fmtLikes(n) {
+    return n >= 1000 ? n.toLocaleString('en-US') : String(n);
+  }
+  function setLiked(next) {
+    const wasLiked = liked;
+    liked = next;
+    likeBtn.classList.toggle('on', liked);
+    likeBtn.setAttribute('aria-pressed', String(liked));
+    likeIcon.setAttribute('fill', liked ? 'currentColor' : 'none');
+    likeCount.textContent = fmtLikes(liked ? baseLikes + 1 : baseLikes);
+    if (!wasLiked && liked) {
+      likeBtn.classList.remove('bouncing');
+      void likeBtn.offsetWidth; // paint cycle so the keyframe restarts
+      likeBtn.classList.add('bouncing');
+    }
+  }
+  likeBtn.addEventListener('click', () => setLiked(!liked));
+  likeBtn.addEventListener('animationend', () => likeBtn.classList.remove('bouncing'));
+
+  const bookmarkBtn = document.getElementById('bookmarkBtn');
+  const bookmarkIcon = bookmarkBtn.querySelector('svg');
+  let saved = false;
+  function setSaved(next) {
+    saved = next;
+    bookmarkBtn.classList.toggle('on', saved);
+    bookmarkBtn.setAttribute('aria-pressed', String(saved));
+    bookmarkIcon.setAttribute('fill', saved ? 'currentColor' : 'none');
+    // No scale animation — master-faithful.
+  }
+  bookmarkBtn.addEventListener('click', () => setSaved(!saved));
+
+  // Toast (shared across sections)
+  const toast = document.getElementById('shareToast');
+  let toastTimer = null;
+  function showShareToast() {
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  document.getElementById('shareBtn').addEventListener('click', showShareToast);
+
+  // Comments button — scroll the demo wrap so it doesn't break when comments don't exist.
+  document.getElementById('commentsBtn').addEventListener('click', () => {
+    window.scrollBy({ top: 300, behavior: 'smooth' });
+  });
+
+  // Demo trigger row (section 1)
+  document.getElementById('toggleLikeTrigger').addEventListener('click', () => setLiked(!liked));
+  document.getElementById('toggleBookmarkTrigger').addEventListener('click', () => setSaved(!saved));
+  document.getElementById('fireShareTrigger').addEventListener('click', showShareToast);
+  document.getElementById('resetBar').addEventListener('click', () => {
+    setLiked(false);
+    setSaved(false);
+  });
+
+  // ── Section 2: like solo ────────────────────────────────────────────────────
+  const likeBtnSolo = document.getElementById('likeBtnSolo');
+  const likeCountSolo = document.getElementById('likeCountSolo');
+  const likeIconSolo = likeBtnSolo.querySelector('svg');
+  let likedSolo = false;
+  let baseLikesSolo = parseInt(likeCountSolo.textContent.replace(/,/g, ''), 10);
+  function setLikedSolo(next) {
+    const wasLiked = likedSolo;
+    likedSolo = next;
+    likeBtnSolo.classList.toggle('on', likedSolo);
+    likeBtnSolo.setAttribute('aria-pressed', String(likedSolo));
+    likeIconSolo.setAttribute('fill', likedSolo ? 'currentColor' : 'none');
+    likeCountSolo.textContent = fmtLikes(likedSolo ? baseLikesSolo + 1 : baseLikesSolo);
+    if (!wasLiked && likedSolo) {
+      likeBtnSolo.classList.remove('bouncing');
+      void likeBtnSolo.offsetWidth;
+      likeBtnSolo.classList.add('bouncing');
+    }
+  }
+  likeBtnSolo.addEventListener('click', () => setLikedSolo(!likedSolo));
+  likeBtnSolo.addEventListener('animationend', () => likeBtnSolo.classList.remove('bouncing'));
+  document.getElementById('bounceLikeSolo').addEventListener('click', () => setLikedSolo(!likedSolo));
+  document.getElementById('bumpCountSolo').addEventListener('click', () => {
+    // Count tick only — no state change, no animation. Demonstrates the contract.
+    baseLikesSolo += 1;
+    likeCountSolo.textContent = fmtLikes(likedSolo ? baseLikesSolo + 1 : baseLikesSolo);
+  });
+  document.getElementById('resetSolo').addEventListener('click', () => {
+    setLikedSolo(false);
+    baseLikesSolo = 2403;
+    likeCountSolo.textContent = fmtLikes(baseLikesSolo);
+  });
+
+  // ── Section 3: bookmark solo ────────────────────────────────────────────────
+  const bookmarkBtnSolo = document.getElementById('bookmarkBtnSolo');
+  const bookmarkIconSolo = bookmarkBtnSolo.querySelector('svg');
+  let savedSolo = false;
+  function setSavedSolo(next) {
+    savedSolo = next;
+    bookmarkBtnSolo.classList.toggle('on', savedSolo);
+    bookmarkBtnSolo.setAttribute('aria-pressed', String(savedSolo));
+    bookmarkIconSolo.setAttribute('fill', savedSolo ? 'currentColor' : 'none');
+  }
+  bookmarkBtnSolo.addEventListener('click', () => setSavedSolo(!savedSolo));
+  document.getElementById('toggleBookmarkSolo').addEventListener('click', () => setSavedSolo(!savedSolo));
+
+  // ── Section 4: share toast solo ─────────────────────────────────────────────
+  document.getElementById('fireShareSolo').addEventListener('click', showShareToast);
+</script>
+
+</body>
+</html>

@@ -13,8 +13,11 @@ export default function Home() {
 
   return (
     <>
-      <Topbar />
-      <TagFilterBar activeTag={activeTag} onTagChange={setTag} />
+      <Topbar
+        bottomRow={
+          <TagFilterBar activeTag={activeTag} onTagChange={setTag} />
+        }
+      />
       <section className={styles.feedWrap}>
         {!isLoggedIn && <AuthBanner />}
         <FeedGrid
@@ -23,7 +26,6 @@ export default function Home() {
           loading={loading}
           onLoadMore={loadMore}
           onLike={toggleLike}
-          onTagClick={setTag}
         />
       </section>
       <RefreshFAB onRefresh={refresh} />

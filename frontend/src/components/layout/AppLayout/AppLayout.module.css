@@ -2,15 +2,15 @@
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
   min-height: 100vh;
-  transition: grid-template-columns 200ms ease;
+  transition: grid-template-columns var(--motion-sidebar);
 }
 
-.app[data-reader] {
-  grid-template-columns: 52px 1fr;
+.app[data-mode="b"] {
+  grid-template-columns: var(--rail-width) 1fr;
 }
 
-.app[data-reader]:has(aside:hover) {
-  grid-template-columns: 148px 1fr;
+.app[data-mode="b"]:has(aside:hover) {
+  grid-template-columns: var(--sidebar-width) 1fr;
 }
 
 .main {
