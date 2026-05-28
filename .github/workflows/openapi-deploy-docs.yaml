@@ -47,7 +47,7 @@ jobs:
         run: redocly build-docs backend/recommendation-service/api/openapi.yaml --output=public_docs/recommendation-service.html
 
       - name: Build genai Service Docs
-        run: redocly build-docs backend/genai-service/api/openapi.yaml --output=public_docs/genai-service.html
+        run: redocly build-docs genai-service/api/openapi.yaml --output=public_docs/genai-service.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
