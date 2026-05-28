@@ -1,9 +1,16 @@
 openapi: 3.1.0
+
 info:
   title: Title
-  description: Title
   version: 1.0.0
+
 servers:
-  - url: 'https'
+  - url: https://example.com
+
 paths:
-  
+  /health:
+    get:
+      operationId: healthCheck
+      responses:
+        '200':
+          description: OK
