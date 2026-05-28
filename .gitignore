@@ -46,6 +46,19 @@ out/
 # Claude Code workspace state
 .claude/
 
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+venv/
+.venv/
+.env
+*.egg
+
+### basedpyright ###
+pyrightconfig.json
 # Claude Code instructions (local only)
 CLAUDE.md
 
