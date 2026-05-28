@@ -1,4 +1,4 @@
-apiVersion: v1
+﻿apiVersion: v1
 kind: Pod
 metadata:
   name: "{{ include "verita.fullname" . }}-test-connection"
@@ -9,7 +9,9 @@ metadata:
 spec:
   containers:
     - name: wget
-      image: busybox
-      command: ['wget']
-      args: ['{{ include "verita.fullname" . }}:{{ .Values.service.port }}']
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - wget -qO- http://{{ printf "%s-%s" .Release.Name "frontend" }}:{{ .Values.frontend.service.port }}/
   restartPolicy: Never

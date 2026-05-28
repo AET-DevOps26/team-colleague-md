@@ -1,0 +1,8 @@
+﻿global:
+  registry: registry.example.com
+  imagePullSecrets: []
+ingress:
+  enabled: true
+  host: example.k8s.ase.cit.tum.de
+  tls:
+    secretName: verita-tls

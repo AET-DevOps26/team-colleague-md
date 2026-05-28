@@ -1,0 +1,10 @@
+﻿global:
+  registry: ""
+replicaCount: 1
+image:
+  repository: verita/frontend
+  tag: latest
+  pullPolicy: IfNotPresent
+service:
+  type: ClusterIP
+  port: 80
