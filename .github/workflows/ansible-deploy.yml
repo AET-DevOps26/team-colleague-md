@@ -13,9 +13,6 @@ jobs:
     # For workflow_run: only deploy when docker-build succeeded; always run for manual triggers
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    environment:
-      name: Azure
-      url: "http://${{ vars.AZURE_PUBLIC_IP }}"
 
     steps:
       - name: Checkout repository
