@@ -211,7 +211,7 @@ a workflow only runs when files in that service change.
 | Workflow | Trigger path | Job |
 |----------|-------------|-----|
 | `ci-user-service.yml` | `backend/user-service/**` | `./gradlew build` (compile + unit tests) |
-| `ci-genai-service.yml` | `genai-service/**` | `pip install -r requirements.txt` + import check |
+| `ci-genai-service.yml` | `genai-service/**` | `pip install -r requirements.txt` + import check + `pytest -q` |
 | `ci-frontend.yml` | `frontend/**` | `npm ci` → `npm run lint` → `npm run build` (includes `tsc`) |
 
 All workflows also trigger when their own `.yml` file is modified.
@@ -227,11 +227,23 @@ find . -name "openapi.yaml" -not -path "*/node_modules/*" | xargs npx @redocly/c
 
 This matches the local pre-commit hook so developers get the same feedback locally and in CI.
 
-### 5.3 Code Generation Validation
+### 5.3 API Documentation Publishing
+
+`openapi-deploy-docs.yaml` triggers on pushes to `main` when any `openapi.yaml` file changes.
+It builds static HTML documentation for all services using Redocly CLI and deploys them to GitHub Pages.
+
+| Service | Source spec |
+|---------|-------------|
+| `user-service` | `backend/user-service/api/openapi.yaml` |
+| `content-service` | `backend/content-service/api/openapi.yaml` |
+| `recommendation-service` | `backend/recommendation-service/api/openapi.yaml` |
+| `genai-service` | `genai-service/api/openapi.yaml` |
+
+### 5.4 Code Generation Validation
 
 ...
 
-### 5.4 Docker Build and Publish
+### 5.5 Docker Build and Publish
 
 `docker-build.yml` triggers on pull requests and pushes to `dev` when service source files change.
 It replaces the earlier `ci-docker.yml` and adds image publishing on merge.
