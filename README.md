@@ -11,12 +11,14 @@ The fastest way to run the full platform. From the repository root:
 docker compose up --build
 ```
 
-This builds and starts all five services:
+This builds and starts the application services plus the PostgreSQL database used by
+`user-service`:
 
 | Service | URL | Description |
 |---|---|---|
 | `frontend` | http://localhost:3000 | React UI (served by nginx) |
 | `user-service` | http://localhost:8081 | Spring Boot — user identity & auth |
+| `user-db` | localhost:5432 | PostgreSQL — persistent user data |
 | `content-service` | http://localhost:8082 | Spring Boot — posts & content |
 | `recommendation-service` | http://localhost:8083 | Spring Boot — feeds & notifications |
 | `genai-service` | http://localhost:8000 | FastAPI — AI features |
@@ -25,6 +27,13 @@ To stop all services:
 
 ```bash
 docker compose down
+```
+
+User data is stored in the named Docker volume `team-colleague-md_user-db-data`.
+To remove the database data as well:
+
+```bash
+docker compose down -v
 ```
 
 To start a single service only:
@@ -77,6 +86,15 @@ cd backend/user-service
 ```
 
 Health check: `http://localhost:8081/actuator/health`
+
+Local `bootRun` uses the default `dev` Spring profile with an in-memory H2 database.
+To run locally against the Docker PostgreSQL database instead:
+
+```bash
+docker compose up -d user-db
+cd backend/user-service
+DB_HOST=localhost DB_USER=verita_user DB_PASSWORD=verita_password ./gradlew bootRun --args="--spring.profiles.active=docker"
+```
 
 ---
 
