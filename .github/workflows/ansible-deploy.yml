@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   workflow_run:
     workflows: ["Docker Build and Publish"]
-    branches: [dev]
+    branches: [main]
     types: [completed]
 
 jobs:

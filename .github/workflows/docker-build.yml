@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - dev
+      - main
     paths:
       - "backend/**"
       - "frontend/**"
@@ -13,6 +14,7 @@ on:
   push:
     branches:
       - dev
+      - main
     paths:
       - "backend/**"
       - "frontend/**"
@@ -26,7 +28,7 @@ permissions:
 
 jobs:
   build:
-    name: ${{ github.event_name == 'push' && 'Build and Push' || 'Build' }} — ${{ matrix.service.name }}
+    name: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'Build and Push' || 'Build' }} — ${{ matrix.service.name }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -67,10 +69,10 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
 
-      - name: Build (PR) or Build and Push (merge to dev)
+      - name: Build only (PR / push to dev) or Build and Push (merge to main)
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.service.context }}
-          push: ${{ github.event_name == 'push' }}
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
