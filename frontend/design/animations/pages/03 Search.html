@@ -1,0 +1,315 @@
+<!doctype html>
+<!--
+  P03 — Search
+  Scope:      Search results choreography. Composes C06 (filter chips),
+              C08 (skeleton + shimmer), C10 (author avatars on result cards).
+  Spec:       docs/Animation Spec.md  §  Pages · Search
+  Source:     pages/Verita Search Results.html
+  React hint: <SearchLayout>, useDebouncedQuery(), useSearchResults()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; }
+  .stage h4 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 10px; }
+
+  /* --- Search input mock (mirrors topbar .search from production) --- */
+  .search-mock { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border-radius: 10px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); transition: border-color 120ms ease-out, box-shadow 120ms ease-out, background 120ms ease-out; }
+  .search-mock:focus-within { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(10,10,10,0.06); }
+  .search-mock svg { color: var(--text-tertiary); flex-shrink: 0; }
+  .search-mock input { flex: 1; background: none; border: 0; outline: 0; font: 400 13.5px var(--font-sans); color: var(--text-primary); }
+  .search-mock input::placeholder { color: var(--text-tertiary); }
+
+  /* --- Skeleton shimmer (1:1 from Verita Search Results.html:292) --- */
+  .skel-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .skel-card { display: flex; flex-direction: column; gap: 10px; }
+  .skel-cover { aspect-ratio: 4/3; border-radius: 10px; }
+  .skel-line  { height: 9px; border-radius: 4px; }
+  .skel-line.w100 { width: 100%; }
+  .skel-line.w70  { width: 70%; }
+  .skel-line.w50  { width: 50%; }
+  .skeleton { background: var(--bg-elevated); animation: shimmer 1.4s ease-in-out infinite; }
+  @keyframes shimmer { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+  /* --- Result card list (re-uses P02 fadeIn 180ms / 60ms stagger pattern) --- */
+  .results-mock { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .results-mock .res { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px; opacity: 0; transform: translateY(4px); animation: fadeIn 180ms ease-out forwards; }
+  .results-mock .res:nth-child(1) { animation-delay: 0ms; }
+  .results-mock .res:nth-child(2) { animation-delay: 60ms; }
+  .results-mock .res:nth-child(3) { animation-delay: 120ms; }
+  .results-mock .res:nth-child(4) { animation-delay: 180ms; }
+  .results-mock .res:nth-child(5) { animation-delay: 240ms; }
+  .results-mock .res:nth-child(6) { animation-delay: 300ms; }
+  @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+  .results-mock .ttl { font: 600 12.5px var(--font-sans); color: var(--text-primary); margin-bottom: 6px; line-height: 1.35; }
+  .results-mock .by  { font: 400 11.5px var(--font-sans); color: var(--text-tertiary); }
+
+  /* --- Empty state --- */
+  .empty-mock { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 16px; opacity: 0; transform: translateY(6px); transition: opacity 220ms ease-out, transform 220ms ease-out; }
+  .empty-mock.shown { opacity: 1; transform: translateY(0); }
+  .empty-mock .ico { width: 44px; height: 44px; border-radius: 12px; background: var(--bg-elevated); display: grid; place-items: center; color: var(--text-tertiary); }
+  .empty-mock .ttl { font: 600 14px var(--font-sans); }
+  .empty-mock .body { font-size: 12.5px; color: var(--text-secondary); text-align: center; max-width: 36ch; line-height: 1.55; }
+
+  /* --- Filter chip row (composes C06 §4 Extended cross-fade) --- */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .chip { appearance: none; border: 1px solid var(--border-default); background: var(--bg-base); color: var(--text-secondary); padding: 5px 12px; border-radius: 999px; font: 500 12px var(--font-sans); cursor: pointer; transition: background 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; }
+  .chip:hover { color: var(--text-primary); }
+  .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  .back { margin-top: 80px; display: inline-block; color: var(--text-secondary); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; transition: color 120ms, border-color 120ms; }
+  .back:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .results-mock .res { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .skeleton { animation: none !important; opacity: 0.7 !important; }
+    .empty-mock { transition: none !important; }
+    .chip { transition: background 80ms linear, color 80ms linear !important; }
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+
+    <header class="lead-block">
+      <div class="wordmark"><span class="lead">V</span>erita</div>
+      <h1>Search</h1>
+      <ul class="scope">
+        <li>Page-level orchestration of query → fetch → results: debounce window, skeleton mount, masonry stagger, empty state.</li>
+        <li>Composes <a href="../components/06 Tags & Filters.html">C06</a>, <a href="../components/08 Skeletons & Loading.html">C08</a>, <a href="../components/10 Avatars & Identity.html">C10</a>.</li>
+        <li>Skeleton shimmer (production), result fade stagger (production — same <code>fadeIn</code> as P02), empty-state reveal (extended), debounce window (extended — production fires per-keystroke).</li>
+      </ul>
+      <span class="status live">Status: Live</span>
+    </header>
+
+    <section>
+      <h2>Choreography timeline</h2>
+      <p>Time origin (<code>t=0</code>) is the keystroke that finalises the query (or pressing Enter). Earlier offsets describe the input chrome already in motion.</p>
+      <table class="timeline">
+        <thead><tr><th>t=</th><th>Actor</th><th>Motion</th><th>Source / component</th></tr></thead>
+        <tbody>
+          <tr><td>−120ms</td><td>Search input</td><td>border-color + bg + 4px focus ring, 120ms ease-out</td><td>Production · <code>.search:focus-within</code> (Search Results.html:115)</td></tr>
+          <tr><td>0</td><td>Keystroke</td><td>Value commit — query string updated</td><td>Production · keydown handler (Search Results.html:745)</td></tr>
+          <tr><td>0 → 250ms</td><td>Debounce window</td><td>Quiet — no fetch yet</td><td>Extended — <code>useDebouncedQuery(250)</code> (no production source)</td></tr>
+          <tr><td>250ms</td><td>Results area</td><td>Mount skeleton (8 cards), shimmer 1.4s loop</td><td>C08 §1 · <code>@keyframes shimmer</code> (Search Results.html:293)</td></tr>
+          <tr><td>~600ms</td><td>Skeleton</td><td>Unmount on fetch resolve</td><td>Production · <code>renderResults()</code> (Search Results.html:684)</td></tr>
+          <tr><td>~600ms</td><td>Result cards</td><td>fadeIn 180ms ease-out, 60ms stagger (cap 6)</td><td>C09 §2 — same keyframe as P02 comments</td></tr>
+          <tr><td>~600ms</td><td>Empty state</td><td>opacity + translateY(6px → 0), 220ms ease-out</td><td>Extended — proposal (no production source)</td></tr>
+          <tr><td>onClick chip</td><td>Filter chip</td><td>bg + color + border 160ms ease-out</td><td>C06 §4 (extended cross-fade)</td></tr>
+          <tr><td>chip → results</td><td>Result list</td><td>Re-mount → repeat skeleton + fadeIn cycle</td><td>Production · <code>applyResultsState()</code> (Search Results.html:684)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="divided">
+      <h2>Skeleton → result fade <span class="tier prod">Production</span></h2>
+      <p>Type a query and press <kbd>Enter</kbd> — the skeleton mounts immediately and shimmers (opacity 1 → 0.45 → 1, 1.4s ease-in-out infinite) while the fake fetch resolves. On resolve, skeletons unmount and result cards fade in with the same 180ms / 60ms stagger pattern as P02 comments. Shimmer keyframe is verbatim from <code>pages/Verita Search Results.html:292–296</code>.</p>
+      <div class="stage">
+        <div class="search-mock">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="searchInput" type="text" value="gpt4o" placeholder="Search Verita…" aria-label="Search query">
+        </div>
+        <div id="resultsArea" style="margin-top: 14px;"></div>
+        <div class="triggers">
+          <button class="trigger solid" id="runSearch">Run search</button>
+          <button class="trigger" id="emptyQuery">Force empty</button>
+        </div>
+        <p class="hint">Hook: <code>useSearchResults(query)</code> returns <code>{ status, items }</code> where <code>status ∈ {idle | loading | ready | empty}</code> — bind <code>status</code> to the area's render branch.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Result list stagger <span class="tier prod">Production</span></h2>
+      <p>Same canonical <code>@keyframes fadeIn</code> as P02's comments — 180ms ease-out, opacity + translateY(4px → 0), 60ms per-item delay. Cap stagger at 6 items so a 50-result query does not run a 3-second cascade. The keyframe is the page-level animation vocabulary's "list arrival" tempo; do not invent a second one for search.</p>
+      <div class="stage">
+        <div class="results-mock" id="staggerMock">
+          <div class="res"><div class="ttl">GPT-4o evaluation suite</div><div class="by">Yuna Lee · 2h</div></div>
+          <div class="res"><div class="ttl">MMLU-Pro head-to-head</div><div class="by">Wei Zhang · 5h</div></div>
+          <div class="res"><div class="ttl">Latency over accuracy</div><div class="by">Helena Park · 1d</div></div>
+          <div class="res"><div class="ttl">In-context learning depth</div><div class="by">Naomi Greene · 8h</div></div>
+          <div class="res"><div class="ttl">Refusal circuit mapping</div><div class="by">Chris Olah · 3d</div></div>
+          <div class="res"><div class="ttl">Vision pipeline diff</div><div class="by">Sora Tanaka · 6h</div></div>
+        </div>
+        <div class="triggers"><button class="trigger" id="replayStagger">Replay stagger</button></div>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Empty state reveal <span class="tier ext">Extended</span></h2>
+      <p>When <code>status === 'empty'</code>, the empty panel reveals with a 220ms opacity + translateY(6px → 0) ease-out — slightly slower than result cards (180ms) so the "no results" beat lands deliberately rather than ghosting in like a missed render. Production today renders the empty state with no entry motion (Search Results.html:670); this proposal adds the reveal.</p>
+      <div class="stage">
+        <div class="empty-mock" id="emptyMock">
+          <div class="ico">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </div>
+          <div class="ttl">No results found</div>
+          <div class="body">Nothing matched <em>quokka</em> on Verita yet. Try a different keyword, or clear your search to browse the full feed.</div>
+        </div>
+        <div class="triggers"><button class="trigger solid" id="toggleEmpty">Toggle empty reveal</button></div>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Filter chip toggle <span class="tier prod">Production</span></h2>
+      <p>Filter pills sit below the results header. Toggling a chip uses the C06 §4 cross-fade — 160ms ease-out across <code>background</code>, <code>color</code>, and <code>border-color</code> with shared dimensions so the row never reflows. On chip change, the result list re-mounts through the same skeleton → fadeIn cycle as Section 1; the chips themselves do not animate the cards.</p>
+      <div class="stage">
+        <div class="chips" id="chipRow">
+          <button class="chip on" data-tag="gpt4o">#gpt4o</button>
+          <button class="chip" data-tag="benchmarks">benchmarks</button>
+          <button class="chip" data-tag="mech-interp">mech-interp</button>
+          <button class="chip" data-tag="multimodal">multimodal</button>
+          <button class="chip" data-tag="safety">safety</button>
+        </div>
+        <p class="hint">In production, chips are static text (no toggle). The cross-fade lives in <a href="../components/06 Tags & Filters.html">C06</a> §4 as the unified <code>&lt;TagChip&gt;</code> contract; P03 is its first page-level consumer.</p>
+      </div>
+    </section>
+
+    <div class="react-hint">
+      <h3>React contract</h3>
+      <dl>
+        <dt>Layout</dt><dd><code>&lt;SearchLayout query={q} filters={tags} /&gt;</code> — owns the topbar input, results region, and filter row.</dd>
+        <dt>Hooks</dt><dd><code>useDebouncedQuery(input, 250)</code>, <code>useSearchResults(query, filters)</code> → <code>{ status, items }</code></dd>
+        <dt>Composes</dt>
+        <dd>
+          <div class="composes">
+            <a href="../components/06 Tags & Filters.html">C06 TagChip</a>
+            <a href="../components/08 Skeletons & Loading.html">C08 Skeleton</a>
+            <a href="../components/10 Avatars & Identity.html">C10 Avatar</a>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <a class="back" href="../00 Index.html">← Back to Index</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  const area  = document.getElementById('resultsArea');
+  const input = document.getElementById('searchInput');
+  const run   = document.getElementById('runSearch');
+  const empty = document.getElementById('emptyQuery');
+
+  const skel = `<div class="skel-grid">${Array.from({length:6}).map(() => `
+    <div class="skel-card">
+      <div class="skel-cover skeleton"></div>
+      <div class="skel-line skeleton w100"></div>
+      <div class="skel-line skeleton w70"></div>
+      <div class="skel-line skeleton w50"></div>
+    </div>`).join('')}</div>`;
+
+  const cards = [
+    {t:'GPT-4o evaluation suite', by:'Yuna Lee · 2h'},
+    {t:'MMLU-Pro head-to-head', by:'Wei Zhang · 5h'},
+    {t:'Latency over accuracy', by:'Helena Park · 1d'},
+    {t:'In-context learning depth', by:'Naomi Greene · 8h'},
+    {t:'Refusal circuit mapping', by:'Chris Olah · 3d'},
+    {t:'Vision pipeline diff', by:'Sora Tanaka · 6h'},
+  ];
+  const results = `<div class="results-mock">${cards.map(c => `<div class="res"><div class="ttl">${c.t}</div><div class="by">${c.by}</div></div>`).join('')}</div>`;
+
+  const emptyHtml = `
+    <div class="empty-mock shown" style="border:1px solid var(--border-subtle); border-radius:10px; background:var(--bg-base);">
+      <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+      <div class="ttl">No results found</div>
+      <div class="body">Nothing matched that query yet.</div>
+    </div>`;
+
+  let timer = null;
+  function fakeFetch(query, forceEmpty) {
+    clearTimeout(timer);
+    area.innerHTML = skel;
+    timer = setTimeout(() => {
+      if (forceEmpty || !query.trim()) area.innerHTML = emptyHtml;
+      else area.innerHTML = results;
+    }, 600);
+  }
+
+  run?.addEventListener('click', () => fakeFetch(input.value, false));
+  empty?.addEventListener('click', () => fakeFetch('quokka', true));
+  input?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') fakeFetch(input.value, false);
+  });
+
+  area.innerHTML = `<p style="font-size:12.5px;color:var(--text-tertiary);margin:0;">Press Enter or "Run search" to mount skeleton → results.</p>`;
+
+  const replay = document.getElementById('replayStagger');
+  const grid   = document.getElementById('staggerMock');
+  replay?.addEventListener('click', () => {
+    grid.querySelectorAll('.res').forEach(r => {
+      r.style.animation = 'none';
+      r.offsetHeight;
+      r.style.animation = '';
+    });
+  });
+
+  const emptyMock   = document.getElementById('emptyMock');
+  const toggleEmpty = document.getElementById('toggleEmpty');
+  toggleEmpty?.addEventListener('click', () => emptyMock.classList.toggle('shown'));
+
+  const chipRow = document.getElementById('chipRow');
+  chipRow?.addEventListener('click', e => {
+    const c = e.target.closest('.chip');
+    if (c) c.classList.toggle('on');
+  });
+})();
+</script>
+</body>
+</html>

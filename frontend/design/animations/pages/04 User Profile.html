@@ -1,0 +1,320 @@
+<!doctype html>
+<!--
+  P04 — User Profile
+  Scope:      Public profile choreography. Composes C05 (post cards),
+              C06 (tabs with count badges), C07 (manage-portal dropdown),
+              C10 (avatar, follow button).
+  Spec:       docs/Animation Spec.md  §  Pages · User Profile
+  Source:     pages/Verita User Profile.html
+  React hint: <UserProfileLayout>, useTabs(), useManagePortal()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>User Profile · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; position: relative; }
+  .stage h4 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 10px; }
+
+  /* --- Profile tabs mock (production — C06 §3 tab-item) --- */
+  .tabs-mock { display: flex; gap: 0; border-bottom: 1px solid var(--border-subtle); }
+  .tabs-mock .tab-item {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    padding: 14px 16px; font: 500 13.5px var(--font-sans); color: var(--text-secondary);
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: color 120ms, border-color 120ms; position: relative; top: 1px;
+  }
+  .tabs-mock .tab-item:hover { color: var(--text-primary); }
+  .tabs-mock .tab-item.active { color: var(--text-primary); font-weight: 600; border-bottom-color: var(--accent); }
+  .tabs-mock .tab-count { font-size: 11px; font-weight: 600; color: var(--text-tertiary); background: var(--bg-elevated); padding: 1px 5px; border-radius: 4px; transition: background 120ms, color 120ms; }
+  .tabs-mock .tab-item.active .tab-count { background: var(--accent); color: #fff; }
+  .panel { padding: 18px 0 0; font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+  .panel.hidden { display: none; }
+
+  /* --- Manage portal mock (production — C07 §3 dropIn) --- */
+  .portal-mock-trigger { position: relative; display: inline-block; }
+  .manage-btn {
+    width: 28px; height: 28px; border-radius: 7px; background: rgba(255,255,255,0.92);
+    border: 1px solid var(--border-subtle); color: var(--text-secondary); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 120ms, color 120ms, box-shadow 120ms;
+  }
+  .manage-btn:hover, .manage-btn:focus { background: #fff; color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.18); outline: none; }
+  .manage-portal {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 5;
+    min-width: 148px; background: var(--bg-base);
+    border: 1px solid var(--border-default); border-radius: 10px;
+    box-shadow: 0 8px 28px -8px rgba(0,0,0,0.18);
+    padding: 4px; display: none; animation: dropIn 120ms ease-out;
+  }
+  .manage-portal.open { display: block; }
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .manage-portal .item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 7px;
+    font: 500 13px var(--font-sans); color: var(--text-primary); cursor: pointer;
+    transition: background 100ms; border: none; background: transparent;
+    width: 100%; text-align: left;
+  }
+  .manage-portal .item:hover { background: var(--bg-elevated); }
+  .manage-portal .item.danger { color: var(--danger); }
+  .manage-portal .item.danger:hover { background: #FEF2F2; }
+  .manage-portal .sep { height: 1px; background: var(--border-subtle); margin: 3px 6px; }
+
+  /* --- Card grid stagger mock (production — C05 cards, P02 fadeIn pattern) --- */
+  .grid-mock { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .grid-mock .card { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 14px; opacity: 0; transform: translateY(4px); animation: fadeIn 180ms ease-out forwards; }
+  .grid-mock .card:nth-child(1) { animation-delay: 0ms; }
+  .grid-mock .card:nth-child(2) { animation-delay: 60ms; }
+  .grid-mock .card:nth-child(3) { animation-delay: 120ms; }
+  .grid-mock .card:nth-child(4) { animation-delay: 180ms; }
+  @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+  .grid-mock .ttl { font-family: var(--font-serif); font-weight: 600; font-size: 15px; line-height: 1.3; margin-bottom: 6px; color: var(--text-primary); }
+  .grid-mock .meta { font: 500 11px var(--font-mono); color: var(--text-tertiary); }
+
+  /* --- Follow button mock (extended — accent cross-fade) --- */
+  .follow-row { display: flex; gap: 10px; align-items: center; }
+  .follow-btn {
+    height: 32px; padding: 0 16px; border-radius: 7px; font: 600 12.5px var(--font-sans);
+    border: 1px solid var(--border-default); background: transparent; color: var(--text-primary);
+    cursor: pointer; transition: background 200ms ease-out, color 200ms ease-out, border-color 200ms ease-out;
+  }
+  .follow-btn:hover { border-color: var(--text-primary); }
+  .follow-btn.following { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .follow-state { font: 500 11px var(--font-mono); color: var(--text-tertiary); }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  .back { margin-top: 80px; display: inline-block; color: var(--text-secondary); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; transition: color 120ms, border-color 120ms; }
+  .back:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grid-mock .card { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .manage-portal { animation: none !important; }
+    .follow-btn { transition: background 120ms linear, color 120ms linear !important; }
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+
+    <header class="lead-block">
+      <div class="wordmark"><span class="lead">V</span>erita</div>
+      <h1>User Profile</h1>
+      <ul class="scope">
+        <li>Page-level orchestration of identity-and-archive view — header, tabbed archive, and per-card actions.</li>
+        <li>Composes <a href="../components/05 Cards & Hover.html">C05</a>, <a href="../components/06 Tags & Filters.html">C06</a>, <a href="../components/07 Tooltips & Popovers.html">C07</a>, <a href="../components/10 Avatars & Identity.html">C10</a>.</li>
+        <li>Tab switch (instant, production), manage-portal dropdown (production), card grid stagger (production), follow toggle (extended).</li>
+      </ul>
+      <span class="status live">Status: Live</span>
+    </header>
+
+    <section>
+      <h2>Choreography timeline</h2>
+      <p>Time origin (<code>t=0</code>) is the moment <code>onLoad</code> fires after route transition completes. The header itself is statically painted in production — there is no entrance stagger on profile mount.</p>
+      <table class="timeline">
+        <thead><tr><th>t=</th><th>Actor</th><th>Motion</th><th>Source / component</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Profile header</td><td>Static — already painted (avatar, name, bio, edit btn)</td><td>Production · <code>pages/Verita User Profile.html:485–520</code></td></tr>
+          <tr><td>0</td><td>Tabs row</td><td>Static — Posts active by default, count badge filled accent</td><td>C06 §3 (production)</td></tr>
+          <tr><td>0</td><td>Posts grid</td><td>fadeIn 180ms ease-out, stagger 60ms (initial mount only)</td><td>P02 pattern · <code>@keyframes fadeIn</code></td></tr>
+          <tr><td>onClick tab</td><td>Tab item</td><td>Instant panel swap; color 120ms, border-color 120ms — <em>no production motion</em> on panel</td><td>Production · <code>switchTab()</code> at <code>:932</code></td></tr>
+          <tr><td>onClick tab</td><td>Count badge</td><td>background 120ms, color 120ms (bg-elevated → accent)</td><td>C06 §3 (production)</td></tr>
+          <tr><td>onClick manage</td><td>Manage portal</td><td>dropIn 120ms ease-out — opacity + translateY(−4px) + scale(0.97)</td><td>C07 §3 · <code>@keyframes dropIn</code></td></tr>
+          <tr><td>outside-click / Esc</td><td>Manage portal</td><td>display:none — no exit animation in production</td><td>Production · <code>closePortal()</code> at <code>:967</code></td></tr>
+          <tr><td>onClick follow</td><td>Follow button</td><td>bg + color cross-fade 200ms ease-out (accent fill)</td><td>Extended — proposed (no production source on profile)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="divided">
+      <h2>Tab switch + count badge <span class="tier prod">Production</span></h2>
+      <p>Profile tabs sit on a 1px hairline (Posts / Bookmarks / Drafts / Likes). Active tab flips text color + 600 weight + 2px accent bottom-border (<code>120ms</code> on color and border-color). The inline <code>.tab-count</code> badge cross-fades its background from <code>--bg-elevated</code> to <code>--accent</code> and its text to white over <code>120ms</code>. Panel content swaps instantly — production has <em>no slide</em> between panels.</p>
+      <div class="stage">
+        <div class="tabs-mock" id="tabsMock">
+          <button class="tab-item active" data-panel="posts">Posts <span class="tab-count">47</span></button>
+          <button class="tab-item" data-panel="bookmarks">Bookmarks <span class="tab-count">28</span></button>
+          <button class="tab-item" data-panel="drafts">Drafts <span class="tab-count">3</span></button>
+          <button class="tab-item" data-panel="likes">Likes <span class="tab-count">312</span></button>
+        </div>
+        <div class="panel" id="panel-posts">47 published posts. Active panel — content swaps instantly with no transition.</div>
+        <div class="panel hidden" id="panel-bookmarks">28 bookmarks saved across topics.</div>
+        <div class="panel hidden" id="panel-drafts">3 drafts — private to author.</div>
+        <div class="panel hidden" id="panel-likes">312 posts you liked.</div>
+        <p class="hint">Panel swap is a <code>display: none</code> flip. The only animated parts are the tab text-color, bottom-border, and count-badge background. C06 §3 documents the literals; <code>useTabs()</code> exposes <code>activePanel</code> and a stable <code>switchTab(id)</code>.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Manage portal dropdown <span class="tier prod">Production</span></h2>
+      <p>Per-card overflow menu (Edit / Unpublish / Delete). In production, the dropdown is portaled to <code>document.body</code> to escape the masonry's <code>overflow: hidden</code> and JS-positions to <code>buttonRect.bottom + 6px</code>. Motion is <code>@keyframes dropIn 120ms ease-out</code> — opacity 0→1, <code>translateY(−4px)→0</code>, <code>scale(0.97)→1</code>. Only place in production where popover combines opacity + translate + scale (C07 §3).</p>
+      <div class="stage">
+        <div class="portal-mock-trigger">
+          <button class="manage-btn" id="manageTrigger" aria-label="Manage post">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="3" cy="7" r="1.3"/><circle cx="7" cy="7" r="1.3"/><circle cx="11" cy="7" r="1.3"/></svg>
+          </button>
+          <div class="manage-portal" id="managePortal" role="menu">
+            <button class="item">Edit post</button>
+            <button class="item">Unpublish</button>
+            <div class="sep"></div>
+            <button class="item danger">Delete post</button>
+          </div>
+        </div>
+        <p class="hint">Demo positions inline (<code>position: absolute</code>) for clarity; React's <code>useManagePortal()</code> should mirror production's body-portal pattern so the menu can clip past the card boundary. Outside-click / Esc dismiss with no exit animation — matches production exactly.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Card grid stagger <span class="tier prod">Production</span></h2>
+      <p>On initial panel mount, cards play <code>@keyframes fadeIn</code> (180ms ease-out, opacity + <code>translateY(4px)→0</code>) with a 60ms stagger — same primitive as P02's comment list. Stagger fires only on first-paint of a panel, never on tab re-switch (otherwise toggling tabs would re-trigger the cascade and feel laggy).</p>
+      <div class="stage">
+        <div class="grid-mock" id="gridMock">
+          <div class="card"><div class="ttl">Why scaling laws hide more than they show</div><div class="meta">May 12 · 4 min</div></div>
+          <div class="card"><div class="ttl">RLHF, but make it boring</div><div class="meta">Apr 28 · 6 min</div></div>
+          <div class="card"><div class="ttl">A field guide to attention sinks</div><div class="meta">Apr 14 · 8 min</div></div>
+          <div class="card"><div class="ttl">The two lies of model evaluation</div><div class="meta">Mar 30 · 5 min</div></div>
+        </div>
+        <div class="triggers"><button class="trigger" id="replayGrid">Replay stagger</button></div>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Follow toggle <span class="tier ext">Extended</span></h2>
+      <p>Production's User Profile page renders an <em>Edit Profile</em> button (own-profile view) and has no follow affordance — the only follow toggle in production lives on Digest Management cards (C10 §3, 120ms <code>transition: all</code>). For the public-profile view this page will eventually serve, propose a 200ms accent-color cross-fade on <code>background</code>, <code>color</code>, and <code>border-color</code>: hollow → accent fill on follow, accent fill → hollow on unfollow. Slower than C10's bulk-action 120ms because profile follow is a singular, deliberate action; 120ms feels twitchy when there's only one button on the page.</p>
+      <div class="stage">
+        <div class="follow-row">
+          <button class="follow-btn" id="followBtn" data-following="false">Follow</button>
+          <span class="follow-state" id="followState">state: idle</span>
+        </div>
+        <p class="hint">Optimistic update: state flips immediately on click; error path would revert via C04 error toast. No scale, no haptic flash — quiet by design, same rationale as C10 §3.</p>
+      </div>
+    </section>
+
+    <div class="react-hint">
+      <h3>React contract</h3>
+      <dl>
+        <dt>Layout</dt><dd><code>&lt;UserProfileLayout user={user} /&gt;</code> — owns header, tabs row, and card grid panels.</dd>
+        <dt>Hooks</dt><dd><code>useTabs(initial)</code>, <code>useManagePortal(triggerRef)</code>, <code>useFollow(userId)</code></dd>
+        <dt>Composes</dt>
+        <dd>
+          <div class="composes">
+            <a href="../components/05 Cards & Hover.html">C05 PostCard</a>
+            <a href="../components/06 Tags & Filters.html">C06 FilterTabs</a>
+            <a href="../components/07 Tooltips & Popovers.html">C07 ManagePortal</a>
+            <a href="../components/10 Avatars & Identity.html">C10 Avatar / FollowButton</a>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <a class="back" href="../00 Index.html">← Back to Index</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  // Tabs
+  const tabs = document.querySelectorAll('#tabsMock .tab-item');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('panel-' + t.dataset.panel).classList.remove('hidden');
+  }));
+
+  // Manage portal
+  const trigger = document.getElementById('manageTrigger');
+  const portal  = document.getElementById('managePortal');
+  trigger?.addEventListener('click', e => {
+    e.stopPropagation();
+    portal.classList.toggle('open');
+    if (portal.classList.contains('open')) {
+      // re-fire keyframe each open
+      portal.style.animation = 'none';
+      portal.offsetHeight;
+      portal.style.animation = '';
+    }
+  });
+  document.addEventListener('click', e => {
+    if (!portal.contains(e.target) && e.target !== trigger) portal.classList.remove('open');
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') portal.classList.remove('open'); });
+
+  // Grid stagger replay
+  const grid = document.getElementById('gridMock');
+  document.getElementById('replayGrid')?.addEventListener('click', () => {
+    grid.querySelectorAll('.card').forEach(c => {
+      c.style.animation = 'none';
+      c.offsetHeight;
+      c.style.animation = '';
+    });
+  });
+
+  // Follow toggle
+  const fbtn = document.getElementById('followBtn');
+  const fst  = document.getElementById('followState');
+  fbtn?.addEventListener('click', () => {
+    const on = fbtn.dataset.following === 'true';
+    fbtn.dataset.following = (!on).toString();
+    fbtn.classList.toggle('following', !on);
+    fbtn.textContent = on ? 'Follow' : 'Following';
+    fst.textContent  = on ? 'state: idle' : 'state: following';
+  });
+})();
+</script>
+</body>
+</html>

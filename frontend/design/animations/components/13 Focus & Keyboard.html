@@ -1,0 +1,575 @@
+<!doctype html>
+<!--
+  C13 — Focus & Keyboard
+  Scope:      Cross-cutting governance for focus rings, keyboard navigation, focus
+              traps, and roving tabindex. Like C11, this file is normative — there
+              is no production tier vs extended tier split. Production today
+              relies on browser-default focus rings (no canonical token), so every
+              section here is a proposal pending design sign-off.
+
+              Sections:
+                §1 Token: --focus-ring (proposal)
+                §2 :focus-visible per context — input / button / link / card / chip
+                §3 Skip-link reveal on focus
+                §4 Focus trap entry/exit (modal) — paired with C03's open/close
+                §5 Roving tabindex inside .actions-pill (paired with C12)
+                §6 Search overlay focus order — paired with P03
+                §7 Audit checklist (consumed by every C-file and P-file)
+  Spec:       docs/Animation Spec.md  §  Accessibility
+  React hint: useFocusVisible(), <FocusTrap>, <SkipLink>, useRovingTabIndex()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Focus & Keyboard · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (copied verbatim from C11) ---------- */
+  body { background: var(--bg-base); color: var(--text-primary); overflow: auto; }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.gov { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+  .tier.norm { background: var(--text-primary); color: #fff; border: 1px solid var(--text-primary); }
+
+  table.spec { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.spec thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.spec tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.45; }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.spec tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-secondary); width: 22%; }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  .section-meta { display: grid; grid-template-columns: 86px 1fr; gap: 6px 14px; margin: 8px 0 14px; font-size: 12.5px; line-height: 1.55; }
+  .section-meta dt { font: 500 10px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding-top: 1px; }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code { font: 500 11px var(--font-mono); color: var(--text-primary); }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 0; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms, border-color 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+  .trigger.solid:hover { background: oklch(28% 0 0); }
+  .trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 160px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 28px 24px; }
+
+  pre.code {
+    font: 500 11.5px var(--font-mono);
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border-left: 2px solid var(--accent);
+    padding: 12px 14px;
+    margin: 12px 0 0;
+    border-radius: 0 6px 6px 0;
+    white-space: pre-wrap;
+    line-height: 1.55;
+    overflow-x: auto;
+  }
+  pre.code .kw { color: var(--text-primary); font-weight: 600; }
+
+  /* ---------- §2 focus-visible per context ---------- */
+  .focus-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .focus-cell { padding: 18px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-surface); }
+  .focus-cell h4 { margin: 0 0 12px; font: 600 10.5px var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-tertiary); }
+
+  .fk-input { width: 100%; box-sizing: border-box; font: 500 13px var(--font-sans); color: var(--text-primary); background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 8px; padding: 9px 12px; outline: none; transition: border-color 120ms, box-shadow 160ms; }
+  .fk-input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent); }
+
+  .fk-btn { font: 500 12.5px var(--font-sans); color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 8px; padding: 8px 14px; cursor: pointer; outline: none; transition: background 120ms; }
+  .fk-btn:hover { background: var(--bg-elevated); }
+  .fk-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .fk-link { color: var(--text-primary); text-decoration: underline; text-decoration-color: var(--text-tertiary); text-underline-offset: 3px; outline: none; }
+  .fk-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; text-decoration-color: var(--accent); }
+
+  .fk-card { display: block; padding: 14px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-elevated); cursor: pointer; outline: none; transition: border-color 160ms; }
+  .fk-card:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 28%, transparent); }
+  .fk-card .fc-title { font-weight: 600; font-size: 13px; }
+  .fk-card .fc-meta  { color: var(--text-tertiary); font-size: 11.5px; margin-top: 2px; }
+
+  .fk-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; font: 500 12px var(--font-sans); color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 999px; cursor: pointer; outline: none; transition: background 120ms, border-color 120ms; }
+  .fk-chip:hover { background: var(--bg-elevated); }
+  .fk-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .fk-chip.active { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  /* ---------- §3 skip link ---------- */
+  .skip-stage { position: relative; height: 96px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-surface); overflow: hidden; }
+  .skip-link {
+    position: absolute; top: 8px; left: 8px;
+    padding: 8px 14px;
+    background: var(--text-primary); color: #fff;
+    font: 600 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase;
+    border-radius: 6px; text-decoration: none; outline: none;
+    transform: translateY(-140%);
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .skip-link:focus-visible { transform: translateY(0); }
+  .skip-stage .body { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-tertiary); font-size: 12.5px; }
+
+  /* ---------- §4 focus trap modal ---------- */
+  .trap-stage { position: relative; height: 240px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-elevated); overflow: hidden; }
+  .trap-bg-btn {
+    position: absolute; left: 14px; top: 14px;
+    font: 500 11.5px var(--font-mono); padding: 6px 10px; border-radius: 6px;
+    background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);
+    cursor: pointer; outline: none;
+  }
+  .trap-bg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .trap-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(20, 20, 20, 0.42);
+    opacity: 0; pointer-events: none;
+    transition: opacity 160ms ease-out;
+  }
+  .trap-modal {
+    position: absolute; left: 50%; top: 50%;
+    width: min(320px, 88%);
+    transform: translate(-50%, -46%) scale(0.96);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+    opacity: 0; pointer-events: none;
+    transition: opacity 180ms ease-out, transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .trap-stage.open .trap-backdrop { opacity: 1; pointer-events: auto; }
+  .trap-stage.open .trap-modal    { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+  .trap-modal h5 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+  .trap-modal p  { margin: 0 0 12px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.5; }
+  .trap-row { display: flex; gap: 8px; align-items: center; }
+  .trap-row .fk-input { flex: 1; padding: 7px 10px; font-size: 12.5px; }
+  .trap-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+
+  /* ---------- §5 roving tabindex (.actions-pill mock) ---------- */
+  .roving-stage { display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg-elevated); border-radius: 10px; }
+  .actions-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.10);
+  }
+  .actions-pill .cact {
+    appearance: none;
+    width: 36px; height: 36px;
+    border: 0; background: transparent;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    display: grid; place-items: center;
+    cursor: pointer; outline: none;
+    transition: background 120ms, color 120ms;
+  }
+  .actions-pill .cact:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .actions-pill .cact:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .actions-pill .cact svg { width: 16px; height: 16px; }
+
+  .roving-log {
+    margin-top: 14px;
+    font: 500 11.5px var(--font-mono);
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 8px 12px;
+    min-height: 28px;
+  }
+  .roving-log .key { color: var(--accent); }
+
+  /* ---------- §6 overlay focus order ---------- */
+  .overlay-stage { position: relative; height: 200px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-elevated); overflow: hidden; padding: 12px; }
+  .overlay-search {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.94);
+    backdrop-filter: blur(8px);
+    opacity: 0; pointer-events: none;
+    transition: opacity 200ms ease-out;
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .overlay-stage.open .overlay-search { opacity: 1; pointer-events: auto; }
+  .overlay-search .row { display: flex; gap: 6px; }
+  .overlay-search .row input { flex: 1; }
+  .overlay-results { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; font-size: 12px; color: var(--text-secondary); }
+  .overlay-results > a { padding: 5px 10px; border-radius: 6px; text-decoration: none; color: inherit; outline: none; }
+  .overlay-results > a:focus-visible { background: var(--bg-surface); outline: 2px solid var(--accent); outline-offset: -1px; color: var(--text-primary); }
+
+  /* ---------- §7 audit checklist ---------- */
+  table.audit { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.audit thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.audit tbody td { padding: 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.audit tbody td:first-child { font-weight: 600; width: 26%; }
+  table.audit tbody td:last-child { color: var(--text-secondary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skip-link { transition: none; }
+    .trap-modal, .trap-backdrop { transition-duration: 100ms; }
+    .overlay-search { transition-duration: 100ms; }
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-header">
+  <span class="demo-title">C13 · Focus &amp; Keyboard</span>
+  <span class="demo-spec">focus-ring · skip-link · focus-trap · roving tabindex · overlay focus order</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<div class="demo-stage">
+<div class="wrap">
+
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Focus &amp; Keyboard</h1>
+    <ul class="scope">
+      <li><strong>Token:</strong> proposed <code>--focus-ring</code> = 2px solid <code>var(--accent)</code> with 2px offset.</li>
+      <li><strong>Per-context</strong> <code>:focus-visible</code> for input, button, link, card, chip — five visual treatments, one token.</li>
+      <li><strong>Skip link</strong> reveal on focus (translateY −140% → 0 over 200ms).</li>
+      <li><strong>Focus trap</strong> for modals — entry routes to first focusable; <code>Tab</code> wraps; <code>Esc</code> closes; restore prior focus on close.</li>
+      <li><strong>Roving tabindex</strong> inside <code>.actions-pill</code> — single tab stop; arrow keys move focus.</li>
+      <li><strong>Overlay focus order</strong> — search overlay (P03) routes focus to input on open and back to invoker on close.</li>
+    </ul>
+    <span class="status live">Status · Live · Governance</span>
+  </div>
+
+  <section>
+    <h2>§1 Token <span class="tier gov">Governance</span></h2>
+    <p>Production has no canonical focus-ring. Every page falls back to the browser default (<code>auto</code>), which differs across Safari / Firefox / Chrome and inverts unpredictably on dark surfaces. Proposed token below.</p>
+    <table class="spec">
+      <thead><tr><th>Token</th><th>Value</th><th>Source</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>--focus-ring</code></td>
+          <td>2px solid var(--accent)</td>
+          <td>proposal</td>
+          <td>Width 2px, not 3px — narrow enough that it doesn't visually bleed into adjacent border-radius edges; wide enough to clear AA contrast against <code>--bg-base</code>.</td>
+        </tr>
+        <tr>
+          <td><code>--focus-ring-offset</code></td>
+          <td>2px</td>
+          <td>proposal</td>
+          <td>Applied via <code>outline-offset</code>. On rounded primitives (cards, chips), offset doubles as breathing room so the ring never crops the corner.</td>
+        </tr>
+        <tr>
+          <td><code>--focus-ring-glow</code></td>
+          <td>0 0 0 3px color-mix(accent 22% transparent)</td>
+          <td>proposal</td>
+          <td>Used on form inputs (existing pattern in C02 Section 1). Composes with the standard outline; do not stack both on the same primitive.</td>
+        </tr>
+      </tbody>
+    </table>
+    <pre class="code"><span class="kw">:root</span> {
+  --focus-ring:        2px solid var(--accent);
+  --focus-ring-offset: 2px;
+  --focus-ring-glow:   0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+<span class="kw">*</span>:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}</pre>
+  </section>
+
+  <section class="divided">
+    <h2>§2 Per-context focus-visible <span class="tier norm">Normative</span></h2>
+    <p>Same token, five visual treatments — picked per primitive shape. Tab through the cells below.</p>
+    <dl class="section-meta">
+      <dt>Input</dt>     <dd>border-color → <code>--accent</code> + 3px <code>--focus-ring-glow</code> (matches C02 Section 1).</dd>
+      <dt>Button</dt>    <dd>2px outline, 2px offset (token default).</dd>
+      <dt>Link</dt>      <dd>2px outline, 3px offset, underline color shifts to <code>--accent</code> (signal carries even if outline misses contrast).</dd>
+      <dt>Card</dt>      <dd>border-color → <code>--accent</code> + 2px glow (no outline; ring would clash with card's own border).</dd>
+      <dt>Chip</dt>      <dd>2px outline, 2px offset (same as button — pill primitives share a contract).</dd>
+    </dl>
+    <div class="stage">
+      <div class="focus-grid">
+        <div class="focus-cell">
+          <h4>Input</h4>
+          <input class="fk-input" placeholder="Tab here">
+        </div>
+        <div class="focus-cell">
+          <h4>Button</h4>
+          <button class="fk-btn">Save changes</button>
+        </div>
+        <div class="focus-cell">
+          <h4>Link</h4>
+          <a href="#" class="fk-link" onclick="return false;">Read more</a>
+        </div>
+        <div class="focus-cell">
+          <h4>Card</h4>
+          <a href="#" class="fk-card" onclick="return false;">
+            <div class="fc-title">A card with a single tab stop</div>
+            <div class="fc-meta">8 min read · Politics</div>
+          </a>
+        </div>
+        <div class="focus-cell" style="grid-column: span 2;">
+          <h4>Chips</h4>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="fk-chip active">All</button>
+            <button class="fk-chip">Politics</button>
+            <button class="fk-chip">Tech</button>
+            <button class="fk-chip">Climate</button>
+            <button class="fk-chip">Long reads</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="divided">
+    <h2>§3 Skip link <span class="tier norm">Normative</span></h2>
+    <p>Every page mounts a skip link as the first focusable element. Hidden until focused; revealed via <code>translateY</code>, never <code>display: none</code> (which removes from tab order).</p>
+    <dl class="section-meta">
+      <dt>Resting</dt> <dd><code>transform: translateY(-140%)</code> — fully off-canvas but still in tab order.</dd>
+      <dt>Focused</dt> <dd><code>transform: translateY(0)</code> over 200ms <code>cubic-bezier(0.22, 1, 0.36, 1)</code>.</dd>
+      <dt>Target</dt>  <dd>Anchored to <code>#main</code>; activating moves keyboard focus and viewport.</dd>
+    </dl>
+    <div class="stage">
+      <div class="skip-stage">
+        <a href="#main" class="skip-link" onclick="event.preventDefault(); document.getElementById('skipFocusBtn').focus();">Skip to main content</a>
+        <div class="body">↑ Press Tab inside this card to reveal the skip link.</div>
+      </div>
+      <button id="skipFocusBtn" class="trigger" style="margin-top: 12px;">main content (skip target)</button>
+    </div>
+  </section>
+
+  <section class="divided">
+    <h2>§4 Focus trap — modal <span class="tier norm">Normative</span></h2>
+    <p>Pairs with C03 modal open/close motion. On open, focus moves to the first focusable element inside the modal. <code>Tab</code> wraps within. <code>Esc</code> closes. On close, focus restores to the trigger.</p>
+    <dl class="section-meta">
+      <dt>Entry</dt>   <dd>First <code>input, button, [tabindex]:not([tabindex="-1"]), a[href]</code> inside the modal receives focus 1 frame after the open class lands.</dd>
+      <dt>Wrap</dt>    <dd>Last → first on Tab; first → last on Shift+Tab. Implemented via <code>focusin</code> sentinel.</dd>
+      <dt>Exit</dt>    <dd><code>Esc</code> close; backdrop click close; explicit close button. All three restore focus to the trigger element.</dd>
+      <dt>Reduced</dt> <dd>Trap behavior unchanged — focus management is functional, not motion. Only the modal open/close transition shortens.</dd>
+    </dl>
+    <div class="triggers">
+      <button class="trigger solid" id="trapOpen">Open modal</button>
+      <span class="hint">Tab cycles inside; Shift+Tab also cycles; Esc closes.</span>
+    </div>
+    <div class="stage" style="margin-top: 12px;">
+      <div class="trap-stage" id="trapStage">
+        <button class="trap-bg-btn">background button (should not receive focus while trap is open)</button>
+        <div class="trap-backdrop" id="trapBackdrop"></div>
+        <div class="trap-modal" role="dialog" aria-modal="true" aria-labelledby="trapTitle" id="trapModal">
+          <h5 id="trapTitle">Save draft?</h5>
+          <p>You have unsaved changes. Choose where they go.</p>
+          <div class="trap-row">
+            <input class="fk-input" id="trapInput" placeholder="Draft title…">
+          </div>
+          <div class="trap-actions">
+            <button class="fk-btn" id="trapCancel">Cancel</button>
+            <button class="fk-btn" id="trapSave" style="background: var(--text-primary); color: #fff; border-color: var(--text-primary);">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="divided">
+    <h2>§5 Roving tabindex — <code>.actions-pill</code> <span class="tier norm">Normative</span></h2>
+    <p>Pairs with C12. The pill is a single tab stop — only one button has <code>tabindex="0"</code> at a time, the others are <code>-1</code>. ←/→ moves the active stop and refocuses; Home/End jump to the ends; Tab leaves the group entirely.</p>
+    <dl class="section-meta">
+      <dt>Initial</dt>  <dd>First button (Comments) has <code>tabindex="0"</code>.</dd>
+      <dt>← / →</dt>    <dd>Active button moves; old becomes <code>-1</code>; new becomes <code>0</code> and receives focus.</dd>
+      <dt>Home/End</dt> <dd>Jump to first / last button.</dd>
+      <dt>Tab</dt>      <dd>Leaves the group — does not iterate inside.</dd>
+    </dl>
+    <div class="stage">
+      <div class="roving-stage">
+        <div class="actions-pill" id="actionsPill" role="toolbar" aria-label="Post actions">
+          <button class="cact" tabindex="0" aria-label="Comments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+          <button class="cact" tabindex="-1" aria-label="Like"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <button class="cact" tabindex="-1" aria-label="Bookmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+          <button class="cact" tabindex="-1" aria-label="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+        </div>
+      </div>
+      <div class="roving-log" id="rovingLog">Tab to the toolbar, then press <span class="key">←</span> / <span class="key">→</span>.</div>
+    </div>
+  </section>
+
+  <section class="divided">
+    <h2>§6 Overlay focus order — search <span class="tier norm">Normative</span></h2>
+    <p>Pairs with P03. Opening the search overlay routes focus to the input. Closing returns focus to the invoker. Result list uses arrow keys to move; Enter activates.</p>
+    <div class="triggers">
+      <button class="trigger solid" id="overlayOpen">Open search</button>
+      <span class="hint">Esc to close; arrow keys move within results.</span>
+    </div>
+    <div class="stage" style="margin-top: 12px;">
+      <div class="overlay-stage" id="overlayStage">
+        <div class="overlay-search">
+          <div class="row">
+            <input class="fk-input" id="overlayInput" placeholder="Search posts, authors…" >
+            <button class="fk-btn" id="overlayClose">Esc</button>
+          </div>
+          <div class="overlay-results" id="overlayResults">
+            <a href="#" onclick="return false;">The case for slow feeds</a>
+            <a href="#" onclick="return false;">Why we read less than we think</a>
+            <a href="#" onclick="return false;">A field guide to writing for your future self</a>
+          </div>
+        </div>
+        <div style="color: var(--text-tertiary); font-size: 12.5px;">Background page content. Should not be tabbable while overlay is open.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="divided">
+    <h2>§7 Audit checklist <span class="tier gov">Governance</span></h2>
+    <p>Every C-file and P-file gates on these four checks before merging. C13 is the source of truth.</p>
+    <table class="audit">
+      <thead><tr><th>Check</th><th>What to verify</th></tr></thead>
+      <tbody>
+        <tr><td>Visible focus everywhere</td><td>Tab through the entire flow with no <code>outline: none</code> orphans. Every interactive primitive shows <code>--focus-ring</code> (or its per-context variant).</td></tr>
+        <tr><td>No focus traps outside modals</td><td>Tab can always escape the page chrome. Skip link is the first focusable; it works.</td></tr>
+        <tr><td>Modal traps restore focus</td><td>Open / close cycles return focus to the invoker. Test with mouse-open + Tab-close, and Tab-open + Esc-close.</td></tr>
+        <tr><td>Toolbars use roving</td><td><code>.actions-pill</code> and any group of mutually-exclusive buttons (filter chips, segmented control) use a single tab stop with arrow-key navigation.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="react-hint">
+    <h3>React mapping</h3>
+    <dl>
+      <dt>useFocusVisible()</dt>
+      <dd>Hook that mirrors <code>:focus-visible</code> behavior in JS for cases where CSS can't reach (Portal'd surfaces). Returns <code>{ ref, isFocusVisible }</code>.</dd>
+      <dt>&lt;FocusTrap&gt;</dt>
+      <dd>Wraps modal/drawer body. Props: <code>active</code>, <code>initialFocus</code>, <code>restoreFocus</code> (defaults true). Implements §4.</dd>
+      <dt>&lt;SkipLink&gt;</dt>
+      <dd>Mounts at top of every page layout. Props: <code>href</code> (defaults <code>#main</code>), <code>label</code>. Implements §3.</dd>
+      <dt>useRovingTabIndex()</dt>
+      <dd>Hook for toolbars and segmented controls. Returns <code>{ getItemProps(index) }</code>. Implements §5.</dd>
+      <dt>--focus-ring</dt>
+      <dd>Token added to <code>tokens.css</code> when this proposal is approved. All <code>:focus-visible</code> rules across the codebase migrate to <code>outline: var(--focus-ring)</code>.</dd>
+    </dl>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // ---------- §4 focus trap ----------
+  (function () {
+    const stage = document.getElementById('trapStage');
+    const modal = document.getElementById('trapModal');
+    const openBtn = document.getElementById('trapOpen');
+    const closeBtn = document.getElementById('trapCancel');
+    const saveBtn = document.getElementById('trapSave');
+    const backdrop = document.getElementById('trapBackdrop');
+    const input = document.getElementById('trapInput');
+    let lastFocus = null;
+
+    function focusables() {
+      return modal.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"]), a[href]');
+    }
+    function open() {
+      lastFocus = document.activeElement;
+      stage.classList.add('open');
+      requestAnimationFrame(() => input.focus());
+    }
+    function close() {
+      stage.classList.remove('open');
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    openBtn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    saveBtn.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+      if (!stage.classList.contains('open')) return;
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key !== 'Tab') return;
+      const list = Array.from(focusables());
+      if (!list.length) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  })();
+
+  // ---------- §5 roving tabindex ----------
+  (function () {
+    const pill = document.getElementById('actionsPill');
+    const log = document.getElementById('rovingLog');
+    const buttons = Array.from(pill.querySelectorAll('.cact'));
+    let activeIndex = 0;
+    function setActive(i) {
+      activeIndex = (i + buttons.length) % buttons.length;
+      buttons.forEach((b, idx) => b.tabIndex = idx === activeIndex ? 0 : -1);
+      buttons[activeIndex].focus();
+      log.innerHTML = `<span class="key">${buttons[activeIndex].getAttribute('aria-label')}</span> active · tabindex=0`;
+    }
+    pill.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowRight': e.preventDefault(); setActive(activeIndex + 1); break;
+        case 'ArrowLeft':  e.preventDefault(); setActive(activeIndex - 1); break;
+        case 'Home':       e.preventDefault(); setActive(0); break;
+        case 'End':        e.preventDefault(); setActive(buttons.length - 1); break;
+      }
+    });
+  })();
+
+  // ---------- §6 overlay focus order ----------
+  (function () {
+    const stage = document.getElementById('overlayStage');
+    const openBtn = document.getElementById('overlayOpen');
+    const closeBtn = document.getElementById('overlayClose');
+    const input = document.getElementById('overlayInput');
+    const results = document.getElementById('overlayResults');
+    let lastFocus = null;
+
+    function open() {
+      lastFocus = document.activeElement;
+      stage.classList.add('open');
+      requestAnimationFrame(() => input.focus());
+    }
+    function close() {
+      stage.classList.remove('open');
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    openBtn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+      if (!stage.classList.contains('open')) return;
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const items = Array.from(results.querySelectorAll('a'));
+        const here = items.indexOf(document.activeElement);
+        const next = e.key === 'ArrowDown' ? (here + 1) % items.length : (here - 1 + items.length) % items.length;
+        items[Math.max(0, next)].focus();
+        e.preventDefault();
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>

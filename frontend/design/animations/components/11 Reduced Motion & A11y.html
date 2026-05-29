@@ -1,0 +1,763 @@
+<!doctype html>
+<!--
+  C11 — Reduced Motion & A11y
+  Scope:      Cross-cutting governance for accessibility motion + focus + announcements.
+              No "production tier vs extended tier" split — this file IS the policy.
+              All sections are normative for the React port.
+
+              Sections:
+                §1 prefers-reduced-motion — global override pattern (audit-friendly form)
+                §2 Per-pattern reduced-motion comparisons (modal, toast, like, skeleton)
+                §3 Focus-visible vs focus rings (token + scope)
+                §4 Focus order — modal trap + search overlay
+                §5 Screen-reader live regions (toasts, validation, count)
+                §6 Motion-free state cues (color + position alternates)
+                §7 Reduced-transparency, forced-colors, prefers-contrast
+                §8 Audit checklist (consumed by every C-file)
+  Spec:       docs/Animation Spec.md  §  Accessibility
+  React hint: <ReducedMotionGate>, <FocusTrap>, <LiveRegion>, useFocusVisible(), useA11yMotion()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reduced Motion & A11y · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — copied verbatim from C10) ---------- */
+  body { background: var(--bg-base); color: var(--text-primary); overflow: auto; }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.gov { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+  .tier.norm { background: var(--text-primary); color: #fff; border: 1px solid var(--text-primary); }
+
+  table.spec { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.spec thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.spec tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.45; }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.spec tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-secondary); width: 22%; }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  .section-meta { display: grid; grid-template-columns: 86px 1fr; gap: 6px 14px; margin: 8px 0 14px; font-size: 12.5px; line-height: 1.55; }
+  .section-meta dt { font: 500 10px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding-top: 1px; }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code { font: 500 11px var(--font-mono); color: var(--text-primary); }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 0; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms, border-color 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+  .trigger.solid:hover { background: oklch(28% 0 0); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 160px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 28px 24px; }
+
+  /* Side-by-side comparator */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .compare > div {
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 18px;
+    background: var(--bg-surface);
+    min-height: 160px;
+    display: flex; flex-direction: column;
+  }
+  .compare h4 {
+    margin: 0 0 12px;
+    font: 600 10.5px var(--font-mono);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .compare h4::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary);
+  }
+  .compare .col-rm h4::before { background: var(--accent); }
+
+  /* Code block */
+  pre.code {
+    font: 500 11.5px var(--font-mono);
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border-left: 2px solid var(--accent);
+    padding: 12px 14px;
+    margin: 12px 0 0;
+    border-radius: 0 6px 6px 0;
+    white-space: pre-wrap;
+    line-height: 1.55;
+    overflow-x: auto;
+  }
+  pre.code .kw { color: var(--text-primary); font-weight: 600; }
+
+  /* ===========================================================
+   * §2 — Per-pattern comparisons
+   * =========================================================== */
+
+  /* Modal */
+  .demo-modal-stage { position: relative; min-height: 130px; display: grid; place-items: center; }
+  .mini-modal {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 14px 16px;
+    width: 100%; max-width: 240px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+    font-size: 12.5px;
+    color: var(--text-primary);
+  }
+  .mini-modal .title { font-weight: 600; margin-bottom: 4px; }
+  .mini-modal .body  { color: var(--text-secondary); }
+  .col-std .mini-modal {
+    opacity: 0; transform: scale(0.96) translateY(6px);
+    transition: opacity 220ms ease-out, transform 220ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .col-std.show .mini-modal { opacity: 1; transform: scale(1) translateY(0); }
+  .col-rm .mini-modal {
+    opacity: 0;
+    transition: opacity 100ms linear;
+  }
+  .col-rm.show .mini-modal { opacity: 1; }
+
+  /* Toast */
+  .demo-toast-stage { position: relative; min-height: 130px; display: grid; place-items: center; }
+  .mini-toast {
+    background: var(--text-primary);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font: 500 12px var(--font-sans);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  }
+  .col-std .mini-toast {
+    opacity: 0; transform: translateY(14px);
+    transition: opacity 220ms ease-out, transform 320ms cubic-bezier(0.16,1,0.3,1);
+  }
+  .col-std.show .mini-toast { opacity: 1; transform: translateY(0); }
+  .col-rm .mini-toast {
+    opacity: 0;
+    transition: opacity 120ms linear;
+  }
+  .col-rm.show .mini-toast { opacity: 1; }
+
+  /* Like-bounce */
+  .demo-like-stage { display: flex; align-items: center; gap: 12px; min-height: 60px; }
+  .like-btn {
+    width: 36px; height: 36px;
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    display: grid; place-items: center;
+    cursor: pointer;
+  }
+  .like-btn svg { width: 16px; height: 16px; color: var(--text-secondary); transition: color 120ms; }
+  .like-btn.liked svg { color: var(--accent); fill: currentColor; }
+  .col-std .like-btn.bumping svg { animation: likeBounce 320ms cubic-bezier(0.16,1,0.3,1); }
+  @keyframes likeBounce {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.25); }
+    70%  { transform: scale(0.92); }
+    100% { transform: scale(1); }
+  }
+  .col-rm .like-btn.bumping svg { animation: none; }
+  .like-label { font-size: 12px; color: var(--text-secondary); }
+  .like-label .count { font-weight: 600; color: var(--text-primary); }
+
+  /* Skeleton */
+  .demo-skel-stage { display: grid; gap: 8px; }
+  .skel {
+    height: 12px; border-radius: 4px;
+    background: linear-gradient(90deg,
+      var(--bg-elevated) 0%,
+      color-mix(in oklab, var(--bg-elevated) 70%, var(--bg-surface)) 50%,
+      var(--bg-elevated) 100%);
+    background-size: 200% 100%;
+  }
+  .col-std .skel { animation: shimmer 1.4s ease-in-out infinite; }
+  @keyframes shimmer {
+    0%, 100% { background-position: 0% 0; opacity: 1; }
+    50%      { background-position: -50% 0; opacity: 0.55; }
+  }
+  .col-rm .skel { animation: none; opacity: 0.7; }
+
+  /* ===========================================================
+   * §3 — Focus-visible
+   * =========================================================== */
+  .focus-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .fv-btn, .fv-link, .fv-input {
+    font: 500 12.5px var(--font-sans);
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    outline: none;
+    transition: background 120ms;
+  }
+  .fv-btn:hover { background: var(--bg-elevated); }
+  .fv-btn:focus-visible,
+  .fv-link:focus-visible,
+  .fv-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .fv-link {
+    text-decoration: underline;
+    text-decoration-color: var(--text-tertiary);
+    text-underline-offset: 3px;
+    background: none;
+    border: 0;
+    padding: 4px 2px;
+  }
+  .fv-input {
+    padding: 7px 10px;
+    width: 200px;
+  }
+  .fv-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+  }
+
+  /* ===========================================================
+   * §4 — Focus order: modal trap
+   * =========================================================== */
+  .trap-stage { display: grid; gap: 14px; }
+  .trap-modal {
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    background: var(--bg-surface);
+    padding: 16px;
+    display: grid; gap: 10px;
+  }
+  .trap-modal[hidden] { display: none; }
+  .trap-modal h4 { margin: 0; font-size: 14px; }
+  .trap-modal .row { display: flex; gap: 8px; }
+  .trap-modal input[type=text] {
+    flex: 1;
+    padding: 7px 10px; font-size: 12.5px;
+    border: 1px solid var(--border-default); border-radius: 6px;
+    background: var(--bg-base);
+    outline: none;
+  }
+  .trap-modal input[type=text]:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
+  .focus-log {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 10px 12px;
+    border-radius: 8px;
+    min-height: 64px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
+
+  /* ===========================================================
+   * §5 — Live regions
+   * =========================================================== */
+  .live-stage { display: grid; gap: 14px; }
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .live-visible {
+    font: 500 11.5px var(--font-mono);
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border-left: 2px solid var(--success);
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+    min-height: 28px;
+  }
+
+  /* ===========================================================
+   * §6 — Motion-free state cues
+   * =========================================================== */
+  .cue-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .cue-card {
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .cue-card h5 { margin: 0 0 8px; font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); }
+  .cue-color   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--success); display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .cue-color   .dot.warn  { background: var(--warning); }
+  .cue-color   .dot.error { background: var(--error); }
+  .cue-pos     .pos { display: inline-block; padding: 2px 8px; border: 1px solid var(--border-default); border-radius: 4px; margin-right: 6px; font: 500 11px var(--font-mono); }
+  .cue-text    code { font: 500 11px var(--font-mono); color: var(--text-primary); }
+
+  /* ===========================================================
+   * §7 — Reduced transparency / forced colors
+   * =========================================================== */
+  .ct-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .ct-pill {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font: 500 12px var(--font-sans);
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .ct-pill {
+      background: var(--bg-elevated);
+      border-color: var(--border-default);
+      color: var(--text-primary);
+    }
+  }
+  @media (forced-colors: active) {
+    .ct-pill {
+      background: ButtonFace;
+      color: ButtonText;
+      border: 1px solid ButtonText;
+      forced-color-adjust: none;
+    }
+    .fv-btn:focus-visible { outline-color: Highlight; }
+  }
+
+  /* ===========================================================
+   * Global reduced-motion override (canonical pattern)
+   * Note: this file demonstrates the override INLINE per-section
+   * (left = standard, right = reduced) so behavior can be compared
+   * without toggling OS settings. The block below is the form a
+   * real C-file ships with — single rule, scoped to this file's
+   * named animations.
+   * =========================================================== */
+  @media (prefers-reduced-motion: reduce) {
+    /* Real-world rule the React port should ship per pattern.
+       Demo intentionally does NOT activate global kill-switches,
+       because §2 needs to play the standard column even when the
+       OS has reduced-motion on (so users can compare). */
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+    <div class="lead-block">
+      <div class="wordmark"><span class="lead">C11</span> · Verita Animation Demo</div>
+      <h1>Reduced Motion &amp; A11y.</h1>
+      <p class="scope">The accessibility governance file. Every other C-file references this one's patterns: the single-rule reduced-motion override at the bottom of each demo, the focus-visible scope, and the live-region announcement contracts. There is no production-vs-extended split here — every section is normative.</p>
+      <span class="status live">Live · Governance</span>
+    </div>
+
+    <section>
+      <h2>Spec snapshot</h2>
+      <p>This file is the source of truth for every <code>@media (prefers-reduced-motion: reduce)</code> block, <code>:focus-visible</code> ring, <code>aria-live</code> region, and forced-colors fallback that lands in the React component layer.</p>
+      <table class="spec">
+        <thead><tr><th>Section</th><th>Rule / API</th><th>Scope</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>§1 Reduced-motion override <span class="tier norm">norm</span></td><td>@media (prefers-reduced-motion: reduce)</td><td>per-file, single block at bottom</td><td>Don't scatter checks per-keyframe.</td></tr>
+          <tr><td>§2 Per-pattern comparisons <span class="tier gov">gov</span></td><td>side-by-side</td><td>modal, toast, like, skeleton</td><td>Reference forms for the four most common patterns.</td></tr>
+          <tr><td>§3 Focus-visible ring <span class="tier norm">norm</span></td><td>:focus-visible</td><td>all interactive elements</td><td>2px outline, 2px offset, accent color.</td></tr>
+          <tr><td>§4 Focus order &amp; trap <span class="tier norm">norm</span></td><td>tabindex + Tab/Shift+Tab cycle</td><td>modal, search overlay</td><td>Restore on close to the trigger.</td></tr>
+          <tr><td>§5 Live regions <span class="tier norm">norm</span></td><td>aria-live="polite" / "assertive"</td><td>toasts, validation, count</td><td>Don't double-announce on motion + text.</td></tr>
+          <tr><td>§6 Motion-free state cues <span class="tier gov">gov</span></td><td>color, position, text alternates</td><td>any animated state</td><td>Every motion needs a non-motion fallback signal.</td></tr>
+          <tr><td>§7 Transparency / forced colors <span class="tier gov">gov</span></td><td>prefers-reduced-transparency, forced-colors</td><td>chrome surfaces</td><td>Solid swap; respect system token names.</td></tr>
+          <tr><td>§8 Audit checklist <span class="tier norm">norm</span></td><td>list</td><td>every C-file</td><td>Apply before flipping a C-file Live in Plan.md.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============== §1 ============== -->
+    <section class="divided">
+      <h2>§1 — The reduced-motion override <span class="tier norm">normative</span></h2>
+      <p>One <code>@media (prefers-reduced-motion: reduce)</code> block per C-file, located at the bottom of the file's CSS. Override target named animations + transitions; leave color-only transitions alone (those are considered safe). Don't scatter checks across keyframes — concentrate the override surface so audits only have to scan one block per file.</p>
+      <pre class="code"><span class="kw">@media</span> (prefers-reduced-motion: reduce) {
+  /* Kill named animations */
+  .toast.show       { animation: none; opacity: 1; }
+  .skeleton         { animation: none; opacity: 0.7; }
+  .like-btn.bumping { animation: none; }
+
+  /* Kill non-color transforms; keep box-shadow as the affordance anchor */
+  .avatar-btn:hover { transform: none; }
+  .avatar-btn       { transition: box-shadow 160ms ease-out; }
+
+  /* Strip transition: all to its safe subset */
+  .composer         { transition: box-shadow 240ms ease-out; }
+}</pre>
+      <p class="hint">Color-only transitions (e.g. follow button hover, like icon color toggle) are <em>not</em> killed. The 120ms color swap is below the WCAG flicker threshold and is considered acceptable under reduced-motion. <code>opacity</code> changes are also kept — fade-in is the gentlest signal of state change.</p>
+    </section>
+
+    <!-- ============== §2 ============== -->
+    <section class="divided">
+      <h2>§2 — Per-pattern comparisons <span class="tier gov">governance</span></h2>
+      <p>Four side-by-side comparators. Left column is the standard motion shipping in the demo; right column is the reduced-motion variant the C-file's <code>@media</code> block produces. Trigger any pattern below — both columns animate in parallel so the difference is visible.</p>
+
+      <h4 style="margin: 24px 0 6px; font: 600 12px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary);">Modal (C03)</h4>
+      <div class="stage compare">
+        <div class="col-std" id="modal-std">
+          <h4>Standard · 220ms scale + fade</h4>
+          <div class="demo-modal-stage">
+            <div class="mini-modal"><div class="title">Confirm action</div><div class="body">Publish post to your network?</div></div>
+          </div>
+        </div>
+        <div class="col-rm" id="modal-rm">
+          <h4>Reduced · 100ms opacity-only</h4>
+          <div class="demo-modal-stage">
+            <div class="mini-modal"><div class="title">Confirm action</div><div class="body">Publish post to your network?</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="triggers"><button class="trigger" id="modal-toggle">Toggle modal</button></div>
+
+      <h4 style="margin: 28px 0 6px; font: 600 12px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary);">Toast (C04)</h4>
+      <div class="stage compare">
+        <div class="col-std" id="toast-std">
+          <h4>Standard · 320ms spring rise</h4>
+          <div class="demo-toast-stage"><div class="mini-toast">Saved to your library</div></div>
+        </div>
+        <div class="col-rm" id="toast-rm">
+          <h4>Reduced · 120ms opacity-only</h4>
+          <div class="demo-toast-stage"><div class="mini-toast">Saved to your library</div></div>
+        </div>
+      </div>
+      <div class="triggers"><button class="trigger" id="toast-toggle">Show toast</button></div>
+
+      <h4 style="margin: 28px 0 6px; font: 600 12px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary);">Like-bounce (C12)</h4>
+      <div class="stage compare">
+        <div class="col-std" id="like-std">
+          <h4>Standard · 320ms spring scale</h4>
+          <div class="demo-like-stage">
+            <button class="like-btn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-4.35-7-10a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 5.65-7 10-7 10z"/></svg>
+            </button>
+            <span class="like-label"><span class="count">128</span> likes</span>
+          </div>
+        </div>
+        <div class="col-rm" id="like-rm">
+          <h4>Reduced · color-only (safe)</h4>
+          <div class="demo-like-stage">
+            <button class="like-btn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-4.35-7-10a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 5.65-7 10-7 10z"/></svg>
+            </button>
+            <span class="like-label"><span class="count">128</span> likes</span>
+          </div>
+        </div>
+      </div>
+      <div class="triggers"><button class="trigger" id="like-toggle">Toggle like</button></div>
+
+      <h4 style="margin: 28px 0 6px; font: 600 12px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary);">Skeleton (C08)</h4>
+      <div class="stage compare">
+        <div class="col-std">
+          <h4>Standard · 1.4s shimmer loop</h4>
+          <div class="demo-skel-stage" style="margin-top: 4px;">
+            <div class="skel" style="width:60%;"></div>
+            <div class="skel" style="width:90%;"></div>
+            <div class="skel" style="width:75%;"></div>
+          </div>
+        </div>
+        <div class="col-rm">
+          <h4>Reduced · static at 0.7 opacity</h4>
+          <div class="demo-skel-stage" style="margin-top: 4px;">
+            <div class="skel" style="width:60%;"></div>
+            <div class="skel" style="width:90%;"></div>
+            <div class="skel" style="width:75%;"></div>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Skeleton is the most opinionated case. The shimmer loop is gentle (opacity 1 → 0.55 → 1) but still <em>infinite</em>, which can be tiring. Reduced-motion swaps to a static 0.7-opacity bar — the user still gets the "this is loading, don't read it" signal without a perpetual pulse.</p>
+    </section>
+
+    <!-- ============== §3 ============== -->
+    <section class="divided">
+      <h2>§3 — Focus-visible ring <span class="tier norm">normative</span></h2>
+      <p>Every interactive element gets a 2px <code>outline</code> in <code>var(--accent)</code> with 2px <code>outline-offset</code> on <code>:focus-visible</code> only. Not <code>:focus</code> — mouse-clicking should not paint a ring; keyboard navigation and screen-reader navigation should. Tab through the row below to verify.</p>
+      <dl class="section-meta">
+        <dt>Width</dt><dd><code>2px</code></dd>
+        <dt>Offset</dt><dd><code>2px</code> (1px on inputs, where the border is part of the ring)</dd>
+        <dt>Color</dt><dd><code>var(--accent)</code> · <code>Highlight</code> in forced-colors</dd>
+        <dt>Selector</dt><dd><code>:focus-visible</code> only — never bare <code>:focus</code></dd>
+      </dl>
+      <div class="stage focus-row">
+        <button class="fv-btn" type="button">Primary action</button>
+        <button class="fv-btn" type="button">Secondary</button>
+        <a href="#" class="fv-link" onclick="event.preventDefault()">Inline link</a>
+        <input class="fv-input" type="text" placeholder="Type here" />
+      </div>
+      <p class="hint">If a custom interactive element (e.g. a clickable card) needs a ring, scope the rule to <code>[role="button"]:focus-visible</code> or use a class — never broaden the global selector.</p>
+    </section>
+
+    <!-- ============== §4 ============== -->
+    <section class="divided">
+      <h2>§4 — Focus order &amp; modal trap <span class="tier norm">normative</span></h2>
+      <p>When a modal opens, focus moves to the first focusable element inside it. Tab and Shift+Tab cycle within the modal. Esc closes; on close, focus returns to the trigger. The log below records every focus event so the cycle is visible.</p>
+      <dl class="section-meta">
+        <dt>Open</dt><dd>focus → first <code>[tabindex=0], button, input, a</code> in modal</dd>
+        <dt>Cycle</dt><dd>Tab from last → first; Shift+Tab from first → last</dd>
+        <dt>Close</dt><dd>focus → originating trigger element</dd>
+        <dt>Esc</dt><dd>closes modal &amp; restores focus</dd>
+      </dl>
+      <div class="stage trap-stage">
+        <button class="trigger" id="trap-open">Open modal (focus trap)</button>
+        <div class="trap-modal" id="trap-modal" role="dialog" aria-modal="true" aria-labelledby="trap-title" hidden>
+          <h4 id="trap-title">Sign in</h4>
+          <div class="row"><input type="text" id="trap-email" placeholder="Email" /></div>
+          <div class="row"><input type="text" id="trap-pw" placeholder="Password" /></div>
+          <div class="row" style="justify-content: flex-end; gap: 8px;">
+            <button class="trigger" id="trap-cancel">Cancel</button>
+            <button class="trigger solid" id="trap-submit">Continue</button>
+          </div>
+        </div>
+        <div class="focus-log" id="focus-log" aria-live="polite">Focus log (announced via polite live region):</div>
+      </div>
+    </section>
+
+    <!-- ============== §5 ============== -->
+    <section class="divided">
+      <h2>§5 — Live regions <span class="tier norm">normative</span></h2>
+      <p>State changes that aren't visible in the page's normal reading order need an <code>aria-live</code> region. <code>polite</code> for non-urgent updates (saved, copied, refreshed); <code>assertive</code> for blocking errors only. Don't double-announce — if a toast contains the same text as an inline message, only one needs the live attribute.</p>
+      <dl class="section-meta">
+        <dt>Polite</dt><dd>save, copy, refresh, count change, toast (default)</dd>
+        <dt>Assertive</dt><dd>form validation error, network failure, irreversible warning</dd>
+        <dt>Off</dt><dd>regions whose content is already announced via focus or a heading</dd>
+      </dl>
+      <div class="stage live-stage">
+        <div>
+          <strong style="font-size: 12.5px;">Polite (toast equivalent)</strong>
+          <div class="live-visible" id="live-polite" aria-live="polite" aria-atomic="true">—</div>
+          <div class="triggers">
+            <button class="trigger" id="live-save">Trigger “Saved”</button>
+            <button class="trigger" id="live-copy">Trigger “Copied link”</button>
+          </div>
+        </div>
+        <div>
+          <strong style="font-size: 12.5px;">Assertive (validation error)</strong>
+          <div class="live-visible" id="live-assertive" aria-live="assertive" aria-atomic="true" style="border-left-color: var(--error);">—</div>
+          <div class="triggers">
+            <button class="trigger" id="live-error">Trigger validation error</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">In production, the visible toast box and the SR-only live region should share content via the same React component (<code>&lt;LiveRegion politeness="polite"&gt;</code>) — the visible UI is one styling target, the live region is another, but the source string is single.</p>
+    </section>
+
+    <!-- ============== §6 ============== -->
+    <section class="divided">
+      <h2>§6 — Motion-free state cues <span class="tier gov">governance</span></h2>
+      <p>Every animated state change must be conveyed by at least one non-motion signal too: color, position, or text. If the only difference between "saved" and "saving" is a spinner, reduced-motion users get no information. Three canonical alternates are documented below.</p>
+      <div class="stage cue-row">
+        <div class="cue-card cue-color">
+          <h5>Color</h5>
+          <div><span class="dot"></span> Saved</div>
+          <div><span class="dot warn"></span> Saving…</div>
+          <div><span class="dot error"></span> Failed</div>
+        </div>
+        <div class="cue-card cue-pos">
+          <h5>Position</h5>
+          <div><span class="pos">top-right</span> Toast (success)</div>
+          <div><span class="pos">inline</span> Field error</div>
+          <div><span class="pos">modal</span> Blocking confirm</div>
+        </div>
+        <div class="cue-card cue-text">
+          <h5>Text</h5>
+          <div>aria-label: <code>"Saving"</code></div>
+          <div>data-state: <code>"saving"</code></div>
+          <div>visible label: <em>Saving…</em></div>
+        </div>
+      </div>
+      <p class="hint">Rule of thumb: kill every animation in the demo, then read the screen as a static snapshot. If you can't tell which state each component is in, the static design is missing a cue — fix the static layer, not the motion layer.</p>
+    </section>
+
+    <!-- ============== §7 ============== -->
+    <section class="divided">
+      <h2>§7 — Transparency &amp; forced colors <span class="tier gov">governance</span></h2>
+      <p>Two less-discussed media queries that the React port must respect: <code>prefers-reduced-transparency: reduce</code> (Safari macOS only at the moment, but ratified in spec) collapses tinted/translucent surfaces to solid; <code>forced-colors: active</code> (Windows High Contrast) maps all colors to system tokens. The pill below changes shape under each.</p>
+      <div class="stage ct-row">
+        <span class="ct-pill">Verified</span>
+        <span class="ct-pill">3 followers</span>
+        <span class="ct-pill">Topic · Form &amp; Hierarchy</span>
+      </div>
+      <p class="hint">Under <code>forced-colors: active</code>, set <code>forced-color-adjust: none</code> only on the elements you've explicitly remapped to system tokens — never globally. The default UA mapping handles 95% of the page; only chrome surfaces with <code>color-mix()</code> or alpha-channel backgrounds need the override.</p>
+    </section>
+
+    <!-- ============== §8 ============== -->
+    <section class="divided">
+      <h2>§8 — Per-C-file audit checklist <span class="tier norm">normative</span></h2>
+      <p>Before flipping any C-file from <code>Pending</code> to <code>Live</code> in <code>Plan.md</code>, verify:</p>
+      <ul style="font-size: 13.5px; line-height: 1.65; color: var(--text-secondary); padding-left: 22px;">
+        <li>Single <code>@media (prefers-reduced-motion: reduce)</code> block at the bottom of the file's CSS (not scattered).</li>
+        <li>Every named <code>@keyframes</code> in the file is killed or replaced by the override block.</li>
+        <li>Every <code>transition: all</code> is either documented (with a comment explaining why "all") or replaced with named properties.</li>
+        <li>Every interactive element uses <code>:focus-visible</code> for the ring — never bare <code>:focus</code>.</li>
+        <li>Every state change has at least one non-motion cue (color, position, or text — see §6).</li>
+        <li>Live regions are scoped: polite for routine, assertive for errors, off for everything announced via focus.</li>
+        <li>If the C-file uses tinted/translucent surfaces, it provides a <code>prefers-reduced-transparency</code> fallback.</li>
+        <li>If the C-file uses non-token colors (alpha-channel, color-mix), it provides a <code>forced-colors: active</code> fallback.</li>
+        <li>Demo file's React-hint footer references <code>useA11yMotion()</code> or equivalent for any motion that needs JS coordination.</li>
+      </ul>
+      <p class="hint">This checklist is the contract every C-file's Plan.md "Deviations" subsection should be auditable against.</p>
+    </section>
+
+    <div class="react-hint">
+      <h3>React component hints</h3>
+      <dl>
+        <dt>useA11yMotion()</dt>
+        <dd>Hook that returns <code>{ reduced: boolean, transparency: boolean, forcedColors: boolean }</code>. Components consult this only when motion needs JS coordination (cancellable timers, FLIP). For pure CSS motions, prefer the <code>@media</code> block.</dd>
+        <dt>&lt;FocusTrap&gt;</dt>
+        <dd>Wraps modal/overlay content. Auto-focuses first focusable on mount, restores focus on unmount. Tab/Shift+Tab cycle within children. Esc handler optional via <code>onEscape</code> prop.</dd>
+        <dt>&lt;LiveRegion&gt;</dt>
+        <dd>Renders <code>role="status"</code> (polite) or <code>role="alert"</code> (assertive) with <code>aria-atomic="true"</code>. Pairs with the visible toast/inline-error UI; both consume the same source string.</dd>
+        <dt>useFocusVisible()</dt>
+        <dd>Hook for components that need to know whether focus arrived via keyboard (so they can paint custom focus chrome). Most components shouldn't need this — <code>:focus-visible</code> in CSS is enough.</dd>
+        <dt>Tokens</dt>
+        <dd><code>--ring</code> 2px <code>var(--accent)</code> · <code>--ring-offset</code> 2px · <code>--ring-forced</code> <code>Highlight</code> · <code>--motion-safe</code> <code>color</code>, <code>opacity</code>, <code>box-shadow</code></dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<script>
+  // §2 — modal toggle
+  (() => {
+    const std = document.getElementById('modal-std');
+    const rm  = document.getElementById('modal-rm');
+    const btn = document.getElementById('modal-toggle');
+    btn.addEventListener('click', () => {
+      std.classList.toggle('show');
+      rm.classList.toggle('show');
+    });
+    // start visible so the page isn't empty
+    std.classList.add('show'); rm.classList.add('show');
+  })();
+
+  // §2 — toast toggle
+  (() => {
+    const std = document.getElementById('toast-std');
+    const rm  = document.getElementById('toast-rm');
+    const btn = document.getElementById('toast-toggle');
+    let timer;
+    btn.addEventListener('click', () => {
+      clearTimeout(timer);
+      std.classList.remove('show'); rm.classList.remove('show');
+      void std.offsetWidth;
+      std.classList.add('show'); rm.classList.add('show');
+      timer = setTimeout(() => {
+        std.classList.remove('show'); rm.classList.remove('show');
+      }, 2400);
+    });
+  })();
+
+  // §2 — like toggle
+  (() => {
+    const std = document.querySelector('#like-std .like-btn');
+    const rm  = document.querySelector('#like-rm .like-btn');
+    const stdLabel = document.querySelector('#like-std .count');
+    const rmLabel  = document.querySelector('#like-rm  .count');
+    const btn = document.getElementById('like-toggle');
+    let liked = false;
+    btn.addEventListener('click', () => {
+      liked = !liked;
+      [std, rm].forEach(el => {
+        el.classList.toggle('liked', liked);
+        el.classList.remove('bumping');
+        void el.offsetWidth;
+        if (liked) el.classList.add('bumping');
+        setTimeout(() => el.classList.remove('bumping'), 340);
+      });
+      const next = liked ? '129' : '128';
+      stdLabel.textContent = next;
+      rmLabel.textContent  = next;
+    });
+  })();
+
+  // §4 — focus trap
+  (() => {
+    const modal   = document.getElementById('trap-modal');
+    const open    = document.getElementById('trap-open');
+    const cancel  = document.getElementById('trap-cancel');
+    const log     = document.getElementById('focus-log');
+    let prevFocus = null;
+
+    const focusables = () => modal.querySelectorAll('input, button');
+    const note = (msg) => {
+      const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      log.textContent = `Focus log:\n[${time}] ${msg}`;
+    };
+
+    const onKeydown = (e) => {
+      if (modal.hidden) return;
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key !== 'Tab') return;
+      const items = Array.from(focusables());
+      const first = items[0];
+      const last  = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+
+    const onModalFocus = (e) => {
+      if (modal.contains(e.target)) {
+        const id = e.target.id || e.target.tagName.toLowerCase();
+        note(`focus → #${id}`);
+      }
+    };
+
+    const openModal = () => {
+      prevFocus = document.activeElement;
+      modal.hidden = false;
+      const items = focusables();
+      if (items.length) items[0].focus();
+      note(`open · trapped to #${items[0].id}`);
+      document.addEventListener('keydown', onKeydown);
+      document.addEventListener('focusin', onModalFocus);
+    };
+    const close = () => {
+      modal.hidden = true;
+      document.removeEventListener('keydown', onKeydown);
+      document.removeEventListener('focusin', onModalFocus);
+      if (prevFocus && prevFocus.focus) prevFocus.focus();
+      note(`close · restored → #${prevFocus?.id || 'trigger'}`);
+    };
+
+    open.addEventListener('click', openModal);
+    cancel.addEventListener('click', close);
+    document.getElementById('trap-submit').addEventListener('click', close);
+  })();
+
+  // §5 — live regions
+  (() => {
+    const polite    = document.getElementById('live-polite');
+    const assertive = document.getElementById('live-assertive');
+    document.getElementById('live-save').addEventListener('click', () => { polite.textContent = 'Saved · 12:34:56'; });
+    document.getElementById('live-copy').addEventListener('click', () => { polite.textContent = 'Link copied to clipboard'; });
+    document.getElementById('live-error').addEventListener('click', () => { assertive.textContent = 'Email is required'; });
+  })();
+</script>
+</body>
+</html>

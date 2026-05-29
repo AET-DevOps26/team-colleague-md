@@ -1,0 +1,42 @@
+name: Ansible Deploy
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Docker Build and Publish"]
+    branches: [dev]
+    types: [completed]
+
+jobs:
+  deploy:
+    name: Deploy Verita to Azure VM
+    # For workflow_run: only deploy when docker-build succeeded; always run for manual triggers
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Write SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AZURE_PRIVATE_KEY }}" > ~/.ssh/verita_key
+          chmod 600 ~/.ssh/verita_key
+
+      - name: Generate inventory from AZURE_PUBLIC_IP variable
+        run: |
+          cat > infra/ansible/inventory.ini << EOF
+          [verita]
+          verita-vm ansible_host=${{ vars.AZURE_PUBLIC_IP }} ansible_user=${{ vars.AZURE_USER }} ansible_ssh_private_key_file=~/.ssh/verita_key ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+          EOF
+
+      - name: Run Ansible playbook
+        run: |
+          ansible-playbook \
+            -i infra/ansible/inventory.ini \
+            infra/ansible/deploy.yml \
+            --extra-vars "github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }}"

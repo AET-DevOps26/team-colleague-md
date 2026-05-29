@@ -1,0 +1,297 @@
+<!doctype html>
+<!--
+  P07 — Digest Post
+  Scope:      Long-form digest reading view. Composes C05 (item cards),
+              C08 (reading progress + skeletons), C09 (comments fadeIn).
+  Spec:       docs/Animation Spec.md  §  Pages · Digest Post
+  Source:     pages/Verita Digest Post.html
+  React hint: <DigestPostLayout>, useReadingProgress(), useTOC()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Digest Post · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-primary); }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; padding-left: 18px; }
+  .scope li { margin: 4px 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; max-width: 64ch; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+  .tier.ext  { background: color-mix(in oklab, var(--accent) 12%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  table.timeline { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.timeline thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.timeline tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.5; }
+  table.timeline tbody td:nth-child(1) { font: 500 11px var(--font-mono); color: var(--accent); width: 14%; white-space: nowrap; }
+  table.timeline tbody td:nth-child(2) { font-weight: 600; width: 22%; }
+  table.timeline tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 22%; }
+  table.timeline tbody td:nth-child(4) { color: var(--text-secondary); }
+
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 22px; }
+  .stage h4 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 10px; }
+
+  /* --- Reading progress mock (mirrors P02) --- */
+  .reading-mock { position: relative; height: 280px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); overflow: hidden; }
+  .reading-mock .progress { position: absolute; top: 0; left: 0; height: 2px; background: var(--accent); width: 0; transition: width 60ms linear; z-index: 2; }
+  .reading-mock .topbar { height: 44px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; padding: 0 16px; font: 500 12.5px var(--font-sans); color: var(--text-secondary); position: sticky; top: 0; background: var(--bg-surface); }
+  .reading-mock .body { padding: 16px 18px; font-size: 13px; line-height: 1.7; color: var(--text-primary); }
+  .reading-mock .body p { margin: 0 0 10px; color: var(--text-secondary); }
+  .reading-mock .body h5 { font: 600 13px var(--font-sans); margin: 14px 0 6px; color: var(--text-primary); }
+
+  /* --- Section reveal stagger (item cards) --- */
+  .items-mock { display: grid; gap: 10px; }
+  .items-mock .item { padding: 12px 14px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px; opacity: 0; transform: translateY(6px); animation: revealIn 220ms cubic-bezier(0.22,1,0.36,1) forwards; transition: transform 160ms ease-out, border-color 160ms ease-out; }
+  .items-mock .item:nth-child(1) { animation-delay: 0ms; }
+  .items-mock .item:nth-child(2) { animation-delay: 80ms; }
+  .items-mock .item:nth-child(3) { animation-delay: 160ms; }
+  .items-mock .item:nth-child(4) { animation-delay: 240ms; }
+  .items-mock .item:nth-child(5) { animation-delay: 320ms; }
+  .items-mock .item:hover { transform: translateY(-1px); border-color: var(--border-default); }
+  .items-mock .head { font: 600 13px var(--font-sans); color: var(--text-primary); margin-bottom: 4px; letter-spacing: -0.01em; }
+  .items-mock .src  { font: 500 10.5px var(--font-mono); color: var(--text-tertiary); letter-spacing: 0.02em; }
+  @keyframes revealIn { to { opacity: 1; transform: translateY(0); } }
+
+  /* --- TOC sticky mock --- */
+  .toc-mock { display: grid; grid-template-columns: 160px 1fr; gap: 16px; height: 280px; }
+  .toc-mock .toc { position: sticky; top: 0; align-self: start; border-right: 1px solid var(--border-subtle); padding-right: 14px; font-size: 12.5px; }
+  .toc-mock .toc a { display: block; padding: 5px 8px; color: var(--text-secondary); border-radius: 6px; text-decoration: none; transition: color 160ms ease-out, background 160ms ease-out; line-height: 1.4; }
+  .toc-mock .toc a.active { color: var(--text-primary); background: var(--bg-elevated); font-weight: 600; }
+  .toc-mock .toc a:hover { color: var(--text-primary); }
+  .toc-mock .scroller { overflow: auto; height: 280px; padding-right: 4px; }
+  .toc-mock .scroller h5 { font: 600 14px var(--font-sans); margin: 0 0 8px; scroll-margin-top: 8px; letter-spacing: -0.01em; }
+  .toc-mock .scroller p  { font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 18px; }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  .composes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .composes a { font: 500 11px var(--font-mono); color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px; text-decoration: none; transition: color 120ms, border-color 120ms; }
+  .composes a:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  .back { margin-top: 80px; display: inline-block; color: var(--text-secondary); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; transition: color 120ms, border-color 120ms; }
+  .back:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .items-mock .item { animation: none !important; opacity: 1 !important; transform: none !important; transition: border-color 120ms linear !important; }
+    .items-mock .item:hover { transform: none !important; }
+    .reading-mock .progress { transition: none !important; }
+    .toc-mock .toc a { transition: background 120ms linear, color 120ms linear !important; }
+  }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+
+    <header class="lead-block">
+      <div class="wordmark"><span class="lead">V</span>erita</div>
+      <h1>Digest Post</h1>
+      <ul class="scope">
+        <li>Page-level orchestration of an aggregated reading view — digest hero, item-by-item scan, persistent reading position.</li>
+        <li>Composes <a href="../components/05 Cards & Hover.html">C05</a>, <a href="../components/08 Skeletons & Loading.html">C08</a>, <a href="../components/09 Comments & Threads.html">C09</a>.</li>
+        <li>Reading-progress bar (production), section reveal stagger (extended), TOC sticky tracking (extended), item-card hover (production).</li>
+      </ul>
+      <span class="status live">Status: Live</span>
+    </header>
+
+    <section>
+      <h2>Choreography timeline</h2>
+      <p>Time origin (<code>t=0</code>) is the moment the digest article paints after route arrival. The digest reuses Post Detail's reading-progress primitive verbatim; everything below the hero is a sequence of <code>.topic-event</code> blocks, not a single body.</p>
+      <table class="timeline">
+        <thead><tr><th>t=</th><th>Actor</th><th>Motion</th><th>Source / component</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Digest hero</td><td>Static — title + topic pills already painted</td><td>Production · <code>pages/Verita Digest Post.html:550–572</code></td></tr>
+          <tr><td>0</td><td>Topic pills</td><td>Static; <code>:hover</code> bg flip 120ms</td><td>Production · <code>.topic-pill</code></td></tr>
+          <tr><td>scroll&gt;0</td><td>Reading progress</td><td>width 0 → N%, 60ms linear</td><td>Production · <code>.reading-progress-bar</code> (shared with P02)</td></tr>
+          <tr><td>onMount</td><td>Item cards</td><td>opacity + translateY(6px), 220ms cb(0.22,1,0.36,1), 80ms stagger</td><td>Extended — borrows C09 <code>fadeIn</code> tempo</td></tr>
+          <tr><td>scroll into section</td><td>TOC entry</td><td>color + bg, 160ms ease-out (active section)</td><td>Extended — IntersectionObserver-driven</td></tr>
+          <tr><td>hover item</td><td>Item card</td><td>translateY -1px, border-color, 160ms ease-out</td><td>Production · <code>.topic-event-link</code> arrow shift, C05 family</td></tr>
+          <tr><td>hover external link</td><td>Arrow icon</td><td>translateX 2px, 120ms</td><td>Production · <code>.topic-event-link:hover svg</code></td></tr>
+          <tr><td>onClick bookmark</td><td>Bookmark icon</td><td>color + fill swap 120ms (no scale)</td><td>Production · <code>.cact.on</code> (C12 parity)</td></tr>
+          <tr><td>onClick share</td><td>Toast</td><td>opacity + translateY(8px → 0), 200ms</td><td>Production · <code>#toast</code></td></tr>
+          <tr><td>scroll into comments</td><td>Comment list</td><td>fadeIn 180ms ease-out, 60ms stagger</td><td>C09 §1 (production)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="divided">
+      <h2>Reading progress <span class="tier prod">Production</span></h2>
+      <p>Top-edge 2px hairline — the same primitive as P02. <code>width 60ms linear</code> is preserved verbatim from <code>pages/Verita Digest Post.html:472–481</code>; the rule appears identically in <code>Verita Post Detail.html:750–762</code> (C08 audit flagged the duplication — extract to <code>&lt;ReadingProgress target /&gt;</code>).</p>
+      <div class="stage">
+        <div class="reading-mock" id="readingMock">
+          <div class="progress" id="readingProgress"></div>
+          <div class="topbar">Your Monday Digest · ~8 min read</div>
+          <div class="body" id="readingBody">
+            <p>Scroll inside this panel — the top hairline tracks reading position across the whole digest, not per-item. The motion is intentionally instant (60ms linear) so the bar feels mechanically locked to the scroll surface.</p>
+            <h5>1. ChatGPT 5.6 Begins Staged Rollout</h5>
+            <p>OpenAI started a limited A/B test for a subset of Plus and Team subscribers. Latency on standard completions reportedly 18% lower than 5.5.</p>
+            <h5>2. Apple Intelligence — On-Device Reasoning</h5>
+            <p>Apple seeded iOS 19.2 beta to developers, introducing a fully on-device reasoning layer. Privacy mode now default-on.</p>
+            <h5>3. Anthropic — Skill Induction Heads</h5>
+            <p>Researchers identified a cluster of ~140 attention heads providing the clearest mechanistic account of few-shot learning to date.</p>
+            <h5>4. Goodfire — Pre-Refusal Features</h5>
+            <p>Sparse features in residual stream mid-layers reliably activate 2–4 tokens before a refusal output begins.</p>
+            <p>End of digest.</p>
+          </div>
+        </div>
+        <p class="hint">Hook: <code>useReadingProgress(targetRef)</code> — same hook as P02. Returns <code>{ pct, visible }</code>; bind <code>pct</code> to <code>style.width</code>.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Section reveal stagger <span class="tier ext">Extended</span></h2>
+      <p>Production renders all <code>.topic-event</code> blocks together — no entrance motion. Proposed: <code>opacity + translateY(6px)</code> over 220ms <code>cubic-bezier(0.22,1,0.36,1)</code>, 80ms stagger, capped at 5 visible items (longer digests skip the cascade past item 5 to avoid a 2-second unfold). Tempo borrows from C09's <code>fadeIn</code> family (180ms / 60ms) but slowed because digest items are dense, headline-bearing blocks rather than comment rows — they need a touch more weight on arrival.</p>
+      <div class="stage">
+        <div class="items-mock" id="itemsMock">
+          <div class="item"><div class="head">ChatGPT 5.6 Begins Staged Rollout Testing</div><div class="src">openai.com · 3h ago</div></div>
+          <div class="item"><div class="head">Apple Intelligence Adds On-Device Reasoning in iOS 19.2 Beta</div><div class="src">developer.apple.com · 9h ago</div></div>
+          <div class="item"><div class="head">Anthropic Isolates Skill Induction Heads in 70B Models</div><div class="src">transformer-circuits.pub · 4h ago</div></div>
+          <div class="item"><div class="head">Goodfire Finds Sparse Features That Predict Refusal</div><div class="src">goodfire.ai · 8h ago</div></div>
+          <div class="item"><div class="head">Meta Releases Llama 4.1 with 256K Native Context</div><div class="src">ai.meta.com · 6h ago</div></div>
+        </div>
+        <div class="triggers"><button class="trigger" id="replayItems">Replay stagger</button></div>
+        <p class="hint">React: <code>useStaggeredReveal(refs, { step: 80, cap: 5 })</code> — gate behind <code>firstPaint</code> so back-nav doesn't re-fire on cached scroll position.</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>TOC sticky tracking <span class="tier ext">Extended</span></h2>
+      <p>Production has no table-of-contents primitive. Proposed: a sidebar list anchored <code>position: sticky; top: 0</code> with active-section tracking via <code>IntersectionObserver</code> watching each <code>.topic-event-headline</code>. Active entry transitions <code>color</code> + <code>background</code> over 160ms ease-out — pure color is safe under reduced-motion. The observer's <code>rootMargin</code> is <code>"0px 0px -70% 0px"</code> so the entry highlights when the headline crosses the upper third of the viewport, not when it just barely enters.</p>
+      <div class="stage">
+        <div class="toc-mock">
+          <nav class="toc" id="tocNav">
+            <a href="#s1" data-target="s1" class="active">ChatGPT 5.6 rollout</a>
+            <a href="#s2" data-target="s2">Apple on-device</a>
+            <a href="#s3" data-target="s3">Anthropic — induction</a>
+            <a href="#s4" data-target="s4">Goodfire — refusal</a>
+            <a href="#s5" data-target="s5">Meta Llama 4.1</a>
+          </nav>
+          <div class="scroller" id="tocScroller">
+            <h5 id="s1">ChatGPT 5.6 rollout</h5>
+            <p>Limited A/B test for Plus and Team. New Deep Context mode retains information across sessions without manual memory prompts. Latency 18% lower than 5.5 per internal benchmarks.</p>
+            <h5 id="s2">Apple on-device reasoning</h5>
+            <p>iOS 19.2 beta to developers. On-device mode eliminates the server round-trip for summarisation, priority inbox, and Writing Tools — all run locally on A18 Pro and M-series chips.</p>
+            <h5 id="s3">Anthropic — induction heads</h5>
+            <p>Researchers identified ~140 attention heads firing selectively on coherent in-context examples. Ablating the cluster degraded few-shot performance to near-zero.</p>
+            <h5 id="s4">Goodfire — pre-refusal features</h5>
+            <p>SAE tooling identified mid-layer features that activate 2–4 tokens before a refusal begins. First feature-granular characterisation of pre-refusal states.</p>
+            <h5 id="s5">Meta Llama 4.1</h5>
+            <p>256K native context, no positional extrapolation hacks. New 8B variant matches GPT-4o-mini on MMLU at 4-bit quantisation.</p>
+          </div>
+        </div>
+        <p class="hint">Hook: <code>useTOC(scrollerRef, headingsRef)</code> — returns <code>{ activeId, scrollTo(id) }</code>. Demo scopes the observer to the inner scroller via <code>{ root: scrollerRef.current }</code>; in production the root is <code>null</code> (viewport).</p>
+      </div>
+    </section>
+
+    <section class="divided">
+      <h2>Item card hover <span class="tier prod">Production</span></h2>
+      <p>Each <code>.topic-event</code> hover lifts the row 1px and brightens the border — same family as C05's image-card lift (<code>translateY(-1px)</code>, 160ms ease-out). The trailing <code>.topic-event-link svg</code> shifts <code>translateX(2px)</code> on hover (<code>pages/Verita Digest Post.html:370–371</code>) — the same arrow-shift idiom as C05's digest-card CTA, just at smaller amplitude (2px instead of 3px) because digest items are denser than feed cards.</p>
+      <div class="stage">
+        <div class="items-mock" style="animation: none">
+          <div class="item" style="opacity:1;transform:none"><div class="head">vLLM 0.7 Cuts GPU Memory Overhead 30%</div><div class="src">github.com/vllm-project · 14h ago</div></div>
+          <div class="item" style="opacity:1;transform:none"><div class="head">Sora Tanaka — RLHF Reward-Hacking Test Suite</div><div class="src">huggingface.co · 2d ago</div></div>
+        </div>
+        <p class="hint">Hover either row. The lift is 160ms ease-out; reduced-motion keeps the border-color shift, drops the translate.</p>
+      </div>
+    </section>
+
+    <div class="react-hint">
+      <h3>React contract</h3>
+      <dl>
+        <dt>Layout</dt><dd><code>&lt;DigestPostLayout digest={digest} items={items} /&gt;</code> — owns reading-progress + TOC observers; renders <code>.topic-event</code> blocks as <code>&lt;DigestItem /&gt;</code>.</dd>
+        <dt>Hooks</dt><dd><code>useReadingProgress(ref)</code> (shared with P02), <code>useTOC(scrollerRef, headingsRef)</code>, <code>useStaggeredReveal(refs, { step:80, cap:5, firstPaint })</code></dd>
+        <dt>Composes</dt>
+        <dd>
+          <div class="composes">
+            <a href="../components/05 Cards & Hover.html">C05 Item hover (lift family)</a>
+            <a href="../components/08 Skeletons & Loading.html">C08 ReadingProgress</a>
+            <a href="../components/09 Comments & Threads.html">C09 fadeIn (tempo source)</a>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <a class="back" href="../00 Index.html">← Back to Index</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  // Reading progress (mirrors P02)
+  const body = document.getElementById('readingBody');
+  const bar  = document.getElementById('readingProgress');
+  if (body && bar) {
+    body.parentElement.addEventListener('scroll', () => {
+      const max = body.scrollHeight - body.parentElement.clientHeight;
+      const pct = Math.max(0, Math.min(100, (body.parentElement.scrollTop / max) * 100));
+      bar.style.width = pct + '%';
+    });
+  }
+
+  // Replay item stagger
+  const replay = document.getElementById('replayItems');
+  const list   = document.getElementById('itemsMock');
+  replay?.addEventListener('click', () => {
+    list.querySelectorAll('.item').forEach(r => {
+      r.style.animation = 'none';
+      r.offsetHeight; // force reflow
+      r.style.animation = '';
+    });
+  });
+
+  // TOC IntersectionObserver
+  const scroller = document.getElementById('tocScroller');
+  const tocNav   = document.getElementById('tocNav');
+  if (scroller && tocNav && 'IntersectionObserver' in window) {
+    const headings = scroller.querySelectorAll('h5');
+    const links    = tocNav.querySelectorAll('a');
+    const setActive = (id) => links.forEach(a => a.classList.toggle('active', a.dataset.target === id));
+    const io = new IntersectionObserver((entries) => {
+      const visible = entries.filter(e => e.isIntersecting).sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]) setActive(visible[0].target.id);
+    }, { root: scroller, rootMargin: '0px 0px -65% 0px', threshold: 0 });
+    headings.forEach(h => io.observe(h));
+
+    tocNav.addEventListener('click', (e) => {
+      const a = e.target.closest('a[data-target]');
+      if (!a) return;
+      e.preventDefault();
+      const target = scroller.querySelector('#' + a.dataset.target);
+      if (target) scroller.scrollTo({ top: target.offsetTop - 4, behavior: 'smooth' });
+    });
+  }
+})();
+</script>
+</body>
+</html>

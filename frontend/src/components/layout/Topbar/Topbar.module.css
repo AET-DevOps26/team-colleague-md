@@ -6,13 +6,23 @@
   backdrop-filter: saturate(160%) blur(10px);
   -webkit-backdrop-filter: saturate(160%) blur(10px);
   border-bottom: 1px solid var(--border-subtle);
+  transition: box-shadow var(--motion-hover), border-bottom-color var(--motion-hover);
 }
 
-.topbarRow {
+.topbar[data-scrolled] {
+  border-bottom-color: transparent;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+}
+
+.row1 {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 14px 24px 14px 28px;
+}
+
+.row2 {
+  padding-bottom: 2px;
 }
 
 .search {
@@ -26,7 +36,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  transition: border-color 120ms ease-out, box-shadow 120ms ease-out, background 120ms ease-out;
+  transition: border-color var(--motion-hover), box-shadow var(--motion-hover), background var(--motion-hover);
 }
 
 .search:focus-within {
@@ -69,7 +79,7 @@
   position: relative;
   border: 1px solid var(--border-subtle);
   display: block;
-  transition: transform 160ms ease-out, box-shadow 160ms ease-out;
+  transition: transform var(--motion-card-lift), box-shadow var(--motion-card-lift);
 }
 
 .avatarBtn:hover {
@@ -103,17 +113,16 @@
 .signinBtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   height: 36px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   background: var(--accent);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: background 120ms;
+  transition: background var(--motion-hover);
 }
 
 .signinBtn:hover {

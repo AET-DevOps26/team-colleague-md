@@ -1,0 +1,763 @@
+<!doctype html>
+<!--
+  C05 — Cards & Hover
+  Scope:      Feed card primitives in three variants (image, text, digest).
+              All markup, sizing, padding, and hover behavior are sourced 1:1
+              from pages/Verita Home.html — the production page, not
+              Verita Transition.html (which carries an older simplified card).
+              Like-bounce + the detail action bar live in C12 (where they
+              are actually reachable in the product); the feed cards shown
+              here only display static like counts.
+  Spec:       docs/Animation Spec.md  §  Cards & Hover
+  React hint: <PostCard variant="image|text">, <DigestCard>
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cards & Hover · Verita Animation Demo</title>
+<!-- Direct webfont link mirrors pages/Verita Home.html so Inter + Newsreader
+     load in parallel with tokens.css instead of waiting for its @import chain.
+     Without this, .card-title (which inherits font-family from <body>) can
+     paint in a fallback face on first load before Inter arrives. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — copied verbatim from C04) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .scope {
+    color: var(--text-secondary);
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  /* Scoped to direct section headings only — bare `h2` would hijack
+     `<h2 class="card-title">` inside .card-body and force it into serif italic. */
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+
+  /* Spec table — compact */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 20%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 18%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 22%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  /* Scope list */
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  /* Section meta — compact structured description */
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* React hint footer */
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd {
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.55;
+  }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ===========================================================
+   * CARD PRIMITIVES — verbatim from pages/Verita Home.html.
+   * Three variants share .card and the masonry-style hover lift,
+   * but diverge on chrome:
+   *   .card                — image card (cover + plain title + author row)
+   *   .card.is-text        — text card (cream pull-quote block + plain title)
+   *   .card.digest-card    — digest card (dark surface, no lift, cta arrow shift)
+   * =========================================================== */
+
+  /* Demo grid: two cards side-by-side at >720px, single col below */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+    margin: 8px 0 4px;
+  }
+  @media (max-width: 720px){
+    .card-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Shared card primitive (Home line 241-253) */
+  .card {
+    break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid;
+    display: inline-block; width: 100%;
+    margin: 0;
+    transition: transform 160ms ease-out;
+    cursor: pointer;
+  }
+  .card:hover { transform: translateY(-1px); }
+  .card:not(.is-text):not(.digest-card) { transition: transform 160ms ease-out; }
+  .card:not(.is-text):not(.digest-card):hover .cover {
+    box-shadow: 0 8px 24px -14px rgba(0,0,0,0.16);
+  }
+  .card.is-text { transition: transform 160ms ease-out; }
+
+  /* ---------- Image card (Home line 261-297) ---------- */
+  .cover {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: 12px;
+    transition: box-shadow 220ms ease-out;
+  }
+  .cover > svg, .cover > img { display: block; width: 100%; height: 100%; }
+  .cover .badge-tl, .cover .badge-tr {
+    position: absolute; top: 12px;
+    font: 600 11px var(--font-sans); letter-spacing: 0.02em;
+    background: rgba(255,255,255,0.92); color: var(--text-primary);
+    padding: 5px 10px; border-radius: 999px; backdrop-filter: blur(6px);
+  }
+  .cover .badge-tl { left: 12px; }
+  .cover .badge-tr { right: 12px; }
+  .cover .badge-tl.dark, .cover .badge-tr.dark {
+    background: rgba(10,10,10,0.72); color: #fff;
+  }
+
+  .card-body { padding: 12px 8px 4px; }
+  .card.is-text .card-body { padding: 12px 8px 4px; }
+  .card-title {
+    font-size: 16px; font-weight: 700; line-height: 1.3; color: var(--text-primary);
+    letter-spacing: -0.018em;
+    margin: 0 0 6px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-wrap: pretty;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    hyphenate-limit-chars: 8 4 3;
+  }
+  .author-row {
+    display: flex; align-items: center; gap: 8px;
+    padding-top: 0; margin-top: 0;
+  }
+  .author-row .av {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, #ccc, #888);
+    display: grid; place-items: center;
+    color: #fff; font-size: 9.5px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .author-row .name {
+    font-size: 12.5px; font-weight: 500; color: var(--text-primary);
+    display: flex; align-items: center; gap: 5px; min-width: 0;
+  }
+  .author-row .name .verified {
+    color: var(--accent); width: 12px; height: 12px; flex-shrink: 0;
+  }
+  .author-row .dot-sep { color: var(--text-tertiary); font-size: 11.5px; }
+  .author-row .ago    { color: var(--text-tertiary); font-size: 11.5px; }
+  /* Likes in the feed are READ-ONLY <span> — the like *button* lives on the
+     detail page action bar (see C12 — Post Detail Action Bar). */
+  .author-row .likes {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-secondary);
+    font-variant-numeric: tabular-nums; font-weight: 500;
+  }
+  .author-row .likes svg {
+    color: var(--text-tertiary); width: 13px; height: 13px;
+  }
+
+  /* ---------- Text card (Home line 298-322) ---------- */
+  .card-text {
+    position: relative;
+    background: oklch(97% 0.012 80);
+    border-radius: 12px;
+    padding: 14px 28px 14px 16px;
+    overflow: hidden;
+    transition: box-shadow 220ms ease-out;
+  }
+  .card.is-text:hover .card-text {
+    box-shadow: 0 8px 24px -14px rgba(0,0,0,0.12);
+  }
+  .card-text .eyebrow {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary); margin: 0 0 10px;
+    display: inline-flex; align-items: center; gap: 0;
+  }
+  .card-text .pull-quote {
+    font-family: var(--font-serif); font-style: italic; font-weight: 500;
+    font-size: 16px; line-height: 1.7;
+    color: var(--text-primary);
+    border-left: 2px solid var(--border-default);
+    padding-left: 12px; margin: 0;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-wrap: pretty;
+  }
+  .card-text .pull-quote.is-short { -webkit-line-clamp: 3; }
+
+  /* ---------- Digest card (Home line 324-338) — dark surface, NO lift ---------- */
+  .digest-card {
+    background: #0A0A0A; color: #fff;
+    padding: 24px 26px 20px;
+    border-radius: 12px;
+    aspect-ratio: 5 / 6;
+    display: flex; flex-direction: column;
+    transition: none; /* explicitly cancel masonry lift on the digest variant */
+  }
+  .card.digest-card:hover { transform: none; }
+  .digest-card-link {
+    display: flex; flex-direction: column; flex: 1;
+    color: inherit; text-decoration: none;
+  }
+  .digest-card-link:hover .cta { color: #fff; }
+  .digest-card-link:hover .cta-arrow { transform: translateX(3px); }
+  .digest-card .label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ababab; margin-bottom: 6px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .digest-card .label::before {
+    content: ""; width: 6px; height: 6px;
+    background: #fff; border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.08);
+  }
+  .digest-card .sublabel {
+    font-size: 11px; color: #6b6b6b;
+    margin: 0 0 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .digest-card .title {
+    font-family: var(--font-serif); font-style: italic; font-weight: 500;
+    font-size: 22px; line-height: 1.22; letter-spacing: -0.01em;
+    margin: 0 0 14px;
+    text-wrap: balance; padding-right: 8px;
+  }
+  .digest-card .divider {
+    height: 1px; background: rgba(255,255,255,0.08);
+    margin: 0 0 14px;
+  }
+  .digest-card .bullets {
+    list-style: none; padding: 0; margin: 0 0 18px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .digest-card .bullets li {
+    display: flex; gap: 9px;
+    font-size: 12.5px; color: #d4d4d4;
+    line-height: 1.5; text-wrap: pretty; padding-right: 6px;
+  }
+  .digest-card .bullets li::before {
+    content: "•"; flex-shrink: 0;
+    font-size: 12px; line-height: 1.5; color: #6b6b6b;
+  }
+  .digest-card .cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: #ababab;
+    padding: 12px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 12px; font-weight: 500; letter-spacing: 0.02em;
+    margin-top: auto;
+    transition: color 200ms;
+  }
+  .digest-card .cta-arrow {
+    transition: transform 200ms;
+    display: inline-flex;
+  }
+
+  /* Reduced motion — collapse to color-only state changes. */
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+    .card:hover { transform: none; }
+    .card:not(.is-text):not(.digest-card):hover .cover { box-shadow: none; }
+    .card.is-text:hover .card-text { box-shadow: none; }
+    .digest-card-link:hover .cta-arrow { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. tokens.css fixed bar -->
+<div class="demo-header">
+  <span class="demo-title">C05 · Cards & Hover</span>
+  <span class="demo-spec">Image · Text · Digest · Reduced-motion</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<!-- 2. Stage + content wrap -->
+<div class="demo-stage">
+<div class="wrap">
+
+  <!-- 3. Lead block -->
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Cards & Hover</h1>
+    <ul class="scope-list">
+      <li>Three card variants from the Home feed — image, text, digest — each with its own hover signature</li>
+      <li>All markup, sizing, padding sourced 1:1 from <code>pages/Verita Home.html</code></li>
+      <li>Likes in the feed are static <code>&lt;span&gt;</code> — the like <em>button</em> + bounce live in <a href="12%20Post%20Detail%20Action%20Bar.html">C12 — Post Detail Action Bar</a></li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- 4. Spec table -->
+  <section>
+    <h2>Spec</h2>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Card hover lift (image / text)</td>
+          <td>160ms</td><td>ease-out</td>
+          <td><code>translateY(-1px)</code> on <code>.card</code> + 220ms <code>box-shadow</code> on <code>.cover</code> (image) or <code>.card-text</code> (text). Digest cards do not lift.</td>
+        </tr>
+        <tr>
+          <td>Digest CTA arrow</td>
+          <td>200ms</td><td>linear</td>
+          <td><code>translateX(3px)</code> on <code>.cta-arrow</code> when the digest-card-link is hovered. Color-only shift on the CTA label.</td>
+        </tr>
+        <tr>
+          <td>Reduced motion</td>
+          <td>—</td><td>—</td>
+          <td><code>prefers-reduced-motion: reduce</code> disables lift, cover/quote shadow, and arrow shift. State color/fill changes still apply.</td>
+        </tr>
+        <tr>
+          <td>Author-row hover</td>
+          <td>—</td><td>—</td>
+          <td>None. Likes are a static <code>&lt;span class="likes"&gt;</code>; the like button + bounce live in <a href="12%20Post%20Detail%20Action%20Bar.html">C12</a>. Verified handles + ago marks have no hover state — they navigate on click only.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =========================================================
+       SECTION 1 — Image card (hover lift + cover shadow)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Image card · hover lift</h2>
+    <dl class="section-meta">
+      <dt>Markup</dt><dd><code>article.card</code> &gt; <code>.cover</code> + <code>.card-body</code> &gt; <code>.card-title</code> + <code>.author-row</code></dd>
+      <dt>Hover</dt><dd>tile <code>translateY(-1px)</code> · cover gains <code>0 8px 24px -14px rgba(0,0,0,.16)</code></dd>
+      <dt>Cover</dt><dd><code>aspect-ratio: 16 / 10</code> · hairline 12px radius · two badge slots (TL / TR)</dd>
+      <dt>Title</dt><dd>16px / 700 / -0.018em · 3-line clamp · <code>hyphens: auto</code></dd>
+    </dl>
+    <p>Two image cards from the logged-in feed. The cover SVGs are real <code>Covers.network</code> and <code>Covers.scatter</code> generators copied from Home. Author-row likes are static <code>&lt;span class="likes"&gt;</code>.</p>
+
+    <!-- Inline SVG defs so cover SVGs reference the gradients/patterns -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1a1a1a"/><stop offset="1" stop-color="#3a3a3a"/></linearGradient>
+        <pattern id="dots" width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.18)"/></pattern>
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(10,10,10,0.06)" stroke-width="1"/></pattern>
+      </defs>
+    </svg>
+
+    <div class="card-grid">
+      <article class="card">
+        <div class="cover">
+          <svg class="cv" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+            <rect width="300" height="200" fill="url(#g1)"/>
+            <rect width="300" height="200" fill="url(#dots)"/>
+            <g stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none">
+              <line x1="40" y1="60" x2="120" y2="40"/>
+              <line x1="40" y1="60" x2="90" y2="120"/>
+              <line x1="120" y1="40" x2="200" y2="70"/>
+              <line x1="120" y1="40" x2="160" y2="130"/>
+              <line x1="200" y1="70" x2="260" y2="50"/>
+              <line x1="200" y1="70" x2="240" y2="140"/>
+              <line x1="90" y1="120" x2="160" y2="130"/>
+              <line x1="160" y1="130" x2="240" y2="140"/>
+              <line x1="90" y1="120" x2="60" y2="170"/>
+              <line x1="160" y1="130" x2="180" y2="175"/>
+            </g>
+            <g fill="#fff">
+              <circle cx="40" cy="60" r="4"/><circle cx="120" cy="40" r="6"/>
+              <circle cx="200" cy="70" r="5"/><circle cx="260" cy="50" r="3.5"/>
+              <circle cx="90" cy="120" r="4"/><circle cx="160" cy="130" r="7"/>
+              <circle cx="240" cy="140" r="4"/><circle cx="60" cy="170" r="3"/>
+              <circle cx="180" cy="175" r="3.5"/>
+            </g>
+            <circle cx="160" cy="130" r="14" fill="none" stroke="rgba(255,255,255,0.4)"/>
+          </svg>
+          <span class="badge-tl dark">Paper</span>
+          <span class="badge-tr dark">23 min read</span>
+        </div>
+        <div class="card-body">
+          <h2 class="card-title">Skill Induction Heads:&#8203; Mechanistic Evidence for Few-Shot Learning in 70B Models</h2>
+          <div class="author-row">
+            <span class="av">AR</span>
+            <span class="name">Ananya Roy
+              <svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="dot-sep">·</span>
+            <span class="ago">4h</span>
+            <span class="likes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              487
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="cover">
+          <svg class="cv" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+            <rect width="300" height="200" fill="#F5F4EF"/>
+            <rect width="300" height="200" fill="url(#grid)"/>
+            <g fill="#0a0a0a" opacity="0.75">
+              <circle cx="86" cy="84" r="2.4"/><circle cx="92" cy="98" r="2.0"/>
+              <circle cx="78" cy="100" r="2.6"/><circle cx="100" cy="86" r="1.8"/>
+              <circle cx="84" cy="92" r="2.2"/><circle cx="94" cy="78" r="2.0"/>
+              <circle cx="76" cy="88" r="1.8"/><circle cx="102" cy="96" r="2.2"/>
+              <circle cx="200" cy="68" r="2.0"/><circle cx="208" cy="76" r="2.4"/>
+              <circle cx="194" cy="78" r="1.8"/><circle cx="212" cy="64" r="2.0"/>
+              <circle cx="178" cy="138" r="2.2"/><circle cx="186" cy="146" r="2.6"/>
+              <circle cx="190" cy="132" r="2.0"/><circle cx="172" cy="146" r="2.4"/>
+              <circle cx="184" cy="138" r="1.8"/><circle cx="178" cy="128" r="2.2"/>
+            </g>
+            <circle cx="90" cy="90" r="36" fill="none" stroke="rgba(10,10,10,0.5)" stroke-dasharray="3 3"/>
+            <text x="60" y="62" font-family="Inter" font-size="9" font-weight="600" fill="#0a0a0a">cluster A · 24</text>
+          </svg>
+          <span class="badge-tl">Benchmark</span>
+          <span class="badge-tr">Live · 12m ago</span>
+        </div>
+        <div class="card-body">
+          <h2 class="card-title">Claude 4 evaluation run · reasoning suite</h2>
+          <div class="author-row">
+            <span class="av">YL</span>
+            <span class="name">Yuna Lee</span>
+            <span class="dot-sep">·</span>
+            <span class="ago">12m</span>
+            <span class="likes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              56
+            </span>
+          </div>
+        </div>
+      </article>
+    </div>
+    <p class="hint">Hover over either tile — only the <code>.cover</code> photo lifts shadow, never the body.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 2 — Text card (cream block + serif italic pull-quote)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Text card · cream block hover</h2>
+    <dl class="section-meta">
+      <dt>Markup</dt><dd><code>article.card.is-text</code> &gt; <code>.card-text</code> (eyebrow + pull-quote) + <code>.card-body</code></dd>
+      <dt>Hover</dt><dd>tile <code>translateY(-1px)</code> · cream block gains <code>0 8px 24px -14px rgba(0,0,0,.12)</code></dd>
+      <dt>Surface</dt><dd><code>oklch(97% 0.012 80)</code> warm cream · 12px radius · holds eyebrow + serif italic pull-quote</dd>
+      <dt>Hierarchy</dt><dd>quote first inside the cream block · title + author row sit below as bare text — parity with image cards</dd>
+    </dl>
+    <p>Pure-text posts compose the cream block as their "cover" — there is no image. Differentiation is by typography, not chrome. Two real essays from the logged-in feed.</p>
+
+    <div class="card-grid">
+      <article class="card is-text">
+        <div class="card-text">
+          <div class="eyebrow">Opinion</div>
+          <blockquote class="pull-quote">The mistake is thinking there will be a clear moment when "it" arrives. There won't be. Each capability threshold will be crossed quietly, then normalised — and we'll keep moving the goalposts to preserve the feeling of safety we never actually had.</blockquote>
+        </div>
+        <div class="card-body">
+          <h2 class="card-title">We are not building toward AGI. We are already inside the transition.</h2>
+          <div class="author-row">
+            <span class="av">TR</span>
+            <span class="name">Tomás Reyes</span>
+            <span class="dot-sep">·</span>
+            <span class="ago">3h</span>
+            <span class="likes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              1,841
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card is-text">
+        <div class="card-text">
+          <div class="eyebrow">Eval · Tooling</div>
+          <blockquote class="pull-quote is-short">The trick was nothing exotic — we just stopped pretending each problem in the suite needed its own warm process. Pool the workers, batch the prompts that share a system message, and the wall-clock collapses before you touch the model.</blockquote>
+        </div>
+        <div class="card-body">
+          <h2 class="card-title">How we cut our eval latency by 60% with smarter parallelism</h2>
+          <div class="author-row">
+            <span class="av">MR</span>
+            <span class="name">Marc Reuter
+              <svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="dot-sep">·</span>
+            <span class="ago">20h</span>
+            <span class="likes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              612
+            </span>
+          </div>
+        </div>
+      </article>
+    </div>
+    <p class="hint">Long quote uses 4-line clamp; the right card uses <code>.pull-quote.is-short</code> for a tighter 3-line clamp on shorter copy. The two share one cream tone — only the line-clamp differs.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 3 — Digest card (no lift; CTA arrow shifts on hover)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Digest card · CTA arrow shift</h2>
+    <dl class="section-meta">
+      <dt>Markup</dt><dd><code>article.card.digest-card</code> &gt; <code>.digest-card-link</code> &gt; label · title · bullets · cta</dd>
+      <dt>Hover</dt><dd><strong>No tile lift.</strong> CTA color → <code>#fff</code> · <code>.cta-arrow</code> <code>translateX(3px)</code></dd>
+      <dt>Surface</dt><dd>black <code>#0A0A0A</code> · <code>aspect-ratio: 5 / 6</code> · serif italic title at 22px</dd>
+      <dt>Why no lift</dt><dd>digest already differentiates by surface (dark, taller, denser). Lifting it competes with the image cards next to it in the masonry.</dd>
+    </dl>
+    <p>The digest is structurally a different object — a packaged set of picks, not a single post — so its hover signature is signal in the CTA, not motion on the tile.</p>
+
+    <div class="card-grid">
+      <article class="card digest-card">
+        <a class="digest-card-link" href="#" onclick="event.preventDefault()">
+          <div class="label">Your Digest · May 13</div>
+          <div class="sublabel">4 picks · 38 min read</div>
+          <h2 class="title">Your Monday Digest</h2>
+          <div class="divider"></div>
+          <ul class="bullets">
+            <li>Anthropic posts a candid retrospective on Claude 4's reward-hacking failures.</li>
+            <li>A 27-author paper claims circuit-level evidence of in-context "skill induction."</li>
+            <li>Three new open-weights models cross 70% on AIME 2025 — all under 30B params.</li>
+            <li>Robotics: a Stanford team teleoperates a humanoid through ambiguous kitchen tasks.</li>
+          </ul>
+          <div class="cta">
+            <span>Read full digest</span>
+            <span class="cta-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            </span>
+          </div>
+        </a>
+      </article>
+
+      <article class="card digest-card">
+        <a class="digest-card-link" href="#" onclick="event.preventDefault()">
+          <div class="label">Community Digest · May 13</div>
+          <div class="sublabel">4 picks · trending now</div>
+          <h2 class="title">What Everyone's Reading This Week</h2>
+          <div class="divider"></div>
+          <ul class="bullets">
+            <li>The most-saved paper this week: circuit-level evidence of skill induction in 70B models.</li>
+            <li>Top debate: does RLHF scale, or is it hitting a ceiling? 400+ comments.</li>
+            <li>Open-source highlight: a new SAE paper from Goodfire on refusal features.</li>
+            <li>Most-viewed visualization: UMAP embeddings of every Verita paper this month.</li>
+          </ul>
+          <div class="cta">
+            <span>Browse this week's digest</span>
+            <span class="cta-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            </span>
+          </div>
+        </a>
+      </article>
+    </div>
+    <p class="hint">Hover the tile — the arrow nudges right, the CTA brightens. The card itself stays still. Hover on the bullets does nothing; only the link surface owns the gesture.</p>
+  </section>
+
+  <!-- 6. React hint footer -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <dl>
+      <dt>Image card</dt><dd><code>&lt;PostCard variant="image" cover={…} title={…} author={…} likes={…} /&gt;</code></dd>
+      <dt>Text card</dt><dd><code>&lt;PostCard variant="text" eyebrow={…} quote={…} title={…} author={…} /&gt;</code></dd>
+      <dt>Digest card</dt><dd><code>&lt;DigestCard label sublabel title bullets cta /&gt;</code> — separate component, not a <code>PostCard</code> variant; never lifts.</dd>
+      <dt>Likes display</dt><dd>read-only span in the author row — no button, no bounce on the feed. The like button + bounce live in <code>&lt;ActionsPill&gt;</code> on the post-detail page (see C12).</dd>
+      <dt>Reduced motion</dt><dd><code>useReducedMotion()</code> short-circuits lift, shadow, and arrow shift.</dd>
+    </dl>
+  </div>
+
+</div>
+</div>
+
+</body>
+</html>

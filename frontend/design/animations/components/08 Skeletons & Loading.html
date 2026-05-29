@@ -1,0 +1,1247 @@
+<!doctype html>
+<!--
+  C08 — Skeletons & Loading
+  Scope:      Loading affordances across the product.
+              Production tier (3 sections, 1:1 from pages/*.html):
+                §1 .skeleton + shimmer       — Search Results loading state (primary production)
+                §2 .gen-spinner              — Digest Management generating-state ring
+                §3 .reading-progress-bar     — Post Detail / Digest Post scroll-driven bar
+              Extended tier (5 sections, proposals for unified <Skeleton>/<Spinner>/<ProgressBar>):
+                §4 Linear-gradient sweep skeleton (primary extended) — replaces opacity pulse
+                §5 Indeterminate spinner (24px) + tiny inline (14px) variants
+                §6 Determinate progress bar (publish/upload flow) with success transition
+                §7 Pull-to-refresh (mobile feed) — drag → spin → release
+                §8 Reduced-motion fallback (shimmer → static tint, spinner → static dot, progress retained)
+  Spec:       docs/Animation Spec.md  §  Skeletons & Loading
+  React hint: <Skeleton>, <Spinner>, <ProgressBar>, <PullToRefresh>, useLoading()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Skeletons & Loading · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — copied verbatim from C07) ---------- */
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: auto;
+  }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .wordmark .lead {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    margin: 18px 0 10px;
+    line-height: 1.05;
+  }
+  .scope {
+    color: var(--text-secondary);
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    color: var(--text-secondary);
+  }
+  .status.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+
+  section { margin-top: 56px; }
+  section.divided {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  section > h2 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  section > p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+
+  .tier {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 8px;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    vertical-align: 2px;
+  }
+  .tier.prod {
+    background: color-mix(in oklab, var(--success) 12%, var(--bg-surface));
+    color: var(--success);
+    border: 1px solid color-mix(in oklab, var(--success) 28%, transparent);
+  }
+  .tier.ext {
+    background: color-mix(in oklab, var(--accent) 10%, var(--bg-surface));
+    color: var(--accent);
+    border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent);
+  }
+  .tier.primary {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.spec thead th {
+    text-align: left;
+    font: 500 9.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 8px 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.spec tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+    width: 14%;
+    white-space: nowrap;
+  }
+  table.spec tbody td:nth-child(3) {
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    width: 18%;
+  }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  ul.scope-list {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 18px;
+    display: grid;
+    gap: 6px;
+  }
+  ul.scope-list li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 18px;
+    position: relative;
+  }
+  ul.scope-list li::before {
+    content: "·";
+    position: absolute;
+    left: 6px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  .section-meta {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 6px 14px;
+    margin: 8px 0 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .section-meta dt {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding-top: 1px;
+  }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code {
+    font: 500 11px var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  .triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0 0;
+    align-items: center;
+  }
+  .trigger {
+    appearance: none;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    border-radius: 7px;
+    padding: 8px 14px;
+    font: 500 12.5px var(--font-sans);
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+  }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger:active { background: var(--border-subtle); }
+  .trigger.solid {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+  .trigger.solid:hover { background: oklch(28% 0 0); }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    line-height: 1.55;
+    max-width: none;
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .react-hint {
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+  }
+  .react-hint h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 14px;
+  }
+  .react-hint dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 10px;
+    column-gap: 18px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .react-hint dt {
+    color: var(--text-tertiary);
+    font: 500 11px var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Stage shell */
+  .stage {
+    margin: 14px 0 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+    overflow: hidden;
+    padding: 32px 24px;
+    min-height: 120px;
+    position: relative;
+  }
+  .stage.tall { min-height: 200px; }
+  .stage.flex { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+
+  /* ===========================================================
+   * §1 — .skeleton + shimmer  (PRODUCTION, primary)
+   * Verbatim from pages/Verita Search Results.html:291–304
+   * =========================================================== */
+  .skeleton {
+    background: var(--bg-elevated);
+    border-radius: 6px;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+  }
+  .skel-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    width: 100%;
+  }
+  .skel-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .skel-cover { aspect-ratio: 4/3; border-radius: 12px; }
+  .skel-body {
+    padding: 4px 2px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .skel-line { height: 10px; border-radius: 4px; }
+  .skel-line.w100 { width: 100%; }
+  .skel-line.w80  { width: 80%;  }
+  .skel-line.w60  { width: 60%;  }
+  .skel-line.w40  { width: 40%;  }
+
+  /* ===========================================================
+   * §2 — .gen-spinner  (PRODUCTION)
+   * Verbatim from pages/Verita Digest Management.html:117–118
+   * Note: production renders this on a dark hero surface.
+   * =========================================================== */
+  .gen-stage {
+    background: oklch(20% 0.012 70);
+    color: rgba(255,255,255,0.55);
+    border-radius: var(--radius-card);
+    padding: 28px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    width: 100%;
+  }
+  .gen-spinner {
+    width: 18px; height: 18px; flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: rgba(255,255,255,0.7);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===========================================================
+   * §3 — .reading-progress-bar  (PRODUCTION)
+   * Verbatim from pages/Verita Post Detail.html:750–762
+   * =========================================================== */
+  .reading-stage {
+    width: 100%;
+    height: 240px;
+    border-radius: var(--radius-card);
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+    position: relative;
+  }
+  .reading-stage .reading-progress {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    z-index: 2;
+    background: transparent;
+  }
+  .reading-stage .reading-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 60ms linear;
+  }
+  .reading-content {
+    padding: 32px 28px 28px;
+    height: calc(100% + 480px);
+    column-count: 1;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .reading-content h3 {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 18px;
+    color: var(--text-primary);
+    margin: 0 0 8px;
+  }
+  .reading-content p { margin: 0 0 12px; }
+  .reading-scrollwrap {
+    height: 100%;
+    overflow-y: scroll;
+    scrollbar-width: thin;
+  }
+  .reading-readout {
+    position: absolute; right: 12px; bottom: 10px;
+    font: 500 10.5px var(--font-mono);
+    color: var(--text-tertiary);
+    background: color-mix(in oklab, var(--bg-base) 88%, transparent);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  /* ===========================================================
+   * §4 — Linear-gradient sweep skeleton  (EXTENDED, primary)
+   * Replaces production opacity-pulse with a left-to-right sheen.
+   * Same 1.4s tempo so a card mid-fetch can swap implementations
+   * without timing drift.
+   * =========================================================== */
+  .sk-sweep {
+    background:
+      linear-gradient(
+        90deg,
+        var(--bg-elevated) 0%,
+        color-mix(in oklab, var(--bg-elevated) 50%, var(--bg-surface)) 50%,
+        var(--bg-elevated) 100%
+      );
+    background-size: 200% 100%;
+    background-position: 100% 0;
+    animation: sweep 1.4s linear infinite;
+    border-radius: 6px;
+  }
+  @keyframes sweep {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+  .sk-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    width: 100%;
+  }
+  .sk-comparison-col {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .sk-comparison-label {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 4px;
+  }
+  .sk-card {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .sk-cover { aspect-ratio: 4/3; border-radius: 12px; }
+  .sk-line { height: 10px; border-radius: 4px; }
+  .sk-line.w100 { width: 100%; }
+  .sk-line.w80  { width: 80%;  }
+  .sk-line.w60  { width: 60%;  }
+
+  /* ===========================================================
+   * §5 — Spinner — 24px (default) + 14px (inline)
+   * =========================================================== */
+  .spin-row {
+    display: flex; align-items: center; gap: 32px;
+    flex-wrap: wrap;
+  }
+  .spin-cell {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    min-width: 110px;
+  }
+  .spin-label {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .x-spinner {
+    border-radius: 50%;
+    border-style: solid;
+    animation: spin 1s linear infinite;
+  }
+  .x-spinner.s14 {
+    width: 14px; height: 14px;
+    border-width: 1.5px;
+    border-color: var(--border-default);
+    border-top-color: var(--text-primary);
+  }
+  .x-spinner.s24 {
+    width: 24px; height: 24px;
+    border-width: 2px;
+    border-color: var(--border-default);
+    border-top-color: var(--text-primary);
+  }
+  .x-spinner.s24.on-accent {
+    border-color: color-mix(in oklab, var(--accent) 25%, transparent);
+    border-top-color: var(--accent);
+  }
+  .spin-inline-demo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    padding: 7px 12px;
+    border-radius: 7px;
+    font: 500 12.5px var(--font-sans);
+  }
+
+  /* ===========================================================
+   * §6 — Determinate progress bar
+   * Used by publish flow / upload / generation.
+   * Three states: idle (0%) → filling (animated) → success (full + green flash)
+   * =========================================================== */
+  .progress-container {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .progress-meta {
+    display: flex; justify-content: space-between;
+    font: 500 11px var(--font-mono);
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+  .progress-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 240ms ease-out, background-color 220ms ease-out;
+  }
+  .progress-fill.success {
+    background: var(--success);
+  }
+  .progress-readout-row {
+    display: flex; gap: 8px; margin-top: 14px;
+    align-items: center;
+  }
+  .progress-readout {
+    flex: 1;
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+  }
+  .progress-readout strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  /* ===========================================================
+   * §7 — Pull-to-refresh (mobile feed)
+   * Drag the surface down → indicator translates into view → release triggers spin
+   * =========================================================== */
+  .ptr-frame {
+    width: 240px;
+    height: 360px;
+    border-radius: 28px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 8px 24px -12px rgba(0,0,0,0.12);
+    margin: 0 auto;
+    user-select: none;
+    touch-action: none;
+  }
+  .ptr-statusbar {
+    height: 22px;
+    background: var(--bg-base);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    font: 500 10px var(--font-mono);
+    color: var(--text-secondary);
+  }
+  .ptr-indicator {
+    position: absolute;
+    top: 22px; left: 0; right: 0;
+    height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    transform: translateY(-100%);
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    color: var(--text-secondary);
+    font-size: 11.5px;
+  }
+  .ptr-indicator.armed { color: var(--accent); }
+  .ptr-indicator-icon {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    border-top-color: transparent;
+    margin-right: 8px;
+    transition: transform 120ms ease-out;
+  }
+  .ptr-indicator.armed .ptr-indicator-icon { transform: rotate(180deg); }
+  .ptr-frame.refreshing .ptr-indicator {
+    transform: translateY(0);
+  }
+  .ptr-frame.refreshing .ptr-indicator-icon {
+    animation: spin 0.9s linear infinite;
+    transform: none;
+  }
+  .ptr-frame.dragging .ptr-indicator {
+    transition: none;
+  }
+  .ptr-feed {
+    position: absolute;
+    top: 22px; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .ptr-frame.dragging .ptr-feed { transition: none; }
+  .ptr-frame.refreshing .ptr-feed { transform: translateY(56px); }
+  .ptr-feed-card {
+    margin: 12px 14px 0;
+    padding: 12px 14px;
+    background: var(--bg-elevated);
+    border-radius: 10px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .ptr-feed-card strong {
+    display: block;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+  }
+  .ptr-readout {
+    font: 500 10.5px var(--font-mono);
+    color: var(--text-tertiary);
+    margin-top: 14px;
+    text-align: center;
+  }
+
+  /* ===========================================================
+   * §8 — Reduced-motion comparison
+   * =========================================================== */
+  .rm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    width: 100%;
+  }
+  .rm-cell {
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 16px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+  }
+  .rm-label {
+    font: 500 10px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .rm-stack {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .rm-stack .skeleton, .rm-stack .sk-line {
+    height: 10px;
+    border-radius: 4px;
+  }
+  .rm-stack .skeleton.w100, .rm-stack .sk-line.w100 { width: 100%; }
+  .rm-stack .skeleton.w80, .rm-stack .sk-line.w80 { width: 80%; }
+  .rm-stack .skeleton.w60, .rm-stack .sk-line.w60 { width: 60%; }
+  .rm-stack .reduced {
+    background: color-mix(in oklab, var(--bg-elevated) 70%, var(--bg-surface));
+    animation: none !important;
+  }
+  .rm-spinner-static {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin: 4px 0;
+  }
+  .rm-spinner-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-secondary);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton,
+    .sk-sweep,
+    .gen-spinner,
+    .x-spinner,
+    .ptr-indicator-icon {
+      animation: none !important;
+    }
+    .skeleton, .sk-sweep {
+      background: color-mix(in oklab, var(--bg-elevated) 70%, var(--bg-surface)) !important;
+    }
+    .gen-spinner, .x-spinner {
+      border-style: solid;
+      border-color: var(--border-default);
+      border-top-color: var(--text-primary);
+    }
+    .progress-fill {
+      transition: width 0ms linear, background-color 120ms linear !important;
+    }
+    .ptr-indicator,
+    .ptr-feed {
+      transition: transform 0ms linear !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. tokens.css fixed bar -->
+<div class="demo-header">
+  <span class="demo-title">C08 · Skeletons & Loading</span>
+  <span class="demo-spec">Shimmer · Gen-spinner · Reading progress · Sweep · Spinner sizes · Determinate · Pull-to-refresh · Reduced</span>
+  <a class="demo-back" href="../00 Index.html">← Back to Index</a>
+</div>
+
+<!-- 2. Stage + content wrap -->
+<div class="demo-stage">
+<div class="wrap">
+
+  <!-- 3. Lead block -->
+  <div class="lead-block">
+    <div class="wordmark"><span class="lead">V</span>erita</div>
+    <h1>Skeletons &amp; Loading</h1>
+    <ul class="scope-list">
+      <li>Three production primitives — Search Results <code>.skeleton</code> shimmer, Digest Management <code>.gen-spinner</code>, Post Detail <code>.reading-progress-bar</code> — sourced 1:1 from <code>pages/*.html</code></li>
+      <li>Five Extended-tier proposals for the unified <code>&lt;Skeleton&gt;</code> / <code>&lt;Spinner&gt;</code> / <code>&lt;ProgressBar&gt;</code> / <code>&lt;PullToRefresh&gt;</code> contract</li>
+      <li>Pull-to-refresh has no production source today — surfaced as Extended §7 because the plan names it as an unimplemented mobile feed affordance</li>
+    </ul>
+    <span class="status live">Status · Live</span>
+  </div>
+
+  <!-- 4. Spec table -->
+  <section>
+    <h2>Spec</h2>
+    <table class="spec">
+      <thead>
+        <tr><th>Animation</th><th>Duration</th><th>Easing</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Shimmer (production)</td>
+          <td>1.4s loop</td><td>ease-in-out</td>
+          <td>Opacity pulse <code>1 → 0.45 → 1</code> on <code>.skeleton</code>. Search Results §1.</td>
+        </tr>
+        <tr>
+          <td>Gen-spinner</td>
+          <td>1s loop</td><td>linear</td>
+          <td>2px ring, top-color highlighted, 18px. <code>@keyframes spin</code>. Production §2.</td>
+        </tr>
+        <tr>
+          <td>Reading progress</td>
+          <td>60ms per frame</td><td>linear</td>
+          <td>Width tracks <code>scrollY / docHeight</code>. 2px fixed bar at viewport top. Production §3.</td>
+        </tr>
+        <tr>
+          <td>Sweep skeleton</td>
+          <td>1.4s loop</td><td>linear</td>
+          <td>Background-position sweep — replaces opacity pulse for higher-fidelity surfaces. Extended §4.</td>
+        </tr>
+        <tr>
+          <td>Spinner (24/14)</td>
+          <td>1s loop / 0.9s loop</td><td>linear</td>
+          <td>Same primitive at two sizes. Inline 14px is the in-button variant. Extended §5.</td>
+        </tr>
+        <tr>
+          <td>Determinate progress</td>
+          <td>240ms per update</td><td>ease-out</td>
+          <td>Width transition; success swap fades color over 220ms. Extended §6.</td>
+        </tr>
+        <tr>
+          <td>Pull-to-refresh</td>
+          <td>220ms snap / 0.9s spin</td><td>cubic-bezier(0.16,1,0.3,1)</td>
+          <td>Drag → indicator slides in (1:1 with finger), release → snap to refreshing then spin. Extended §7.</td>
+        </tr>
+        <tr>
+          <td>Reduced motion</td>
+          <td>—</td><td>—</td>
+          <td>Shimmer/sweep collapse to static tint; spinner becomes a solid dot; progress bar keeps width transitions instant. Extended §8.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =========================================================
+       SECTION 1 — Skeleton + shimmer (PRODUCTION, primary)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Skeleton + shimmer<span class="tier prod primary">Production · Primary</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Search Results.html</code> · lines 291–304, render at lines 619–637</dd>
+      <dt>Markup</dt><dd><code>.skeleton</code> base + size modifiers (<code>.skel-cover</code>, <code>.skel-line.w100|w80|w60|w40</code>)</dd>
+      <dt>Trigger</dt><dd>Search Results <code>resultsState === 'loading'</code> swap; renders 8 mock cards</dd>
+      <dt>Motion</dt><dd><code>animation: shimmer 1.4s ease-in-out infinite</code> — opacity pulse, no gradient</dd>
+    </dl>
+    <p>The only skeleton primitive in production. A flat <code>--bg-elevated</code> rectangle that pulses its opacity. Six widths (<code>w40</code>–<code>w100</code>) compose into card silhouettes. The cover variant uses <code>aspect-ratio: 4/3</code>; mock-text-card variants drop the cover and use a 160px placeholder.</p>
+    <div class="stage">
+      <div class="skel-mini-grid">
+        <div class="skel-card">
+          <div class="skel-cover skeleton"></div>
+          <div class="skel-body">
+            <div class="skel-line skeleton w100"></div>
+            <div class="skel-line skeleton w80"></div>
+          </div>
+        </div>
+        <div class="skel-card">
+          <div class="skeleton" style="border-radius: 12px; height: 160px;"></div>
+          <div class="skel-body">
+            <div class="skel-line skeleton w100"></div>
+            <div class="skel-line skeleton w100"></div>
+            <div class="skel-line skeleton w60"></div>
+            <div class="skel-line skeleton w40"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Production caveat: shimmer is opacity-only. On a low-contrast surface it can read as content fading out and back in, not as "loading." Extended §4 swaps in a left-to-right sweep that reads more clearly as activity.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 2 — Gen-spinner (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Gen-spinner<span class="tier prod">Production</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Digest Management.html</code> · lines 117–118, used at line 297</dd>
+      <dt>Markup</dt><dd><code>.gen-spinner</code> + adjacent <code>&lt;span&gt;</code> for the message</dd>
+      <dt>Trigger</dt><dd><code>.generating-state</code> wrapper rendered when digest is being generated</dd>
+      <dt>Motion</dt><dd><code>spin 1s linear infinite</code> on <code>transform: rotate</code></dd>
+    </dl>
+    <p>Inline 18px ring spinner used inside the dark digest hero. Two-tone border — 15% white background ring, 70% white top arc — gives the rotation visible. Note: this primitive is currently <em>only</em> on the dark surface; light-surface variants are Extended §5.</p>
+    <div class="stage">
+      <div class="gen-stage">
+        <div class="gen-spinner" aria-hidden="true"></div>
+        <span>Generating your digest — check back later</span>
+      </div>
+    </div>
+    <p class="hint">Token drift: this is the single production usage and the colors are hardcoded against <code>rgba(255,255,255,…)</code>, not against tokens. The unified <code>&lt;Spinner&gt;</code> proposal (§5) reads token colors so the same primitive can drop into any surface.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 3 — Reading progress (PRODUCTION)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Reading progress<span class="tier prod">Production</span></h2>
+    <dl class="section-meta">
+      <dt>Source</dt><dd><code>pages/Verita Post Detail.html</code> · lines 750–762; identical block in <code>Verita Digest Post.html</code> · 472–477</dd>
+      <dt>Markup</dt><dd><code>.reading-progress &gt; .reading-progress-bar</code> — 2px fixed strip</dd>
+      <dt>Trigger</dt><dd><code>scroll</code> event reads <code>scrollY / (docHeight - viewportH)</code>; sets <code>style.width</code></dd>
+      <dt>Motion</dt><dd><code>transition: width 60ms linear</code> — a touch of smoothing, not enough to lag the cursor</dd>
+    </dl>
+    <p>Determinate read-position bar. Scroll inside the stage to see it fill. The 60ms width transition is intentional: instant feels twitchy, anything longer feels disconnected from the input.</p>
+    <div class="stage" style="padding: 0;">
+      <div class="reading-stage">
+        <div class="reading-progress">
+          <div class="reading-progress-bar" id="rp-bar"></div>
+        </div>
+        <div class="reading-scrollwrap" id="rp-scroller">
+          <div class="reading-content">
+            <h3>The long read</h3>
+            <p>This stage scrolls. As you drag the inner scrollbar, the 2px <code>--accent</code> bar at the top fills proportionally. Production renders this against <code>position: fixed; top: 0;</code>, so on the real page it sits above the topbar.</p>
+            <p>Notice the 60ms width transition: too fast and a fast scroll wheel makes the bar twitch in stair-steps; too slow and the bar feels like it's pulled by a rubber band. 60ms linear is the sweet spot.</p>
+            <p>Production reads <code>scrollY</code> and <code>document.documentElement.scrollHeight</code>. Here we measure the inner scroller instead so the demo isn't tied to the page's own scroll position.</p>
+            <p>The bar is unnoticed when you're reading; it is a peripheral aid for re-orienting after a scroll jump or browser back.</p>
+            <p>Long-form Verita posts treat this as the only motion above the article — sticky engagement bar comes in later, fade-down on scroll.</p>
+          </div>
+        </div>
+        <div class="reading-readout"><span id="rp-readout">0%</span> read</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 4 — Sweep skeleton (EXTENDED, primary)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Sweep skeleton<span class="tier ext primary">Extended · Primary</span></h2>
+    <dl class="section-meta">
+      <dt>Status</dt><dd>Proposed; not in production</dd>
+      <dt>Why</dt><dd>Opacity pulse reads as "fading content" on light surfaces; a left-to-right sheen reads as "activity"</dd>
+      <dt>Tempo</dt><dd>1.4s linear loop — same as production shimmer so they can swap freely</dd>
+      <dt>Motion</dt><dd><code>background-position</code> sweep across a 200%-width gradient</dd>
+    </dl>
+    <p>Side-by-side comparison. Both columns shimmer at the same 1.4s tempo; the sweep column reads as motion-on-content rather than the whole tile pulsing.</p>
+    <div class="stage">
+      <div class="sk-comparison">
+        <div class="sk-comparison-col">
+          <div class="sk-comparison-label">Production · opacity pulse</div>
+          <div class="sk-card">
+            <div class="sk-cover skeleton"></div>
+            <div class="sk-line skeleton w100"></div>
+            <div class="sk-line skeleton w80"></div>
+            <div class="sk-line skeleton w60"></div>
+          </div>
+        </div>
+        <div class="sk-comparison-col">
+          <div class="sk-comparison-label">Extended · sweep</div>
+          <div class="sk-card">
+            <div class="sk-cover sk-sweep"></div>
+            <div class="sk-line sk-sweep w100"></div>
+            <div class="sk-line sk-sweep w80"></div>
+            <div class="sk-line sk-sweep w60"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">For mid-fetch swaps: keep <code>.skeleton</code> classes on the same elements, only flip <code>animation-name: shimmer → sweep</code>. The 1.4s period match means the visual rhythm doesn't break.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 5 — Spinner sizes (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Spinner — sizes<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Status</dt><dd>Proposed; one production source (§2) is dark-surface-only</dd>
+      <dt>Sizes</dt><dd><code>14px</code> (in-button inline) · <code>24px</code> (default standalone) · <code>24px on-accent</code></dd>
+      <dt>Motion</dt><dd>Same <code>spin 1s linear infinite</code> as production gen-spinner</dd>
+    </dl>
+    <p>Three contexts. The 14px variant is for inline use inside a button or input; the 24px is the standalone default; the on-accent variant uses tinted accent for the trail.</p>
+    <div class="stage flex">
+      <div class="spin-cell">
+        <span class="spin-label">14px · inline</span>
+        <div class="spin-inline-demo">
+          <span class="x-spinner s14" aria-hidden="true"></span>
+          Saving…
+        </div>
+      </div>
+      <div class="spin-cell">
+        <span class="spin-label">24px · default</span>
+        <span class="x-spinner s24" aria-hidden="true"></span>
+      </div>
+      <div class="spin-cell">
+        <span class="spin-label">24px · on-accent</span>
+        <span class="x-spinner s24 on-accent" aria-hidden="true"></span>
+      </div>
+    </div>
+    <p class="hint">For waits longer than ~800ms, prefer a skeleton; spinners are for "I'm working on it" feedback, not "I'm loading data" feedback.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 6 — Determinate progress (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Determinate progress<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Status</dt><dd>Proposed; Post Editor publish flow currently shows no visible progress</dd>
+      <dt>Use cases</dt><dd>Publish · upload · digest generation · large download</dd>
+      <dt>States</dt><dd><code>idle (0%)</code> → <code>filling (animated)</code> → <code>success (100% + green flash)</code></dd>
+      <dt>Motion</dt><dd><code>width 240ms ease-out</code> per update; <code>background-color 220ms</code> on success</dd>
+    </dl>
+    <p>Click the trigger to start a fake 4-step publish. Each step bumps the bar by 25% with a 240ms width transition. The final step also crossfades the bar's color to green.</p>
+    <div class="stage" style="flex-direction: column; align-items: stretch;">
+      <div class="progress-container">
+        <div class="progress-meta">
+          <span id="pg-stage">Idle</span>
+          <span id="pg-pct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="pg-fill"></div>
+        </div>
+        <div class="progress-readout-row">
+          <span class="progress-readout">Simulates a 4-step publish: <strong>compile</strong>, <strong>upload</strong>, <strong>index</strong>, <strong>notify</strong>.</span>
+          <button class="trigger solid" type="button" id="pg-start">Run publish</button>
+          <button class="trigger" type="button" id="pg-reset">Reset</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION 7 — Pull-to-refresh (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Pull-to-refresh<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Status</dt><dd>No production source — proposed primitive for the mobile feed in P01 Home</dd>
+      <dt>Trigger</dt><dd>Drag (mouse or touch) the feed surface down; release after the threshold</dd>
+      <dt>Motion</dt><dd>Drag tracks 1:1 (no transition); release snaps via <code>cubic-bezier(0.16,1,0.3,1)</code> over 220ms</dd>
+      <dt>Spin</dt><dd>0.9s linear loop while refreshing — slightly faster than the 1s gen-spinner so it reads as "active work"</dd>
+    </dl>
+    <p>Drag the phone-frame body downward. Pass the threshold (≈ 56px) and release to trigger a fake 1.2s refresh.</p>
+    <div class="stage" style="padding: 28px;">
+      <div>
+        <div class="ptr-frame" id="ptr-frame">
+          <div class="ptr-statusbar">
+            <span>9:41</span>
+            <span>•••</span>
+          </div>
+          <div class="ptr-indicator" id="ptr-indicator">
+            <span class="ptr-indicator-icon" id="ptr-icon"></span>
+            <span id="ptr-label">Pull to refresh</span>
+          </div>
+          <div class="ptr-feed" id="ptr-feed">
+            <div class="ptr-feed-card"><strong>Long-read of the day</strong>How interfaces decide what counts as "loading"</div>
+            <div class="ptr-feed-card"><strong>Now reading</strong>Three patterns for showing waits without showing wait</div>
+            <div class="ptr-feed-card"><strong>Editor's pick</strong>The shimmer is the message — until the message arrives</div>
+          </div>
+        </div>
+        <div class="ptr-readout" id="ptr-readout">Drag down to test</div>
+      </div>
+    </div>
+    <p class="hint">Mobile-only — desktop accidental drag is ignored. The primitive falls back to a top-of-feed manual <em>Refresh</em> button on platforms without touch.</p>
+  </section>
+
+  <!-- =========================================================
+       SECTION 8 — Reduced-motion comparison (EXTENDED)
+       ========================================================= -->
+  <section class="divided">
+    <h2>Reduced motion<span class="tier ext">Extended</span></h2>
+    <dl class="section-meta">
+      <dt>Status</dt><dd>Governance section; full coverage handled by one CSS rule at the bottom of the stylesheet</dd>
+      <dt>Coverage</dt><dd>Shimmer · sweep · spinner · pull-to-refresh — all collapse simultaneously</dd>
+      <dt>Retained</dt><dd>Determinate progress fill (instant width updates instead of 240ms ease)</dd>
+      <dt>Why</dt><dd>State change must still be conveyed; only the <em>motion</em> is suppressed</dd>
+    </dl>
+    <p>Left column shows full-motion variants. Right column simulates the <code>prefers-reduced-motion: reduce</code> output: shimmer becomes a static tinted block, the spinner becomes a solid dot, the sweep stops mid-frame.</p>
+    <div class="stage" style="padding: 24px;">
+      <div class="rm-grid">
+        <div class="rm-cell">
+          <span class="rm-label">Full motion</span>
+          <div class="rm-stack">
+            <div class="skeleton w100"></div>
+            <div class="skeleton w80"></div>
+            <div class="skeleton w60"></div>
+          </div>
+          <div class="rm-spinner-row">
+            <span class="x-spinner s24" aria-hidden="true"></span>
+            <span>Spinner — 1s loop</span>
+          </div>
+        </div>
+        <div class="rm-cell">
+          <span class="rm-label">Reduced motion</span>
+          <div class="rm-stack">
+            <div class="sk-line reduced w100"></div>
+            <div class="sk-line reduced w80"></div>
+            <div class="sk-line reduced w60"></div>
+          </div>
+          <div class="rm-spinner-row">
+            <span class="rm-spinner-static" aria-hidden="true"></span>
+            <span>Static dot — same role</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">The rule lives at the bottom of this file's stylesheet: a single <code>@media (prefers-reduced-motion: reduce)</code> block kills the animations on every primitive in this file at once. The progress bar's <em>state change</em> is preserved (color flip on success); only the timing is collapsed to instant.</p>
+  </section>
+
+  <!-- React hint footer -->
+  <div class="react-hint">
+    <h3>React hint</h3>
+    <dl>
+      <dt>&lt;Skeleton&gt;</dt>
+      <dd>
+        <code>&lt;Skeleton variant="line|cover" width="60" /&gt;</code>. Default <code>animation="pulse"</code> matches production §1; <code>animation="sweep"</code> picks up §4. Same 1.4s period.
+      </dd>
+      <dt>&lt;Spinner&gt;</dt>
+      <dd>
+        <code>&lt;Spinner size={14|24} tone="default|on-accent|on-dark" /&gt;</code>. The dark-surface variant covers the production §2 case via tone, not via a separate primitive.
+      </dd>
+      <dt>&lt;ProgressBar&gt;</dt>
+      <dd>
+        <code>&lt;ProgressBar value={0..100} status="filling|success|error" /&gt;</code>. <code>status="success"</code> handles the §6 color crossfade. <code>indeterminate={true}</code> would defer to <code>&lt;Spinner&gt;</code>.
+      </dd>
+      <dt>&lt;ReadingProgress&gt;</dt>
+      <dd>
+        <code>&lt;ReadingProgress target={ref} /&gt;</code>. Reads <code>scrollY</code> from <code>target</code> (defaults to <code>document.documentElement</code>); renders the §3 fixed bar.
+      </dd>
+      <dt>&lt;PullToRefresh&gt;</dt>
+      <dd>
+        <code>&lt;PullToRefresh onRefresh={async() =&gt; …} /&gt;</code>. Consumes drag events; threshold defaults to 56px. Mobile-only; renders nothing on desktop.
+      </dd>
+      <dt>useLoading()</dt>
+      <dd>
+        <code>const &#123; isLoading, started &#125; = useLoading(promise)</code>. Returns <code>started</code> as the wall-clock timestamp so callers can decide between "show spinner immediately" and "wait 200ms before showing anything" (no-flicker fast loads).
+      </dd>
+      <dt>useReducedMotion()</dt>
+      <dd>
+        Returns boolean from <code>matchMedia('(prefers-reduced-motion: reduce)')</code>. Per §8, prefer the CSS media query — only consult the hook when geometry has to differ (e.g. pull-to-refresh threshold could be raised so accidental drags don't trigger).
+      </dd>
+    </dl>
+  </div>
+
+</div><!-- /wrap -->
+</div><!-- /demo-stage -->
+
+<script>
+/* =================================================================
+ * §3 — Reading progress
+ * ================================================================= */
+(function () {
+  const scroller = document.getElementById('rp-scroller');
+  const bar = document.getElementById('rp-bar');
+  const readout = document.getElementById('rp-readout');
+  function update() {
+    const max = scroller.scrollHeight - scroller.clientHeight;
+    const pct = max > 0 ? (scroller.scrollTop / max) * 100 : 0;
+    bar.style.width = pct + '%';
+    readout.textContent = Math.round(pct) + '%';
+  }
+  scroller.addEventListener('scroll', update, { passive: true });
+  update();
+})();
+
+/* =================================================================
+ * §6 — Determinate progress
+ * ================================================================= */
+(function () {
+  const fill = document.getElementById('pg-fill');
+  const stage = document.getElementById('pg-stage');
+  const pct = document.getElementById('pg-pct');
+  const start = document.getElementById('pg-start');
+  const reset = document.getElementById('pg-reset');
+  let timer = null;
+  const steps = [
+    { label: 'Compiling', pct: 25 },
+    { label: 'Uploading', pct: 50 },
+    { label: 'Indexing',  pct: 75 },
+    { label: 'Notifying', pct: 100 },
+  ];
+
+  function setProgress(p, label, success) {
+    fill.style.width = p + '%';
+    fill.classList.toggle('success', !!success);
+    stage.textContent = label;
+    pct.textContent = p + '%';
+  }
+
+  function run() {
+    if (timer) return;
+    let i = 0;
+    setProgress(0, 'Starting…', false);
+    timer = setInterval(() => {
+      const step = steps[i];
+      setProgress(step.pct, step.label, false);
+      i++;
+      if (i >= steps.length) {
+        clearInterval(timer);
+        timer = null;
+        setTimeout(() => setProgress(100, 'Published', true), 240);
+      }
+    }, 600);
+  }
+
+  function resetAll() {
+    if (timer) { clearInterval(timer); timer = null; }
+    setProgress(0, 'Idle', false);
+  }
+
+  start.addEventListener('click', run);
+  reset.addEventListener('click', resetAll);
+})();
+
+/* =================================================================
+ * §7 — Pull-to-refresh
+ * ================================================================= */
+(function () {
+  const frame = document.getElementById('ptr-frame');
+  const indicator = document.getElementById('ptr-indicator');
+  const feed = document.getElementById('ptr-feed');
+  const label = document.getElementById('ptr-label');
+  const readout = document.getElementById('ptr-readout');
+  const THRESHOLD = 56;
+  let dragging = false;
+  let startY = 0;
+  let dy = 0;
+
+  function getY(e) {
+    return e.touches ? e.touches[0].clientY : e.clientY;
+  }
+
+  function onStart(e) {
+    if (frame.classList.contains('refreshing')) return;
+    dragging = true;
+    startY = getY(e);
+    dy = 0;
+    frame.classList.add('dragging');
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    const y = getY(e);
+    dy = Math.max(0, Math.min(120, y - startY));
+    indicator.style.transform = `translateY(${-100 + (dy / 56) * 100}%)`;
+    feed.style.transform = `translateY(${dy * 0.6}px)`;
+    if (dy >= THRESHOLD) {
+      indicator.classList.add('armed');
+      label.textContent = 'Release to refresh';
+    } else {
+      indicator.classList.remove('armed');
+      label.textContent = 'Pull to refresh';
+    }
+    e.preventDefault();
+  }
+
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    frame.classList.remove('dragging');
+    indicator.style.transform = '';
+    feed.style.transform = '';
+    if (dy >= THRESHOLD) {
+      indicator.classList.remove('armed');
+      label.textContent = 'Refreshing…';
+      readout.textContent = 'Refreshing…';
+      frame.classList.add('refreshing');
+      setTimeout(() => {
+        frame.classList.remove('refreshing');
+        label.textContent = 'Pull to refresh';
+        readout.textContent = 'Updated just now';
+        setTimeout(() => { readout.textContent = 'Drag down to test'; }, 1400);
+      }, 1200);
+    }
+    dy = 0;
+  }
+
+  frame.addEventListener('mousedown', onStart);
+  frame.addEventListener('touchstart', onStart, { passive: true });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+})();
+</script>
+
+</body>
+</html>

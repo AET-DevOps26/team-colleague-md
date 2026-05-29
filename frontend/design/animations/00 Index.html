@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Animation Demo Library · Verita</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+  }
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 80px 80px 120px;
+  }
+  .wordmark { font-family: var(--font-display); font-style: italic; font-size: 28px; color: var(--text-secondary); }
+  .wordmark .lead { font-size: 32px; font-weight: 600; color: var(--text-primary); }
+  h1 {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 56px;
+    margin: 24px 0 16px;
+    line-height: 1.05;
+    font-weight: 500;
+  }
+  .intro { color: var(--text-secondary); font-size: 17px; line-height: 1.55; max-width: 64ch; margin: 0 0 64px; }
+  h2 {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 32px;
+    margin: 56px 0 8px;
+    font-weight: 500;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 32px;
+  }
+  .section-note { color: var(--text-tertiary); font-size: 14px; margin: 0 0 24px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border-subtle);
+    border-left: 1px solid var(--border-subtle);
+  }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+    .page { padding: 56px 28px 80px; }
+    h1 { font-size: 42px; }
+  }
+  .card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    padding: 24px 28px;
+    border-right: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background var(--dur-fast, 180ms) var(--ease-out, ease-out);
+    background: var(--bg-base);
+  }
+  .card:hover { background: var(--surface-elevated, #fafafa); }
+  .card .num {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    letter-spacing: 0.02em;
+  }
+  .card .title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px;
+    margin: 4px 0 6px;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .card .scope {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    font-size: 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 100px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.02em;
+  }
+  .badge.live {
+    color: var(--success);
+    border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle));
+  }
+  footer {
+    margin-top: 96px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  footer a {
+    color: var(--text-primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 1px;
+  }
+  footer a:hover { border-color: var(--text-primary); }
+  footer p { margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="wordmark"><span class="lead">V</span>erita</div>
+  <h1>Animation Demo Library</h1>
+  <p class="intro">
+    A working library of animation prototypes for Verita. Each demo is a small, openable HTML page that specifies one interaction or one page-level choreography in production-faithful HTML/CSS/JS — the source of truth for motion before it lands in React. Components define reusable interaction specs; pages compose them into screen-level choreography.
+  </p>
+
+  <h2>Components</h2>
+  <p class="section-note">Reusable interaction specs. One file per UI primitive.</p>
+  <div class="grid">
+    <a class="card" href="components/01%20Buttons%20%26%20Links.html">
+      <div class="num">01 ·</div>
+      <div class="title">Buttons &amp; Links</div>
+      <p class="scope">Hover, press, disabled, link underline, icon button, FAB.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/02%20Form%20Fields%20%26%20Validation.html">
+      <div class="num">02 ·</div>
+      <div class="title">Form Fields &amp; Validation</div>
+      <p class="scope">Focus ring, floating label, error shake, success tick, password toggle, character counter.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/03%20Modals%20%26%20Dialogs.html">
+      <div class="num">03 ·</div>
+      <div class="title">Modals &amp; Dialogs</div>
+      <p class="scope">Open/close motion, internal panel push, confirm dialog, dismiss behaviors.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/04%20Toasts%20%26%20Notifications.html">
+      <div class="num">04 ·</div>
+      <div class="title">Toasts &amp; Notifications</div>
+      <p class="scope">Generic toast (bottom-right) and welcome toast (top-center pill). Auto-dismiss + timer reset.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/05%20Cards%20%26%20Hover.html">
+      <div class="num">05 ·</div>
+      <div class="title">Cards &amp; Hover</div>
+      <p class="scope">Three feed-card variants — image, text, digest — each with its own hover signature.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/06%20Tags%20%26%20Filters.html">
+      <div class="num">06 ·</div>
+      <div class="title">Tags &amp; Filters</div>
+      <p class="scope">Chip toggle, applied state, count badge increment, chip removal.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/07%20Tooltips%20%26%20Popovers.html">
+      <div class="num">07 ·</div>
+      <div class="title">Tooltips &amp; Popovers</div>
+      <p class="scope">Hover-delay tooltip, anchor-origin popover, dismiss, arrow positioning.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/08%20Skeletons%20%26%20Loading.html">
+      <div class="num">08 ·</div>
+      <div class="title">Skeletons &amp; Loading</div>
+      <p class="scope">Skeleton shimmer, spinner, progress bar, pull-to-refresh.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/09%20Comments%20%26%20Threads.html">
+      <div class="num">09 ·</div>
+      <div class="title">Comments &amp; Threads</div>
+      <p class="scope">List stagger, reply expand, show-more, submit, like-on-comment.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/10%20Avatars%20%26%20Identity.html">
+      <div class="num">10 ·</div>
+      <div class="title">Avatars &amp; Identity</div>
+      <p class="scope">Avatar morph, follow toggle, presence pulse, badge count.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/11%20Reduced%20Motion%20%26%20A11y.html">
+      <div class="num">11 ·</div>
+      <div class="title">Reduced Motion &amp; A11y</div>
+      <p class="scope">prefers-reduced-motion fallbacks, focus order, screen-reader transitions.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/12%20Post%20Detail%20Action%20Bar.html">
+      <div class="num">12 ·</div>
+      <div class="title">Post Detail Action Bar</div>
+      <p class="scope">Comments, like (with bounce), bookmark (no animation), share toast — the floating .actions-pill on the detail page.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="components/13%20Focus%20%26%20Keyboard.html">
+      <div class="num">13 ·</div>
+      <div class="title">Focus &amp; Keyboard</div>
+      <p class="scope">Per-context focus rings, skip links, focus trap, roving tabindex inside toolbars.</p>
+      <span class="badge live">Live</span>
+    </a>
+  </div>
+
+  <h2>Pages</h2>
+  <p class="section-note">Screen-level choreography. Compose components.</p>
+  <div class="grid">
+    <a class="card" href="pages/01%20Home.html">
+      <div class="num">01 ·</div>
+      <div class="title">Home</div>
+      <p class="scope">Sidebar rail, topbar shadow, masonry refresh, FAB spin, hero entry.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/02%20Post%20Detail.html">
+      <div class="num">02 ·</div>
+      <div class="title">Post Detail</div>
+      <p class="scope">Push entry, reading progress, AI summary, comments reveal, back transition.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/03%20Search.html">
+      <div class="num">03 ·</div>
+      <div class="title">Search</div>
+      <p class="scope">Overlay open, push mode, input focus, result stagger, return to home.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/04%20User%20Profile.html">
+      <div class="num">04 ·</div>
+      <div class="title">User Profile</div>
+      <p class="scope">Avatar push, header reveal, tab slide, follow flow.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/05%20Post%20Editor.html">
+      <div class="num">05 ·</div>
+      <div class="title">Post Editor</div>
+      <p class="scope">Drawer open, AI panel toggle, autosave indicator, publish, focus mode.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/06%20Digest%20Management.html">
+      <div class="num">06 ·</div>
+      <div class="title">Digest Management</div>
+      <p class="scope">FLIP entry, drag-reorder, delete collapse, rename inline edit.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/07%20Digest%20Post.html">
+      <div class="num">07 ·</div>
+      <div class="title">Digest Post</div>
+      <p class="scope">Cross-post swipe, progress sync, all-caught-up celebration.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/08%20Admin.html">
+      <div class="num">08 ·</div>
+      <div class="title">Admin</div>
+      <p class="scope">Row filter (FLIP), confirm modals, inline edit, bulk select.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/09%20404%20%26%20Errors.html">
+      <div class="num">09 ·</div>
+      <div class="title">404 &amp; Errors</div>
+      <p class="scope">404 entry, empty states, error banner.</p>
+      <span class="badge live">Live</span>
+    </a>
+    <a class="card" href="pages/10%20Auth%20%26%20Sign-in%20Flow.html">
+      <div class="num">10 ·</div>
+      <div class="title">Auth &amp; Sign-in Flow</div>
+      <p class="scope">Modal open, internal panel push, parallel close + avatar morph + toast + feed refresh.</p>
+      <span class="badge live">Live</span>
+    </a>
+  </div>
+
+  <footer>
+    <p>The current end-to-end integration of all sign-in choreography lives in <a href="Verita%20Transition.html">Verita Transition.html</a> — kept as the master integration demo.</p>
+    <p>Architecture and migration map: <a href="Plan.md">Plan.md</a>.</p>
+  </footer>
+
+</div>
+</body>
+</html>

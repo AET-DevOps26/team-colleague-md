@@ -1,0 +1,647 @@
+<!doctype html>
+<!--
+  C10 — Avatars & Identity
+  Scope:      Avatar primitives, presence indicators, follow buttons, badges, verified marks.
+              Production tier (4 sections, 1:1 from pages/Verita *.html):
+                §1 Avatar primitives — sizes, gradients, pseudo-element face   — primary production
+                §2 Avatar hover lift (160ms ease-out, translateY(-1px))        — primary production motion
+                §3 Follow button toggle (120ms color/background transition)
+                §4 Sidebar nav badge + Editor status dot (static, color swap)
+              Extended tier (4 sections, proposals):
+                §5 Presence pulse (online status, 1.6s ring breathe)           — primary extended
+                §6 Notification badge increment (count change spring-bounce)
+                §7 Avatar group / stack hover fan-out
+                §8 Reduced-motion fallback
+  Spec:       docs/Animation Spec.md  §  Avatars & Identity
+  React hint: <Avatar>, <AvatarStack>, <FollowButton>, <PresenceDot>, <NotificationBadge>
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Avatars & Identity · Verita Animation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens/tokens.css">
+<style>
+  /* ---------- Demo chrome (page layout — copied verbatim from C09) ---------- */
+  body { background: var(--bg-base); color: var(--text-primary); overflow: auto; }
+  .demo-stage { padding: 88px 0 120px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 40px; }
+
+  .lead-block { margin-bottom: 48px; }
+  .wordmark { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--text-secondary); line-height: 1; }
+  .wordmark .lead { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 46px; letter-spacing: -0.01em; margin: 18px 0 10px; line-height: 1.05; }
+  .scope { color: var(--text-secondary); font-size: 15.5px; line-height: 1.55; max-width: 60ch; margin: 0; }
+  .status { display: inline-block; margin-top: 20px; padding: 4px 12px; font: 500 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-secondary); }
+  .status.live { color: var(--success); border-color: color-mix(in oklab, var(--success) 30%, var(--border-subtle)); }
+
+  section { margin-top: 56px; }
+  section.divided { padding-top: 32px; border-top: 1px solid var(--border-subtle); }
+  section > h2 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 22px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section > p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; margin: 0 0 18px; }
+
+  .tier { display: inline-block; margin-left: 10px; padding: 2px 8px; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 4px; vertical-align: 2px; }
+  .tier.prod { background: color-mix(in oklab, var(--success) 12%, var(--bg-surface)); color: var(--success); border: 1px solid color-mix(in oklab, var(--success) 28%, transparent); }
+  .tier.ext { background: color-mix(in oklab, var(--accent) 10%, var(--bg-surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent); }
+  .tier.primary { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+  table.spec { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.spec thead th { text-align: left; font: 500 9.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 8px 6px; border-bottom: 1px solid var(--border-default); }
+  table.spec tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.45; }
+  table.spec tbody td:first-child { font-weight: 600; width: 22%; }
+  table.spec tbody td:nth-child(2) { font: 500 11px var(--font-mono); color: var(--text-primary); width: 14%; white-space: nowrap; }
+  table.spec tbody td:nth-child(3) { font: 500 11px var(--font-mono); color: var(--text-secondary); width: 18%; }
+  table.spec tbody td:last-child { color: var(--text-secondary); font-size: 11.5px; }
+
+  ul.scope-list { list-style: none; padding: 0; margin: 14px 0 18px; display: grid; gap: 6px; }
+  ul.scope-list li { font-size: 14px; color: var(--text-secondary); line-height: 1.5; padding-left: 18px; position: relative; }
+  ul.scope-list li::before { content: "·"; position: absolute; left: 6px; color: var(--text-tertiary); font-weight: 700; }
+
+  .section-meta { display: grid; grid-template-columns: 86px 1fr; gap: 6px 14px; margin: 8px 0 14px; font-size: 12.5px; line-height: 1.55; }
+  .section-meta dt { font: 500 10px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding-top: 1px; }
+  .section-meta dd { margin: 0; color: var(--text-secondary); }
+  .section-meta dd code { font: 500 11px var(--font-mono); color: var(--text-primary); }
+
+  .triggers { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 0; align-items: center; }
+  .trigger { appearance: none; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 7px; padding: 8px 14px; font: 500 12.5px var(--font-sans); cursor: pointer; transition: background 120ms, border-color 120ms; }
+  .trigger:hover { background: var(--bg-elevated); }
+  .trigger.solid { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+  .trigger.solid:hover { background: oklch(28% 0 0); }
+
+  .hint { font-size: 12.5px; color: var(--text-tertiary); margin-top: 14px; line-height: 1.55; }
+  .hint code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px; }
+
+  .react-hint { margin-top: 64px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+  .react-hint h3 { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 18px; margin: 0 0 14px; }
+  .react-hint dl { display: grid; grid-template-columns: 140px 1fr; row-gap: 10px; column-gap: 18px; margin: 0; font-size: 13px; }
+  .react-hint dt { color: var(--text-tertiary); font: 500 11px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; align-self: start; padding-top: 2px; }
+  .react-hint dd { margin: 0; color: var(--text-primary); line-height: 1.55; }
+  .react-hint code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+
+  /* Stage shell */
+  .stage { margin: 14px 0 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); padding: 28px 24px; }
+  .stage.row { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .stage.center { display: grid; place-items: center; min-height: 140px; }
+
+  /* ===========================================================
+   * §1 — Avatar primitives
+   * Sources: pages/Verita Home.html:146–165 (avatar-btn 44)
+   *          pages/Verita Post Detail.html:182–205 (avatar-btn 36)
+   *          pages/Verita User Profile.html:171–176 (profile 80)
+   *          inline .av sizes from comment threads + author rows
+   * =========================================================== */
+
+  .avatar-btn {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg,#c0a4ff 0%, #ff8a8a 55%, #ffc28a 100%);
+    border: 1px solid var(--border-subtle);
+    position: relative;
+    cursor: pointer;
+    transition: transform 160ms ease-out, box-shadow 160ms ease-out;
+  }
+  .avatar-btn::before {
+    content: ""; position: absolute;
+    left: 28%; top: 38%; width: 14%; height: 9%;
+    background:
+      radial-gradient(ellipse at 50% 50%, #2a1a1a 30%, transparent 33%) left center / 50% 100% no-repeat,
+      radial-gradient(ellipse at 50% 50%, #2a1a1a 30%, transparent 33%) right center / 50% 100% no-repeat;
+  }
+  .avatar-btn::after {
+    content: ""; position: absolute;
+    left: 36%; top: 60%; width: 28%; height: 8%;
+    background: #2a1a1a;
+    border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  }
+  .avatar-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+  }
+  .avatar-btn.sm { width: 36px; height: 36px; border-radius: 10px; }
+  .avatar-btn.sm::before { top: 36%; }
+  .avatar-btn.sm::after  { top: 58%; }
+
+  .av {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#d4d4d4,#6b6b6b);
+    color: #fff;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .av.xs { width: 22px; height: 22px; font-size: 9px; }
+  .av.md { width: 36px; height: 36px; font-size: 13px; }
+  .av.lg { width: 80px; height: 80px; font-size: 28px; border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--border-default); }
+
+  .av.tone-a { background: linear-gradient(135deg,#c0a4ff,#7c5cff); }
+  .av.tone-b { background: linear-gradient(135deg,#ffc28a,#e07a5f); }
+  .av.tone-c { background: linear-gradient(135deg,#a8d8c0,#3aa17c); }
+  .av.tone-d { background: linear-gradient(135deg,#9ec5ff,#3865ad); }
+
+  .av-row { display: flex; flex-direction: column; gap: 8px; }
+  .av-row > div { display: flex; align-items: center; gap: 14px; }
+  .av-row .label { font: 500 11px var(--font-mono); color: var(--text-tertiary); min-width: 100px; }
+
+  .verified-svg { color: var(--accent); width: 13px; height: 13px; flex-shrink: 0; }
+  .verified-pill { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .who-row { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+  .who-row .name { font-weight: 600; }
+
+  /* ===========================================================
+   * §3 — Follow button toggle
+   * Source: pages/Verita Digest Management.html:198–200
+   * =========================================================== */
+  .topic-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--bg-surface);
+    max-width: 360px;
+  }
+  .topic-card .av { width: 32px; height: 32px; font-size: 12px; }
+  .topic-meta { flex: 1; min-width: 0; }
+  .topic-meta .topic-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+  .topic-meta .topic-sub { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; }
+  .follow-btn {
+    height: 28px; padding: 0 12px;
+    border-radius: 6px;
+    font: 600 12px var(--font-sans);
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    transition: all 120ms;
+  }
+  .follow-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .topic-card.followed .follow-btn {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .topic-card.followed .follow-btn:hover { background: var(--accent-hover); }
+
+  /* ===========================================================
+   * §4 — Sidebar nav badge + Editor status dot
+   * Sources: pages/Verita Home.html:71–75 + pages/Verita Post Editor.html:133–138
+   * =========================================================== */
+  .nav-row { display: flex; flex-direction: column; gap: 10px; max-width: 260px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px; color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .nav-item .label { flex: 1; }
+  .nav-item .badge {
+    font: 600 10.5px var(--font-sans);
+    padding: 3px 6px;
+    min-width: 16px;
+    text-align: center;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 999px;
+  }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    font: 500 11.5px var(--font-mono);
+    color: var(--text-secondary);
+    transition: background 200ms, color 200ms;
+  }
+  .status-pill .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-tertiary);
+    transition: background 200ms;
+  }
+  .status-pill.saved  .status-dot { background: var(--success); }
+  .status-pill.saving .status-dot { background: var(--warning); }
+  .status-pill.saved  { color: var(--success); }
+  .status-pill.saving { color: var(--warning); }
+
+  /* ===========================================================
+   * §5 — Presence pulse (Extended primary)
+   * =========================================================== */
+  .av-presence { position: relative; display: inline-flex; }
+  .presence-dot {
+    position: absolute;
+    right: -2px; bottom: -2px;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--success);
+    border: 2px solid var(--bg-surface);
+  }
+  .av-presence.online .presence-dot::after {
+    content: "";
+    position: absolute; inset: -3px;
+    border-radius: 50%;
+    border: 2px solid var(--success);
+    animation: presencePulse 1.6s ease-in-out infinite;
+  }
+  @keyframes presencePulse {
+    0%, 100% { opacity: 0.0; transform: scale(0.85); }
+    50%      { opacity: 0.65; transform: scale(1.15); }
+  }
+
+  /* ===========================================================
+   * §6 — Notification badge increment (Extended)
+   * =========================================================== */
+  .bell {
+    position: relative;
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: background 120ms;
+  }
+  .bell:hover { background: var(--bg-elevated); }
+  .bell svg { width: 16px; height: 16px; color: var(--text-primary); }
+  .bell .count-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    min-width: 16px; height: 16px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font: 700 10px var(--font-sans);
+    display: grid; place-items: center;
+    border: 2px solid var(--bg-surface);
+    box-sizing: content-box;
+  }
+  .bell .count-badge.bumping {
+    animation: countBump 320ms cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes countBump {
+    0%   { transform: scale(1);    }
+    35%  { transform: scale(1.32); }
+    70%  { transform: scale(0.94); }
+    100% { transform: scale(1);    }
+  }
+  .bell .count-num {
+    display: inline-block;
+    transition: opacity 100ms ease-out, transform 100ms ease-out;
+  }
+  .bell .count-num.swap-out {
+    opacity: 0; transform: translateY(-3px);
+  }
+
+  /* ===========================================================
+   * §7 — Avatar group / stack hover fan-out (Extended)
+   * =========================================================== */
+  .av-stack {
+    display: inline-flex;
+    padding: 6px;
+    cursor: default;
+  }
+  .av-stack > .av {
+    margin-left: -8px;
+    border: 2px solid var(--bg-surface);
+    box-sizing: content-box;
+    transition: margin-left 220ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .av-stack > .av:first-child { margin-left: 0; }
+  .av-stack:hover > .av { margin-left: 4px; }
+  .av-stack:hover > .av:first-child { margin-left: 0; }
+
+  .stack-row { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-secondary); }
+
+  /* ===========================================================
+   * §8 — Reduced-motion fallback (single block at the bottom)
+   * =========================================================== */
+  @media (prefers-reduced-motion: reduce) {
+    .avatar-btn { transition: box-shadow 160ms ease-out; }
+    .avatar-btn:hover { transform: none; }
+    .av-presence.online .presence-dot::after { animation: none; opacity: 0.5; }
+    .bell .count-badge.bumping { animation: none; }
+    .bell .count-num { transition: none; }
+    .av-stack > .av { transition: none; }
+    .av-stack:hover > .av { margin-left: -8px; }
+    .av-stack:hover > .av:first-child { margin-left: 0; }
+  }
+
+  .demo-rm { padding: 16px; border: 1px dashed var(--border-default); border-radius: 8px; background: var(--bg-base); }
+  .demo-rm h4 { margin: 0 0 8px; font: 600 11.5px var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-tertiary); }
+</style>
+</head>
+<body>
+<div class="demo-stage">
+  <div class="wrap">
+    <div class="lead-block">
+      <div class="wordmark"><span class="lead">C10</span> · Verita Animation Demo</div>
+      <h1>Avatars &amp; Identity.</h1>
+      <p class="scope">Avatar primitives, follow toggle, badges, presence, and stack hover. Production today is almost entirely static identity chrome — only the topbar avatar's hover lift is animated. Extended tier proposes presence pulse, notification badge bump, and avatar-stack fan-out as opt-in motions.</p>
+      <span class="status live">Live</span>
+    </div>
+
+    <section>
+      <h2>Spec snapshot</h2>
+      <p>Production motions verified 1:1 against <code>pages/Verita Home.html</code>, <code>Post Detail.html</code>, <code>User Profile.html</code>, <code>Digest Management.html</code>, and <code>Post Editor.html</code>. All other identity chrome is static in production today.</p>
+      <table class="spec">
+        <thead><tr><th>Section</th><th>Tempo</th><th>Easing</th><th>Source / Note</th></tr></thead>
+        <tbody>
+          <tr><td>§1 Avatar primitives <span class="tier prod">prod</span></td><td>—</td><td>—</td><td>Static. Sizes 22 / 26 / 36 / 44 / 80, gradient fills + face pseudo-elements.</td></tr>
+          <tr><td>§2 Avatar hover lift <span class="tier prod primary">prod ★</span></td><td>160ms</td><td>ease-out</td><td><code>translateY(-1px)</code> + 4px box-shadow. Topbar only.</td></tr>
+          <tr><td>§3 Follow toggle <span class="tier prod">prod</span></td><td>120ms</td><td>linear</td><td>Color/bg swap only. No scale.</td></tr>
+          <tr><td>§4 Nav badge / status dot <span class="tier prod">prod</span></td><td>—</td><td>—</td><td>Static count + 200ms color swap on dot only.</td></tr>
+          <tr><td>§5 Presence pulse <span class="tier ext primary">ext ★</span></td><td>1.6s loop</td><td>ease-in-out</td><td>Breathing ring around <code>.presence-dot</code>.</td></tr>
+          <tr><td>§6 Badge bump <span class="tier ext">ext</span></td><td>320ms</td><td>cubic-bezier(.16,1,.3,1)</td><td>Spring scale on count change.</td></tr>
+          <tr><td>§7 Stack fan-out <span class="tier ext">ext</span></td><td>220ms</td><td>cubic-bezier(.22,1,.36,1)</td><td>Margin expand on hover.</td></tr>
+          <tr><td>§8 Reduced-motion <span class="tier ext">ext</span></td><td>—</td><td>—</td><td>Single <code>@media</code> kills all motion; hover lift collapses to shadow-only.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============== §1 ============== -->
+    <section class="divided">
+      <h2>§1 — Avatar primitives <span class="tier prod">production</span></h2>
+      <p>The five avatar shapes used across production, side-by-side. The 44/36 topbar variants are square-ish (12 / 10 px radius) with a gradient face pseudo-element; the inline 22/26/36 sizes are circular with initials over a tonal gradient; the 80 px profile hero adds a 3 px white border + 1.5 px outline shadow.</p>
+      <dl class="section-meta">
+        <dt>Sizes</dt><dd><code>av.xs 22</code> · <code>av 26</code> · <code>av.md 36</code> · <code>avatar-btn.sm 36</code> · <code>avatar-btn 44</code> · <code>av.lg 80</code></dd>
+        <dt>Sources</dt><dd><code>pages/Verita Home.html:146–165</code> · <code>Post Detail.html:182–205</code> · <code>User Profile.html:171–176</code></dd>
+      </dl>
+      <div class="stage row">
+        <div class="av-row">
+          <div><span class="label">avatar-btn 44</span><button class="avatar-btn" aria-label="user"></button></div>
+          <div><span class="label">avatar-btn.sm 36</span><button class="avatar-btn sm" aria-label="user"></button></div>
+        </div>
+        <div class="av-row">
+          <div><span class="label">av.xs 22</span><span class="av xs tone-a">EM</span></div>
+          <div><span class="label">av 26</span><span class="av tone-b">JK</span></div>
+          <div><span class="label">av.md 36</span><span class="av md tone-c">RA</span></div>
+          <div><span class="label">av.lg 80</span><span class="av lg tone-d">VS</span></div>
+        </div>
+        <div class="av-row">
+          <div><span class="label">verified inline</span>
+            <span class="who-row"><span class="av tone-a">EM</span><span class="name">Elena Marquez</span>
+              <svg class="verified-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5l2.6 2.4 3.5-.4.6 3.5 3.1 1.7-1.6 3.1 1.6 3.1-3.1 1.7-.6 3.5-3.5-.4L12 22.5l-2.6-2.4-3.5.4-.6-3.5-3.1-1.7 1.6-3.1-1.6-3.1 3.1-1.7.6-3.5 3.5.4L12 1.5zm-1.4 13.3l5.6-5.6-1.3-1.3-4.3 4.3-2-2-1.3 1.3 3.3 3.3z"/></svg>
+            </span>
+          </div>
+          <div><span class="label">verified pill</span><span class="verified-pill">Verified</span></div>
+        </div>
+      </div>
+      <p class="hint">Faces on <code>.avatar-btn</code> are decorative <code>::before</code> + <code>::after</code> pseudo-elements — kept here verbatim so React's <code>&lt;Avatar variant="topbar"&gt;</code> can render the same chrome without an &lt;img&gt; or SVG dependency.</p>
+    </section>
+
+    <!-- ============== §2 ============== -->
+    <section class="divided">
+      <h2>§2 — Avatar hover lift <span class="tier prod primary">production · primary</span></h2>
+      <p>The single avatar motion in production today — <code>.avatar-btn:hover</code> rises 1px and gains a 4px box-shadow over 160ms ease-out. Hover the avatars below; the inline <code>.av</code> sizes intentionally do <em>not</em> animate (they're identity tags, not buttons).</p>
+      <dl class="section-meta">
+        <dt>Tempo</dt><dd><code>transform 160ms ease-out</code> + <code>box-shadow 160ms ease-out</code></dd>
+        <dt>Source</dt><dd><code>pages/Verita Post Detail.html:182–205</code> (same rule mirrored across topbar in Home / Search / Profile)</dd>
+        <dt>Scope</dt><dd>Topbar avatar only. Inline initials avatars (<code>.av</code>) stay static.</dd>
+      </dl>
+      <div class="stage row">
+        <button class="avatar-btn" aria-label="topbar 44"></button>
+        <button class="avatar-btn sm" aria-label="topbar 36"></button>
+        <span class="av md tone-c" title="static — no hover">RA</span>
+        <span class="av lg tone-d" title="static — no hover">VS</span>
+      </div>
+      <p class="hint">The hover is a <em>navigation affordance</em> — only avatars that act as buttons (open profile menu) lift. Identity tags inline in feed/comment rows must stay still so the row doesn't twitch as the cursor moves through.</p>
+    </section>
+
+    <!-- ============== §3 ============== -->
+    <section class="divided">
+      <h2>§3 — Follow toggle <span class="tier prod">production</span></h2>
+      <p>Production follow buttons (Digest Management topic cards) toggle in 120ms with a single <code>transition: all</code>. No scale, no haptic flash — just border + background + color swap. The pill also swaps from hollow to filled-accent in the followed state.</p>
+      <dl class="section-meta">
+        <dt>Tempo</dt><dd><code>all 120ms</code></dd>
+        <dt>Source</dt><dd><code>pages/Verita Digest Management.html:198–200</code></dd>
+        <dt>States</dt><dd>idle (hollow) / hover (subtle bg) / followed (filled accent)</dd>
+      </dl>
+      <div class="stage" style="display:grid; gap:10px;">
+        <div class="topic-card" id="topic-1">
+          <span class="av tone-a">FH</span>
+          <div class="topic-meta"><div class="topic-name">Form &amp; Hierarchy</div><div class="topic-sub">412 followers · 28 posts/wk</div></div>
+          <button class="follow-btn" type="button" data-follow>Follow</button>
+        </div>
+        <div class="topic-card followed" id="topic-2">
+          <span class="av tone-b">QC</span>
+          <div class="topic-meta"><div class="topic-name">Quiet Cinema</div><div class="topic-sub">1.2k followers · 9 posts/wk</div></div>
+          <button class="follow-btn" type="button" data-follow>Following</button>
+        </div>
+      </div>
+      <p class="hint">Click each pill to toggle. The label flip (Follow ↔ Following) and color swap share the same 120ms transition — no separate label transition.</p>
+    </section>
+
+    <!-- ============== §4 ============== -->
+    <section class="divided">
+      <h2>§4 — Sidebar nav badge &amp; Editor status dot <span class="tier prod">production</span></h2>
+      <p>Two static identity-adjacent indicators. The sidebar count badge (Digest "3", Notifications "12") is purely visual — no entry animation, no count-up. The Post Editor status pill swaps dot color on save (idle → saving → saved) over a 200ms color transition only.</p>
+      <dl class="section-meta">
+        <dt>Tempo</dt><dd>badge: none · status dot: <code>background 200ms</code></dd>
+        <dt>Sources</dt><dd><code>pages/Verita Home.html:71–75</code> · <code>Verita Post Editor.html:133–138</code></dd>
+      </dl>
+      <div class="stage" style="display:flex; gap:32px; align-items:flex-start; flex-wrap:wrap;">
+        <div class="nav-row">
+          <div class="nav-item"><span class="label">Home</span></div>
+          <div class="nav-item"><span class="label">Digest</span><span class="badge">3</span></div>
+          <div class="nav-item"><span class="label">Notifications</span><span class="badge">12</span></div>
+          <div class="nav-item"><span class="label">Profile</span></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-start;">
+          <span class="status-pill" id="status-pill"><span class="status-dot"></span><span>Idle</span></span>
+          <div class="triggers">
+            <button class="trigger" id="status-saving">Trigger saving</button>
+            <button class="trigger" id="status-saved">Trigger saved</button>
+            <button class="trigger" id="status-idle">Reset</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Production has no count-bump on the sidebar badge — when the count goes 3 → 4, it just renders 4. The bump motion is proposed in §6 (Extended).</p>
+    </section>
+
+    <!-- ============== §5 ============== -->
+    <section class="divided">
+      <h2>§5 — Presence pulse <span class="tier ext primary">extended · primary</span></h2>
+      <p>No production source. Adds a 1.6 s breathing ring around the green presence dot to denote "online" without yanking attention. Off-screen on hover and on Reduced-Motion. Toggle a presence state below.</p>
+      <dl class="section-meta">
+        <dt>Tempo</dt><dd><code>1.6s ease-in-out infinite</code> on a <code>::after</code> ring</dd>
+        <dt>Color</dt><dd>ring inherits <code>var(--success)</code>; opacity 0 → 0.65 → 0; scale 0.85 → 1.15 → 0.85</dd>
+        <dt>Use case</dt><dd>Live thread / DM avatars — ambient affordance, never the main signal.</dd>
+      </dl>
+      <div class="stage row">
+        <span class="av-presence online"><span class="av md tone-a">EM</span><span class="presence-dot"></span></span>
+        <span class="av-presence online"><span class="av md tone-c">RA</span><span class="presence-dot"></span></span>
+        <span class="av-presence" id="presence-toggle"><span class="av md tone-b">JK</span><span class="presence-dot" style="background: var(--text-tertiary);"></span></span>
+        <button class="trigger" id="presence-trigger">Toggle JK online/offline</button>
+      </div>
+      <p class="hint">Pulse is intentionally low-amplitude. If the ring is the only motion on screen, that's the spec — louder pulses break the calm of the feed.</p>
+    </section>
+
+    <!-- ============== §6 ============== -->
+    <section class="divided">
+      <h2>§6 — Notification badge increment <span class="tier ext">extended</span></h2>
+      <p>When the count changes, the pill briefly scales 1 → 1.32 → 0.94 → 1 over 320ms with <code>cubic-bezier(0.16,1,0.3,1)</code>. The number itself crossfades at 100ms. Tap <em>Add 1</em> repeatedly to see consecutive bumps queue cleanly.</p>
+      <dl class="section-meta">
+        <dt>Tempo</dt><dd>pill: <code>320ms cubic-bezier(0.16,1,0.3,1)</code> · digit: <code>100ms ease-out</code> opacity+translateY</dd>
+        <dt>Trigger</dt><dd>Count delta only — not initial mount, not navigation back to a screen.</dd>
+      </dl>
+      <div class="stage row">
+        <button class="bell" id="bell" aria-label="notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span class="count-badge" id="count-badge"><span class="count-num" id="count-num">3</span></span>
+        </button>
+        <div class="triggers">
+          <button class="trigger" id="bell-add">Add 1</button>
+          <button class="trigger" id="bell-reset">Reset</button>
+        </div>
+      </div>
+      <p class="hint">If <code>count === 0</code>, the pill should fade out entirely (220ms opacity), not bump. Demo handles the 0 case by hiding the badge node.</p>
+    </section>
+
+    <!-- ============== §7 ============== -->
+    <section class="divided">
+      <h2>§7 — Avatar group / stack fan-out <span class="tier ext">extended</span></h2>
+      <p>Tight overlap (-8px) at rest; on hover, the stack fans to a 4px gap over 220ms with <code>cubic-bezier(0.22,1,0.36,1)</code>. Used in card byline rows ("Read by Elena, Jin, +12") and reaction summaries.</p>
+      <dl class="section-meta">
+        <dt>Tempo</dt><dd><code>220ms cubic-bezier(0.22,1,0.36,1)</code> on <code>margin-left</code></dd>
+        <dt>Cap</dt><dd>Max 4–5 visible avatars; rest collapse into a <code>+N</code> chip.</dd>
+      </dl>
+      <div class="stage row">
+        <div class="stack-row">
+          <div class="av-stack">
+            <span class="av tone-a">EM</span>
+            <span class="av tone-b">JK</span>
+            <span class="av tone-c">RA</span>
+            <span class="av tone-d">VS</span>
+            <span class="av" style="background:var(--bg-elevated); color:var(--text-secondary); font-size:9px;">+8</span>
+          </div>
+          <span>Read by Elena, Jin, Rita, Vee, and 8 others</span>
+        </div>
+      </div>
+      <p class="hint">The fan-out reveals the count-chip without changing component height. Don't animate the chip itself — it's part of the stack and should travel with the group.</p>
+    </section>
+
+    <!-- ============== §8 ============== -->
+    <section class="divided">
+      <h2>§8 — Reduced-motion fallback <span class="tier ext">extended</span></h2>
+      <p>One <code>@media (prefers-reduced-motion: reduce)</code> rule at the bottom of the file kills all four extended motions and collapses the production hover lift (§2) to shadow-only — the focus state still has a visual anchor without the 1px translate.</p>
+      <dl class="section-meta">
+        <dt>Killed</dt><dd>presence pulse, badge bump, count crossfade, stack fan-out</dd>
+        <dt>Reduced</dt><dd>avatar hover: shadow-only (no <code>translateY</code>)</dd>
+        <dt>Preserved</dt><dd>follow-button color swap, status-pill color swap (both 120/200ms color, considered safe)</dd>
+      </dl>
+      <div class="stage" style="display:grid; gap:14px;">
+        <div class="demo-rm">
+          <h4>Standard motion</h4>
+          <p style="font-size:12.5px; color:var(--text-secondary); margin:0;">All §5–7 motions active. Toggle Reduced-Motion in your OS to compare against the rule below.</p>
+        </div>
+        <div class="demo-rm">
+          <h4>Reduced-motion override (single rule)</h4>
+          <pre style="font: 500 11.5px var(--font-mono); color: var(--text-secondary); margin:0; white-space:pre-wrap;">@media (prefers-reduced-motion: reduce) {
+  .avatar-btn { transition: box-shadow 160ms ease-out; }
+  .avatar-btn:hover { transform: none; }
+  .av-presence.online .presence-dot::after { animation: none; opacity: 0.5; }
+  .bell .count-badge.bumping { animation: none; }
+  .bell .count-num { transition: none; }
+  .av-stack > .av { transition: none; }
+  .av-stack:hover > .av { margin-left: -8px; }
+}</pre>
+        </div>
+      </div>
+      <p class="hint">Per the C-file convention: <em>one</em> reduced-motion block per file at the bottom. Don't scatter <code>prefers-reduced-motion</code> checks per-keyframe.</p>
+    </section>
+
+    <div class="react-hint">
+      <h3>React component hints</h3>
+      <dl>
+        <dt>&lt;Avatar&gt;</dt>
+        <dd>Variants: <code>topbar</code> (44/36, hover-lift) · <code>inline</code> (22/26/36, no hover) · <code>profile</code> (80, ringed). Accept <code>tone</code> prop (a/b/c/d) for the gradient family. Initials fallback when no <code>src</code>.</dd>
+        <dt>&lt;PresenceDot&gt;</dt>
+        <dd>Wraps an <code>&lt;Avatar&gt;</code>. <code>state ∈ idle | online | offline</code>. Pulse only when <code>state === "online"</code>; killed under reduced-motion.</dd>
+        <dt>&lt;FollowButton&gt;</dt>
+        <dd>Two visual states (idle / followed) with a 120ms <code>all</code> transition. Label switches in-place (<em>Follow</em> ↔ <em>Following</em>); no separate label transition.</dd>
+        <dt>&lt;NotificationBadge&gt;</dt>
+        <dd>Count delta detection lives in the component. <code>onCountChange(prev, next)</code> triggers <code>.bumping</code> for 320ms then removes the class. Hide entirely at <code>count === 0</code>.</dd>
+        <dt>&lt;AvatarStack&gt;</dt>
+        <dd>Children clip to <code>max</code> (default 4); overflow renders a <code>+N</code> chip as the last item. Hover fan-out is CSS-only; no JS coupling.</dd>
+        <dt>Tokens</dt>
+        <dd><code>--dur-fast</code> 120 / <code>--dur-base</code> 220 / <code>--dur-pulse</code> 1600 · <code>--ease-spring</code> <code>cubic-bezier(0.16,1,0.3,1)</code></dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<script>
+  // §3 — follow toggle
+  document.querySelectorAll('[data-follow]').forEach(btn => {
+    const card = btn.closest('.topic-card');
+    const sync = () => {
+      const followed = card.classList.contains('followed');
+      btn.textContent = followed ? 'Following' : 'Follow';
+    };
+    sync();
+    btn.addEventListener('click', () => {
+      card.classList.toggle('followed');
+      sync();
+    });
+  });
+
+  // §4 — status pill
+  (() => {
+    const pill = document.getElementById('status-pill');
+    if (!pill) return;
+    const label = pill.querySelector('span:last-child');
+    const set = (state, text) => {
+      pill.classList.remove('saving', 'saved');
+      if (state) pill.classList.add(state);
+      label.textContent = text;
+    };
+    document.getElementById('status-saving').addEventListener('click', () => set('saving', 'Saving…'));
+    document.getElementById('status-saved').addEventListener('click', () => set('saved', 'Saved'));
+    document.getElementById('status-idle').addEventListener('click', () => set(null, 'Idle'));
+  })();
+
+  // §5 — presence toggle
+  (() => {
+    const wrap = document.getElementById('presence-toggle');
+    const dot = wrap.querySelector('.presence-dot');
+    const btn = document.getElementById('presence-trigger');
+    btn.addEventListener('click', () => {
+      const online = wrap.classList.toggle('online');
+      dot.style.background = online ? 'var(--success)' : 'var(--text-tertiary)';
+    });
+  })();
+
+  // §6 — notification badge bump
+  (() => {
+    const badge = document.getElementById('count-badge');
+    const num = document.getElementById('count-num');
+    let count = 3;
+    const render = (next) => {
+      const prev = count;
+      count = next;
+      if (count === 0) { badge.style.display = 'none'; return; }
+      badge.style.display = '';
+      // crossfade digit
+      num.classList.add('swap-out');
+      setTimeout(() => {
+        num.textContent = String(count);
+        num.classList.remove('swap-out');
+      }, 100);
+      // bump pill (only on increment)
+      if (next > prev) {
+        badge.classList.remove('bumping');
+        void badge.offsetWidth;
+        badge.classList.add('bumping');
+        setTimeout(() => badge.classList.remove('bumping'), 340);
+      }
+    };
+    document.getElementById('bell-add').addEventListener('click', () => render(count + 1));
+    document.getElementById('bell-reset').addEventListener('click', () => render(0));
+  })();
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@ export interface Post {
   viewCount: number;
   isLikedByMe: boolean;
   createdAt: string;
+  readTimeMinutes?: number;
 }
 
 export interface DigestSummary {

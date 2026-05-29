@@ -43,6 +43,12 @@ jobs:
       - name: Build Content Service Docs
         run: redocly build-docs backend/content-service/api/openapi.yaml --output=public_docs/content-service.html
 
+      - name: Build Recommendation Service Docs
+        run: redocly build-docs backend/recommendation-service/api/openapi.yaml --output=public_docs/recommendation-service.html
+
+      - name: Build genai Service Docs
+        run: redocly build-docs genai-service/api/openapi.yaml --output=public_docs/genai-service.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
