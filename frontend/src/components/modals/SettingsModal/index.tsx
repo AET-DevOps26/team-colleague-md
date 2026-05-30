@@ -7,7 +7,7 @@ import styles from './SettingsModal.module.css';
 
 export default function SettingsModal() {
   const { isOpen, close } = useSettingsModal();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [digestFreq, setDigestFreq] = useState<'Daily' | 'Weekly' | 'Off'>('Daily');
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showLikes, setShowLikes] = useState(false);
@@ -67,6 +67,15 @@ export default function SettingsModal() {
               <input type="checkbox" checked={showLikes} onChange={(e) => setShowLikes(e.target.checked)} />
               <span className={styles.toggleTrack} />
             </label>
+          </section>
+
+          <section className={styles.section}>
+            <button
+              className={styles.logoutBtn}
+              onClick={() => { logout(); close(); }}
+            >
+              Sign out
+            </button>
           </section>
 
           <Dialog.Close className={styles.closeBtn} aria-label="Close">

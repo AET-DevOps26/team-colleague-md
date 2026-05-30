@@ -248,6 +248,9 @@ export default function AuthModal() {
         <Wordmark />
         {renderTabs('signup')}
         <form onSubmit={handleSignup} className={styles.formBody}>
+          {/* Hidden email input tells the browser to associate the password with the email, not the username */}
+          <input type="email" autoComplete="username" value={email} onChange={() => {}} style={{ display: 'none' }} aria-hidden="true" tabIndex={-1} />
+
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Username</span></div>
             <div className={styles.fieldBox}>
@@ -258,7 +261,7 @@ export default function AuthModal() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                autoComplete="username"
+                autoComplete="nickname"
                 minLength={3}
               />
             </div>

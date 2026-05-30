@@ -166,6 +166,24 @@
   transform: translateX(16px);
 }
 
+.logoutBtn {
+  width: 100%;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--danger);
+  background: none;
+  color: var(--danger);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+
+.logoutBtn:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
 .closeBtn {
   position: absolute;
   top: 16px;
