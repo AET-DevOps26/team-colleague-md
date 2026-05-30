@@ -71,8 +71,8 @@ export default function AuthModal() {
 
   function handleOpenChange(o: boolean) {
     if (o) {
-      setScreen(activeTab);
       resetAll();
+      setScreen(activeTab);
     } else {
       close();
       resetAll();
