@@ -58,6 +58,7 @@ export default function AuthModal() {
   const otpRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null));
 
   function resetAll() {
+    setScreen('login');
     setEmail('');
     setPassword('');
     setUsername('');
@@ -70,7 +71,7 @@ export default function AuthModal() {
 
   function handleOpenChange(o: boolean) {
     if (o) {
-      setScreen(activeTab as AuthScreen);
+      setScreen(activeTab);
       resetAll();
     } else {
       close();
@@ -142,13 +143,13 @@ export default function AuthModal() {
       <div className={styles.tabs}>
         <button
           className={`${styles.tab} ${active === 'login' ? styles.activeTab : ''}`}
-          onClick={() => { open('login'); setScreen('login'); setError(''); }}
+          onClick={() => { open('login'); switchTo('login'); }}
         >
           Log in
         </button>
         <button
           className={`${styles.tab} ${active === 'signup' ? styles.activeTab : ''}`}
-          onClick={() => { open('signup'); setScreen('signup'); setError(''); }}
+          onClick={() => { open('signup'); switchTo('signup'); }}
         >
           Sign up
         </button>
@@ -229,7 +230,7 @@ export default function AuthModal() {
               type="button"
               className={styles.switchLinkBtn}
               data-testid="switch-to-signup"
-              onClick={() => { open('signup'); setScreen('signup'); setError(''); }}
+              onClick={() => { open('signup'); switchTo('signup'); }}
             >
               Sign up
             </button>
@@ -318,7 +319,7 @@ export default function AuthModal() {
               type="button"
               className={styles.switchLinkBtn}
               data-testid="switch-to-login"
-              onClick={() => { open('login'); setScreen('login'); setError(''); }}
+              onClick={() => { open('login'); switchTo('login'); }}
             >
               Log in
             </button>
@@ -344,7 +345,7 @@ export default function AuthModal() {
         <div className={styles.forgotDesc}>
           Enter your account email and we'll send a link to reset your password.
         </div>
-        <div style={{ marginTop: '20px' }}>
+        <form style={{ marginTop: '20px' }} onSubmit={(e) => { e.preventDefault(); switchTo('otp'); }}>
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Email</span></div>
             <div className={styles.fieldBox}>
@@ -361,13 +362,13 @@ export default function AuthModal() {
           </div>
           <button
             className={styles.cta}
+            type="submit"
             data-testid="send-reset-btn"
-            onClick={() => switchTo('otp')}
             disabled={!forgotEmail}
           >
             Send reset link
           </button>
-        </div>
+        </form>
       </div>
     );
   }
