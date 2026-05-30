@@ -169,15 +169,28 @@ Stage 2 (runtime)  nginx:alpine
 
 ### 4.2 docker-compose.yml
 
-`docker-compose.yml` lives at the repository root. Each service entry declares its build
-context (the directory containing the `Dockerfile`) and the host port mapping.
+`docker-compose.yml` lives at the repository root. Each application service entry declares its
+build context (the directory containing the `Dockerfile`) and the host port mapping. The
+`user-service` runs with the `dev` Spring profile and connects to the PostgreSQL `user-db`
+container through Spring Data JPA.
 
 | Service | Build context | Host → Container port | Profile |
 |---------|--------------|----------------------|---------|
+| `user-db` | `postgres:16-alpine` | `5432 → 5432` | — |
 | `user-service` | `./backend/user-service` | `8081 → 8081` | `dev` |
+| `content-service` | `./backend/content-service` | `8082 → 8082` | `dev` |
+| `recommendation-service` | `./backend/recommendation-service` | `8083 → 8083` | `dev` |
 | `genai-service` | `./genai-service` | `8000 → 8000` | — |
 | `frontend` | `./frontend` | `3000 → 80` | — |
 
+User data is persisted in the named Docker volume `user-db-data`; remove it with
+`docker compose down -v` when a clean local database is required.
+
+The `user-service` keeps shared settings in `application.properties`. PostgreSQL-specific
+settings live in `application-dev.properties` for local/Compose development and
+`application-prod.properties` for production. Existing lightweight tests keep their isolated
+H2 configuration in test resources, while endpoint integration tests use PostgreSQL through
+Testcontainers.
 
 ---
 
