@@ -81,19 +81,22 @@ Default dev server: `http://localhost:3000`
 ### Backend — User Service
 
 ```bash
+docker compose up -d user-db
 cd backend/user-service
 ./gradlew bootRun    # Windows: .\gradlew.bat bootRun
 ```
 
 Health check: `http://localhost:8081/actuator/health`
 
-Local `bootRun` uses the default `dev` Spring profile with an in-memory H2 database.
-To run locally against the Docker PostgreSQL database instead:
+Local `bootRun` uses the default `dev` Spring profile with PostgreSQL. Start `user-db`
+first, or provide `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` for another
+PostgreSQL instance.
+
+To run with the production profile:
 
 ```bash
-docker compose up -d user-db
 cd backend/user-service
-DB_HOST=localhost DB_USER=verita_user DB_PASSWORD=verita_password ./gradlew bootRun --args="--spring.profiles.active=docker"
+DB_HOST=localhost DB_NAME=verita_users DB_USER=verita_user DB_PASSWORD=verita_password ./gradlew bootRun --args="--spring.profiles.active=prod"
 ```
 
 ---
