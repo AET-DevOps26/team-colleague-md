@@ -143,12 +143,14 @@ export default function AuthModal() {
       <div className={styles.tabs}>
         <button
           className={`${styles.tab} ${active === 'login' ? styles.activeTab : ''}`}
+          data-testid="tab-login"
           onClick={() => { open('login'); switchTo('login'); }}
         >
           Log in
         </button>
         <button
           className={`${styles.tab} ${active === 'signup' ? styles.activeTab : ''}`}
+          data-testid="tab-signup"
           onClick={() => { open('signup'); switchTo('signup'); }}
         >
           Sign up
@@ -232,7 +234,7 @@ export default function AuthModal() {
               data-testid="switch-to-signup"
               onClick={() => { open('signup'); switchTo('signup'); }}
             >
-              Create account
+              Sign up
             </button>
           </div>
         </form>
@@ -321,7 +323,7 @@ export default function AuthModal() {
               data-testid="switch-to-login"
               onClick={() => { open('login'); switchTo('login'); }}
             >
-              Sign in
+              Log in
             </button>
           </div>
         </form>
@@ -343,7 +345,7 @@ export default function AuthModal() {
         <Wordmark />
         <div className={styles.forgotTitle}>Reset your password</div>
         <div className={styles.forgotDesc}>
-          Enter your account email and we'll send you a recovery link.
+          Enter your account email and we'll send a link to reset your password.
         </div>
         <form style={{ marginTop: '20px' }} onSubmit={(e) => { e.preventDefault(); switchTo('otp'); }}>
           <div className={styles.field}>

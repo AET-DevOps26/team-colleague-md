@@ -4,7 +4,7 @@ async function openAuthModal(page: Page, tab: 'login' | 'signup' = 'login') {
   await page.goto('/');
   await page.locator('[data-testid="sidebar-signin"]').click();
   if (tab === 'signup') {
-    await page.locator('[role="dialog"] button', { hasText: 'Sign up' }).click();
+    await page.locator('[data-testid="tab-signup"]').click();
   }
   await expect(page.locator('[role="dialog"]')).toBeVisible();
   if (tab === 'signup') {
@@ -45,7 +45,7 @@ test.describe('AuthModal — screens', () => {
     await page.locator('[data-testid="forgot-link"]').click();
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog.locator('[data-testid="forgot-screen"]')).toBeVisible();
-    await expect(dialog.getByText('Reset your password')).toBeVisible();
+    await expect(dialog.getByText('Reset your password', { exact: true })).toBeVisible();
   });
 
   test('AM-5: back link on forgot screen returns to login', async ({ page }) => {
@@ -79,9 +79,9 @@ test.describe('AuthModal — screens', () => {
 
   test('AM-8: tab switch between login and signup', async ({ page }) => {
     await openAuthModal(page, 'login');
-    await page.locator('[role="dialog"] button', { hasText: 'Sign up' }).click();
+    await page.locator('[data-testid="tab-signup"]').click();
     await expect(page.locator('[data-testid="signup-screen"]')).toBeVisible();
-    await page.locator('[role="dialog"] button', { hasText: 'Log in' }).click();
+    await page.locator('[data-testid="tab-login"]').click();
     await expect(page.locator('[data-testid="login-screen"]')).toBeVisible();
   });
 
