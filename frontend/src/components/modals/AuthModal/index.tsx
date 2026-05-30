@@ -232,7 +232,7 @@ export default function AuthModal() {
               data-testid="switch-to-signup"
               onClick={() => { open('signup'); switchTo('signup'); }}
             >
-              Sign up
+              Create account
             </button>
           </div>
         </form>
@@ -321,7 +321,7 @@ export default function AuthModal() {
               data-testid="switch-to-login"
               onClick={() => { open('login'); switchTo('login'); }}
             >
-              Log in
+              Sign in
             </button>
           </div>
         </form>
@@ -343,7 +343,7 @@ export default function AuthModal() {
         <Wordmark />
         <div className={styles.forgotTitle}>Reset your password</div>
         <div className={styles.forgotDesc}>
-          Enter your account email and we'll send a link to reset your password.
+          Enter your account email and we'll send you a recovery link.
         </div>
         <form style={{ marginTop: '20px' }} onSubmit={(e) => { e.preventDefault(); switchTo('otp'); }}>
           <div className={styles.field}>
@@ -437,8 +437,8 @@ export default function AuthModal() {
           <Dialog.Title className={styles.srOnly}>
             {screen === 'login' ? 'Log in to Verita' :
              screen === 'signup' ? 'Create a Verita account' :
-             screen === 'forgot' ? 'Reset your password' :
-             'Verify your email'}
+             screen === 'forgot' ? 'Forgot password' :
+             'Email verification'}
           </Dialog.Title>
 
           {screenMap[screen]()}
