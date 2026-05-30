@@ -1,13 +1,17 @@
-// frontend/tests/auth.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
-async function openAuthModal(page: Parameters<typeof test.fn>[0]['page'], tab: 'login' | 'signup' = 'login') {
+async function openAuthModal(page: Page, tab: 'login' | 'signup' = 'login') {
   await page.goto('/');
   await page.locator('[data-testid="sidebar-signin"]').click();
   if (tab === 'signup') {
     await page.locator('[role="dialog"] button', { hasText: 'Sign up' }).click();
   }
   await expect(page.locator('[role="dialog"]')).toBeVisible();
+  if (tab === 'signup') {
+    await expect(page.locator('[data-testid="signup-screen"]')).toBeVisible();
+  } else {
+    await expect(page.locator('[data-testid="login-screen"]')).toBeVisible();
+  }
 }
 
 test.describe('AuthModal — screens', () => {
@@ -26,7 +30,6 @@ test.describe('AuthModal — screens', () => {
     const pwInput = dialog.locator('input[type="password"]');
     await pwInput.fill('secret');
     await dialog.locator('[data-testid="toggle-password"]').click();
-    await expect(dialog.locator('input[type="text"][data-testid="password-input"]')).toBeVisible();
     await expect(dialog.locator('input[type="text"][data-testid="password-input"]')).toHaveValue('secret');
   });
 
@@ -42,7 +45,7 @@ test.describe('AuthModal — screens', () => {
     await page.locator('[data-testid="forgot-link"]').click();
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog.locator('[data-testid="forgot-screen"]')).toBeVisible();
-    await expect(dialog.locator('text=Reset your password')).toBeVisible();
+    await expect(dialog.getByText('Reset your password')).toBeVisible();
   });
 
   test('AM-5: back link on forgot screen returns to login', async ({ page }) => {
@@ -55,16 +58,18 @@ test.describe('AuthModal — screens', () => {
   test('AM-6: send reset link navigates to OTP screen', async ({ page }) => {
     await openAuthModal(page, 'login');
     await page.locator('[data-testid="forgot-link"]').click();
-    await page.locator('input[type="email"]').fill('test@example.com');
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.locator('input[type="email"]').fill('test@example.com');
     await page.locator('[data-testid="send-reset-btn"]').click();
     await expect(page.locator('[data-testid="otp-screen"]')).toBeVisible();
-    await expect(page.locator('text=Verify your email')).toBeVisible();
+    await expect(dialog.getByText('Verify your email')).toBeVisible();
   });
 
   test('AM-7: OTP grid has 6 cells that accept digits', async ({ page }) => {
     await openAuthModal(page, 'login');
     await page.locator('[data-testid="forgot-link"]').click();
-    await page.locator('input[type="email"]').fill('test@example.com');
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.locator('input[type="email"]').fill('test@example.com');
     await page.locator('[data-testid="send-reset-btn"]').click();
     const cells = page.locator('[data-testid="otp-cell"]');
     await expect(cells).toHaveCount(6);
