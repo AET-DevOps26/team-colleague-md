@@ -139,11 +139,13 @@ class UserEndpointIntegrationTests {
                         .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.digestFrequency").value("DAILY"))
-                .andExpect(jsonPath("$.showBookmarks").value(false));
+                .andExpect(jsonPath("$.showBookmarks").value(false))
+                .andExpect(jsonPath("$.showLikes").value(true));
 
         UserEntity updatedUser = userRepository.findById(user.getId()).orElseThrow();
         assertEquals(DigestFrequency.DAILY, updatedUser.getDigestFrequency());
         assertFalse(updatedUser.getShowBookmarks());
+        assertTrue(updatedUser.getShowLikes());
     }
 
     @Test

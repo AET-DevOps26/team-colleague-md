@@ -59,6 +59,7 @@ public class UserService {
         UserPreferences prefs = new UserPreferences();
         prefs.setDigestFrequency(user.getDigestFrequency());
         prefs.setShowBookmarks(user.getShowBookmarks());
+        prefs.setShowLikes(user.getShowLikes());
         return prefs;
     }
 
@@ -66,6 +67,7 @@ public class UserService {
         UserEntity user = userRepository.findByUsername(username).orElseThrow();
         if (prefs.getDigestFrequency() != null) user.setDigestFrequency(prefs.getDigestFrequency());
         if (prefs.getShowBookmarks() != null) user.setShowBookmarks(prefs.getShowBookmarks());
+        if (prefs.getShowLikes() != null) user.setShowLikes(prefs.getShowLikes());
         userRepository.save(user);
     }
 
@@ -137,7 +139,6 @@ public class UserService {
         return dto;
     }
 }
-
 
 
 
