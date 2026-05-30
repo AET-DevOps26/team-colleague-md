@@ -22,7 +22,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=postgresql
+      - SPRING_PROFILES_ACTIVE=dev
       - DB_HOST=user-db
       - DB_PORT=5432
       - DB_NAME=verita_users
