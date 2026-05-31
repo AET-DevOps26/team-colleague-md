@@ -1,10 +1,10 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(3px);
   z-index: 100;
-  animation: fadeIn 150ms ease-out;
+  animation: fadeIn 160ms ease-out;
 }
 
 .content {
@@ -13,192 +13,287 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 101;
-  background: #fff;
+  background: var(--bg-base);
   border-radius: 14px;
-  padding: 28px;
+  border: 1px solid var(--border-subtle);
   width: 100%;
   max-width: 440px;
-  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.25);
-  animation: slideUp 200ms ease-out;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.18);
+  animation: slideUp 160ms ease-out;
 }
 
-.title {
-  font-size: 17px;
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  background: var(--bg-base);
+  border-radius: 14px 14px 0 0;
+  z-index: 1;
+}
+
+.modalTitle {
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 24px;
+}
+
+.modalBody {
+  padding: 0 0 8px;
 }
 
 .section {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 20px 20px 4px;
 }
 
-.section:last-of-type {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
+.section + .section {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 16px;
+}
+
+.sectionLast {
+  padding-bottom: 20px;
 }
 
 .sectionHeading {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-tertiary);
   margin-bottom: 12px;
 }
 
-.row {
+.accountField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.accountFieldLabel {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.accountFieldValue {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.settingsLink {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.rowLabel {
-  font-size: 13.5px;
-  color: var(--text-secondary);
-}
-
-.rowValue {
-  font-size: 13.5px;
+  padding: 9px 0;
+  margin-bottom: 4px;
   color: var(--text-primary);
+  font-size: 13.5px;
   font-weight: 500;
-}
-
-.link {
-  font-size: 13px;
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 500;
-  display: inline-block;
-  margin-top: 4px;
-}
-
-.link:hover {
-  text-decoration: underline;
-}
-
-.segmented {
-  display: flex;
-  border: 1px solid var(--border-default);
-  border-radius: 7px;
-  overflow: hidden;
-}
-
-.segBtn {
-  padding: 5px 12px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  border-radius: 6px;
+  transition: color 120ms ease-out;
+  cursor: pointer;
+  width: 100%;
   background: none;
   border: none;
-  border-right: 1px solid var(--border-default);
-  cursor: pointer;
-  transition: background 120ms, color 120ms;
+  text-align: left;
+  text-decoration: none;
 }
 
-.segBtn:last-child {
+.settingsLink:hover {
+  color: var(--accent-hover);
+}
+
+.settingsLink:hover .linkArrow {
+  color: var(--text-secondary);
+}
+
+.settingsLinkText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.settingsLinkDesc {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.linkArrow {
+  color: var(--text-tertiary);
+  transition: color 120ms ease-out;
+  flex-shrink: 0;
+}
+
+.linkArrow svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+  display: block;
+}
+
+.signoutLink {
+  color: var(--danger);
+  margin-top: 8px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border-subtle);
+  margin-bottom: 0;
+}
+
+.signoutLink:hover {
+  color: var(--danger);
+}
+
+.signoutLink .linkArrow {
+  color: var(--danger);
+  opacity: 0.85;
+}
+
+.signoutLink:hover .linkArrow {
+  opacity: 1;
+  color: var(--danger);
+}
+
+.freqLabel {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.freqControl {
+  display: flex;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.freqBtn {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border-default);
+  text-align: center;
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+
+.freqBtn:last-child {
   border-right: none;
 }
 
-.segBtn:hover {
+.freqBtn:not(.freqActive):hover {
   background: var(--bg-elevated);
   color: var(--text-primary);
 }
 
-.segActive {
+.freqActive {
   background: var(--accent);
   color: #fff;
 }
 
-.segActive:hover {
-  background: var(--accent-hover);
-}
-
-.toggle {
+.toggleRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  cursor: pointer;
-  font-size: 13.5px;
-  color: var(--text-secondary);
-  gap: 12px;
+  padding: 10px 0;
+  gap: 16px;
 }
 
-.toggle input {
-  position: absolute;
+.toggleRow + .toggleRow {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.toggleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggleLabel {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.toggleDesc {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.switch input {
   opacity: 0;
   width: 0;
   height: 0;
-}
-
-.toggleTrack {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  background: var(--border-default);
-  border-radius: 999px;
-  flex-shrink: 0;
-  transition: background 200ms;
-}
-
-.toggleTrack::after {
-  content: '';
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: #fff;
-  border-radius: 50%;
-  transition: transform 200ms;
 }
 
-.toggle input:checked + .toggleTrack {
+.switchTrack {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  border: 1.5px solid var(--border-default);
+  transition: background 160ms ease-out, border-color 160ms ease-out;
+}
+
+.switch input:checked ~ .switchTrack {
   background: var(--accent);
+  border-color: var(--accent);
 }
 
-.toggle input:checked + .toggleTrack::after {
+.switchThumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: var(--text-tertiary);
+  border-radius: 50%;
+  transition: transform 160ms ease-out, background 160ms ease-out;
+  pointer-events: none;
+}
+
+.switch input:checked ~ .switchTrack .switchThumb {
   transform: translateX(16px);
-}
-
-.logoutBtn {
-  width: 100%;
-  height: 38px;
-  border-radius: 8px;
-  border: 1px solid var(--danger);
-  background: none;
-  color: var(--danger);
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms, color 120ms;
-}
-
-.logoutBtn:hover {
-  background: var(--danger);
-  color: #fff;
+  background: #fff;
 }
 
 .closeBtn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   background: none;
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: background 120ms, color 120ms;
+  transition: background 120ms ease-out, color 120ms ease-out;
 }
 
 .closeBtn:hover {
@@ -212,6 +307,6 @@
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
-  to { opacity: 1; transform: translate(-50%, -50%); }
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(0.98); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }

@@ -36,7 +36,7 @@ test.describe('AuthModal — screens', () => {
   test('AM-3: signup screen shows username field and terms text', async ({ page }) => {
     await openAuthModal(page, 'signup');
     const dialog = page.locator('[role="dialog"]');
-    await expect(dialog.locator('input[autocomplete="username"]')).toBeVisible();
+    await expect(dialog.locator('input[autocomplete="nickname"]')).toBeVisible();
     await expect(dialog.locator('[data-testid="signup-terms"]')).toBeVisible();
   });
 
