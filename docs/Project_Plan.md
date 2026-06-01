@@ -2,296 +2,423 @@
 
 **Project:** Verita AI Knowledge Platform
 **Team:** 3 members — Backend / Frontend / GenAI
-**Sprint:** May 13 – June 17, 2026 (5 weeks)
+**Sprint:** May 11 – June 28, 2026 (7 weeks)
 **Repository:** AET-DevOps26/team-colleague-md
+**Last revised:** June 1, 2026
+
+---
+
+## Overall Status
+
+| Week | Dates     | Status          | Milestone                                    |
+| ---- | --------- | --------------- | -------------------------------------------- |
+| W1   | May 11–17 | ✅ Complete     | Foundation shipped                           |
+| W2   | May 18–24 | ✅ Complete     | User auth + GenAI foundation done            |
+| W3   | May 25–31 | ⚠️ Partial     | IaC done; content layer carries over to W4   |
+| W4   | Jun 1–7   | 🔄 Active       | Content layer + user profile + digest setup  |
+| W5   | Jun 8–14  | ⏳ Upcoming     | Personalization + recommendation live        |
+| W6   | Jun 15–21 | ⏳ Upcoming     | New features + monitoring                    |
+| W7   | Jun 22–28 | ⏳ Upcoming     | Final integration + demo-ready               |
 
 ---
 
 ## Sprint Overview
 
-| Week | Dates     | Backend                          | Frontend                  | GenAI                          | Infrastructure                                          | Deliverable                             |
-| ---- | --------- | -------------------------------- | ------------------------- | ------------------------------ | ------------------------------------------------------- | --------------------------------------- |
-| W1   | May 11–17 | OpenAPI Spec + DB Schema (all 3) | Reseach &Learning         | Reseach &Learning              | Pre-commit, CI basics, Docker Compose                   | Unified openapi.yaml, CI running on PRs |
-| W2   | May 18–24 | User Service                     | Auth UI                   | LangChain + Summarization      | Full CI with tests, Code gen script, Multi-stage Docker | User Service live, Auth UI functional   |
-| W3   | May 25–31 | Content Service                  | Feed + Post pages         | Auto-tag + Daily Digest        | Kubernetes manifests, CD pipeline to K8s                | All content features working            |
-| W4   | Jun 1–7   | Recommendation Service           | Discovery + Profile pages | Cross-service integration + P2 | API Gateway, Prometheus metrics                         | Full backend stack, frontend core done  |
-| W5   | Jun 8–14  | Integration + bug fixes (all 3)  | E2E tests + polish        | RAG (if time)                  | Grafana dashboards + alert rules                        | Demo-ready platform                     |
+| Week | Dates     | Backend                                    | Frontend                              | GenAI                                | Infrastructure                         |
+| ---- | --------- | ------------------------------------------ | ------------------------------------- | ------------------------------------ | -------------------------------------- |
+| W1   | May 11–17 | OpenAPI spec + DB schema                   | Research & learning                   | Research & learning                  | Pre-commit, CI, Docker Compose         |
+| W2   | May 18–24 | User Service auth + profile                | Auth UI                               | LangChain + summarization            | Full CI, multi-stage Docker            |
+| W3   | May 25–31 | *(carry-over resolved)*                    | *(carry-over resolved)*               | *(carry-over resolved)*              | IaC: Terraform + Ansible + CD to VM    |
+| W4   | Jun 1–7   | Content Service + Recommendation bootstrap | Feed, post pages, user profile        | Digest schema + tag subscription     | Kubernetes + CD to AET cluster         |
+| W5   | Jun 8–14  | Recommendation Service                     | Personalized feed + digest management | Daily digest generation              | API gateway + Prometheus               |
+| W6   | Jun 15–21 | Verification + admin                       | Verification + admin UI               | *(P2 features if time permits)*      | Grafana dashboards + alerts            |
+| W7   | Jun 22–28 | Integration + bug fixes                    | E2E tests + polish                    | Integration testing                  | Final deployment + README              |
 
 ---
 
-## Backlog
+## Week 1 — Foundation (May 11–17) ✅ COMPLETE
 
-### Week 1 — Foundation (May 11–17)
+### 🏁 Milestone: W1 — Foundation Shipped
+> Due: May 17 | Status: ✅ Complete
 
-All three members work together. No parallel tracks yet.
-Prerequisites for all subsequent work: unified API spec and DB schema must be finalized before W2.
+- [x] Unified OpenAPI spec covering all 4 services passes lint
+- [x] Database schemas defined for all 3 backend services
+- [x] CI pipeline runs on every PR: spec lint + build check
+- [x] `docker-compose up` starts all services with health checks
+- [x] README documents local setup
 
 ---
 
-**Complete OpenAPI Specification for All Services**
+### Backlog
+
+**Complete OpenAPI Specification for All Services** ✅
 Labels: `all-tracks` `P0` `W1`
-- [ ] Define User Service endpoints (auth, profile, verification, role management)
-- [ ] Define Content Service endpoints (posts, comments, tags, votes, bookmarks)
-- [ ] Define Recommendation Service endpoints (feed, trending, subscriptions, notifications, interactions)
-- [ ] Define GenAI Service endpoints (summarize, suggest-tags, daily-digest)
-- [ ] Validate spec: `npx @redocly/cli lint api/openapi.yaml`
-- [ ] Add request/response examples and pagination parameters for all list endpoints
-- [ ] Generate HTML documentation
+- [x] User Service: auth, profile, verification, role management
+- [x] Content Service: posts, comments, tags, votes, bookmarks
+- [x] Recommendation Service: feed, subscriptions, notifications, interactions
+- [x] GenAI Service: summarize, suggest-tags, daily-digest
+- [x] Spec validated; HTML documentation generated
 
----
-
-**Finalize Database Schema**
+**Finalize Database Schema** ✅
 Labels: `backend` `P0` `W1`
-- [ ] Define user_schema: users, verification_requests
-- [ ] Define content_schema: posts, comments, tags, post_tags, votes, bookmarks
-- [ ] Define recommendation_schema: user_interactions, tag_subscriptions, trending_posts, notifications
-- [ ] GenAI database?
-- [ ] Write CREATE TABLE statements with indexes
-- [ ] Team review
+- [x] User schema: users, verification requests
+- [x] Content schema: posts, comments, tags, votes, bookmarks
+- [x] Recommendation schema: interactions, tag subscriptions, notifications
+- [x] Team review completed
 
----
-
-**CI Pipeline and Pre-commit Setup**
+**CI Pipeline and Pre-commit Setup** ✅
 Labels: `infrastructure` `P0` `W1`
-- [ ] Configure pre-commit hooks (conventional commit format, trailing whitespace)
-- [ ] GitHub Actions CI workflow triggered on all PRs
-- [ ] CI job: lint OpenAPI spec - detail?
-- [ ] CI job: build check for all 3 services - detail?
-- [ ] Add health check endpoints and configs to docker-compose.yml
-- [ ] Update README with local setup instructions
+- [x] Pre-commit hooks configured
+- [x] CI triggers on all PRs: OpenAPI lint + build check for all services
+- [x] Health checks added to docker-compose
+- [x] README updated with local setup instructions
 
 ---
 
-### Week 2 — Core Services (May 19–23)
+## Week 2 — Core Services Foundation (May 18–24) ✅ COMPLETE
+
+### 🏁 Milestone: W2 — User Auth + GenAI Foundation
+> Due: May 24 | Status: ✅ Complete (W2 carry-overs resolved on June 1)
+
+- [x] Users can register and log in; JWT issued and accepted by all services
+- [x] GenAI service starts and returns post summaries
+- [x] Spring Boot 4 / Java 25 upgrade complete across all services
+- [x] PostgreSQL accessible from all services in local docker-compose
+- [x] CI runs unit tests on every PR
 
 ---
 
-**Refine API Specification and Database Schema**
+### Backlog
+
+**Refine API Specification and Database Schema** ✅
 Labels: `backend` `P0` `W2`
-- [ ] Align User Service API endpoints with Frontend_PRD requirements (auth flows, profile data, user settings)
-- [ ] Align Content Service API data model (posts, comments, tags, bookmarks) with frontend needs
-- [ ] Align Recommendation Service API (feed, trending, subscriptions) with frontend discovery pages
-- [ ] Review and update database schemas to ensure all required fields and relationships are present
-- [ ] Team review: backend → frontend, Frontend_PRD → API spec/schema mapping confirmed
-- [ ] Update openapi.yaml and database schema documentation
+- [x] All service APIs aligned with Frontend PRD
+- [x] Gap analysis completed (issue #44)
+- [x] openapi.yaml updated; team review done
 
----
-
-**User Service Implementation**
+**User Service** ✅ — Issue #47
 Labels: `backend` `P0` `W2`
-- [ ] User authentication: registration and login with JWT token generation
-- [ ] User profile management: create, read, and update user profiles with bio, expertise, social links
-- [ ] User settings: manage account preferences (digest frequency, privacy settings)
-- [ ] User role and permission system: ROLE_USER, ROLE_VERIFIED, ROLE_ADMIN with access control checks
-- [ ] Admin capabilities: view and update user roles, manage user verification status
-- [ ] Role-based access control enforced at service level
-- [ ] Unit tests (>80% coverage)
-- [ ] Docker image builds, health check passes at /health
+- [x] Users can register and log in with JWT authentication
+- [x] Users can view and update their profile (bio, expertise, social links)
+- [x] Users can manage account settings (digest frequency, privacy)
+- [x] Admins can manage user roles and verification status
+- [x] Role-based access enforced (ROLE_USER, ROLE_VERIFIED, ROLE_ADMIN)
+- [x] Unit tests passing; Docker image builds; `/health` passes
 
----
-
-**Home UI + Auth UI**
+**Home UI + Auth Modal** ⚠️ — Issue #48
 Labels: `frontend` `P0` `W2`
-- [ ] Home Feed page layout: sidebar, top bar, tag filter bar, post feed (mock data)
-- [ ] Auth Modal: Sign Up and Log In tabs with form validation
-- [ ] JWT token management: store in localStorage, attach to API requests via Authorization header
-- [ ] Protected routes: redirect to Auth Modal if no valid JWT
-- [ ] User Profile page: view user info, edit profile form (bio, expertise, social links)
-- [ ] Settings Modal: account settings, digest frequency, privacy toggles
-- [ ] Responsive layout and component integration
-- [ ] Works against User Service API or Prism mock server
+- [x] Users can sign up and log in via a modal; JWT stored in localStorage
+- [ ] Auth Modal wired to real User Service backend (currently mock) *(carries to W4)*
+- [x] Unauthenticated users are redirected to the auth modal
+- [x] Home feed page layout: sidebar, topbar, tag filter bar, post cards
+- [x] Settings modal: digest frequency and privacy toggles
 
----
-
-**GenAI Service Foundation**
+**GenAI Service Foundation** ✅ — Issue #49
 Labels: `genai` `P1` `W2`
-- [ ] FastAPI project structure and dependencies configured
-- [ ] LangChain integration for LLM interactions (environment-based API key configuration)
-- [ ] Summarization capability: accepts content and returns structured summary
-- [ ] Fallback mechanism for local model support (implementation details TBD)
-- [ ] Basic endpoint testing with pytest
-- [ ] Dockerfile builds and service starts
+- [x] FastAPI service configured with LangChain
+- [x] Post summaries generated and returned as structured output
+- [x] Tests passing; Dockerfile builds
 
----
-
-**Database Setup and Test Data**
+**Database and Local Infrastructure Setup** ✅ — Issue #50
 Labels: `infrastructure` `P0` `W2`
-- [ ] PostgreSQL: initialize local instance (Docker Compose), create databases for all services
-- [ ] MinIO: initialize local S3-compatible storage for file uploads (post cover images, user avatars)
-- [ ] Create test data scripts: seed users, posts, tags, comments for manual testing
-- [ ] Verify connectivity: all services can connect to PostgreSQL and MinIO
-- [ ] Document database connection strings and credentials for local development
-- [ ] Health check endpoints confirm database and storage availability
+- [x] PostgreSQL initializes all service databases on first start
+- [ ] MinIO provides S3-compatible storage for file uploads *(carries to W4)*
+- [ ] Seed script creates test users, posts, and tags for manual testing *(carries to W4)*
+- [x] All services confirm storage connectivity on startup
 
----
-
-**Full CI Pipeline + Docker Improvements**
+**Full CI Pipeline + Docker Improvements** ✅ — Issue #51
 Labels: `infrastructure` `P0` `W2`
-- [ ] CI: run unit tests for all 3 services on every PR
-- [ ] OpenAPI code generation script: api/scripts/gen-all.sh
-  - Generate Spring Boot stubs (openapi-generator-cli)
-  - Generate Python client (openapi-python-client)
-  - Generate TypeScript types (openapi-typescript)
-- [ ] Run gen-all.sh in CI after spec lint
-- [ ] Multi-stage Dockerfiles for all services (smaller production images)
-- [ ] GitHub Actions dependency caching (Maven, pip, npm)
+- [x] CI runs unit tests for all 3 backend services on every PR
+- [x] Multi-stage Dockerfiles in use (smaller production images)
+- [x] GitHub Actions dependency caching (Maven, pip, npm)
+- [x] OpenAPI code generation runs in CI after spec lint
 
 ---
 
-### Week 3 — Content Layer (May 26–30)
+## Week 3 — IaC + Carry-over Resolution (May 25–31) ⚠️ PARTIAL
+
+### 🏁 Milestone: W3 — Cloud Infrastructure Ready
+> Due: May 31 | Status: ⚠️ Partial — content layer items carry over to W4
+
+- [x] Azure VM provisioned via Terraform; services deployable via Ansible
+- [x] Docker images built and pushed on every merge to dev
+- [x] Ansible deployment triggers automatically after successful Docker build
+- [ ] All services running on AET Kubernetes cluster via CD pipeline *(carries to W4)*
+- [ ] Content creation and browsing working end-to-end *(carries to W4)*
 
 ---
 
-**Content Service Implementation**
-Labels: `backend` `P0` `W3`
-- [ ] POST /api/v1/posts — create post with title, Markdown body, tags, source URL
-- [ ] GET /api/v1/posts — list with tag filter, pagination (limit/offset)
-- [ ] GET /api/v1/posts/{id}
-- [ ] PUT /api/v1/posts/{id} — author only
-- [ ] DELETE /api/v1/posts/{id} — author or admin
-- [ ] POST /api/v1/posts/{id}/comments — create comment or reply (parentCommentId)
-- [ ] GET /api/v1/posts/{id}/comments — threaded
-- [ ] PUT and DELETE /api/v1/comments/{id} — author only
-- [ ] POST /api/v1/votes — upvote or downvote post or comment
-- [ ] DELETE /api/v1/votes — remove vote
-- [ ] POST /api/v1/bookmarks, DELETE /api/v1/bookmarks/{id}
-- [ ] GET /api/v1/users/{id}/bookmarks
-- [ ] GET /api/v1/tags, POST /api/v1/tags
-- [ ] Full-text search via PostgreSQL GIN index
-- [ ] Denormalized counters (upvoteCount, commentCount) updated on write
-- [ ] Unit + integration tests, Docker image builds
+### Backlog
 
----
-
-**Feed and Post Pages**
-Labels: `frontend` `P0` `W3`
-- [ ] Homepage feed — chronological post list with pagination
-- [ ] Filter feed by tag (single and multiple)
-- [ ] Post creation page — Markdown editor with real-time preview, tag input, source URL field
-- [ ] Post detail page — full content, AI summary button, vote controls
-- [ ] Comment section — threaded display, submit reply
-- [ ] Bookmark button on post detail
-- [ ] Author can edit and delete their own posts and comments
-
----
-
-**Auto-tag Suggestion + Daily Digest**
-Labels: `genai` `P1` `W3`
-- [ ] POST /api/v1/genai/suggest-tags — analyze post content, return ranked tag list
-- [ ] POST /api/v1/genai/daily-digest — aggregate posts by topic, return summary per subscribed tag
-- [ ] Scheduled trigger for daily digest (cron at 04:00)
-- [ ] Response caching to avoid redundant LLM calls (Redis or in-memory)
-- [ ] pytest tests for both endpoints
-
----
-
-**Kubernetes Setup + CD Pipeline**
+**Cloud Deployment Deliverable** — Issue #74
 Labels: `infrastructure` `P0` `W3`
-- [ ] Write Kubernetes manifests for all services (Deployment, Service, ConfigMap, Secret)
-- [ ] Helm chart or raw manifests — choose one approach and document it
-- [ ] CD pipeline: auto-deploy to K8s cluster on merge to main
-- [ ] Kubernetes Secrets for all API keys and DB credentials (no hardcoded values)
-- [ ] Verify all services start and communicate in cluster
-- [ ] Add K8s setup instructions to README
+- [x] Azure VM provisioned via Terraform (`infra/terraform/`)
+- [x] Ansible playbooks deploy and configure all services (`infra/ansible/`)
+- [x] Docker build + push to GHCR on merge to dev
+- [x] Ansible deploy auto-triggers after successful Docker build
+- [ ] Kubernetes manifests for all services (Deployment, Service, ConfigMap, Secret)
+- [ ] Helm chart packaging all services
+- [ ] CD pipeline deploys to AET K8s cluster via Helm on merge to dev
+- [ ] Full deployment verified as reproducible from scratch
+
+**Content Service** *(carry-over to W4)*
+Labels: `backend` `P0` `W3`
+- [ ] Authors can create, edit, and delete their own posts
+- [ ] Feed supports tag filtering: unauthenticated → chronological results (Content Service); authenticated → engagement-ranked results for that topic (Recommendation Service)
+- [ ] Users can comment on posts and reply to other comments
+- [ ] Users can upvote posts and comments
+- [ ] Users can bookmark posts and view their saved posts
+- [ ] Full-text search across post content
+- [ ] Post summary auto-generated by GenAI on creation
+- [ ] Unit and integration tests passing; Docker image builds
+
+**Feed and Post Pages** *(carry-over to W4)*
+Labels: `frontend` `P0` `W3`
+- [ ] Home feed displays real posts from Content Service
+- [ ] Tag filter bar: selecting a tag shows engagement-ranked results for logged-in users (`/feed/trending?tag=`) or chronological results for guests (`/posts?tag=`); UI shows "For You" vs topic mode clearly
+- [ ] Authors can write posts in a Markdown editor with tag input and cover image
+- [ ] Post detail page shows full content, auto-generated AI summary, and vote controls
+- [ ] Comment section supports threaded replies
+- [ ] Authors can edit and delete their own posts and comments
 
 ---
 
-### Week 4 — Recommendation + Discovery (Jun 2–6)
+## Week 4 — Content Layer + User Profile + Digest Setup (Jun 1–7) 🔄 ACTIVE
+
+### 🏁 Milestone: W4 — Content + Auth End-to-End; Digest Preferences Saved
+> Due: June 7 | Status: 🔄 Active
+
+- [ ] Auth Modal sign-up and log-in working against real User Service
+- [ ] MinIO storage and seed data script working locally
+- [ ] Home feed displays real posts from Content Service; post detail shows auto-generated AI summary
+- [ ] Digest tag preferences can be saved and retrieved per user
+- [ ] All services deploy to AET K8s cluster via CD pipeline
+- [ ] All W3 carry-over issues closed
+- [ ] *(optional)* Post editor, user profile page, and Digest Management page complete
 
 ---
 
-**Recommendation Service Implementation**
-Labels: `backend` `P1` `W4`
-- [ ] GET /api/v1/feed — personalized feed based on user interaction history
-- [ ] GET /api/v1/feed/personalized — weighted by subscriptions and interactions
-- [ ] GET /api/v1/trending?timeWindow=DAY|WEEK — ranked by trending score
-- [ ] POST /api/v1/subscriptions — subscribe to tag
-- [ ] DELETE /api/v1/subscriptions/{tagId} — unsubscribe
-- [ ] GET /api/v1/subscriptions
-- [ ] GET /api/v1/notifications
-- [ ] PUT /api/v1/notifications/{id}/read
-- [ ] DELETE /api/v1/notifications/{id}
-- [ ] POST /api/v1/interactions/track — log VIEW, CLICK, UPVOTE, COMMENT, BOOKMARK
-- [ ] Notification types: COMMENT, UPVOTE, VERIFICATION_APPROVED, DAILY_DIGEST, NEW_POST_IN_SUBSCRIBED_TAG
-- [ ] Unit + integration tests, Docker image builds
+### Backlog
+
+**Auth Modal — Backend Integration** *(carry-over from W2)*
+Labels: `frontend` `P0` `W4`
+- [ ] Auth Modal sign-up and log-in wired to real User Service (replace mock)
+- [ ] JWT received from backend stored and attached to all subsequent API requests
+- [ ] Protected routes verified against real JWT
+
+**MinIO + Seed Data Setup** *(carry-over from W2)*
+Labels: `infrastructure` `P0` `W4`
+- [ ] MinIO provides S3-compatible storage for file uploads (post cover images, user avatars)
+- [ ] Seed script creates test users, posts, tags, and comments for manual testing
+- [ ] All services confirm storage connectivity on startup
+
+**Resolve W3 Infrastructure Carry-overs**
+Labels: `infrastructure` `P0` `W4`
+- [ ] Kubernetes manifests and Helm chart complete for all services
+- [ ] CD pipeline to AET K8s cluster working; close issue #74
+- [ ] Full deployment verified as reproducible from scratch
+
+**Content Service** *(carry-over from W3)*
+Labels: `backend` `P0` `W4`
+- [ ] Authors can create, edit, and delete their own posts
+- [ ] Users can browse and filter the post feed by tag
+- [ ] Users can comment on posts and reply to other comments
+- [ ] Users can upvote posts and comments
+- [ ] Users can bookmark posts and view their saved posts
+- [ ] Full-text search across post content
+- [ ] Post summary auto-generated by GenAI on creation (no manual trigger)
+- [ ] DB schema fix: add `status` (DRAFT/PUBLISHED) and `avatar_url` fields
+- [ ] Unit and integration tests passing; Docker image builds
+
+**User Profile Page** *(optional — complete in W5 if not reached)*
+Labels: `frontend` `P2` `W4`
+- [ ] Users can view their own and other users' profiles (bio, expertise, links, post count)
+- [ ] Users can edit their profile including avatar upload
+
+**Feed and Post Pages** *(carry-over from W3)*
+Labels: `frontend` `P0` `W4`
+- [ ] Home feed displays real posts from Content Service
+- [ ] Tag filter bar: selecting a tag shows engagement-ranked results for logged-in users (`/feed/trending?tag=`) or chronological results for guests (`/posts?tag=`); UI shows "For You" vs topic mode clearly
+- [ ] Authors can write posts in a Markdown editor with tag input and cover image *(post editor — optional if not reached)*
+- [ ] Post detail page shows full content, auto-generated AI summary, and vote controls
+- [ ] Comment section supports threaded replies
+- [ ] Authors can edit and delete their own posts and comments
+
+**Digest Management — Tag Preferences** *(backend)*
+Labels: `backend` `P0` `W4`
+- [ ] Users can save a list of topics they are interested in
+- [ ] Saved topic preferences are stored per user and retrievable by other services
+- [ ] Preferences are available to GenAI for digest generation and to Recommendation Service for feed weighting
+
+**Digest Management — Page** *(optional — complete in W5 if not reached)*
+Labels: `frontend` `P2` `W4`
+- [ ] Users can open the Digest Management page from the sidebar
+- [ ] Users can search, add, and remove tags from their digest preferences
+- [ ] Previously saved preferences are loaded and editable
+- [ ] Past digests are listed and viewable (date, summary per subscribed tag)
+
+**Daily Digest — Schema Design + Content Service Update**
+Labels: `genai` `backend` `P1` `W4`
+- [ ] Define Digest schema: digest record linked to user, date, subscribed tags, and generated content per tag
+- [ ] Content Service updated to expose the data fields required for digest generation
+- [ ] Schema reviewed by backend and GenAI tracks before W5 implementation begins
 
 ---
 
-**Discovery + Profile Pages**
-Labels: `frontend` `P1` `W4`
-- [ ] Trending page with DAY / WEEK filter
-- [ ] Tag subscription UI — subscribe/unsubscribe from post detail and tag pages
-- [ ] Personalized feed on homepage (replace chronological once Recommendation Service is live)
-- [ ] User profile page — view and edit bio, expertise, social links
-- [ ] Notification list — mark as read, delete
-- [ ] (P2) Semantic search bar with natural language input
+### 🔗 Integration — W4
+
+- **Backend + Frontend**: register/login → profile view/edit tested end-to-end against real User Service
+- **Backend + Frontend**: home feed wired to real Content Service; post creation form live
+- **Backend + GenAI**: post summary auto-generated by GenAI on every new post creation
+- **Backend + GenAI**: tag suggestions returned to the post editor from GenAI
+- **All three**: `docker-compose up` brings all 5 services up; data flows verified between them
 
 ---
 
-**Cross-service Integration + P2 Features**
-Labels: `genai` `P1` `W4`
-- [ ] Integration: summarize triggered on post creation (Content → GenAI)
-- [ ] Integration: tag suggestions displayed in post creation form
-- [ ] Integration: daily digest uses subscriptions from Recommendation Service
-- [ ] End-to-end test for all GenAI flows
-- [ ] (P2) POST /api/v1/genai/sentiment — return sentiment score (0–100, bullish/skeptical) for a post
-- [ ] (P2) POST /api/v1/genai/verify — flag potentially misleading content
+## Week 5 — Personalization + Recommendation (Jun 8–14) ⏳ UPCOMING
+
+### 🏁 Milestone: W5 — Personalized Feed Live; Daily Digest Delivered
+> Due: June 14 | Status: ⏳ Upcoming
+
+- [ ] Homepage feed is weighted by the user's digest topic preferences
+- [ ] Users receive a daily digest based on their selected topics
+- [ ] Users receive in-app notifications for relevant activity
+- [ ] All 4 services communicate correctly in the K8s cluster
+- [ ] Prometheus metrics visible for all services
 
 ---
+
+### Backlog
+
+**Recommendation Service**
+Labels: `backend` `P1` `W5`
+- [ ] Homepage feed is ranked and weighted by the user's saved digest topic preferences
+- [ ] Users receive notifications when someone comments on or upvotes their post, and when a new post appears in one of their subscribed topics
+- [ ] User interactions (views, clicks, votes, bookmarks) are tracked to improve ranking over time
+
+**Personalized Homepage + Notifications**
+Labels: `frontend` `P1` `W5`
+- [ ] Homepage feed default ("For You"): personalized via `/feed/personal` for logged-in users; chronological for guests
+- [ ] Tag selected state ("Topic: X"): engagement-ranked via `/feed/trending?tag=` for logged-in users; chronological via `/posts?tag=` for guests — two modes are mutually exclusive, clearly indicated in UI
+- [ ] Notification list shows new activity with mark-as-read and delete actions
+- [ ] Digest Management page: today's generated digest is displayed under the preferences section
+
+**Daily Digest Generation**
+Labels: `genai` `P0` `W5`
+- [ ] A daily digest is generated automatically (scheduled at 04:00) aggregating posts per subscribed topic
+- [ ] Digest output is stored and accessible from the Digest Management page
+- [ ] Digest uses live topic preferences from Recommendation Service
+- [ ] Response caching avoids redundant LLM calls for the same content
+- [ ] Tests covering digest generation and caching
 
 **API Gateway + Prometheus**
-Labels: `infrastructure` `P0` `W4`
-- [ ] Deploy Traefik or NGINX as API gateway in K8s
-- [ ] Route all external traffic through gateway
-- [ ] Centralize JWT validation at gateway level
-- [ ] Add Prometheus metrics to all backend services:
-  - Request count per endpoint
-  - Request latency (p50, p90, p99)
-  - Error rate (4xx, 5xx)
-- [ ] Prometheus scrape config for all services and GenAI service
-- [ ] Verify metrics appear in Prometheus UI
+Labels: `infrastructure` `P0` `W5`
+- [ ] All external traffic routes through an API gateway (Traefik or NGINX)
+- [ ] JWT validation centralised at the gateway level
+- [ ] All services expose Prometheus metrics (request rate, latency, error rate)
+- [ ] Prometheus scrape config covers all services including GenAI
+- [ ] Metrics visible in Prometheus UI
 
 ---
 
-### Week 5 — Integration and Release (Jun 9–13)
+### 🔗 Integration — W5
 
-All three members collaborate on final integration, testing, and release preparation.
+- **Backend + GenAI**: daily digest generation pulls live topic preferences from Recommendation Service
+- **Backend + Frontend**: personalized feed connected to Recommendation Service on the homepage
+- **Backend + Frontend**: notification list wired to real notification data
+- **Frontend + GenAI**: Digest Management page displays real digest content from GenAI output
+- **All three**: end-to-end journey — register → set digest topics → create post → receive digest
 
 ---
+
+## Week 6 — New Features + Monitoring (Jun 15–21) ⏳ UPCOMING
+
+### 🏁 Milestone: W6 — Verification Flow Live; Grafana Dashboards Committed
+> Due: June 21 | Status: ⏳ Upcoming
+
+- [ ] Users can apply for verified status; admins can approve or reject
+- [ ] Admins can manage users and remove content
+- [ ] Grafana dashboards showing per-service metrics committed to repo
+- [ ] At least one alert rule configured and committed
+
+---
+
+### Backlog
+
+**User Verification + Admin Panel** *(backend)*
+Labels: `backend` `P1` `W6`
+- [ ] Users can submit a verification request
+- [ ] Admins can view pending requests and approve or reject them
+- [ ] Approved users receive a VERIFIED badge visible on their profile and posts
+- [ ] Admins can update user roles and ban/unban users
+- [ ] Admins can remove posts that violate community guidelines
+
+**User Verification + Admin Panel** *(frontend)*
+Labels: `frontend` `P1` `W6`
+- [ ] Users can submit a verification request from their profile page
+- [ ] Verified badge is displayed on profiles and post cards
+- [ ] Admin panel: list users, change roles, ban users, remove posts
+
+**Grafana Dashboards + Alert Rules**
+Labels: `infrastructure` `P0` `W6`
+- [ ] Grafana dashboards showing per-service request rate, latency, and error rate
+- [ ] GenAI service LLM call count and latency visible in dashboard
+- [ ] At least one alert rule configured (e.g. service down or latency > 2 s)
+- [ ] Dashboard JSON files and alert rule files committed to `infra/grafana/`
+
+**P2 — Trending Feed** *(optional, if time permits)*
+Labels: `backend` `frontend` `P2` `W6`
+- [ ] A section or page surfaces posts gaining the most engagement recently
+- [ ] Users can filter by past day or past week
+
+---
+
+### 🔗 Integration — W6
+
+- **Backend + Frontend**: verification request → admin approval → badge appears on profile, end-to-end
+- **Infra + All**: Grafana dashboards verified against live Prometheus data from the K8s cluster
+
+---
+
+## Week 7 — Final Integration + Demo (Jun 22–28) ⏳ UPCOMING
+
+### 🏁 Milestone: W7 — Demo-Ready Platform
+> Due: June 28 | Status: ⏳ Upcoming
+
+- [ ] Full user journey works end-to-end: Register → Log in → Create post → View feed → Set digest topics → Receive digest → Comment → Vote → Bookmark
+- [ ] All P0 pages are mobile-responsive with loading and error states handled
+- [ ] Playwright E2E tests cover all critical flows
+- [ ] CD pipeline deploys cleanly from `main` to K8s
+- [ ] Grafana dashboards live and committed
+- [ ] README final review complete
+- [ ] Presentation slides and live demo rehearsed
+
+---
+
+### Backlog
 
 **Full System Integration + Bug Fixes**
-Labels: `all-tracks` `P0` `W5`
-- [ ] End-to-end user journey: Register → Login → Create Post → AI Summary → Comment → Vote → Bookmark
-- [ ] Verify cross-service communication under realistic load
-- [ ] Fix bugs identified during integration
-- [ ] Confirm CD pipeline deploys cleanly from main to K8s
-
----
+Labels: `all-tracks` `P0` `W7`
+- [ ] Complete end-to-end user journey verified across all services
+- [ ] Cross-service communication tested under realistic load
+- [ ] All bugs found during integration fixed
 
 **Frontend E2E Tests + Final Polish**
-Labels: `frontend` `P0` `W5`
+Labels: `frontend` `P0` `W7`
 - [ ] All P0 pages complete and mobile-responsive
-- [ ] E2E tests for critical user flows (auth, post creation, feed, comments)
-- [ ] Loading states and error states handled throughout
-- [ ] (P2) Semantic search UI connected to GenAI RAG endpoint if available
+- [ ] Loading and error states handled throughout the app
+- [ ] Playwright E2E tests: auth flow, post creation, feed, comments, digest management
+
+**Final Deployment + Documentation**
+Labels: `infrastructure` `P0` `W7`
+- [ ] CD pipeline deploys cleanly from `main` to K8s
+- [ ] Final README: local setup, architecture overview, API docs reference, CI/CD, monitoring, member responsibilities
+- [ ] Presentation slides complete
+- [ ] Live demo rehearsed by the full team
 
 ---
 
-**GenAI P2 — RAG with Weaviate**
-Labels: `genai` `P2` `W5`
-- [ ] Weaviate vector database deployed in K8s
-- [ ] Post content embedded and indexed on creation
-- [ ] POST /api/v1/genai/search — semantic similarity query, return ranked post list
-- [ ] Connect to frontend search UI
+### 🔗 Integration — W7
 
----
-
-**Grafana Dashboards + Alerts + Final Submission**
-Labels: `infrastructure` `P0` `W5`
-- [ ] Grafana dashboards showing per-service: request rate, latency, error rate
-- [ ] GenAI service latency and LLM call count visible in dashboard
-- [ ] At least 1 alert rule configured (e.g., service down or latency > 2s)
-- [ ] Export all dashboards as .json files committed to repo
-- [ ] Alert rule files committed to repo
-- [ ] Final README review: setup, architecture, API docs reference, CI/CD, monitoring, member responsibilities
-- [ ] Presentation slides and live demo preparation
+- **All three**: full regression pass covering every P0 user story
+- **All three**: demo walkthrough rehearsed — each member presents their track's contribution
