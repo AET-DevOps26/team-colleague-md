@@ -11,7 +11,7 @@ jobs:
   deploy:
     name: Deploy Verita to Azure VM
     # For workflow_run: only deploy after a push to main (not a PR build); always run for manual triggers
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-latest
 
     steps:
