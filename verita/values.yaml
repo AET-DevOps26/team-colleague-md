@@ -7,7 +7,7 @@ content:
     repository: content-service
     tag: dev
     digest: sha256:795b8bc3db3bf4e77fd1d809bf0028525ddb22dd4d0d702042476603fd2b94c6
-    pullPolicy: IfNotPresent
+    pullPolicy: latest
   service:
     type: ClusterIP
     port: 8082
@@ -17,7 +17,7 @@ user:
     repository: user-service
     tag: dev
     digest: sha256:b8674d763a5b6ef02b6f2399c3d2e19b84bdb2caf7d005fb4fd1ad210596cc0c
-    pullPolicy: IfNotPresent
+    pullPolicy: latest
   service:
     type: ClusterIP
     port: 8081
@@ -27,7 +27,7 @@ recommendation:
     repository: recommendation-service
     tag: dev
     digest: sha256:05c59d6e2e91447b3d0f135b8474221a974d0dfb37c75ae43a4fd148f9ad4f8c
-    pullPolicy: IfNotPresent
+    pullPolicy: latest
   service:
     type: ClusterIP
     port: 8083
@@ -35,8 +35,9 @@ genai:
   replicaCount: 1
   image:
     repository: genai-service
-    tag: latest
-    pullPolicy: IfNotPresent
+    tag: dev
+    digest: sha256:0ad5a54874c79a02b085810ef3320ae20430e4ab22968d0c0f0b492f1f466c2a
+    pullPolicy: latest
   service:
     type: ClusterIP
     port: 8000
@@ -44,8 +45,9 @@ frontend:
   replicaCount: 1
   image:
     repository: frontend
-    tag: latest
-    pullPolicy: IfNotPresent
+    tag: dev
+    digest: sha256:92ddb67ad0be43f56506ebc9e42b4c902ca07ab78dc9502adc02aef2f3e356b9
+    pullPolicy: latest
   service:
     type: ClusterIP
     port: 80
