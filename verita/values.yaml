@@ -1,11 +1,12 @@
 ﻿global:
-  registry: registry.example.com
+  registry: ghcr.io/aet-devops26/team-colleague-md
   imagePullSecrets: []
 content:
   replicaCount: 1
   image:
-    repository: verita/content
-    tag: latest
+    repository: content-service
+    tag: dev
+    digest: sha256:795b8bc3db3bf4e77fd1d809bf0028525ddb22dd4d0d702042476603fd2b94c6
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -13,8 +14,9 @@ content:
 user:
   replicaCount: 1
   image:
-    repository: verita/user
-    tag: latest
+    repository: user-service
+    tag: dev
+    digest: sha256:b8674d763a5b6ef02b6f2399c3d2e19b84bdb2caf7d005fb4fd1ad210596cc0c
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -22,8 +24,9 @@ user:
 recommendation:
   replicaCount: 1
   image:
-    repository: verita/recommendation
-    tag: latest
+    repository: recommendation-service
+    tag: dev
+    digest: sha256:05c59d6e2e91447b3d0f135b8474221a974d0dfb37c75ae43a4fd148f9ad4f8c
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -31,7 +34,7 @@ recommendation:
 genai:
   replicaCount: 1
   image:
-    repository: verita/genai
+    repository: genai-service
     tag: latest
     pullPolicy: IfNotPresent
   service:
@@ -40,7 +43,7 @@ genai:
 frontend:
   replicaCount: 1
   image:
-    repository: verita/frontend
+    repository: frontend
     tag: latest
     pullPolicy: IfNotPresent
   service:
@@ -48,6 +51,14 @@ frontend:
     port: 80
 ingress:
   enabled: true
-  host: example.k8s.ase.cit.tum.de
+  host: go38loq.stud.k8s.ase.cit.tum.de
   tls:
     secretName: verita-tls
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "32Mi"
+  limits:
+    cpu: "500m"
+    memory: "128Mi"

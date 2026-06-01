@@ -1,10 +1,4 @@
-﻿global:
-  registry: ""
-replicaCount: 1
-image:
-  repository: verita/content
-  tag: latest
-  pullPolicy: IfNotPresent
+﻿replicaCount: 1
 service:
   type: ClusterIP
   port: 8082

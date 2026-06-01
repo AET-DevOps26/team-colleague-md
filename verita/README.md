@@ -1,4 +1,28 @@
-﻿# Verita Helm chart
+﻿## Environment values
+
+The default `values.yaml` contains the current dev configuration with pinned image digests.
+
+Deploy to dev (default):
+
+```powershell
+helm upgrade --install verita . -n my-namespace --create-namespace
+```
+
+Switch to production image tags with `values-prod.yaml`:
+
+```powershell
+helm upgrade --install verita . -n my-namespace --create-namespace -f values-prod.yaml
+```
+
+The chart builds image references like this:
+
+```text
+ghcr.io/aet-devops26/team-colleague-md/<service-name>:<tag>@<digest>
+```
+
+When a digest is pinned, Kubernetes will deploy that exact immutable image. When only `tag` is set, Kubernetes may pull a new image on pod restart.
+
+# Verita Helm chart
 This repository now uses `verita` as an umbrella chart with five subcharts:
 - `content`
 - `user`

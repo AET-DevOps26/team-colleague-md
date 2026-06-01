@@ -1,0 +1,29 @@
+global:
+  registry: ghcr.io/aet-devops26/team-colleague-md
+  imagePullSecrets: []
+content:
+  image:
+    repository: content-service
+    tag: prod
+user:
+  image:
+    repository: user-service
+    tag: prod
+recommendation:
+  image:
+    repository: recommendation-service
+    tag: prod
+genai:
+  image:
+    repository: genai-service
+    tag: prod
+frontend:
+  image:
+    repository: frontend
+    tag: prod
+ingress:
+  enabled: true
+  host: example.k8s.ase.cit.tum.de
+  tls:
+    secretName: verita-tls
+

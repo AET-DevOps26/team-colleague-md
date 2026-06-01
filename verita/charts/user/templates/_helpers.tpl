@@ -39,10 +39,18 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- define "user.image" -}}
 {{- $registry := default "" .Values.global.registry -}}
+{{- $repository := .Values.image.repository -}}
 {{- $tag := default .Chart.AppVersion .Values.image.tag -}}
-{{- if $registry -}}
-{{- printf "%s/%s:%s" $registry .Values.image.repository $tag -}}
-{{- else -}}
-{{- printf "%s:%s" .Values.image.repository $tag -}}
+{{- $digest := default "" .Values.image.digest -}}
+{{- $image := printf "%s/%s" $registry $repository -}}
+{{- if not $registry -}}
+{{- $image = $repository -}}
 {{- end -}}
+{{- if $tag -}}
+{{- $image = printf "%s:%s" $image $tag -}}
+{{- end -}}
+{{- if $digest -}}
+{{- $image = printf "%s@%s" $image $digest -}}
+{{- end -}}
+{{- $image -}}
 {{- end }}
