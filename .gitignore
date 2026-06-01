@@ -46,9 +46,34 @@ out/
 # Claude Code workspace state
 .claude/
 
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+venv/
+.venv/
+.env
+*.egg
+
+### basedpyright ###
+pyrightconfig.json
 # Claude Code instructions (local only)
 CLAUDE.md
 
 # Playwright failure artifacts (auto-generated, not for version control)
 frontend/test-results/
 frontend/playwright-report/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform.lock.hcl
+
+# SSH keys
+*.pem
+*.pub
+verita_key

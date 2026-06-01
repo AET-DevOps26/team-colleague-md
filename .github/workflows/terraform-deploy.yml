@@ -1,0 +1,60 @@
+name: Terraform Deploy
+
+on:
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform-deploy.yml"
+  push:
+    branches:
+      - dev
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform-deploy.yml"
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  TF_VAR_ssh_public_key: ${{ secrets.VM_SSH_PUBLIC_KEY }}
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event_name == 'push' && 'Apply' || 'Plan' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        if: github.event_name == 'pull_request'
+        run: terraform plan -no-color
+
+      - name: Terraform Apply
+        if: github.event_name == 'push'
+        run: terraform apply -auto-approve
+
+      - name: Print VM Public IP
+        if: github.event_name == 'push'
+        run: |
+          echo "::notice title=VM Public IP::$(terraform output -raw vm_public_ip)"
+          echo "Next: set AZURE_PUBLIC_IP GitHub Variable to the IP above."

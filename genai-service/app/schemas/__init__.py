@@ -1,0 +1,1 @@
+# GenAI Service - Schemas Package

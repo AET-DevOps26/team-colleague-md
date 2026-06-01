@@ -194,8 +194,10 @@ Stage 2 (runtime)  nginx:alpine
 
 ### 4.2 docker-compose.yml
 
-`docker-compose.yml` lives at the repository root. Each service entry declares its build
-context (the directory containing the `Dockerfile`) and the host port mapping.
+`docker-compose.yml` lives at the repository root. Each application service entry declares its
+build context (the directory containing the `Dockerfile`) and the host port mapping. The
+`user-service` runs with the `dev` Spring profile and connects to the PostgreSQL `user-db`
+container through Spring Data JPA.
 
 | Service         | Build context            | Host → Container port | Profile |
 | --------------- | ------------------------ | --------------------- | ------- |

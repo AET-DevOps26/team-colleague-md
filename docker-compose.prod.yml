@@ -1,0 +1,94 @@
+# Production compose file — uses pre-built images from ghcr.io.
+# Uploaded to the VM by Ansible; requires prior docker login to ghcr.io.
+services:
+  user-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-verita_users}
+      POSTGRES_USER: ${DB_USER:-verita_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-verita_user} -d ${DB_NAME:-verita_users}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    image: ghcr.io/aet-devops26/team-colleague-md/user-service:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=user-db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-verita_users}
+      - DB_USER=${DB_USER:-verita_user}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      user-db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  content-service:
+    image: ghcr.io/aet-devops26/team-colleague-md/content-service:latest
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  recommendation-service:
+    image: ghcr.io/aet-devops26/team-colleague-md/recommendation-service:latest
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  genai-service:
+    image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    image: ghcr.io/aet-devops26/team-colleague-md/frontend:latest
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  user-db-data:

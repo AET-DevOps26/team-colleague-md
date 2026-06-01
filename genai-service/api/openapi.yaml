@@ -1,0 +1,30 @@
+openapi: 3.1.0
+
+info:
+  title: Title
+  version: 1.0.0
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.myservice.internal
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
