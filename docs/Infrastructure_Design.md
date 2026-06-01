@@ -37,7 +37,7 @@ team-colleague-md/
 │       ├── ci-recommendation-service.yml
 │       ├── ci-genai-service.yml
 │       ├── ci-frontend.yml
-│       ├── docker-build.yml
+│       ├── docker-publish.yml
 │       ├── terraform-deploy.yml
 │       ├── ansible-deploy.yml
 │       └── openapi-lint.yml
@@ -211,6 +211,8 @@ a workflow only runs when files in that service change.
 | Workflow | Trigger path | Job |
 |----------|-------------|-----|
 | `ci-user-service.yml` | `backend/user-service/**` | `./gradlew build` (compile + unit tests) |
+| `ci-content-service.yml` | `backend/content-service/**` | `./gradlew build` (compile + unit tests) |
+| `ci-recommendation-service.yml` | `backend/recommendation-service/**` | `./gradlew build` (compile + unit tests) |
 | `ci-genai-service.yml` | `genai-service/**` | `pip install -r requirements.txt` + import check + `pytest -q` |
 | `ci-frontend.yml` | `frontend/**` | `npm ci` → `npm run lint` → `npm run build` (includes `tsc`) |
 
@@ -245,15 +247,16 @@ It builds static HTML documentation for all services using Redocly CLI and deplo
 
 ### 5.5 Docker Build and Publish
 
-`docker-build.yml` triggers on pull requests and pushes to `dev` when service source files change.
+`docker-publish.yml` triggers on pull requests and pushes to `dev` and `main` when service source files change.
 It replaces the earlier `ci-docker.yml` and adds image publishing on merge.
 
 | Event | Action |
 |-------|--------|
-| Pull request to `dev` | Build all service images (validate only, no push) |
-| Push to `dev` (merge) | Build and push all images to `ghcr.io` |
+| Pull request to `dev` or `main` | Build all service images (validate only, no push) |
+| Push to `dev` (merge) | Build and push all images to `ghcr.io` with `:dev` tag |
+| Push to `main` (merge) | Build and push all images to `ghcr.io` with `:latest` tag |
 
-Images are published to `ghcr.io/aet-devops26/team-colleague-md/<service-name>:latest`.
+Images are published to `ghcr.io/aet-devops26/team-colleague-md/<service-name>` with an environment-specific tag (`:latest` for `main`, `:dev` for `dev`, `pr-<N>` for pull requests).
 Authentication uses the automatic `GITHUB_TOKEN`; no additional secret is required.
 
 | Service | Build context |
@@ -287,6 +290,7 @@ ssh-keygen -t rsa -b 4096 -f verita_key
 |------|-----|-------|
 | Secret | `AZURE_PRIVATE_KEY` | Contents of `verita_key` |
 | Secret | `VM_SSH_PUBLIC_KEY` | Contents of `verita_key.pub` |
+| Secret | `DB_PASSWORD` | A strong password for the PostgreSQL `verita_user` account |
 | Variable | `AZURE_USER` | `azureuser` |
 
 **3. Run `bootstrap.sh`** to create the Terraform state backend and Service Principal:
@@ -347,11 +351,13 @@ SSH using the key stored in the `AZURE_PRIVATE_KEY` GitHub Secret.
 **`deploy.yml` — three phases:**
 
 1. **System preparation** — install Docker Engine and the Compose plugin; add `azureuser` to the `docker` group.
-2. **File sync** — copy `docker-compose.prod.yml` to `/home/azureuser/verita/` on the VM.
+2. **File sync** — copy `docker-compose.prod.yml` to `/home/azureuser/verita/` on the VM; write a `.env` file containing `DB_NAME`, `DB_USER`, and `DB_PASSWORD` (sourced from the `DB_PASSWORD` GitHub Secret).
 3. **Service start** — log in to `ghcr.io`, pull the latest images, run `docker compose up -d --remove-orphans`.
 
 `docker-compose.prod.yml` references pre-built images from `ghcr.io` instead of building
-on the VM, keeping the VM's resource usage low.
+on the VM, keeping the VM's resource usage low. It also runs a `user-db` PostgreSQL 16
+container as a sidecar for the `user-service`; the database password is injected via the
+`.env` file written in step 2.
 
 ### 6.4 GitHub Secrets and Variables
 
@@ -363,6 +369,7 @@ on the VM, keeping the VM's resource usage low.
 | Secret | `ARM_TENANT_ID` | Terraform — Azure AD tenant ID |
 | Secret | `VM_SSH_PUBLIC_KEY` | Terraform — public key written to VM `authorized_keys` |
 | Secret | `AZURE_PRIVATE_KEY` | Ansible — private key for SSH access to the VM |
+| Secret | `DB_PASSWORD` | Ansible — PostgreSQL password written to `.env` on the VM |
 | Variable | `AZURE_USER` | Ansible — VM admin username (`azureuser`) |
 | Variable | `AZURE_PUBLIC_IP` | Ansible — VM public IP (set after first `terraform apply`) |
 
@@ -389,18 +396,16 @@ After a successful apply, the VM public IP is printed as a workflow notice.
 | Event | Action |
 |-------|--------|
 | `workflow_dispatch` | Manual trigger from the GitHub Actions UI |
-| `workflow_run` (after `docker-build.yml` on `dev`) | Automatic trigger when new images are pushed |
+| `workflow_run` (after `"Docker Build and Publish"` on `main`) | Automatic trigger when new images are pushed to `main` |
 
-The workflow generates `inventory.ini` at runtime from the `AZURE_PUBLIC_IP` variable,
-writes the SSH key from `AZURE_PRIVATE_KEY` to a temporary file, then runs
-`ansible-playbook infra/ansible/deploy.yml`.
+The workflow only auto-deploys for push events (not PR builds). It generates `inventory.ini` at runtime from the `AZURE_PUBLIC_IP` variable, writes the SSH key from `AZURE_PRIVATE_KEY` to a temporary file, then runs `ansible-playbook infra/ansible/deploy.yml`.
 
 **End-to-end deployment flow:**
 
 ```
-Code merged to dev
-  → docker-build.yml   builds and pushes images to ghcr.io
-  → ansible-deploy.yml pulls new images and restarts services on the VM
+Code merged to main
+  → docker-publish.yml  builds and pushes :latest images to ghcr.io
+  → ansible-deploy.yml  pulls new images and restarts services on the VM
 ```
 
 ---
