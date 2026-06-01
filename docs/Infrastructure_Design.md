@@ -6,23 +6,24 @@ Document of Verita's infrastructure goals and the toolchain used to achieve them
 reliable local development, automated quality enforcement, reproducible builds,
 and observable cloud-native deployments.
 
-| Goal                        | Tool(s)                              |
-|-----------------------------|--------------------------------------|
-| Code quality enforcement    | pre-commit                           |
-| Containerization            | Docker, Docker Compose               |
-| CI — build & test           | GitHub Actions                       |
-| CI — API contract           | GitHub Actions + Redocly             |
-| Infrastructure provisioning | Terraform                            |
-| Application deployment      | Ansible                              |
-| CD — IaC                    | GitHub Actions + Terraform           |
-| CD — VM deployment          | GitHub Actions + Ansible             |
-| CD — K8s deployment         | GitHub Actions + kubectl / Helm      |
-| Kubernetes orchestration    | Rancher (local), Azure (cloud)       |
-| Metrics & alerting          | Prometheus, Grafana                  |
+| Goal                        | Tool(s)                         |
+| --------------------------- | ------------------------------- |
+| Code quality enforcement    | pre-commit                      |
+| Containerization            | Docker, Docker Compose          |
+| CI — build & test           | GitHub Actions                  |
+| CI — API contract           | GitHub Actions + Redocly        |
+| Infrastructure provisioning | Terraform                       |
+| Application deployment      | Ansible                         |
+| CD — IaC                    | GitHub Actions + Terraform      |
+| CD — VM deployment          | GitHub Actions + Ansible        |
+| CD — K8s deployment         | GitHub Actions + kubectl / Helm |
+| Kubernetes orchestration    | Rancher (local), Azure (cloud)  |
+| Metrics & alerting          | Prometheus, Grafana             |
 
 ---
 
 ## 2. Repository Structure
+
 ```
 team-colleague-md/
 ├── .env.example
@@ -37,7 +38,7 @@ team-colleague-md/
 │       ├── ci-recommendation-service.yml
 │       ├── ci-genai-service.yml
 │       ├── ci-frontend.yml
-│       ├── docker-build.yml
+│       ├── docker-publish.yml
 │       ├── terraform-deploy.yml
 │       ├── ansible-deploy.yml
 │       └── openapi-lint.yml
@@ -103,22 +104,24 @@ pre-commit is a framework that runs automated checks on every `git commit`,
 catching issues locally before they reach CI.
 
 **Installation:**
+
 ```bash
 pip install pre-commit
 pre-commit install
 ```
 
 After running `pre-commit install`, hooks trigger automatically on every `git commit`. To manually check all files at any time:
+
 ```bash
 pre-commit run --all-files
 ```
 
 **Hooks configured in `.pre-commit-config.yaml`:**
 
-| Hook | Purpose |
-|------|---------|
-| `trailing-whitespace` | Remove trailing whitespace at end of lines |
-| `end-of-file-fixer` | Ensure files end with a single newline |
+| Hook                         | Purpose                                                                             |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| `trailing-whitespace`        | Remove trailing whitespace at end of lines                                          |
+| `end-of-file-fixer`          | Ensure files end with a single newline                                              |
 | `openapi-lint` (Redocly CLI) | Lint all `openapi.yaml` files against OpenAPI 3.0 rules via `npx @redocly/cli lint` |
 
 ---
@@ -129,11 +132,13 @@ Each service ships with its own `Dockerfile`. `docker-compose.yml` at the reposi
 wires all services together for local development.
 
 **Start all services:**
+
 ```bash
 docker compose up --build
 ```
 
 **Start a single service:**
+
 ```bash
 docker compose up --build user-service
 ```
@@ -194,23 +199,30 @@ build context (the directory containing the `Dockerfile`) and the host port mapp
 `user-service` runs with the `dev` Spring profile and connects to the PostgreSQL `user-db`
 container through Spring Data JPA.
 
-| Service | Build context | Host → Container port | Profile |
-|---------|--------------|----------------------|---------|
-| `user-db` | `postgres:16-alpine` | `5432 → 5432` | — |
-| `user-service` | `./backend/user-service` | `8081 → 8081` | `dev` |
-| `content-service` | `./backend/content-service` | `8082 → 8082` | `dev` |
-| `recommendation-service` | `./backend/recommendation-service` | `8083 → 8083` | `dev` |
-| `genai-service` | `./genai-service` | `8000 → 8000` | — |
-| `frontend` | `./frontend` | `3000 → 80` | — |
+| Service         | Build context            | Host → Container port | Profile |
+| --------------- | ------------------------ | --------------------- | ------- |
+| `user-service`  | `./backend/user-service` | `8081 → 8081`         | `dev`   |
+| `genai-service` | `./genai-service`        | `8000 → 8000`         | —       |
+| `frontend`      | `./frontend`             | `3000 → 80`           | —       |
 
-User data is persisted in the named Docker volume `user-db-data`; remove it with
-`docker compose down -v` when a clean local database is required.
+### 4.3 docker-compose.prod.yml
 
-The `user-service` keeps shared settings in `application.properties`. PostgreSQL-specific
-settings live in `application-dev.properties` for local/Compose development and
-`application-prod.properties` for production. Existing lightweight tests keep their isolated
-H2 configuration in test resources, while endpoint integration tests use PostgreSQL through
-Testcontainers.
+`docker-compose.prod.yml` is used for production deployments on the Azure VM. Unlike the development compose file,
+it references pre-built images from `ghcr.io` instead of building on the fly, keeping VM resource usage low.
+
+**Key differences from `docker-compose.yml`:**
+
+- **Images**: All services use `ghcr.io/aet-devops26/team-colleague-md/<service>:latest` (pre-built)
+- **Database**: Includes a `user-db` PostgreSQL 16 sidecar container for the `user-service`
+- **Credentials**: Database credentials are injected via `.env` file (not committed to git)
+- **Health checks**: All services define `healthcheck` rules for monitoring
+- **Restart policy**: All services use `restart: unless-stopped` for automatic recovery
+
+The file is uploaded to the VM by Ansible and does **not** require `docker-compose --build`. Instead, it pulls pre-built images and starts the services:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
+```
 
 ---
 
@@ -221,11 +233,13 @@ Testcontainers.
 Each service has its own workflow file triggered on pull requests to `dev`. Path filters ensure
 a workflow only runs when files in that service change.
 
-| Workflow | Trigger path | Job |
-|----------|-------------|-----|
-| `ci-user-service.yml` | `backend/user-service/**` | `./gradlew build` (compile + unit tests) |
-| `ci-genai-service.yml` | `genai-service/**` | `pip install -r requirements.txt` + import check + `pytest -q` |
-| `ci-frontend.yml` | `frontend/**` | `npm ci` → `npm run lint` → `npm run build` (includes `tsc`) |
+| Workflow                        | Trigger path                        | Job                                                            |
+| ------------------------------- | ----------------------------------- | -------------------------------------------------------------- |
+| `ci-user-service.yml`           | `backend/user-service/**`           | `./gradlew build` (compile + unit tests)                       |
+| `ci-content-service.yml`        | `backend/content-service/**`        | `./gradlew build` (compile + unit tests)                       |
+| `ci-recommendation-service.yml` | `backend/recommendation-service/**` | `./gradlew build` (compile + unit tests)                       |
+| `ci-genai-service.yml`          | `genai-service/**`                  | `pip install -r requirements.txt` + import check + `pytest -q` |
+| `ci-frontend.yml`               | `frontend/**`                       | `npm ci` → `npm run lint` → `npm run build` (includes `tsc`)   |
 
 All workflows also trigger when their own `.yml` file is modified.
 
@@ -245,12 +259,12 @@ This matches the local pre-commit hook so developers get the same feedback local
 `openapi-deploy-docs.yaml` triggers on pushes to `main` when any `openapi.yaml` file changes.
 It builds static HTML documentation for all services using Redocly CLI and deploys them to GitHub Pages.
 
-| Service | Source spec |
-|---------|-------------|
-| `user-service` | `backend/user-service/api/openapi.yaml` |
-| `content-service` | `backend/content-service/api/openapi.yaml` |
+| Service                  | Source spec                                       |
+| ------------------------ | ------------------------------------------------- |
+| `user-service`           | `backend/user-service/api/openapi.yaml`           |
+| `content-service`        | `backend/content-service/api/openapi.yaml`        |
 | `recommendation-service` | `backend/recommendation-service/api/openapi.yaml` |
-| `genai-service` | `genai-service/api/openapi.yaml` |
+| `genai-service`          | `genai-service/api/openapi.yaml`                  |
 
 ### 5.4 Code Generation Validation
 
@@ -258,24 +272,25 @@ It builds static HTML documentation for all services using Redocly CLI and deplo
 
 ### 5.5 Docker Build and Publish
 
-`docker-build.yml` triggers on pull requests and pushes to `dev` when service source files change.
+`docker-publish.yml` triggers on pull requests and pushes to `dev` and `main` when service source files change.
 It replaces the earlier `ci-docker.yml` and adds image publishing on merge.
 
-| Event | Action |
-|-------|--------|
-| Pull request to `dev` | Build all service images (validate only, no push) |
-| Push to `dev` (merge) | Build and push all images to `ghcr.io` |
+| Event                           | Action                                                    |
+| ------------------------------- | --------------------------------------------------------- |
+| Pull request to `dev` or `main` | Build all service images (validate only, no push)         |
+| Push to `dev` (merge)           | Build and push all images to `ghcr.io` with `:dev` tag    |
+| Push to `main` (merge)          | Build and push all images to `ghcr.io` with `:latest` tag |
 
-Images are published to `ghcr.io/aet-devops26/team-colleague-md/<service-name>:latest`.
+Images are published to `ghcr.io/aet-devops26/team-colleague-md/<service-name>` with an environment-specific tag (`:latest` for `main`, `:dev` for `dev`, `pr-<N>` for pull requests).
 Authentication uses the automatic `GITHUB_TOKEN`; no additional secret is required.
 
-| Service | Build context |
-|---------|--------------|
-| `user-service` | `./backend/user-service` |
-| `content-service` | `./backend/content-service` |
+| Service                  | Build context                      |
+| ------------------------ | ---------------------------------- |
+| `user-service`           | `./backend/user-service`           |
+| `content-service`        | `./backend/content-service`        |
 | `recommendation-service` | `./backend/recommendation-service` |
-| `genai-service` | `./genai-service` |
-| `frontend` | `./frontend` |
+| `genai-service`          | `./genai-service`                  |
+| `frontend`               | `./frontend`                       |
 
 ---
 
@@ -290,19 +305,22 @@ commands after completing the one-time bootstrap.
 Before any CI workflow can run, a human must complete these steps once:
 
 **1. Generate an SSH key pair** (no passphrase — required for unattended CI use):
+
 ```bash
 ssh-keygen -t rsa -b 4096 -f verita_key
 ```
 
 **2. Add GitHub Secrets and Variables** — Settings → Secrets and variables → Actions:
 
-| Type | Key | Value |
-|------|-----|-------|
-| Secret | `AZURE_PRIVATE_KEY` | Contents of `verita_key` |
-| Secret | `VM_SSH_PUBLIC_KEY` | Contents of `verita_key.pub` |
-| Variable | `AZURE_USER` | `azureuser` |
+| Type     | Key                 | Value                                                      |
+| -------- | ------------------- | ---------------------------------------------------------- |
+| Secret   | `AZURE_PRIVATE_KEY` | Contents of `verita_key`                                   |
+| Secret   | `VM_SSH_PUBLIC_KEY` | Contents of `verita_key.pub`                               |
+| Secret   | `DB_PASSWORD`       | A strong password for the PostgreSQL `verita_user` account |
+| Variable | `AZURE_USER`        | `azureuser`                                                |
 
 **3. Run `bootstrap.sh`** to create the Terraform state backend and Service Principal:
+
 ```bash
 az login
 bash infra/terraform/bootstrap.sh
@@ -313,8 +331,8 @@ bash infra/terraform/bootstrap.sh
 
 **5. After the first `terraform apply`**, set one more Variable:
 
-| Type | Key | Value |
-|------|-----|-------|
+| Type     | Key               | Value                                            |
+| -------- | ----------------- | ------------------------------------------------ |
 | Variable | `AZURE_PUBLIC_IP` | IP printed by `terraform-deploy.yml` after apply |
 
 This value does not change for the lifetime of the VM.
@@ -339,15 +357,15 @@ four values that must be added as GitHub Secrets (`ARM_CLIENT_ID`, `ARM_CLIENT_S
 
 **Resources provisioned:**
 
-| Resource | Configuration |
-|----------|--------------|
-| Resource Group | `verita-rg`, Sweden Central |
-| Virtual Network | `10.0.0.0/16` |
-| Subnet | `10.0.1.0/24` |
-| Network Security Group | Inbound: SSH (22), HTTP (80), app ports 3000 / 8000 / 8081–8083 |
-| Public IP | Static, Standard SKU |
-| Network Interface | Bound to subnet, NSG, and public IP |
-| Virtual Machine | `Standard_D2s_v3`, Ubuntu 22.04 LTS, SSH key auth, 30 GB OS disk |
+| Resource               | Configuration                                                    |
+| ---------------------- | ---------------------------------------------------------------- |
+| Resource Group         | `verita-rg`, Sweden Central                                      |
+| Virtual Network        | `10.0.0.0/16`                                                    |
+| Subnet                 | `10.0.1.0/24`                                                    |
+| Network Security Group | Inbound: SSH (22), HTTP (80), app ports 3000 / 8000 / 8081–8083  |
+| Public IP              | Static, Standard SKU                                             |
+| Network Interface      | Bound to subnet, NSG, and public IP                              |
+| Virtual Machine        | `Standard_D2s_v3`, Ubuntu 22.04 LTS, SSH key auth, 30 GB OS disk |
 
 After the first `terraform apply`, copy the printed `vm_public_ip` value to the
 `AZURE_PUBLIC_IP` GitHub Variable. This value does not change for the lifetime of the VM.
@@ -360,24 +378,27 @@ SSH using the key stored in the `AZURE_PRIVATE_KEY` GitHub Secret.
 **`deploy.yml` — three phases:**
 
 1. **System preparation** — install Docker Engine and the Compose plugin; add `azureuser` to the `docker` group.
-2. **File sync** — copy `docker-compose.prod.yml` to `/home/azureuser/verita/` on the VM.
+2. **File sync** — copy `docker-compose.prod.yml` to `/home/azureuser/verita/` on the VM; write a `.env` file containing `DB_NAME`, `DB_USER`, and `DB_PASSWORD` (sourced from the `DB_PASSWORD` GitHub Secret).
 3. **Service start** — log in to `ghcr.io`, pull the latest images, run `docker compose up -d --remove-orphans`.
 
 `docker-compose.prod.yml` references pre-built images from `ghcr.io` instead of building
-on the VM, keeping the VM's resource usage low.
+on the VM, keeping the VM's resource usage low. It also runs a `user-db` PostgreSQL 16
+container as a sidecar for the `user-service`; the database password is injected via the
+`.env` file written in step 2.
 
 ### 6.4 GitHub Secrets and Variables
 
-| Type | Key | Purpose |
-|------|-----|---------|
-| Secret | `ARM_CLIENT_ID` | Terraform — Azure Service Principal app ID |
-| Secret | `ARM_CLIENT_SECRET` | Terraform — Service Principal password |
-| Secret | `ARM_SUBSCRIPTION_ID` | Terraform — Azure subscription ID |
-| Secret | `ARM_TENANT_ID` | Terraform — Azure AD tenant ID |
-| Secret | `VM_SSH_PUBLIC_KEY` | Terraform — public key written to VM `authorized_keys` |
-| Secret | `AZURE_PRIVATE_KEY` | Ansible — private key for SSH access to the VM |
-| Variable | `AZURE_USER` | Ansible — VM admin username (`azureuser`) |
-| Variable | `AZURE_PUBLIC_IP` | Ansible — VM public IP (set after first `terraform apply`) |
+| Type     | Key                   | Purpose                                                    |
+| -------- | --------------------- | ---------------------------------------------------------- |
+| Secret   | `ARM_CLIENT_ID`       | Terraform — Azure Service Principal app ID                 |
+| Secret   | `ARM_CLIENT_SECRET`   | Terraform — Service Principal password                     |
+| Secret   | `ARM_SUBSCRIPTION_ID` | Terraform — Azure subscription ID                          |
+| Secret   | `ARM_TENANT_ID`       | Terraform — Azure AD tenant ID                             |
+| Secret   | `VM_SSH_PUBLIC_KEY`   | Terraform — public key written to VM `authorized_keys`     |
+| Secret   | `AZURE_PRIVATE_KEY`   | Ansible — private key for SSH access to the VM             |
+| Secret   | `DB_PASSWORD`         | Ansible — PostgreSQL password written to `.env` on the VM  |
+| Variable | `AZURE_USER`          | Ansible — VM admin username (`azureuser`)                  |
+| Variable | `AZURE_PUBLIC_IP`     | Ansible — VM public IP (set after first `terraform apply`) |
 
 ---
 
@@ -387,9 +408,9 @@ on the VM, keeping the VM's resource usage low.
 
 `terraform-deploy.yml` triggers on changes to `infra/terraform/**`.
 
-| Event | Action |
-|-------|--------|
-| Pull request to `dev` | `terraform plan` — previews changes, output visible in CI logs |
+| Event                 | Action                                                               |
+| --------------------- | -------------------------------------------------------------------- |
+| Pull request to `dev` | `terraform plan` — previews changes, output visible in CI logs       |
 | Push to `dev` (merge) | `terraform apply -auto-approve` — creates or updates Azure resources |
 
 The workflow also runs `terraform fmt -check` and `terraform validate` on every run.
@@ -399,21 +420,19 @@ After a successful apply, the VM public IP is printed as a workflow notice.
 
 `ansible-deploy.yml` deploys the latest images to the Azure VM.
 
-| Event | Action |
-|-------|--------|
-| `workflow_dispatch` | Manual trigger from the GitHub Actions UI |
-| `workflow_run` (after `docker-build.yml` on `dev`) | Automatic trigger when new images are pushed |
+| Event                                                         | Action                                                 |
+| ------------------------------------------------------------- | ------------------------------------------------------ |
+| `workflow_dispatch`                                           | Manual trigger from the GitHub Actions UI              |
+| `workflow_run` (after `"Docker Build and Publish"` on `main`) | Automatic trigger when new images are pushed to `main` |
 
-The workflow generates `inventory.ini` at runtime from the `AZURE_PUBLIC_IP` variable,
-writes the SSH key from `AZURE_PRIVATE_KEY` to a temporary file, then runs
-`ansible-playbook infra/ansible/deploy.yml`.
+The workflow only auto-deploys for push events (not PR builds). It generates `inventory.ini` at runtime from the `AZURE_PUBLIC_IP` variable, writes the SSH key from `AZURE_PRIVATE_KEY` to a temporary file, then runs `ansible-playbook infra/ansible/deploy.yml`.
 
 **End-to-end deployment flow:**
 
 ```
-Code merged to dev
-  → docker-build.yml   builds and pushes images to ghcr.io
-  → ansible-deploy.yml pulls new images and restarts services on the VM
+Code merged to main
+  → docker-publish.yml  builds and pushes :latest images to ghcr.io
+  → ansible-deploy.yml  pulls new images and restarts services on the VM
 ```
 
 ---
@@ -433,4 +452,3 @@ Code merged to dev
 ## 10. Contributor Checklist
 
 ...
-
