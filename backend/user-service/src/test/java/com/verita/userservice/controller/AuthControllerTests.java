@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.verita.model.AuthResponse;
 import com.verita.model.LoginRequest;
 import com.verita.model.RegisterRequest;
+import com.verita.userservice.exception.*;
 import com.verita.userservice.security.AuthEntryPointJwt;
 import com.verita.userservice.security.JwtUtils;
 import com.verita.userservice.security.UserDetailsServiceImpl;
@@ -113,5 +114,36 @@ public class AuthControllerTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testLogin_BadCredentials_Returns401() throws Exception {
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("testuser@example.com");
+        loginRequest.setPassword("wrongpassword");
+
+        when(authService.login(any(LoginRequest.class)))
+            .thenThrow(new UserNotFoundException("testuser@example.com"));
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void testRegister_DuplicateEmail_Returns409() throws Exception {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setUsername("newuser");
+        registerRequest.setEmail("taken@example.com");
+        registerRequest.setPassword("TopSecret123!");
+
+        when(authService.register(any(RegisterRequest.class)))
+            .thenThrow(new DuplicateEmailException("taken@example.com"));
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isConflict());
     }
 }

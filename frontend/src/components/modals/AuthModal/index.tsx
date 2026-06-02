@@ -2,6 +2,7 @@ import React, { useState, useRef, type FormEvent } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
+import { AuthError } from '../../../errors/AuthError';
 import styles from './AuthModal.module.css';
 
 type AuthScreen = 'login' | 'signup' | 'forgot' | 'otp';
@@ -92,8 +93,12 @@ export default function AuthModal() {
       await login(email, password);
       close();
       resetAll();
-    } catch {
-      setError('Invalid email or password.');
+    } catch (err) {
+      if (err instanceof AuthError && err.code === 'NETWORK_ERROR') {
+        setError('Cannot reach the server. Check your connection.');
+      } else {
+        setError('Invalid email or password.');
+      }
     } finally {
       setLoading(false);
     }
@@ -107,8 +112,15 @@ export default function AuthModal() {
       await signup(username, email, password);
       close();
       resetAll();
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err) {
+      if (err instanceof AuthError) {
+        if (err.code === 'EMAIL_IN_USE') setError('An account with this email already exists.');
+        else if (err.code === 'USERNAME_IN_USE') setError('This username is already taken.');
+        else if (err.code === 'NETWORK_ERROR') setError('Cannot reach the server. Check your connection.');
+        else setError('Something went wrong. Please try again.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

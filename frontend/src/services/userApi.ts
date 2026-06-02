@@ -2,12 +2,12 @@ import axios from 'axios';
 import { getToken, clearSession } from './tokenStore';
 import { emit } from './authEvents';
 
-const api = axios.create({
-  baseURL: 'http://localhost:8082',
+const userApi = axios.create({
+  baseURL: 'http://localhost:8081',
   headers: { 'Content-Type': 'application/json' },
 });
 
-api.interceptors.request.use((config) => {
+userApi.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -15,7 +15,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-api.interceptors.response.use(
+userApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
@@ -26,4 +26,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+export default userApi;

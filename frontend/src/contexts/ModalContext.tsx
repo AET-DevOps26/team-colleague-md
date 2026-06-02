@@ -1,4 +1,5 @@
-import { createContext, useState, useCallback, useContext, type ReactNode } from 'react';
+import { createContext, useState, useCallback, useContext, useEffect, type ReactNode } from 'react';
+import { subscribe } from '../services/authEvents';
 
 type AuthTab = 'login' | 'signup';
 
@@ -36,6 +37,13 @@ export function useSettingsModal() {
   return useContext(SettingsModalContext);
 }
 
+function AuthEventListener({ open }: { open: (tab?: AuthTab) => void }) {
+  useEffect(() => {
+    return subscribe(() => open('login'));
+  }, [open]);
+  return null;
+}
+
 export function AuthModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
@@ -49,6 +57,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthModalContext.Provider value={{ isOpen, activeTab, open, close }}>
+      <AuthEventListener open={open} />
       {children}
     </AuthModalContext.Provider>
   );

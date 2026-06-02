@@ -1,5 +1,6 @@
-import { createContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { authService } from '../services/auth.service';
+import { subscribe } from '../services/authEvents';
 import type { AuthUser } from '../types';
 
 interface AuthContextValue {
@@ -20,6 +21,10 @@ export const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+
+  useEffect(() => {
+    return subscribe(() => setUser(null));
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const u = await authService.login(email, password);
