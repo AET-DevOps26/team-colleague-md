@@ -15,6 +15,39 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: verita_minio
+      MINIO_ROOT_PASSWORD: verita_minio_password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: verita_minio
+      MINIO_ROOT_PASSWORD: verita_minio_password
+      MINIO_USER_PORTRAITS_BUCKET: verita-user-portraits
+      MINIO_POST_PHOTOS_BUCKET: verita-post-photos
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do
+        sleep 2;
+      done;
+      mc mb --ignore-existing local/$${MINIO_USER_PORTRAITS_BUCKET};
+      mc mb --ignore-existing local/$${MINIO_POST_PHOTOS_BUCKET};
+      mc anonymous set download local/$${MINIO_USER_PORTRAITS_BUCKET};
+      mc anonymous set download local/$${MINIO_POST_PHOTOS_BUCKET};
+      "
+
   user-service:
     build:
       context: ./backend/user-service
@@ -28,9 +61,12 @@ services:
       - DB_NAME=verita_users
       - DB_USER=verita_user
       - DB_PASSWORD=verita_password
+      - STORAGE_S3_ENDPOINT=http://minio:9000
     depends_on:
       user-db:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       # Poll Spring Actuator health endpoint; non-200 response marks container unhealthy
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
@@ -47,6 +83,10 @@ services:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - STORAGE_S3_ENDPOINT=http://minio:9000
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
       interval: 30s
@@ -101,3 +141,4 @@ services:
 
 volumes:
   user-db-data:
+  minio-data:
