@@ -68,13 +68,20 @@
         group: azureuser
         mode: "0644"
 
-    - name: Write .env file with DB credentials
+    - name: Write .env file with database and object storage credentials
       copy:
         dest: "{{ deploy_dir }}/.env"
         content: |
           DB_NAME=verita_users
           DB_USER=verita_user
           DB_PASSWORD={{ db_password }}
+          MINIO_ROOT_USER={{ minio_root_user | default('verita_minio') }}
+          MINIO_ROOT_PASSWORD={{ minio_root_password | default(db_password) }}
+          STORAGE_S3_ENDPOINT=http://minio:9000
+          STORAGE_S3_PUBLIC_ENDPOINT={{ storage_s3_public_endpoint | default('http://' ~ ansible_host ~ ':9000') }}
+          STORAGE_S3_REGION={{ storage_s3_region | default('us-east-1') }}
+          STORAGE_USER_PORTRAITS_BUCKET={{ storage_user_portraits_bucket | default('verita-user-portraits') }}
+          STORAGE_POST_PHOTOS_BUCKET={{ storage_post_photos_bucket | default('verita-post-photos') }}
         owner: azureuser
         group: azureuser
         mode: "0600"
