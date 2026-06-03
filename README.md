@@ -11,17 +11,26 @@ The fastest way to run the full platform. From the repository root:
 docker compose up --build
 ```
 
-This builds and starts the application services plus the PostgreSQL database used by
-`user-service`:
+This builds and starts the application services plus PostgreSQL and MinIO object storage:
 
 | Service | URL | Description |
 |---|---|---|
 | `frontend` | http://localhost:3000 | React UI (served by nginx) |
 | `user-service` | http://localhost:8081 | Spring Boot — user identity & auth |
 | `user-db` | localhost:5432 | PostgreSQL — persistent user data |
+| `minio` | http://localhost:9000 | S3-compatible object storage API |
+| `minio` console | http://localhost:9001 | Object storage admin UI |
 | `content-service` | http://localhost:8082 | Spring Boot — posts & content |
 | `recommendation-service` | http://localhost:8083 | Spring Boot — feeds & notifications |
 | `genai-service` | http://localhost:8000 | FastAPI — AI features |
+
+MinIO development credentials are `verita_minio` / `verita_minio_password`.
+On startup, Compose creates two buckets:
+
+| Bucket | Used for |
+|---|---|
+| `verita-user-portraits` | User portrait/avatar objects owned by `user-service` |
+| `verita-post-photos` | Post photo/cover objects owned by `content-service` |
 
 To stop all services:
 
@@ -30,7 +39,8 @@ docker compose down
 ```
 
 User data is stored in the named Docker volume `team-colleague-md_user-db-data`.
-To remove the database data as well:
+Object storage data is stored in `team-colleague-md_minio-data`.
+To remove persistent database and object storage data as well:
 
 ```bash
 docker compose down -v
@@ -90,7 +100,9 @@ Health check: `http://localhost:8081/actuator/health`
 
 Local `bootRun` uses the default `dev` Spring profile with PostgreSQL. Start `user-db`
 first, or provide `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` for another
-PostgreSQL instance.
+PostgreSQL instance. User portrait storage uses the MinIO defaults in
+`application.properties`; start MinIO with `docker compose up -d minio minio-init` when
+working on portrait uploads locally.
 
 To run with the production profile:
 
@@ -109,6 +121,9 @@ cd backend/content-service
 ```
 
 Health check: `http://localhost:8082/actuator/health`
+
+Post photo storage uses the MinIO defaults in `application.properties`; start MinIO with
+`docker compose up -d minio minio-init` when working on post photo uploads locally.
 
 ---
 
