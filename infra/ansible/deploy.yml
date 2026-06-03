@@ -1,6 +1,6 @@
----
+﻿---
 # Deploys all Verita services to the Azure VM.
-# Requires: github_actor and github_token passed as --extra-vars by the caller.
+# Requires: github_actor, github_token, db_password passed as --extra-vars by the caller.
 - name: Deploy Verita services
   hosts: all
   become: true
@@ -67,6 +67,18 @@
         owner: azureuser
         group: azureuser
         mode: "0644"
+
+    - name: Write .env file with DB credentials
+      copy:
+        dest: "{{ deploy_dir }}/.env"
+        content: |
+          DB_NAME=verita_users
+          DB_USER=verita_user
+          DB_PASSWORD={{ db_password }}
+        owner: azureuser
+        group: azureuser
+        mode: "0600"
+      no_log: true
 
     - name: Log in to GitHub Container Registry
       become_user: azureuser

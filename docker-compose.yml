@@ -1,4 +1,20 @@
 services:
+  user-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: verita_users
+      POSTGRES_USER: verita_user
+      POSTGRES_PASSWORD: verita_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verita_user -d verita_users"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   user-service:
     build:
       context: ./backend/user-service
@@ -7,6 +23,14 @@ services:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - DB_HOST=user-db
+      - DB_PORT=5432
+      - DB_NAME=verita_users
+      - DB_USER=verita_user
+      - DB_PASSWORD=verita_password
+    depends_on:
+      user-db:
+        condition: service_healthy
     healthcheck:
       # Poll Spring Actuator health endpoint; non-200 response marks container unhealthy
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
@@ -74,3 +98,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s  # nginx starts faster than backend services
+
+volumes:
+  user-db-data:

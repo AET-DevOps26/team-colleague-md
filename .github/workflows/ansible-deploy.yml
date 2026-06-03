@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
   workflow_run:
     workflows: ["Docker Build and Publish"]
-    branches: [dev]
+    branches: [main]
     types: [completed]
 
 jobs:
   deploy:
     name: Deploy Verita to Azure VM
-    # For workflow_run: only deploy when docker-build succeeded; always run for manual triggers
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # For workflow_run: only deploy after a push to main (not a PR build); always run for manual triggers
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -39,4 +39,4 @@ jobs:
           ansible-playbook \
             -i infra/ansible/inventory.ini \
             infra/ansible/deploy.yml \
-            --extra-vars "github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }}"
+            --extra-vars "github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }} db_password=${{ secrets.DB_PASSWORD }}"

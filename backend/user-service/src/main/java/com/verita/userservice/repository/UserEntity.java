@@ -58,6 +58,7 @@ public class UserEntity {
     private DigestFrequency digestFrequency = DigestFrequency.WEEKLY;
 
     private Boolean showBookmarks = true;
+    private Boolean showLikes = true;
 
     @PrePersist
     public void prePersist() {
@@ -110,5 +111,6 @@ public class UserEntity {
     public void setDigestFrequency(DigestFrequency digestFrequency) { this.digestFrequency = digestFrequency; }
     public Boolean getShowBookmarks() { return showBookmarks; }
     public void setShowBookmarks(Boolean showBookmarks) { this.showBookmarks = showBookmarks; }
+    public Boolean getShowLikes() { return showLikes; }
+    public void setShowLikes(Boolean showLikes) { this.showLikes = showLikes; }
 }
-
