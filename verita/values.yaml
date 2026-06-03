@@ -51,3 +51,37 @@ ingress:
   host: verita.k8s.ase.cit.tum.de
   tls:
     secretName: verita-tls
+
+userPostgresql:
+  enabled: true
+  auth:
+    username: user_service
+    password: change-me-user
+    database: userdb
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+contentPostgresql:
+  enabled: true
+  auth:
+    username: content_service
+    password: change-me-content #TODO auth.exportingSecret
+    database: contentdb
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+recommendationPostgresql:
+  enabled: true
+  auth:
+    username: recommendation_service
+    password: change-me-recommendation
+    database: recommendationdb
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
