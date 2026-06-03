@@ -1,6 +1,6 @@
 ﻿---
 # Deploys all Verita services to the Azure VM.
-# Requires: github_actor, github_token, db_password passed as --extra-vars by the caller.
+# Requires: github_actor, github_token, db_password, minio_root_password passed as --extra-vars by the caller.
 - name: Deploy Verita services
   hosts: all
   become: true
@@ -76,7 +76,7 @@
           DB_USER=verita_user
           DB_PASSWORD={{ db_password }}
           MINIO_ROOT_USER={{ minio_root_user | default('verita_minio') }}
-          MINIO_ROOT_PASSWORD={{ minio_root_password | default(db_password) }}
+          MINIO_ROOT_PASSWORD={{ minio_root_password }}
           STORAGE_S3_ENDPOINT=http://minio:9000
           STORAGE_S3_PUBLIC_ENDPOINT={{ storage_s3_public_endpoint | default('http://' ~ ansible_host ~ ':9000') }}
           STORAGE_S3_REGION={{ storage_s3_region | default('us-east-1') }}

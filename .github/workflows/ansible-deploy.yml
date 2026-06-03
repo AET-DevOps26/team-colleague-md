@@ -39,4 +39,4 @@ jobs:
           ansible-playbook \
             -i infra/ansible/inventory.ini \
             infra/ansible/deploy.yml \
-            --extra-vars "github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }} db_password=${{ secrets.DB_PASSWORD }}"
+            --extra-vars "github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }} db_password=${{ secrets.DB_PASSWORD }} minio_root_password=${{ secrets.MINIO_ROOT_PASSWORD }}"
