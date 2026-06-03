@@ -9,6 +9,28 @@ import styles from './AuthModal.module.css';
 type AuthScreen = 'login' | 'signup' | 'forgot' | 'otp';
 type AvailStatus = 'idle' | 'checking' | 'available' | 'taken';
 
+const USERNAME_RE = /^[a-zA-Z0-9_]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function validateUsername(v: string): string {
+  if (v.length < 3) return 'Must be at least 3 characters';
+  if (v.length > 20) return 'Must be 20 characters or fewer';
+  if (!USERNAME_RE.test(v)) return 'Letters, numbers, and underscores only';
+  return '';
+}
+
+function validateEmail(v: string): string {
+  if (!EMAIL_RE.test(v)) return 'Enter a valid email address';
+  return '';
+}
+
+function validatePassword(v: string): string {
+  if (v.length < 8) return 'Must be at least 8 characters';
+  if (!/[a-zA-Z]/.test(v)) return 'Must include at least one letter';
+  if (!/\d/.test(v)) return 'Must include at least one number';
+  return '';
+}
+
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
@@ -65,11 +87,15 @@ export default function AuthModal() {
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(''));
   const [usernameAvail, setUsernameAvail] = useState<AvailStatus>('idle');
   const [emailAvail, setEmailAvail] = useState<AvailStatus>('idle');
+  const [usernameFieldError, setUsernameFieldError] = useState('');
+  const [emailFieldError, setEmailFieldError] = useState('');
+  const [passwordFieldError, setPasswordFieldError] = useState('');
   const [otpFocus, setOtpFocus] = useState(-1);
   const otpRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null));
 
+  // Only check availability when format is already valid — avoids API calls for "用户名" or "ab"
   useEffect(() => {
-    if (screen !== 'signup' || username.length < 2) { setUsernameAvail('idle'); return; }
+    if (screen !== 'signup' || validateUsername(username) !== '') { setUsernameAvail('idle'); return; }
     setUsernameAvail('checking');
     const timer = setTimeout(async () => {
       try {
@@ -81,7 +107,7 @@ export default function AuthModal() {
   }, [username, screen]);
 
   useEffect(() => {
-    if (screen !== 'signup' || email.length < 3) { setEmailAvail('idle'); return; }
+    if (screen !== 'signup' || validateEmail(email) !== '') { setEmailAvail('idle'); return; }
     setEmailAvail('checking');
     const timer = setTimeout(async () => {
       try {
@@ -104,6 +130,9 @@ export default function AuthModal() {
     setOtpFocus(-1);
     setUsernameAvail('idle');
     setEmailAvail('idle');
+    setUsernameFieldError('');
+    setEmailFieldError('');
+    setPasswordFieldError('');
   }
 
   function handleOpenChange(o: boolean) {
@@ -142,6 +171,14 @@ export default function AuthModal() {
 
   async function handleSignup(e: FormEvent) {
     e.preventDefault();
+    const uErr = validateUsername(username);
+    const eErr = validateEmail(email);
+    const pErr = validatePassword(password);
+    setUsernameFieldError(uErr);
+    setEmailFieldError(eErr);
+    setPasswordFieldError(pErr);
+    if (uErr || eErr || pErr) return;
+
     setError('');
     setLoading(true);
     try {
@@ -301,70 +338,79 @@ export default function AuthModal() {
 
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Username</span></div>
-            <div className={`${styles.fieldBox} ${usernameAvail === 'taken' ? styles.fieldBoxError : ''}`}>
+            <div className={`${styles.fieldBox} ${usernameFieldError || usernameAvail === 'taken' ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="text"
                 placeholder="3–20 chars, letters / numbers / _"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (usernameFieldError) setUsernameFieldError(validateUsername(e.target.value));
+                }}
+                onBlur={() => setUsernameFieldError(validateUsername(username))}
                 autoComplete="nickname"
-                minLength={3}
               />
             </div>
-            {usernameAvail === 'available' && (
+            {usernameFieldError ? (
+              <div className={styles.fieldError}><WarnIcon /><span>{usernameFieldError}</span></div>
+            ) : usernameAvail === 'available' ? (
               <div className={styles.fieldAvailable}><CheckIcon /><span>Available</span></div>
-            )}
-            {usernameAvail === 'taken' && (
+            ) : usernameAvail === 'taken' ? (
               <div className={styles.fieldError}><WarnIcon /><span>Username already taken</span></div>
-            )}
-            {usernameAvail === 'checking' && (
+            ) : usernameAvail === 'checking' ? (
               <div className={styles.fieldChecking}>Checking…</div>
-            )}
+            ) : null}
           </div>
 
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Email</span></div>
-            <div className={`${styles.fieldBox} ${emailAvail === 'taken' ? styles.fieldBoxError : ''}`}>
+            <div className={`${styles.fieldBox} ${emailFieldError || emailAvail === 'taken' ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="email"
                 placeholder="you@domain.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailFieldError) setEmailFieldError(validateEmail(e.target.value));
+                }}
+                onBlur={() => setEmailFieldError(validateEmail(email))}
                 autoComplete="email"
               />
             </div>
-            {emailAvail === 'available' && (
+            {emailFieldError ? (
+              <div className={styles.fieldError}><WarnIcon /><span>{emailFieldError}</span></div>
+            ) : emailAvail === 'available' ? (
               <div className={styles.fieldAvailable}><CheckIcon /><span>Available</span></div>
-            )}
-            {emailAvail === 'taken' && (
+            ) : emailAvail === 'taken' ? (
               <div className={styles.fieldError}><WarnIcon /><span>An account with this email already exists</span></div>
-            )}
-            {emailAvail === 'checking' && (
+            ) : emailAvail === 'checking' ? (
               <div className={styles.fieldChecking}>Checking…</div>
-            )}
+            ) : null}
           </div>
 
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Password</span></div>
-            <div className={styles.fieldBox}>
+            <div className={`${styles.fieldBox} ${passwordFieldError ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="password"
                 placeholder="At least 8 characters"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordFieldError) setPasswordFieldError(validatePassword(e.target.value));
+                }}
+                onBlur={() => setPasswordFieldError(validatePassword(password))}
                 autoComplete="new-password"
-                minLength={8}
               />
             </div>
-            <div className={styles.fieldHint}>
-              Use 8 or more characters with a mix of letters and numbers.
-            </div>
+            {passwordFieldError ? (
+              <div className={styles.fieldError}><WarnIcon /><span>{passwordFieldError}</span></div>
+            ) : (
+              <div className={styles.fieldHint}>Use 8+ characters with a mix of letters and numbers.</div>
+            )}
           </div>
 
           {error && (
