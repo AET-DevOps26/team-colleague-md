@@ -1,4 +1,4 @@
-openapi: 3.0.3
+﻿openapi: 3.0.3
 info:
   title: Verita User Service API
   description: |
@@ -76,7 +76,7 @@ paths:
       tags: [Authentication]
       security: []
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
@@ -121,6 +121,44 @@ paths:
       responses:
         '204':
           description: Password reset successful
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/auth/check-username:
+    get:
+      operationId: checkUsername
+      summary: Check if a username is available
+      tags: [Authentication]
+      security: []
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Availability result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/auth/check-email:
+    get:
+      operationId: checkEmail
+      summary: Check if an email address is available
+      tags: [Authentication]
+      security: []
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema: { type: string, format: email }
+      responses:
+        '200':
+          description: Availability result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
   # --- CURRENT USER ---
@@ -328,6 +366,15 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
+    AvailabilityResponse:
+      type: object
+      description: Result of a username or email availability check.
+      required: [available]
+      properties:
+        available:
+          type: boolean
+          description: True if the value is not yet taken.
+
     UserRole:
       type: string
       enum: [USER, VERIFIED, ADMIN]
@@ -387,7 +434,7 @@ components:
 
     RefreshTokenRequest:
       type: object
-      required: [refreshToken]
+      description: Body is optional — the refresh token is read from the httpOnly cookie.
       properties:
         refreshToken: { type: string }
 

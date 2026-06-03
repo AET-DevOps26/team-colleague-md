@@ -1,41 +1,33 @@
 package com.verita.userservice.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.verita.model.User;
-import com.verita.userservice.security.AuthEntryPointJwt;
+import com.verita.model.UserRole;
+import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.security.JwtUtils;
+import com.verita.userservice.security.UserDetailsImpl;
 import com.verita.userservice.security.UserDetailsServiceImpl;
 import com.verita.userservice.security.WebSecurityConfig;
 import com.verita.userservice.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.junit.jupiter.api.BeforeEach;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import java.util.Collections;
-import java.util.UUID;
-import com.verita.userservice.security.UserDetailsImpl;
-import com.verita.userservice.repository.UserEntity;
-import com.verita.model.UserRole;
 
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -47,8 +39,6 @@ public class UsersControllerTests {
     @Autowired
     private WebApplicationContext context;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
-
     @MockitoBean
     private UserService userService;
 
@@ -57,9 +47,6 @@ public class UsersControllerTests {
 
     @MockitoBean
     private UserDetailsServiceImpl userDetailsService;
-
-    @MockitoBean
-    private AuthEntryPointJwt authEntryPointJwt;
 
     @BeforeEach
     void setUp() {

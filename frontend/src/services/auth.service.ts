@@ -1,6 +1,6 @@
 import axios from 'axios';
 import userApi from './userApi';
-import { setSession, clearSession, getUser } from './tokenStore';
+import { setAccessToken, setUser, clearSession, getUser } from './tokenStore';
 import { AuthError } from '../errors/AuthError';
 import type { AuthUser } from '../types';
 
@@ -48,7 +48,8 @@ export const authService = {
     try {
       const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/login', { email, password });
       const user = mapUser(data.user);
-      setSession(data.accessToken, user);
+      setAccessToken(data.accessToken);
+      setUser(user);
       return user;
     } catch (error) {
       handleAxiosError(error, false);
@@ -59,15 +60,36 @@ export const authService = {
     try {
       const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/register', { username, email, password });
       const user = mapUser(data.user);
-      setSession(data.accessToken, user);
+      setAccessToken(data.accessToken);
+      setUser(user);
       return user;
     } catch (error) {
       handleAxiosError(error, true);
     }
   },
 
-  logout(): void {
-    clearSession();
+  async logout(): Promise<void> {
+    try {
+      await userApi.post('/api/v1/auth/logout');
+    } catch {
+      // ignore — clear local state regardless
+    } finally {
+      clearSession();
+    }
+  },
+
+  // Attempts to restore a session using the httpOnly refresh-token cookie.
+  // Called on app mount. Returns the user if the cookie is still valid, null otherwise.
+  async restoreSession(): Promise<AuthUser | null> {
+    try {
+      const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/refresh');
+      const user = mapUser(data.user);
+      setAccessToken(data.accessToken);
+      setUser(user);
+      return user;
+    } catch {
+      return null;
+    }
   },
 
   getCurrentUser(): AuthUser | null {

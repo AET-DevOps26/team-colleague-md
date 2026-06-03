@@ -28,6 +28,11 @@ public class GlobalExceptionHandler {
         return errorResponse(HttpStatus.UNAUTHORIZED, "Invalid credentials");
     }
 
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
+        return errorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
     private ResponseEntity<ErrorResponse> errorResponse(HttpStatus status, String message) {
         ErrorResponse body = new ErrorResponse();
         body.setTimestamp(OffsetDateTime.now());

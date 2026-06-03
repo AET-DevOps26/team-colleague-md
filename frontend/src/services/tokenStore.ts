@@ -1,10 +1,18 @@
 import type { AuthUser } from '../types';
 
-const TOKEN_KEY = 'verita_token';
 const USER_KEY = 'verita_user';
 
+// Access token lives only in memory — never persisted to localStorage.
+// This protects against XSS token theft. The refresh token is stored as
+// an httpOnly cookie by the backend and is never accessible to JavaScript.
+let _accessToken: string | null = null;
+
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  return _accessToken;
+}
+
+export function setAccessToken(token: string | null): void {
+  _accessToken = token;
 }
 
 export function getUser(): AuthUser | null {
@@ -16,12 +24,11 @@ export function getUser(): AuthUser | null {
   }
 }
 
-export function setSession(token: string, user: AuthUser): void {
-  localStorage.setItem(TOKEN_KEY, token);
+export function setUser(user: AuthUser): void {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearSession(): void {
-  localStorage.removeItem(TOKEN_KEY);
+  _accessToken = null;
   localStorage.removeItem(USER_KEY);
 }

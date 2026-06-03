@@ -22,9 +22,15 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.junit.jupiter.api.BeforeEach;
 
+import jakarta.servlet.http.Cookie;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -132,6 +138,42 @@ public class AuthControllerTests {
     }
 
     @Test
+    void testCheckUsername_Available_ReturnsTrue() throws Exception {
+        when(authService.checkUsernameAvailable("newuser")).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/auth/check-username").param("username", "newuser"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true));
+    }
+
+    @Test
+    void testCheckUsername_Taken_ReturnsFalse() throws Exception {
+        when(authService.checkUsernameAvailable("takenuser")).thenReturn(false);
+
+        mockMvc.perform(get("/api/v1/auth/check-username").param("username", "takenuser"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(false));
+    }
+
+    @Test
+    void testCheckEmail_Available_ReturnsTrue() throws Exception {
+        when(authService.checkEmailAvailable("new@example.com")).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/auth/check-email").param("email", "new@example.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true));
+    }
+
+    @Test
+    void testCheckEmail_Taken_ReturnsFalse() throws Exception {
+        when(authService.checkEmailAvailable("taken@example.com")).thenReturn(false);
+
+        mockMvc.perform(get("/api/v1/auth/check-email").param("email", "taken@example.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(false));
+    }
+
+    @Test
     void testRegister_DuplicateEmail_Returns409() throws Exception {
         RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setUsername("newuser");
@@ -145,5 +187,43 @@ public class AuthControllerTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void testRefresh_ValidCookie_Returns200AndRotatesCookie() throws Exception {
+        AuthResponse authResponse = new AuthResponse();
+        authResponse.setAccessToken("new-access-token");
+        authResponse.setRefreshToken("new-refresh-uuid");
+
+        when(authService.refreshToken("valid-refresh-uuid")).thenReturn(authResponse);
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .cookie(new Cookie("refreshToken", "valid-refresh-uuid")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("new-access-token"))
+                .andExpect(cookie().value("refreshToken", "new-refresh-uuid"));
+    }
+
+    @Test
+    void testRefresh_InvalidToken_Returns401() throws Exception {
+        when(authService.refreshToken(anyString()))
+                .thenThrow(new InvalidRefreshTokenException());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .cookie(new Cookie("refreshToken", "bad-token")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void testLogout_ClearsCookie() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout"))
+                .andExpect(status().isNoContent())
+                .andExpect(cookie().maxAge("refreshToken", 0));
+
+        verify(authService).logout(null);
     }
 }

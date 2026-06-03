@@ -1,11 +1,13 @@
-import React, { useState, useRef, type FormEvent } from 'react';
+import React, { useState, useRef, useEffect, type FormEvent } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
 import { AuthError } from '../../../errors/AuthError';
+import { checkUsernameAvailable, checkEmailAvailable } from '../../../services/userApi';
 import styles from './AuthModal.module.css';
 
 type AuthScreen = 'login' | 'signup' | 'forgot' | 'otp';
+type AvailStatus = 'idle' | 'checking' | 'available' | 'taken';
 
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -25,6 +27,12 @@ const WarnIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/>
     <path d="M12 8v4M12 16h.01"/>
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
   </svg>
 );
 
@@ -55,8 +63,34 @@ export default function AuthModal() {
   const [loading, setLoading] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(''));
+  const [usernameAvail, setUsernameAvail] = useState<AvailStatus>('idle');
+  const [emailAvail, setEmailAvail] = useState<AvailStatus>('idle');
   const [otpFocus, setOtpFocus] = useState(-1);
   const otpRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null));
+
+  useEffect(() => {
+    if (screen !== 'signup' || username.length < 2) { setUsernameAvail('idle'); return; }
+    setUsernameAvail('checking');
+    const timer = setTimeout(async () => {
+      try {
+        const available = await checkUsernameAvailable(username);
+        setUsernameAvail(available ? 'available' : 'taken');
+      } catch { setUsernameAvail('idle'); }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [username, screen]);
+
+  useEffect(() => {
+    if (screen !== 'signup' || email.length < 3) { setEmailAvail('idle'); return; }
+    setEmailAvail('checking');
+    const timer = setTimeout(async () => {
+      try {
+        const available = await checkEmailAvailable(email);
+        setEmailAvail(available ? 'available' : 'taken');
+      } catch { setEmailAvail('idle'); }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [email, screen]);
 
   function resetAll() {
     setScreen('login');
@@ -68,6 +102,8 @@ export default function AuthModal() {
     setForgotEmail('');
     setOtpDigits(Array(6).fill(''));
     setOtpFocus(-1);
+    setUsernameAvail('idle');
+    setEmailAvail('idle');
   }
 
   function handleOpenChange(o: boolean) {
@@ -265,7 +301,7 @@ export default function AuthModal() {
 
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Username</span></div>
-            <div className={styles.fieldBox}>
+            <div className={`${styles.fieldBox} ${usernameAvail === 'taken' ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="text"
@@ -277,11 +313,20 @@ export default function AuthModal() {
                 minLength={3}
               />
             </div>
+            {usernameAvail === 'available' && (
+              <div className={styles.fieldAvailable}><CheckIcon /><span>Available</span></div>
+            )}
+            {usernameAvail === 'taken' && (
+              <div className={styles.fieldError}><WarnIcon /><span>Username already taken</span></div>
+            )}
+            {usernameAvail === 'checking' && (
+              <div className={styles.fieldChecking}>Checking…</div>
+            )}
           </div>
 
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Email</span></div>
-            <div className={styles.fieldBox}>
+            <div className={`${styles.fieldBox} ${emailAvail === 'taken' ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="email"
@@ -292,6 +337,15 @@ export default function AuthModal() {
                 autoComplete="email"
               />
             </div>
+            {emailAvail === 'available' && (
+              <div className={styles.fieldAvailable}><CheckIcon /><span>Available</span></div>
+            )}
+            {emailAvail === 'taken' && (
+              <div className={styles.fieldError}><WarnIcon /><span>An account with this email already exists</span></div>
+            )}
+            {emailAvail === 'checking' && (
+              <div className={styles.fieldChecking}>Checking…</div>
+            )}
           </div>
 
           <div className={styles.field}>
