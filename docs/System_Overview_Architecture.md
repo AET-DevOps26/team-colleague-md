@@ -207,6 +207,11 @@ The system is divided into four independent services following Domain-Driven Des
 - **Synchronous:** REST API calls (e.g., Content Service → GenAI Service for summarization)
 - **Asynchronous (P2):** Message queue (RabbitMQ) for non-blocking operations like digest generation
 
+**Daily Digest Boundary:**
+- **Recommendation Service** owns tag subscriptions and chooses the user's subscribed topics.
+- **GenAI Service** exposes `POST /api/v1/genai/digests/generate` to fetch relevant external sources for the supplied topics and turn one day of new developments into a text digest.
+- **Caller/Persistence layer** stores generated digest history and triggers notifications; GenAI remains stateless.
+
 ---
 
 ### 3.2 Data Architecture Overview
