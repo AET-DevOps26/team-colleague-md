@@ -22,6 +22,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -124,5 +125,32 @@ public class UsersControllerTests {
                 .with(SecurityMockMvcRequestPostProcessors.user(userDetails))
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testGetCurrentUser_AuthenticatedButMissingUser_Returns404() throws Exception {
+        UserEntity userEntity = new UserEntity();
+        userEntity.setId(UUID.randomUUID());
+        userEntity.setUsername("deleted-user");
+        userEntity.setEmail("deleted@example.com");
+        userEntity.setPassword("password");
+        userEntity.setRole(UserRole.USER);
+
+        UserDetailsImpl userDetails = UserDetailsImpl.build(userEntity);
+        when(userService.getByUsername("deleted-user")).thenReturn(null);
+
+        mockMvc.perform(get("/api/v1/users/me")
+                .with(SecurityMockMvcRequestPostProcessors.user(userDetails))
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetUserById_MissingUser_Returns404() throws Exception {
+        when(userService.getById(any(UUID.class))).thenReturn(null);
+
+        mockMvc.perform(get("/api/v1/users/{userId}", UUID.randomUUID())
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
     }
 }
