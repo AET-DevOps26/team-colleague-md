@@ -209,8 +209,9 @@ The system is divided into four independent services following Domain-Driven Des
 
 **Daily Digest Boundary:**
 - **Recommendation Service** owns tag subscriptions and chooses the user's subscribed topics.
-- **GenAI Service** exposes `POST /api/v1/genai/digests/generate` to fetch relevant external sources for the supplied topics and turn one day of new developments into a text digest.
-- **Caller/Persistence layer** stores generated digest history and triggers notifications; GenAI remains stateless.
+- **GenAI Service** exposes `POST /api/v1/genai/digests/generate` to create an asynchronous in-memory digest job, then `GET /api/v1/genai/digests/jobs/{jobId}` for polling status and results.
+- **GenAI Service** fetches relevant external sources for the supplied topics from the MVP provider set: GitHub, NewsAPI, arXiv, and Hugging Face models/datasets.
+- **Caller/Persistence layer** stores generated digest history and triggers notifications; GenAI keeps only temporary job state.
 
 ---
 
