@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
+import Avatar from '../../ui/Avatar';
 import styles from './Topbar.module.css';
 
 function IconSearch() {
@@ -56,7 +57,9 @@ export default function Topbar({ bottomRow }: TopbarProps) {
         </form>
         <div className={styles.topbarRight}>
           {isLoggedIn && user ? (
-            <Link to={`/profile/${user.username}`} className={styles.avatarBtn} aria-label="Your profile" />
+            <Link to={`/profile/${user.username}`} className={styles.avatarBtn} aria-label="Your profile">
+              <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={44} borderRadius={12} />
+            </Link>
           ) : (
             <button className={styles.signinBtn} onClick={() => openAuth('login')}>
               Sign in
