@@ -4,7 +4,44 @@ export interface User {
   displayName: string;
   avatarUrl?: string;
   role: 'USER' | 'VERIFIED' | 'ADMIN';
-  organisation?: string;
+  organization?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  website?: string | null;
+  organization?: string | null;
+  expertiseAreas?: string[];
+  role: 'USER' | 'VERIFIED' | 'ADMIN';
+  isBanned: boolean;
+  postCount: number;
+  followerCount: number;
+  followingCount: number;
+  likeReceivedCount: number;
+  createdAt: string;
+  updatedAt: string;
+  email?: string;
+}
+
+export interface UpdateUserRequest {
+  displayName?: string;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  website?: string | null;
+  organization?: string | null;
+  expertiseAreas?: string[] | null;
+}
+
+export interface DraftPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  tags: Tag[];
+  updatedAt: string;
 }
 
 export interface Tag {
