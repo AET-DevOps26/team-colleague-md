@@ -39,6 +39,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
   const [expertise, setExpertise] = useState((profile.expertiseAreas ?? []).join(', '));
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatarUrl ?? null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [websiteError, setWebsiteError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Crop state
@@ -79,6 +80,27 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
   }, []);
 
   const handleSave = useCallback(async () => {
+    // Normalize and validate website URL
+    let normalizedWebsite = website.trim();
+    if (normalizedWebsite) {
+      if (!/^https?:\/\//i.test(normalizedWebsite)) {
+        normalizedWebsite = 'https://' + normalizedWebsite;
+      }
+      // Extract hostname and check for spaces / clearly invalid chars
+      const hostname = normalizedWebsite.replace(/^https?:\/\//, '').split(/[/?#]/)[0];
+      let urlValid = !!hostname && !/[\s<>{}|\\^`]/.test(hostname);
+      if (urlValid) {
+        try { new URL(normalizedWebsite); } catch { urlValid = false; }
+      }
+      if (!urlValid) {
+        setWebsiteError('Please enter a valid URL (e.g. https://example.com)');
+        return;
+      }
+      setWebsiteError(null);
+    } else {
+      setWebsiteError(null);
+    }
+
     setSaving(true);
     try {
       const expertiseAreas = expertise
@@ -90,7 +112,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
         displayName: displayName.trim() || profile.displayName,
         bio: bio.trim() || null,
         organization: organization.trim() || null,
-        website: website.trim() || null,
+        website: normalizedWebsite || null,
         expertiseAreas: expertiseAreas.length > 0 ? expertiseAreas : null,
         avatarUrl: avatarPreview,
       });
@@ -135,6 +157,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={(_: Area, pixels: Area) => setCroppedAreaPixels(pixels)}
+                  zoomSpeed={0.3}
                 />
               </div>
               <div className={styles.cropControls}>
@@ -257,13 +280,14 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
                   <div className={styles.formGroup}>
                     <label className={styles.label}>Website</label>
                     <input
-                      className={styles.input}
-                      type="url"
+                      className={`${styles.input}${websiteError ? ` ${styles.inputError}` : ''}`}
+                      type="text"
                       value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      placeholder="https://"
+                      onChange={(e) => { setWebsite(e.target.value); setWebsiteError(null); }}
+                      placeholder="https://example.com"
                       data-testid="edit-website"
                     />
+                    {websiteError && <span className={styles.fieldError}>{websiteError}</span>}
                   </div>
                 </div>
 

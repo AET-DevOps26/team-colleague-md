@@ -269,6 +269,17 @@
 
 .hintWarn { color: var(--warning); }
 
+.inputError {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08) !important;
+}
+
+.fieldError {
+  font-size: 11px;
+  color: var(--danger);
+  margin-top: 1px;
+}
+
 .footer {
   padding: 14px 20px 18px;
   border-top: 1px solid var(--border-subtle);
