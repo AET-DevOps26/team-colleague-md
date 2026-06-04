@@ -1,4 +1,4 @@
-openapi: 3.0.3
+﻿openapi: 3.0.3
 info:
   title: Verita User Service API
   description: |
@@ -76,7 +76,7 @@ paths:
       tags: [Authentication]
       security: []
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
@@ -123,6 +123,44 @@ paths:
           description: Password reset successful
         '400': { $ref: '#/components/responses/BadRequest' }
 
+  /api/v1/auth/check-username:
+    get:
+      operationId: checkUsername
+      summary: Check if a username is available
+      tags: [Authentication]
+      security: []
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Availability result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/auth/check-email:
+    get:
+      operationId: checkEmail
+      summary: Check if an email address is available
+      tags: [Authentication]
+      security: []
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema: { type: string, format: email }
+      responses:
+        '200':
+          description: Availability result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
   # --- CURRENT USER ---
   /api/v1/users/me:
     get:
@@ -136,7 +174,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       operationId: updateCurrentUser
       summary: Update the current user's profile
@@ -328,6 +366,15 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
+    AvailabilityResponse:
+      type: object
+      description: Result of a username or email availability check.
+      required: [available]
+      properties:
+        available:
+          type: boolean
+          description: True if the value is not yet taken.
+
     UserRole:
       type: string
       enum: [USER, VERIFIED, ADMIN]
@@ -364,9 +411,9 @@ components:
       type: object
       required: [username, email, password]
       properties:
-        username: { type: string, minLength: 3, maxLength: 30 }
+        username: { type: string, minLength: 3, maxLength: 20, pattern: '^[a-zA-Z0-9_]+$' }
         email: { type: string, format: email }
-        password: { type: string, minLength: 8 }
+        password: { type: string, minLength: 8, pattern: '^(?=.*[a-zA-Z])(?=.*\d).+$' }
 
     LoginRequest:
       type: object
@@ -387,7 +434,7 @@ components:
 
     RefreshTokenRequest:
       type: object
-      required: [refreshToken]
+      description: Body is optional — the refresh token is read from the httpOnly cookie.
       properties:
         refreshToken: { type: string }
 

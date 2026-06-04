@@ -53,6 +53,10 @@ public class UserEntity {
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
+    @Column(unique = true)
+    private String refreshToken;
+    private OffsetDateTime refreshTokenExpiry;
+
     // Preferences
     @Enumerated(EnumType.STRING)
     private DigestFrequency digestFrequency = DigestFrequency.WEEKLY;
@@ -113,4 +117,8 @@ public class UserEntity {
     public void setShowBookmarks(Boolean showBookmarks) { this.showBookmarks = showBookmarks; }
     public Boolean getShowLikes() { return showLikes; }
     public void setShowLikes(Boolean showLikes) { this.showLikes = showLikes; }
+    public String getRefreshToken() { return refreshToken; }
+    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+    public OffsetDateTime getRefreshTokenExpiry() { return refreshTokenExpiry; }
+    public void setRefreshTokenExpiry(OffsetDateTime refreshTokenExpiry) { this.refreshTokenExpiry = refreshTokenExpiry; }
 }
