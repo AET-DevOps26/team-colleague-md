@@ -4,9 +4,9 @@ info:
   title: Verita GenAI Service API
   description: |
     AI-powered service for post summarization, tag suggestions, and daily digest
-    text generation. For daily digests, callers provide subscribed topics and
-    the GenAI service fetches relevant external sources for the requested day.
-  version: 1.1.0
+    generation. Daily digest generation is asynchronous: internal callers submit
+    a job, poll its status, and persist the final digest when the job succeeds.
+  version: 1.2.0
   license:
     name: Proprietary
 
@@ -44,21 +44,22 @@ paths:
 
   /api/v1/genai/digests/generate:
     post:
-      operationId: generateDailyDigest
-      summary: Generate a one-day text digest for subscribed topics
+      operationId: createDailyDigestJob
+      summary: Start daily digest generation
       description: |
-        Generates a personalized text digest for a user's subscribed topics over
-        a one-day period. Recommendation Service owns the subscription list and
-        supplies the subscribed topics. GenAI Service fetches relevant external
-        sources for those topics during the requested period and summarizes what
-        newly happened.
+        Creates an asynchronous in-memory job that generates a personalized text
+        digest for the supplied topics and one-day period. The caller does not
+        provide source items. GenAI fetches external sources internally from the
+        MVP provider set: GitHub, NewsAPI, arXiv, and Hugging Face models/datasets.
 
-        The service does not persist the digest. The caller is responsible for
-        storing the response, exposing historical digests, and delivering
-        notifications.
+        The endpoint returns `202 Accepted` because digest generation continues
+        after the HTTP response. The caller must poll `statusUrl` until the job is
+        `SUCCEEDED` or `FAILED`, then persist the result outside GenAI.
+
+        MVP limitations: job state is in-memory, lost on restart, and local to one
+        GenAI service instance. Redis/Postgres or a queue-backed worker should
+        replace this for production.
       tags: [Digests]
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -67,36 +68,72 @@ paths:
               $ref: '#/components/schemas/DigestGenerateRequest'
             examples:
               personalizedDailyDigest:
-                summary: Daily digest for a subscribed user
+                summary: Daily digest job for a subscribed user
                 value:
+                  requestId: recommendation-2026-06-04-user-123
                   userId: 123e4567-e89b-12d3-a456-426614174000
-                  digestDate: '2026-06-03'
-                  periodStart: '2026-06-02T00:00:00Z'
-                  periodEnd: '2026-06-03T00:00:00Z'
+                  digestDate: '2026-06-04'
+                  periodStart: '2026-06-03T00:00:00Z'
+                  periodEnd: '2026-06-04T00:00:00Z'
                   timezone: Europe/Berlin
                   topics:
                     - id: 7f7d0f5a-9f75-4971-9624-89a01c3439d6
                       name: LLMs
                     - id: 1ff86b78-d1ef-4fb2-8eec-4f8931f22f1a
                       name: AI Agents
-                  sourcePolicy: trusted
                   maxSourcesPerTopic: 5
                   maxEvents: 8
+                  tone: technical
+      security:
+        - bearerAuth: []
       responses:
-        '200':
-          description: Digest generated successfully
+        '202':
+          description: |
+            Digest generation job accepted. Provider and LLM failures that occur
+            after acceptance are reported through `GET /api/v1/genai/digests/jobs/{jobId}`
+            as a `FAILED` job with `error.code` such as `llm_error` or `llm_parse_error`.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DigestGenerateResponse'
+                $ref: '#/components/schemas/DigestJobAccepted'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '502':
-          $ref: '#/components/responses/LlmError'
+
+  /api/v1/genai/digests/jobs/{jobId}:
+    get:
+      operationId: getDailyDigestJob
+      summary: Get daily digest job status
+      description: |
+        Returns the current state of an asynchronous digest generation job. When
+        the job status is `SUCCEEDED`, the response includes the generated digest
+        result. When the job status is `FAILED`, the response includes an error;
+        LLM provider failures are represented here with `error.code = llm_error`
+        instead of an immediate `502` from the job creation endpoint.
+      tags: [Digests]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Digest job status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DigestJobStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
 components:
   securitySchemes:
@@ -118,14 +155,14 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    ValidationError:
-      description: Request body failed schema validation
+    NotFound:
+      description: Resource not found
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    LlmError:
-      description: LLM provider was unavailable or returned an error
+    ValidationError:
+      description: Request body failed schema validation
       content:
         application/json:
           schema:
@@ -135,21 +172,26 @@ components:
     DigestGenerateRequest:
       type: object
       description: |
-        Request for generating a daily digest. In OpenAPI, `required` lists only
+        Request for starting a daily digest job. In OpenAPI, `required` lists only
         the fields the caller must send; each field's datatype and format are
-        defined under `properties`. Fields with defaults are optional request
-        controls used when the caller wants to override GenAI's normal behavior.
+        defined under `properties`. GenAI owns external source fetching and uses
+        internal prompt limits: snippets are trimmed to 600 characters and at most
+        30 selected sources are sent to the LLM.
       required: [digestDate, periodStart, periodEnd, timezone, topics]
       properties:
+        requestId:
+          type: string
+          maxLength: 120
+          description: Optional caller correlation ID. Echoed in job responses, but not treated as an idempotency key.
         userId:
           type: string
           format: uuid
-          description: User receiving the personalized digest. Omit only for anonymous community digests.
+          description: Optional user receiving the personalized digest. The caller owns durable user-to-digest mapping.
         digestDate:
           type: string
           format: date
           description: Calendar date represented by the digest in the requested timezone.
-          example: '2026-06-03'
+          example: '2026-06-04'
         periodStart:
           type: string
           format: date-time
@@ -166,33 +208,21 @@ components:
           type: array
           minItems: 1
           maxItems: 50
-          description: Topics the user is subscribed to, supplied by Recommendation Service.
+          description: Topics the user is subscribed to, supplied by the internal caller.
           items:
             $ref: '#/components/schemas/DigestTopic'
-        sourcePolicy:
-          type: string
-          enum: [default, trusted, broad]
-          default: default
-          description: Optional external source selection strategy used by GenAI when fetching source material.
-        preferredSourceUrls:
-          type: array
-          maxItems: 20
-          description: Optional trusted domains or feed URLs the caller wants GenAI to prioritize.
-          items:
-            type: string
-            format: uri
         maxSourcesPerTopic:
           type: integer
           minimum: 1
           maximum: 20
           default: 5
-          description: Optional limit for the maximum number of external sources to fetch per subscribed topic.
+          description: Optional final selected source limit per topic across all internal providers.
         maxEvents:
           type: integer
           minimum: 1
           maximum: 20
           default: 8
-          description: Optional limit for the maximum number of digest events to return.
+          description: Optional maximum number of digest events to return.
         tone:
           type: string
           enum: [concise, technical, executive]
@@ -211,6 +241,99 @@ components:
           minLength: 1
           maxLength: 80
 
+    DigestJobAccepted:
+      type: object
+      required: [jobId, status, statusUrl, submittedAt]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/DigestJobStatusValue'
+        statusUrl:
+          type: string
+          example: /api/v1/genai/digests/jobs/8df7f6e0-6c3f-4b82-8d90-7d3d5b8dc8e8
+        requestId:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        submittedAt:
+          type: string
+          format: date-time
+
+    DigestJobStatus:
+      type: object
+      required: [jobId, status, submittedAt, warnings]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/DigestJobStatusValue'
+        requestId:
+          type: string
+          description: Echoed caller correlation ID when provided.
+        userId:
+          type: string
+          format: uuid
+        submittedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          description: Non-fatal provider or topic issues. Warnings can appear on succeeded jobs.
+          items:
+            $ref: '#/components/schemas/DigestJobWarning'
+        result:
+          $ref: '#/components/schemas/DigestGenerateResponse'
+        error:
+          $ref: '#/components/schemas/DigestJobError'
+
+    DigestJobStatusValue:
+      type: string
+      enum: [QUEUED, RUNNING, SUCCEEDED, FAILED]
+
+    DigestJobWarning:
+      type: object
+      required: [provider, code, message]
+      properties:
+        provider:
+          type: string
+          enum: [github, newsapi, arxiv, huggingface, all]
+          description: Source provider related to the warning, or `all` for topic-level warnings.
+        topicId:
+          type: string
+          format: uuid
+          description: Topic related to the warning. Omitted for provider-level warnings.
+        code:
+          type: string
+          enum: [missing_credentials, provider_error, no_sources_for_topic]
+        message:
+          type: string
+
+    DigestJobError:
+      type: object
+      description: Fatal job error. Provider-level non-fatal issues are reported as warnings instead.
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [no_sources_found, llm_error, llm_parse_error, job_not_found, unexpected_error]
+          description: |
+            `llm_error` means the LLM provider failed during background generation.
+            `llm_parse_error` means the LLM returned invalid digest JSON.
+        message:
+          type: string
+        details:
+          type: string
+
     DigestGenerateResponse:
       type: object
       required:
@@ -228,13 +351,6 @@ components:
         - generatedAt
         - model
       properties:
-        digestId:
-          type: string
-          format: uuid
-          description: Optional ID supplied by the caller or generated by an outer persistence layer.
-        userId:
-          type: string
-          format: uuid
         digestDate:
           type: string
           format: date
@@ -246,7 +362,7 @@ components:
           format: date-time
         title:
           type: string
-          example: Your Wednesday AI Digest
+          example: Your Thursday AI Digest
         topStorySubtitle:
           type: string
           description: One-sentence headline for the most important new development.
@@ -259,7 +375,10 @@ components:
             $ref: '#/components/schemas/DigestTopic'
         events:
           type: array
-          description: Structured digest sections rendered as the individual event blocks in the digest post.
+          description: |
+            Structured digest sections rendered as individual event blocks. Each
+            event is one digest-worthy development synthesized from one or more
+            selected external sources.
           items:
             $ref: '#/components/schemas/DigestEvent'
         eventCount:
@@ -268,7 +387,7 @@ components:
         sourceCount:
           type: integer
           minimum: 0
-          description: Number of external sources used for the generated digest.
+          description: Number of selected external sources used for the generated digest.
         readTimeMinutes:
           type: integer
           minimum: 1
@@ -301,7 +420,10 @@ components:
           description: Concise bullets explaining what changed and why it matters.
         topicIds:
           type: array
-          description: Subscribed topic IDs that this event is relevant to.
+          description: |
+            Subscribed topic IDs that this event is relevant to. The LLM must use
+            only topic IDs from the digest request; GenAI validates this mapping
+            before storing the job result.
           items:
             type: string
             format: uuid
@@ -314,7 +436,7 @@ components:
         occurredAt:
           type: string
           format: date-time
-          description: Best available event time, usually the newest source post timestamp.
+          description: Best available event time from the supporting sources.
 
     TokenUsage:
       type: object
@@ -335,9 +457,9 @@ components:
       properties:
         error:
           type: string
-          example: llm_error
+          example: validation_error
         message:
           type: string
-          example: Failed to generate digest.
+          example: Request body failed schema validation.
         details:
           type: string
