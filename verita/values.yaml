@@ -1,6 +1,7 @@
 ﻿global:
   registry: ghcr.io/aet-devops26/team-colleague-md
   imagePullSecrets: []
+
 content:
   replicaCount: 1
   image:
@@ -11,6 +12,7 @@ content:
   service:
     type: ClusterIP
     port: 8082
+
 user:
   replicaCount: 1
   image:
@@ -21,6 +23,7 @@ user:
   service:
     type: ClusterIP
     port: 8081
+
 recommendation:
   replicaCount: 1
   image:
@@ -31,6 +34,7 @@ recommendation:
   service:
     type: ClusterIP
     port: 8083
+
 genai:
   replicaCount: 1
   image:
@@ -41,6 +45,7 @@ genai:
   service:
     type: ClusterIP
     port: 8000
+
 frontend:
   replicaCount: 1
   image:
@@ -51,6 +56,7 @@ frontend:
   service:
     type: ClusterIP
     port: 80
+
 ingress:
   enabled: true
   host: verita.stud.k8s.ase.cit.tum.de

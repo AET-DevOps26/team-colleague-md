@@ -6,6 +6,7 @@ version: 0.2.0
 appVersion: "0.1.0"
 
 dependencies:
+  # External Dependencies
   - name: postgresql
     version: 18.4.0
     repository: https://charts.bitnami.com/bitnami
@@ -21,3 +22,20 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     alias: recommendation-postgresql
     condition: recommendationPostgresql.enabled
+
+  # Local Subcharts (These must point to the folders in charts/)
+  - name: content
+    version: 0.1.0
+    repository: "file://./charts/content"
+  - name: frontend
+    version: 0.1.0
+    repository: "file://./charts/frontend"
+  - name: genai
+    version: 0.1.0
+    repository: "file://./charts/genai"
+  - name: recommendation
+    version: 0.1.0
+    repository: "file://./charts/recommendation"
+  - name: user
+    version: 0.1.0
+    repository: "file://./charts/user"
