@@ -1,33 +1,67 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../../hooks/useAuth';
 import { userService } from '../../services/user.service';
 import { timeAgo } from '../../utils/timeAgo';
 import PostDetailTopbar from '../../components/layout/PostDetailTopbar';
 import Toast from '../../components/ui/Toast';
 import EditProfileModal from '../../components/modals/EditProfileModal';
+import ImageCard from '../../components/feed/ImageCard';
+import TextCard from '../../components/feed/TextCard';
 import type { UserProfile, Post, DraftPost, UpdateUserRequest } from '../../types';
 import styles from './UserProfile.module.css';
 
-type TabId = 'posts' | 'bookmarks' | 'drafts' | 'likes';
+type TabId = 'posts' | 'bookmarks' | 'likes' | 'drafts';
+
+const noop = () => {};
 
 function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  return String(n);
 }
 
 function formatJoinDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
-  return String(n);
+// ── Tab Icons ────────────────────────────────────
+function IconPosts() {
+  return (
+    <svg className={styles.tabIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="14" y2="17" />
+    </svg>
+  );
+}
+function IconBookmarks() {
+  return (
+    <svg className={styles.tabIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+function IconLikes() {
+  return (
+    <svg className={styles.tabIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+function IconDrafts() {
+  return (
+    <svg className={styles.tabIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </svg>
+  );
 }
 
 // ── Manage Dropdown ──────────────────────────────
@@ -44,30 +78,21 @@ function ManageDropdown({ postId, onEdit, onUnpublish, onDelete, children }: {
         {children as React.ReactElement}
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className={styles.dropdownContent} align="end" sideOffset={6}>
-          <DropdownMenu.Item
-            className={styles.dropdownItem}
-            onSelect={() => onEdit(postId)}
-          >
+        <DropdownMenu.Content className={styles.dropdownContent} align="end" sideOffset={6} onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => onEdit(postId)}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M9.5 2.5L11.5 4.5M2 12h2L10.5 4.5 8.5 2.5 2 9v3z" />
             </svg>
             Edit post
           </DropdownMenu.Item>
-          <DropdownMenu.Item
-            className={styles.dropdownItem}
-            onSelect={() => onUnpublish(postId)}
-          >
+          <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => onUnpublish(postId)}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
               <rect x="2" y="2" width="10" height="10" rx="2" />
             </svg>
             Unpublish
           </DropdownMenu.Item>
           <DropdownMenu.Separator className={styles.dropdownSep} />
-          <DropdownMenu.Item
-            className={`${styles.dropdownItem} ${styles.danger}`}
-            onSelect={() => onDelete(postId)}
-          >
+          <DropdownMenu.Item className={`${styles.dropdownItem} ${styles.danger}`} onSelect={() => onDelete(postId)}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M2 3.5h10M5 3.5V2.5h4v1M11.5 3.5l-.7 8H3.2l-.7-8" />
               <path d="M5.5 6v3.5M8.5 6v3.5" />
@@ -77,6 +102,18 @@ function ManageDropdown({ postId, onEdit, onUnpublish, onDelete, children }: {
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
+  );
+}
+
+// ── Saved badge overlay ──────────────────────────
+function SavedBadge() {
+  return (
+    <span className={styles.savedBadge}>
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <path d="M2 2h7v9L5.5 9 2 11V2z" />
+      </svg>
+      Saved
+    </span>
   );
 }
 
@@ -95,6 +132,11 @@ export default function UserProfile() {
   const [activeTab, setActiveTab] = useState<TabId>('posts');
   const [editOpen, setEditOpen] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
+  const [confirm, setConfirm] = useState<{
+    action: 'delete-post' | 'unpublish' | 'delete-draft';
+    id: string;
+    title: string;
+  } | null>(null);
 
   const isOwnProfile = !!authUser && authUser.username === username;
 
@@ -132,10 +174,7 @@ export default function UserProfile() {
     const updated = await userService.updateProfile(username, data);
     setProfile(updated);
     if (isOwnProfile) {
-      updateUser({
-        displayName: updated.displayName,
-        avatarUrl: updated.avatarUrl ?? undefined,
-      });
+      updateUser({ displayName: updated.displayName, avatarUrl: updated.avatarUrl ?? undefined });
     }
     showToast('Profile updated');
   }, [username, profile, isOwnProfile, updateUser, showToast]);
@@ -145,19 +184,45 @@ export default function UserProfile() {
   }, [navigate]);
 
   const handlePostManageUnpublish = useCallback((postId: string) => {
-    showToast('Post unpublished');
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
-  }, [showToast]);
+    const post = posts.find((p) => p.id === postId);
+    setConfirm({ action: 'unpublish', id: postId, title: post?.title ?? 'this post' });
+  }, [posts]);
 
   const handlePostManageDelete = useCallback((postId: string) => {
-    showToast('Post deleted');
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
-  }, [showToast]);
+    const post = posts.find((p) => p.id === postId);
+    setConfirm({ action: 'delete-post', id: postId, title: post?.title ?? 'this post' });
+  }, [posts]);
 
   const handleDraftDelete = useCallback((draftId: string) => {
-    setDrafts((prev) => prev.filter((d) => d.id !== draftId));
-    showToast('Draft deleted');
-  }, [showToast]);
+    const draft = drafts.find((d) => d.id === draftId);
+    setConfirm({ action: 'delete-draft', id: draftId, title: draft?.title ?? 'this draft' });
+  }, [drafts]);
+
+  const executeConfirm = useCallback(() => {
+    if (!confirm) return;
+    if (confirm.action === 'delete-post') {
+      setPosts((prev) => prev.filter((p) => p.id !== confirm.id));
+      showToast('Post deleted');
+    } else if (confirm.action === 'unpublish') {
+      const post = posts.find((p) => p.id === confirm.id);
+      setPosts((prev) => prev.filter((p) => p.id !== confirm.id));
+      if (post) {
+        const draft: DraftPost = {
+          id: post.id,
+          title: post.title,
+          excerpt: post.excerpt ?? '',
+          tags: post.tags,
+          updatedAt: new Date().toISOString(),
+        };
+        setDrafts((prev) => [draft, ...prev]);
+      }
+      showToast('Post moved to Drafts');
+    } else if (confirm.action === 'delete-draft') {
+      setDrafts((prev) => prev.filter((d) => d.id !== confirm.id));
+      showToast('Draft deleted');
+    }
+    setConfirm(null);
+  }, [confirm, posts, showToast]);
 
   if (loading || !profile) {
     return (
@@ -170,12 +235,35 @@ export default function UserProfile() {
 
   const initials = getInitials(profile.displayName);
 
-  const tabs: { id: TabId; label: string; count: number }[] = [
-    { id: 'posts', label: 'Posts', count: posts.length },
-    { id: 'bookmarks', label: 'Bookmarks', count: bookmarks.length },
-    ...(isOwnProfile ? [{ id: 'drafts' as TabId, label: 'Drafts', count: drafts.length }] : []),
-    { id: 'likes', label: 'Likes', count: likedPosts.length },
+  const tabs: { id: TabId; label: string; count: number; icon: React.ReactNode }[] = [
+    { id: 'posts',     label: 'Posts',     count: posts.length,      icon: <IconPosts /> },
+    { id: 'bookmarks', label: 'Bookmarks', count: bookmarks.length,  icon: <IconBookmarks /> },
+    { id: 'likes',     label: 'Likes',     count: likedPosts.length, icon: <IconLikes /> },
+    ...(isOwnProfile ? [{ id: 'drafts' as TabId, label: 'Drafts', count: drafts.length, icon: <IconDrafts /> }] : []),
   ];
+
+  function renderCard(post: Post, overlay?: React.ReactNode) {
+    return post.coverImageUrl
+      ? <ImageCard key={post.id} post={post} onLike={noop} topRightOverlay={overlay} className={styles.profileCard} />
+      : <TextCard  key={post.id} post={post} onLike={noop} topRightOverlay={overlay} className={styles.profileCard} />;
+  }
+
+  function manageOverlay(post: Post) {
+    return (
+      <ManageDropdown postId={post.id} onEdit={handlePostManageEdit} onUnpublish={handlePostManageUnpublish} onDelete={handlePostManageDelete}>
+        <button
+          className={styles.managePill}
+          aria-label="Manage post"
+          onClick={(e) => e.stopPropagation()}
+          data-testid={`manage-btn-${post.id}`}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+            <circle cx="7" cy="2.5" r="1.2" /><circle cx="7" cy="7" r="1.2" /><circle cx="7" cy="11.5" r="1.2" />
+          </svg>
+        </button>
+      </ManageDropdown>
+    );
+  }
 
   return (
     <>
@@ -201,7 +289,7 @@ export default function UserProfile() {
                 aria-label="Edit profile photo"
                 data-testid="avatar-edit-btn"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M10.5 2.5l1 1L5 10l-2 .5.5-2z" />
                 </svg>
               </button>
@@ -248,13 +336,7 @@ export default function UserProfile() {
                     <circle cx="6.5" cy="6.5" r="5" />
                     <path d="M4.5 6.5h4M6.5 4.5v4" />
                   </svg>
-                  <a
-                    href={profile.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.metaLink}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <a href={profile.website} target="_blank" rel="noopener noreferrer" className={styles.metaLink} onClick={(e) => e.stopPropagation()}>
                     {profile.website.replace(/^https?:\/\//, '')}
                   </a>
                 </div>
@@ -287,7 +369,6 @@ export default function UserProfile() {
                 <span className={styles.statLabel}>Likes received</span>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -303,6 +384,7 @@ export default function UserProfile() {
                 onClick={() => setActiveTab(t.id)}
                 data-testid={`tab-${t.id}`}
               >
+                {t.icon}
                 {t.label}
                 <span className={styles.tabCount}>{t.count}</span>
               </button>
@@ -310,15 +392,11 @@ export default function UserProfile() {
           </div>
         </div>
 
-        {/* ── Tab Panels — always mounted, hidden via display:none so stagger only runs once ── */}
+        {/* ── Tab Panels — always mounted, hidden via display:none so stagger fires once ── */}
         <div className={styles.tabPanels}>
 
           {/* Posts */}
-          <div
-            className={activeTab === 'posts' ? styles.tabPanelActive : styles.tabPanel}
-            role="tabpanel"
-            aria-labelledby="tab-posts"
-          >
+          <div className={activeTab === 'posts' ? styles.tabPanelActive : styles.tabPanel} role="tabpanel">
             {posts.length === 0 ? (
               <div className={styles.emptyState}>
                 <strong>No posts yet</strong>
@@ -326,27 +404,13 @@ export default function UserProfile() {
               </div>
             ) : (
               <div className={styles.postsGrid} data-testid="posts-grid">
-                {posts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    showManage={isOwnProfile}
-                    onEdit={handlePostManageEdit}
-                    onUnpublish={handlePostManageUnpublish}
-                    onDelete={handlePostManageDelete}
-                    onClick={() => navigate(`/post/${post.id}`)}
-                  />
-                ))}
+                {posts.map((post) => renderCard(post, isOwnProfile ? manageOverlay(post) : undefined))}
               </div>
             )}
           </div>
 
           {/* Bookmarks */}
-          <div
-            className={activeTab === 'bookmarks' ? styles.tabPanelActive : styles.tabPanel}
-            role="tabpanel"
-            aria-labelledby="tab-bookmarks"
-          >
+          <div className={activeTab === 'bookmarks' ? styles.tabPanelActive : styles.tabPanel} role="tabpanel">
             {bookmarks.length === 0 ? (
               <div className={styles.emptyState}>
                 <strong>No bookmarks</strong>
@@ -354,24 +418,28 @@ export default function UserProfile() {
               </div>
             ) : (
               <div className={styles.postsGrid}>
-                {bookmarks.map((post) => (
-                  <BookmarkCard
-                    key={post.id}
-                    post={post}
-                    onClick={() => navigate(`/post/${post.id}`)}
-                  />
-                ))}
+                {bookmarks.map((post) => renderCard(post, <SavedBadge />))}
+              </div>
+            )}
+          </div>
+
+          {/* Likes */}
+          <div className={activeTab === 'likes' ? styles.tabPanelActive : styles.tabPanel} role="tabpanel">
+            {likedPosts.length === 0 ? (
+              <div className={styles.emptyState}>
+                <strong>No likes yet</strong>
+                {isOwnProfile ? 'Posts you like will appear here.' : `${profile.displayName} hasn't liked anything yet.`}
+              </div>
+            ) : (
+              <div className={styles.postsGrid}>
+                {likedPosts.map((post) => renderCard(post))}
               </div>
             )}
           </div>
 
           {/* Drafts — own profile only */}
           {isOwnProfile && (
-            <div
-              className={activeTab === 'drafts' ? styles.tabPanelActive : styles.tabPanel}
-              role="tabpanel"
-              aria-labelledby="tab-drafts"
-            >
+            <div className={activeTab === 'drafts' ? styles.tabPanelActive : styles.tabPanel} role="tabpanel">
               {drafts.length === 0 ? (
                 <div className={styles.emptyState}>
                   <strong>No drafts</strong>
@@ -393,30 +461,6 @@ export default function UserProfile() {
             </div>
           )}
 
-          {/* Likes */}
-          <div
-            className={activeTab === 'likes' ? styles.tabPanelActive : styles.tabPanel}
-            role="tabpanel"
-            aria-labelledby="tab-likes"
-          >
-            {likedPosts.length === 0 ? (
-              <div className={styles.emptyState}>
-                <strong>No likes yet</strong>
-                {isOwnProfile ? 'Posts you like will appear here.' : `${profile.displayName} hasn't liked anything yet.`}
-              </div>
-            ) : (
-              <div className={styles.postsGrid}>
-                {likedPosts.map((post) => (
-                  <LikedCard
-                    key={post.id}
-                    post={post}
-                    onClick={() => navigate(`/post/${post.id}`)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
         </div>
       </main>
 
@@ -431,179 +475,74 @@ export default function UserProfile() {
       )}
 
       <Toast message={toast.message} show={toast.show} onHide={hideToast} />
+
+      <ConfirmDialog
+        confirm={confirm}
+        onConfirm={executeConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </>
   );
 }
 
-// ── Card Components ──────────────────────────────
-
-type CardVariant = 'manage' | 'bookmark' | 'liked';
-
-interface ProfilePostCardProps {
-  post: Post;
-  variant: CardVariant;
-  onClick: () => void;
-  onEdit?: (id: string) => void;
-  onUnpublish?: (id: string) => void;
-  onDelete?: (id: string) => void;
-}
-
-function ProfilePostCard({ post, variant, onClick, onEdit, onUnpublish, onDelete }: ProfilePostCardProps) {
-  const initials = getInitials(post.author.displayName);
-  const hasImage = !!post.coverImageUrl;
-  const isLiked = variant === 'liked';
-
-  const coverOverlay = (() => {
-    if (variant === 'manage' && onEdit && onUnpublish && onDelete) {
-      return (
-        <ManageDropdown postId={post.id} onEdit={onEdit} onUnpublish={onUnpublish} onDelete={onDelete}>
-          <button
-            className={styles.manageBtn}
-            aria-label="Manage post"
-            onClick={(e) => e.stopPropagation()}
-            data-testid={`manage-btn-${post.id}`}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <circle cx="7" cy="2.5" r="1.2" /><circle cx="7" cy="7" r="1.2" /><circle cx="7" cy="11.5" r="1.2" />
-            </svg>
-          </button>
-        </ManageDropdown>
-      );
-    }
-    if (variant === 'bookmark') {
-      return (
-        <div className={styles.bookmarkFlag}>
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.4">
-            <path d="M2 2h7v9L5.5 9 2 11V2z" />
-          </svg>
-          Saved
-        </div>
-      );
-    }
-    return null;
-  })();
-
-  const heartIcon = isLiked
-    ? <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor" stroke="none"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z" /></svg>
-    : <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z" /></svg>;
-
-  const footer = (
-    <div className={styles.cardFooter}>
-      <div className={styles.cardAuthorAvatar}>{initials}</div>
-      <span className={styles.cardAuthorName}>{post.author.displayName}</span>
-      <div className={styles.cardMetaRight}>
-        <span className={`${styles.cardLikes} ${isLiked ? styles.liked : ''}`}>
-          {heartIcon}
-          {formatCount(post.likeCount)}
-        </span>
-        <span className={styles.cardTime}>{timeAgo(post.createdAt)}</span>
-      </div>
-    </div>
-  );
-
-  const bodyContent = (
-    <>
-      {post.excerpt && (
-        <div className={styles.cardSummary}>
-          <span style={{ fontSize: 11, marginRight: 3 }}>✦</span>{post.excerpt}
-        </div>
-      )}
-      <div className={styles.cardTags}>
-        {post.tags.map((tag) => (
-          <span key={tag.id} className={styles.cardTag}>{tag.name}</span>
-        ))}
-      </div>
-    </>
-  );
-
-  if (!hasImage) {
-    const inlineManageBtn = variant === 'manage' && onEdit && onUnpublish && onDelete ? (
-      <ManageDropdown postId={post.id} onEdit={onEdit} onUnpublish={onUnpublish} onDelete={onDelete}>
-        <button
-          className={styles.manageBtnInline}
-          aria-label="Manage post"
-          onClick={(e) => e.stopPropagation()}
-          data-testid={`manage-btn-${post.id}`}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-            <circle cx="7" cy="2.5" r="1.2" /><circle cx="7" cy="7" r="1.2" /><circle cx="7" cy="11.5" r="1.2" />
-          </svg>
-        </button>
-      </ManageDropdown>
-    ) : null;
-
-    return (
-      <button
-        className={`${styles.postCard} ${styles.textOnly}`}
-        onClick={onClick}
-        data-testid={`post-card-${post.id}`}
-      >
-        <div className={styles.cardBody}>
-          <div className={styles.textTitleRow}>
-            <div className={styles.cardTitle}>{post.title}</div>
-            {inlineManageBtn}
-            {variant === 'bookmark' && (
-              <div style={{
-                flexShrink: 0, background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 4,
-                fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)',
-                display: 'flex', alignItems: 'center', gap: 3,
-              }}>
-                <svg width="10" height="10" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.4">
-                  <path d="M2 2h7v9L5.5 9 2 11V2z" />
-                </svg>
-                Saved
-              </div>
-            )}
-          </div>
-          {bodyContent}
-        </div>
-        {footer}
-      </button>
-    );
-  }
-
-  return (
-    <button className={styles.postCard} onClick={onClick} data-testid={`post-card-${post.id}`}>
-      <div className={styles.cardCover}>
-        <img src={post.coverImageUrl!} alt="" className={styles.coverImg} />
-        {post.tags[0] && <span className={`${styles.cardBadge} ${styles.cardBadgeType}`}>{post.tags[0].name}</span>}
-        {post.readTimeMinutes && (
-          <span className={`${styles.cardBadge} ${styles.cardBadgeTime}`}>{post.readTimeMinutes} min read</span>
-        )}
-        {coverOverlay}
-      </div>
-      <div className={styles.cardBody}>
-        <div className={styles.cardTitle}>{post.title}</div>
-        {bodyContent}
-      </div>
-      {footer}
-    </button>
-  );
-}
-
-function PostCard({ post, showManage, onEdit, onUnpublish, onDelete, onClick }: {
-  post: Post; showManage: boolean;
-  onEdit: (id: string) => void; onUnpublish: (id: string) => void; onDelete: (id: string) => void;
-  onClick: () => void;
+// ── Confirm Dialog ───────────────────────────────
+function ConfirmDialog({ confirm, onConfirm, onCancel }: {
+  confirm: { action: 'delete-post' | 'unpublish' | 'delete-draft'; id: string; title: string } | null;
+  onConfirm: () => void;
+  onCancel: () => void;
 }) {
+  const isDelete = confirm?.action === 'delete-post' || confirm?.action === 'delete-draft';
+  const isUnpublish = confirm?.action === 'unpublish';
+
+  const title = isDelete ? 'Delete?' : 'Unpublish post?';
+  const description = isDelete
+    ? 'This action cannot be undone.'
+    : 'The post will be moved to your Drafts.';
+  const confirmLabel = isDelete ? 'Delete' : 'Unpublish';
+
   return (
-    <ProfilePostCard
-      post={post} variant="manage" onClick={onClick}
-      onEdit={showManage ? onEdit : undefined}
-      onUnpublish={showManage ? onUnpublish : undefined}
-      onDelete={showManage ? onDelete : undefined}
-    />
+    <Dialog.Root open={!!confirm} onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className={styles.confirmOverlay} />
+        <Dialog.Content className={styles.confirmContent} aria-describedby={undefined}>
+          <div className={styles.confirmHeader}>
+            <div className={`${styles.confirmIcon} ${isDelete ? styles.confirmIconDanger : styles.confirmIconWarn}`}>
+              {isDelete ? (
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 4.5h14M6 4.5V3h6v1.5M14.5 4.5l-.9 10H4.4l-.9-10" />
+                  <path d="M7 7.5v4.5M11 7.5v4.5" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="14" height="14" rx="2.5" />
+                  <path d="M9 6v4M9 12v.5" />
+                </svg>
+              )}
+            </div>
+            <div>
+              <Dialog.Title className={styles.confirmTitle}>{title}</Dialog.Title>
+              <p className={styles.confirmDesc}>{description}</p>
+            </div>
+          </div>
+          {confirm && (
+            <div className={styles.confirmPostPreview}>{confirm.title}</div>
+          )}
+          <div className={styles.confirmFooter}>
+            <button className={styles.confirmCancelBtn} onClick={onCancel}>Cancel</button>
+            <button
+              className={`${styles.confirmActionBtn} ${isDelete ? styles.confirmDanger : isUnpublish ? styles.confirmWarn : ''}`}
+              onClick={onConfirm}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
-function BookmarkCard({ post, onClick }: { post: Post; onClick: () => void }) {
-  return <ProfilePostCard post={post} variant="bookmark" onClick={onClick} />;
-}
-
-function LikedCard({ post, onClick }: { post: Post; onClick: () => void }) {
-  return <ProfilePostCard post={post} variant="liked" onClick={onClick} />;
-}
-
+// ── Draft Card ───────────────────────────────────
 function DraftCard({ draft, onPublish, onEdit, onDelete }: {
   draft: DraftPost;
   onPublish: () => void;

@@ -11,6 +11,7 @@
 }
 
 .cream {
+  position: relative;
   background: var(--bg-paper);
   border-radius: 12px;
   padding: 14px 28px 14px 16px;

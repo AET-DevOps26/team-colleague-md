@@ -159,7 +159,8 @@ export const userService = {
 
   getUserLikedPosts(username: string): Promise<Post[]> {
     return new Promise((resolve) => {
-      setTimeout(() => resolve(MOCK_LIKED[username] ?? []), 250);
+      const posts = (MOCK_LIKED[username] ?? []).map((p) => ({ ...p, isLikedByMe: true }));
+      setTimeout(() => resolve(posts), 250);
     });
   },
 
@@ -181,10 +182,10 @@ export const userService = {
           updatedAt: new Date().toISOString(),
         };
 
-        // base64 data URLs can be several MB — don't persist to localStorage.
-        // In production avatarUrl will be a short MinIO URL; this guard is mock-only.
-        const isBase64 = typeof merged.avatarUrl === 'string' && merged.avatarUrl.startsWith('data:');
-        const toStore = isBase64 ? { ...merged, avatarUrl: stored.avatarUrl ?? base.avatarUrl } : merged;
+        // Store the full merged profile including avatarUrl.
+        // try/catch below handles QuotaExceededError if the base64 is too large;
+        // in that case the avatar lives in MOCK_PROFILES memory only (session-scoped).
+        const toStore = merged;
 
         try {
           localStorage.setItem(PROFILE_KEY_PREFIX + username, JSON.stringify(toStore));

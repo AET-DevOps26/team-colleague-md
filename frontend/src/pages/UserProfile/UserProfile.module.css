@@ -8,7 +8,7 @@
 /* ── Profile Header ───────────────────────────── */
 .profileHeader {
   display: flex;
-  gap: 28px;
+  gap: 36px;
   align-items: flex-start;
   justify-content: center;
   margin-bottom: 36px;
@@ -17,10 +17,10 @@
 .avatarWrap {
   position: relative;
   flex-shrink: 0;
-  width: 96px;
-  height: 96px;
+  width: 160px;
+  height: 160px;
   border-radius: 50%;
-  border: 3px solid var(--bg-base);
+  border: 4px solid var(--bg-base);
   box-shadow: 0 0 0 1.5px var(--border-default);
 }
 
@@ -30,7 +30,7 @@
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font-size: 34px;
+  font-size: 56px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -47,10 +47,10 @@
 
 .avatarEditBtn {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 30px;
-  height: 30px;
+  bottom: 4px;
+  right: 4px;
+  width: 38px;
+  height: 38px;
   background: var(--bg-surface);
   border: 1.5px solid var(--border-default);
   border-radius: 50%;
@@ -180,48 +180,6 @@
   color: var(--text-secondary);
 }
 
-.headerActions {
-  display: flex;
-  gap: 8px;
-}
-
-/* ── Buttons ────────────────────────────────────── */
-.btnPrimary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: var(--radius-btn);
-  font-size: 13px;
-  font-weight: 600;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
-  transition: background var(--motion-hover);
-  white-space: nowrap;
-}
-.btnPrimary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-
-.btnOutline {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: var(--radius-btn);
-  font-size: 13px;
-  font-weight: 600;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  border: 1px solid var(--border-default);
-  background: transparent;
-  color: var(--text-primary);
-  transition: background 200ms ease-out, color 200ms ease-out, border-color 200ms ease-out;
-  white-space: nowrap;
-}
-.btnOutline:hover { background: var(--bg-elevated); border-color: var(--text-primary); }
-
 /* ── Tabs ───────────────────────────────────────── */
 .tabsWrap {
   position: sticky;
@@ -275,6 +233,12 @@
   border-bottom-color: var(--accent);
 }
 
+.tabIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 .tabCount {
   font-size: 12px;
   font-weight: 600;
@@ -301,34 +265,6 @@
   display: block;
 }
 
-/* ── Card stagger — fires only on first panel paint (display:none keeps DOM stable) ── */
-@keyframes cardFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.postsGrid .postCard,
-.postsGrid .draftCard {
-  animation: cardFadeIn 180ms ease-out both;
-}
-.postsGrid .postCard:nth-child(1), .postsGrid .draftCard:nth-child(1) { animation-delay: 0ms; }
-.postsGrid .postCard:nth-child(2), .postsGrid .draftCard:nth-child(2) { animation-delay: 60ms; }
-.postsGrid .postCard:nth-child(3), .postsGrid .draftCard:nth-child(3) { animation-delay: 120ms; }
-.postsGrid .postCard:nth-child(4), .postsGrid .draftCard:nth-child(4) { animation-delay: 180ms; }
-.postsGrid .postCard:nth-child(5), .postsGrid .draftCard:nth-child(5) { animation-delay: 240ms; }
-.postsGrid .postCard:nth-child(6), .postsGrid .draftCard:nth-child(6) { animation-delay: 300ms; }
-.postsGrid .postCard:nth-child(7), .postsGrid .draftCard:nth-child(7) { animation-delay: 360ms; }
-.postsGrid .postCard:nth-child(8), .postsGrid .draftCard:nth-child(8) { animation-delay: 420ms; }
-
-@media (prefers-reduced-motion: reduce) {
-  .postsGrid .postCard,
-  .postsGrid .draftCard {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
 /* ── Card Grid ──────────────────────────────────── */
 .postsGrid {
   display: grid;
@@ -339,265 +275,79 @@
 @media (max-width: 1100px) { .postsGrid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 720px)  { .postsGrid { grid-template-columns: 1fr; } }
 
-/* ── Post Card ──────────────────────────────────── */
-.postCard {
-  cursor: pointer;
-  transition: transform var(--motion-card-lift);
-  background: transparent;
-  border: 0;
-  padding: 0;
-  font-family: inherit;
-  text-align: left;
-  width: 100%;
-}
-.postCard:hover { transform: translateY(-1px); }
-.postCard:hover .cardCover { box-shadow: 0 8px 24px -14px rgba(0, 0, 0, 0.16); }
-
-.cardCover {
-  aspect-ratio: 4 / 3;
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--radius-card);
-  transition: box-shadow 220ms ease-out;
+/* Reset home-page card margin; apply stagger animation */
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.cardCoverPlaceholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-family: var(--font-mono);
+.postsGrid > * {
+  margin-bottom: 0;
+  animation: cardFadeIn 180ms ease-out both;
+}
+.postsGrid > *:nth-child(1) { animation-delay: 0ms; }
+.postsGrid > *:nth-child(2) { animation-delay: 60ms; }
+.postsGrid > *:nth-child(3) { animation-delay: 120ms; }
+.postsGrid > *:nth-child(4) { animation-delay: 180ms; }
+.postsGrid > *:nth-child(5) { animation-delay: 240ms; }
+.postsGrid > *:nth-child(6) { animation-delay: 300ms; }
+.postsGrid > *:nth-child(7) { animation-delay: 360ms; }
+.postsGrid > *:nth-child(8) { animation-delay: 420ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .postsGrid > * { animation: none; opacity: 1; transform: none; }
 }
 
-.coverImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+/* profileCard is added as className to ImageCard/TextCard to mark grid items */
+.profileCard { display: block; }
 
-.cardBadge {
+/* ── Manage pill button (Posts tab overlay) ─────── */
+.managePill {
   position: absolute;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 5px 10px;
-  border-radius: 999px;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-.cardBadgeType {
-  top: 12px;
-  left: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--text-primary);
-}
-
-.cardBadgeTime {
   top: 12px;
   right: 12px;
-  background: rgba(10, 10, 10, 0.75);
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.bookmarkFlag {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(10, 10, 10, 0.75);
-  color: rgba(255, 255, 255, 0.9);
-  padding: 3px 7px;
-  border-radius: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  backdrop-filter: blur(6px);
-}
-
-/* ── Manage Post Button ─────────────────────────── */
-.manageBtn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
+  color: var(--text-secondary);
   border: none;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary);
-  opacity: 0.6;
-  transition: opacity 140ms ease-out, background var(--motion-hover), color var(--motion-hover), box-shadow var(--motion-hover);
+  font-family: var(--font-sans);
+  opacity: 0.9;
+  transition: opacity 140ms ease-out, background 120ms, color 120ms;
   z-index: 10;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
 }
-.postCard:hover .manageBtn,
-.manageBtn:focus { opacity: 1; }
-.manageBtn:hover,
-.manageBtn:focus {
+.managePill:hover,
+.managePill:focus {
   background: #fff;
   color: var(--text-primary);
-  outline: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-}
-
-.manageBtnInline {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: 7px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  transition: background var(--motion-hover), color var(--motion-hover), border-color var(--motion-hover);
-  font-family: var(--font-sans);
-}
-.manageBtnInline:hover,
-.manageBtnInline:focus {
-  background: var(--bg-base);
-  border-color: var(--border-default);
-  color: var(--text-primary);
+  opacity: 1;
   outline: none;
 }
 
-/* ── Card Body ──────────────────────────────────── */
-.cardBody {
-  padding: 12px 2px 4px;
-}
-
-.textOnly .cardBody {
-  background: var(--bg-paper);
-  border-radius: var(--radius-card);
-  padding: 18px 18px 20px;
-  transition: box-shadow 220ms ease-out;
-}
-.textOnly:hover .cardBody { box-shadow: 0 8px 24px -14px rgba(0, 0, 0, 0.12); }
-
-.cardTitle {
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.3;
-  letter-spacing: -0.015em;
-  color: var(--text-primary);
-  margin: 0 0 10px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-wrap: pretty;
-}
-.textOnly .cardTitle { font-size: 18px; }
-
-.cardSummary {
-  font-size: 12.5px;
-  font-style: italic;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.cardTags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.cardTag {
-  font-size: 10.5px;
-  font-weight: 500;
-  padding: 3px 7px;
-  border-radius: var(--radius-tag);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
-/* ── Card Footer ────────────────────────────────── */
-.cardFooter {
-  padding: 4px 2px 0;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.textOnly .cardFooter { padding: 12px 2px 0; }
-
-.cardAuthorAvatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--accent);
+/* ── Saved badge (Bookmarks tab overlay) ────────── */
+.savedBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(10, 10, 10, 0.72);
   color: #fff;
-  font-size: 10.5px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.cardAuthorName {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cardMetaRight {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.cardLikes {
-  display: flex;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 5px 10px;
+  border-radius: 999px;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.cardLikes svg { color: var(--text-tertiary); }
-.liked { color: var(--danger); }
-.liked svg { color: var(--danger); }
-
-.cardTime {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-/* ── Text only title row with manage button ─────── */
-.textTitleRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-.textTitleRow .cardTitle {
-  flex: 1;
-  font-size: 15.5px;
-  margin-bottom: 10px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
 }
 
 /* ── Draft Card ─────────────────────────────────── */
@@ -655,6 +405,22 @@
   overflow: hidden;
 }
 
+.cardTags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.cardTag {
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 3px 7px;
+  border-radius: var(--radius-tag);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
 .draftActions {
   display: flex;
   gap: 6px;
@@ -677,9 +443,9 @@
   font-family: var(--font-sans);
 }
 .draftActionBtn:hover { background: var(--bg-elevated); color: var(--text-primary); }
-.draftActionBtn.publish:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-.draftActionBtn.danger { color: var(--danger); }
-.draftActionBtn.danger:hover { background: var(--danger-bg); border-color: var(--danger); }
+.publish:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.danger { color: var(--danger); }
+.danger:hover { background: var(--danger-bg); border-color: var(--danger); }
 
 /* ── Dropdown ───────────────────────────────────── */
 .dropdownContent {
@@ -755,3 +521,147 @@
   position: fixed;
   z-index: 500;
 }
+
+/* ── Confirm Dialog ─────────────────────────────── */
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 500;
+  animation: fadeIn 140ms ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.confirmContent {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 501;
+  background: var(--bg-base);
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.22);
+  animation: scaleIn 140ms ease-out;
+  overflow: hidden;
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.confirmHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 20px 0;
+}
+
+.confirmIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.confirmIconDanger {
+  background: #FEF2F2;
+  color: var(--danger);
+}
+
+.confirmIconWarn {
+  background: #FFFBEB;
+  color: var(--warning);
+}
+
+.confirmTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.confirmDesc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.confirmPostPreview {
+  margin: 14px 20px;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.confirmFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 4px 20px 20px;
+}
+
+.confirmCancelBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-btn);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-primary);
+  transition: background var(--motion-hover);
+}
+.confirmCancelBtn:hover { background: var(--bg-elevated); }
+
+.confirmActionBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-btn);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background var(--motion-hover), border-color var(--motion-hover);
+}
+
+.confirmDanger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+.confirmDanger:hover { background: #b91c1c; border-color: #b91c1c; }
+
+.confirmWarn {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.confirmWarn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
