@@ -59,7 +59,7 @@ frontend:
 
 ingress:
   enabled: true
-  host: verita.stud.k8s.ase.cit.tum.de
+  host: verita.stud.k8s.aet.cit.tum.de
   tls:
     secretName: verita-tls
 
