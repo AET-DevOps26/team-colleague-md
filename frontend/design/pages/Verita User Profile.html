@@ -144,42 +144,49 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
 
 .profile-content { max-width: 900px; margin: 0 auto; padding: 40px 32px 80px; width: 100%; }
 
-.profile-header { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 32px; }
-.profile-avatar-wrap { position: relative; flex-shrink: 0; }
+.profile-header { display: flex; gap: 28px; align-items: flex-start; justify-content: center; margin-bottom: 36px; }
+.profile-avatar-wrap {
+  position: relative; flex-shrink: 0;
+  width: 96px; height: 96px; border-radius: 50%;
+  border: 3px solid var(--bg-base); box-shadow: 0 0 0 1.5px var(--border-default);
+}
 .profile-avatar {
-  width: 80px; height: 80px; border-radius: 50%;
-  background: var(--accent); color: #fff; font-size: 28px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  border: 3px solid var(--bg-base); box-shadow: 0 0 0 1.5px var(--border-default); overflow: hidden;
+  width: 100%; height: 100%; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 34px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .profile-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .profile-avatar-edit {
-  position: absolute; bottom: 0; right: 0; width: 26px; height: 26px;
-  background: var(--bg-base); border: 1.5px solid var(--border-default); border-radius: 50%;
+  position: absolute; right: -2px; bottom: -2px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--bg-surface); color: var(--text-primary);
+  border: 1.5px solid var(--border-default);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: background 120ms, border-color 120ms;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
 }
-.profile-avatar-edit:hover { background: var(--bg-elevated); border-color: var(--accent); }
-.profile-avatar-edit svg { width: 12px; height: 12px; color: var(--text-secondary); }
+.profile-avatar-edit:hover { background: var(--bg-base); border-color: var(--text-primary); }
+.profile-avatar-edit svg { width: 14px; height: 14px; }
 
-.profile-info { flex: 1; min-width: 0; }
+.profile-info { flex: 0 1 620px; min-width: 0; }
 .profile-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
 .profile-name { font-size: 22px; font-weight: 700; line-height: 1.2; color: var(--text-primary); }
 .verified-badge {
   display: inline-flex; align-items: center; gap: 3px;
   background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 600;
   padding: 2px 7px 2px 5px; border-radius: 999px;
+  position: relative; top: 2px;
 }
 .verified-badge svg { width: 11px; height: 11px; }
 .profile-handle { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 10px; }
 .profile-bio { font-size: 14px; line-height: 1.6; color: var(--text-secondary); max-width: 560px; margin-bottom: 14px; }
-.profile-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 16px; }
-.profile-meta-item { display: flex; align-items: center; gap: 4px; }
-.profile-meta-item svg { width: 13px; height: 13px; }
-.profile-stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
-.profile-stat { display: flex; align-items: baseline; gap: 4px; }
-.stat-count { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-.stat-label { font-size: 12.5px; color: var(--text-secondary); }
+.profile-meta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 13.5px; color: var(--text-tertiary); margin-bottom: 18px; }
+.profile-meta-item { display: flex; align-items: center; gap: 5px; }
+.profile-meta-item svg { width: 14px; height: 14px; }
+.profile-stats { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 18px; }
+.profile-stat { display: flex; align-items: baseline; gap: 5px; }
+.stat-count { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.stat-label { font-size: 14px; color: var(--text-secondary); }
 
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -199,18 +206,19 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
   background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-subtle); margin: 0 -32px; padding: 0 32px;
 }
-.profile-tabs { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.profile-tabs { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; justify-content: stretch; }
 .profile-tabs::-webkit-scrollbar { display: none; }
 .tab-item {
-  display: flex; align-items: center; gap: 6px; padding: 14px 16px;
-  font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center; gap: 7px; padding: 16px 16px;
+  font-size: 15px; font-weight: 500; color: var(--text-secondary);
   cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
   transition: color 120ms, border-color 120ms; position: relative; top: 1px;
   background: none; border-left: none; border-right: none; border-top: none; border-radius: 0;
+  flex: 1 1 0;
 }
 .tab-item:hover { color: var(--text-primary); }
 .tab-item.active { color: var(--text-primary); font-weight: 600; border-bottom-color: var(--accent); }
-.tab-count { font-size: 11px; font-weight: 600; color: var(--text-tertiary); background: var(--bg-elevated); padding: 1px 5px; border-radius: 4px; }
+.tab-count { font-size: 12px; font-weight: 600; color: var(--text-tertiary); background: var(--bg-elevated); padding: 2px 6px; border-radius: 4px; }
 .tab-item.active .tab-count { background: var(--accent); color: #fff; }
 .tab-private-icon { color: var(--text-tertiary); width: 12px; height: 12px; }
 
@@ -397,8 +405,9 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
 .modal-avatar-section { display: flex; align-items: center; gap: 16px; padding: 14px; background: var(--bg-surface); border-radius: 10px; border: 1px solid var(--border-subtle); }
 .modal-avatar-large { width: 60px; height: 60px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
 .modal-avatar-large img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.modal-avatar-actions { display: flex; flex-direction: column; gap: 6px; }
+.modal-avatar-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .modal-avatar-actions .btn { font-size: 12px; padding: 5px 12px; }
+.modal-avatar-hint { font-size: 11px; color: var(--text-tertiary); line-height: 1.4; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
 .form-input, .form-textarea { width: 100%; padding: 9px 12px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 8px; font-size: 13.5px; font-family: var(--font-sans); color: var(--text-primary); outline: none; transition: border-color 120ms, box-shadow 120ms, background 120ms; }
@@ -463,9 +472,9 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
     <div class="profile-header">
       <div class="profile-avatar-wrap">
         <div class="profile-avatar">LZ</div>
-        <div class="profile-avatar-edit" onclick="openModal()" title="Change photo">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.5 2.5L9.5 4.5M2 10h2L9.5 4.5 7.5 2.5 2 8v2z"/></svg>
-        </div>
+        <button class="profile-avatar-edit" onclick="openModal()" aria-label="Edit profile photo" title="Edit photo">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l1 1L5 10l-2 .5.5-2z"/></svg>
+        </button>
       </div>
       <div class="profile-info">
         <div class="profile-name-row">
@@ -840,7 +849,7 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
         <div class="modal-avatar-large">LZ</div>
         <div class="modal-avatar-actions">
           <button class="btn btn-outline" style="font-size:12px; padding:5px 12px;"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M7 2v10M2 7h10"/></svg>Upload Photo</button>
-          <button class="btn btn-outline" style="font-size:12px; padding:5px 12px; color:var(--danger); border-color:var(--danger);">Remove Photo</button>
+          <div class="modal-avatar-hint">JPG or PNG · Max 2MB</div>
         </div>
       </div>
       <div class="form-row">
