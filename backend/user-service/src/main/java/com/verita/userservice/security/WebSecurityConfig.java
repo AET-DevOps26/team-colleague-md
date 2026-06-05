@@ -92,8 +92,9 @@ public class WebSecurityConfig {
      * <ul>
      *   <li>Stateless JWT authentication (no HTTP session)</li>
      *   <li>Public: all {@code /api/v1/auth/**} endpoints and {@code /actuator/health}</li>
-     *   <li>{@code GET /api/v1/users/me} requires authentication (must precede the wildcard below)</li>
-     *   <li>{@code GET /api/v1/users/*} is publicly readable (user profiles)</li>
+     *   <li>{@code GET /api/v1/users/me} requires authentication (must precede the wildcards below)</li>
+     *   <li>{@code GET /api/v1/users/by-username/*} is publicly readable (lookup by username)</li>
+     *   <li>{@code GET /api/v1/users/*} is publicly readable (lookup by UUID)</li>
      *   <li>Admin-only: user management and role endpoints</li>
      *   <li>All other requests require authentication</li>
      * </ul>
@@ -108,6 +109,7 @@ public class WebSecurityConfig {
                 auth.requestMatchers("/api/v1/auth/**").permitAll()
                     .requestMatchers("/actuator/health").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/users/by-username/*").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/users/*").permitAll()
                     .requestMatchers("/api/v1/users").hasRole("ADMIN")
                     .requestMatchers("/api/v1/users/*/role").hasRole("ADMIN")
