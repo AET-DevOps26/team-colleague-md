@@ -50,7 +50,7 @@ paths:
         Creates an asynchronous in-memory job that generates a personalized text
         digest for the supplied topics and one-day period. The caller does not
         provide source items. GenAI fetches external sources internally from the
-        MVP provider set: GitHub, NewsAPI, arXiv, and Hugging Face models/datasets.
+        MVP provider set: GitHub, GNews, and Hugging Face models/datasets.
 
         The endpoint returns `202 Accepted` because digest generation continues
         after the HTTP response. The caller must poll `statusUrl` until the job is
@@ -306,7 +306,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [github, newsapi, arxiv, huggingface, all]
+          enum: [github, gnews, huggingface, all]
           description: Source provider related to the warning, or `all` for topic-level warnings.
         topicId:
           type: string
