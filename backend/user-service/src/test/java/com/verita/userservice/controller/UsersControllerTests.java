@@ -153,4 +153,43 @@ public class UsersControllerTests {
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void testGetUserByUsername_ExistingUser_Returns200() throws Exception {
+        com.verita.model.User user = new com.verita.model.User();
+        user.setId(UUID.randomUUID());
+        user.setUsername("alexchen");
+        user.setEmail("alexchen@example.com");
+
+        when(userService.getByUsername("alexchen")).thenReturn(user);
+
+        mockMvc.perform(get("/api/v1/users/by-username/{username}", "alexchen")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("alexchen"));
+    }
+
+    @Test
+    void testGetUserByUsername_MissingUser_Returns404() throws Exception {
+        when(userService.getByUsername("nobody")).thenReturn(null);
+
+        mockMvc.perform(get("/api/v1/users/by-username/{username}", "nobody")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetUserByUsername_NoAuth_Returns200() throws Exception {
+        com.verita.model.User user = new com.verita.model.User();
+        user.setId(UUID.randomUUID());
+        user.setUsername("publicuser");
+
+        when(userService.getByUsername("publicuser")).thenReturn(user);
+
+        // No authentication — endpoint must be public (security: [] in openapi spec)
+        mockMvc.perform(get("/api/v1/users/by-username/{username}", "publicuser")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("publicuser"));
+    }
 }

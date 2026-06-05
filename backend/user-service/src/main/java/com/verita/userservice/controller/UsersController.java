@@ -27,6 +27,21 @@ public class UsersController implements UsersApi, AdminApi {
     }
 
     /**
+     * GET /users/by-username/{username} : Get a user's public profile by username
+     *
+     * @param username the username to look up
+     * @return User profile (status code 200) or Not Found (status code 404)
+     */
+    @Override
+    public ResponseEntity<User> getUserByUsername(String username) {
+        User user = userService.getByUsername(username);
+        if (user != null) {
+            return ResponseEntity.ok(user);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    /**
      * DELETE /users/me : Delete current user
      *
      * @return Deleted successfully. (status code 204)

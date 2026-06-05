@@ -236,6 +236,25 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   # --- PUBLIC USER PROFILES ---
+  /api/v1/users/by-username/{username}:
+    get:
+      operationId: getUserByUsername
+      summary: Get a user's public profile by username
+      tags: [Users]
+      security: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/v1/users/{userId}:
     get:
       operationId: getUserById
