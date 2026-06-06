@@ -433,10 +433,6 @@ components:
             type: string
             format: uri
           description: External source URLs used to support this digest event.
-        occurredAt:
-          type: string
-          format: date-time
-          description: Best available event time from the supporting sources.
 
     TokenUsage:
       type: object
