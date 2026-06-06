@@ -366,12 +366,8 @@ test('API-11: GET /api/v1/me/drafts PostPage shape — Drafts tab renders draft 
 test('API-12: DELETE /api/v1/posts/{id} is called after delete confirmed; post removed from grid', async ({ page }) => {
   await loginAndInterceptProfileApi(page);
 
-  let _deletedPostId: string | null = null;
-
-  // Intercept DELETE calls to capture the post ID
   await page.route('**/api/v1/posts/**', async (route) => {
     if (route.request().method() === 'DELETE') {
-      _deletedPostId = route.request().url().split('/api/v1/posts/')[1];
       route.fulfill({ status: 204 });
     } else {
       route.continue();
@@ -403,11 +399,8 @@ test('API-12: DELETE /api/v1/posts/{id} is called after delete confirmed; post r
 test('API-13: PUT /api/v1/posts/{id} body contains status:DRAFT when unpublish confirmed', async ({ page }) => {
   await loginAndInterceptProfileApi(page);
 
-  let _capturedUnpublishBody: Record<string, unknown> | null = null;
-
   await page.route('**/api/v1/posts/**', async (route) => {
     if (route.request().method() === 'PUT') {
-      _capturedUnpublishBody = route.request().postDataJSON() as Record<string, unknown>;
       route.fulfill({
         status: 200,
         contentType: 'application/json',
