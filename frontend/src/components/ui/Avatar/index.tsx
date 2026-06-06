@@ -1,3 +1,4 @@
+import { getInitials } from '../../../utils/getInitials';
 import styles from './Avatar.module.css';
 
 interface Props {
@@ -9,12 +10,7 @@ interface Props {
 }
 
 export default function Avatar({ displayName, avatarUrl, size = 36, borderRadius = 10, className }: Props) {
-  const initials = displayName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(displayName);
 
   return (
     <div

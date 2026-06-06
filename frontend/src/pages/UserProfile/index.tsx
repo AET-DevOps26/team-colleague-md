@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../../hooks/useAuth';
 import { userService } from '../../services/user.service';
 import { timeAgo } from '../../utils/timeAgo';
+import { getInitials } from '../../utils/getInitials';
 import PostDetailTopbar from '../../components/layout/PostDetailTopbar';
 import Toast from '../../components/ui/Toast';
 import EditProfileModal from '../../components/modals/EditProfileModal';
@@ -16,10 +17,6 @@ import styles from './UserProfile.module.css';
 type TabId = 'posts' | 'bookmarks' | 'likes' | 'drafts';
 
 const noop = () => {};
-
-function getInitials(name: string) {
-  return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
-}
 
 function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
@@ -129,6 +126,7 @@ export default function UserProfile() {
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
   const [drafts, setDrafts] = useState<DraftPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('posts');
   const [editOpen, setEditOpen] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
@@ -143,6 +141,7 @@ export default function UserProfile() {
   useEffect(() => {
     if (!username) { navigate('/'); return; }
     setLoading(true);
+    setLoadError(false);
     setActiveTab('posts');
 
     Promise.all([
@@ -157,6 +156,9 @@ export default function UserProfile() {
       setBookmarks(userBookmarks);
       setDrafts(userDrafts as DraftPost[]);
       setLikedPosts(liked);
+    }).catch(() => {
+      setLoadError(true);
+    }).finally(() => {
       setLoading(false);
     });
   }, [username, navigate]);
@@ -204,31 +206,42 @@ export default function UserProfile() {
       setPosts((prev) => prev.filter((p) => p.id !== confirm.id));
       showToast('Post deleted');
     } else if (confirm.action === 'unpublish') {
-      const post = posts.find((p) => p.id === confirm.id);
-      setPosts((prev) => prev.filter((p) => p.id !== confirm.id));
-      if (post) {
-        const draft: DraftPost = {
-          id: post.id,
-          title: post.title,
-          excerpt: post.excerpt ?? '',
-          tags: post.tags,
-          updatedAt: new Date().toISOString(),
-        };
-        setDrafts((prev) => [draft, ...prev]);
-      }
+      setPosts((prev) => {
+        const post = prev.find((p) => p.id === confirm.id);
+        if (post) {
+          const draft: DraftPost = {
+            id: post.id,
+            title: post.title,
+            excerpt: post.excerpt ?? '',
+            tags: post.tags,
+            updatedAt: new Date().toISOString(),
+          };
+          setDrafts((prevDrafts) => [draft, ...prevDrafts]);
+        }
+        return prev.filter((p) => p.id !== confirm.id);
+      });
       showToast('Post moved to Drafts');
     } else if (confirm.action === 'delete-draft') {
       setDrafts((prev) => prev.filter((d) => d.id !== confirm.id));
       showToast('Draft deleted');
     }
     setConfirm(null);
-  }, [confirm, posts, showToast]);
+  }, [confirm, showToast]);
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <>
         <PostDetailTopbar />
         <div className={styles.loading}>Loading profile…</div>
+      </>
+    );
+  }
+
+  if (loadError || !profile) {
+    return (
+      <>
+        <PostDetailTopbar />
+        <div className={styles.loading}>Failed to load profile. Please try again.</div>
       </>
     );
   }

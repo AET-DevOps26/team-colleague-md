@@ -3,15 +3,17 @@ import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { UserProfile, UpdateUserRequest } from '../../../types';
+import { getInitials } from '../../../utils/getInitials';
 import styles from './EditProfileModal.module.css';
 
 const BIO_MAX = 250;
-const AVATAR_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 
 async function getCroppedImg(src: string, pixelCrop: Area): Promise<string> {
-  const img = await new Promise<HTMLImageElement>((resolve) => {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image();
     i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error('Image failed to load'));
     i.src = src;
   });
   const canvas = document.createElement('canvas');
@@ -52,7 +54,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > AVATAR_MAX_BYTES) {
-      setAvatarError(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 10 MB.`);
+      setAvatarError(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 2 MB.`);
       if (fileRef.current) fileRef.current.value = '';
       return;
     }
@@ -68,10 +70,16 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
 
   const handleCropConfirm = useCallback(async () => {
     if (!cropSrc || !croppedAreaPixels) return;
-    const cropped = await getCroppedImg(cropSrc, croppedAreaPixels);
-    setAvatarPreview(cropped);
-    setCropSrc(null);
-    if (fileRef.current) fileRef.current.value = '';
+    try {
+      const cropped = await getCroppedImg(cropSrc, croppedAreaPixels);
+      setAvatarPreview(cropped);
+      setCropSrc(null);
+      if (fileRef.current) fileRef.current.value = '';
+    } catch {
+      setCropSrc(null);
+      if (fileRef.current) fileRef.current.value = '';
+      setAvatarError('Could not process image. Please try a different file.');
+    }
   }, [cropSrc, croppedAreaPixels]);
 
   const handleCropCancel = useCallback(() => {
@@ -80,17 +88,20 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
   }, []);
 
   const handleSave = useCallback(async () => {
-    // Normalize and validate website URL
     let normalizedWebsite = website.trim();
     if (normalizedWebsite) {
       if (!/^https?:\/\//i.test(normalizedWebsite)) {
         normalizedWebsite = 'https://' + normalizedWebsite;
       }
-      // Extract hostname and check for spaces / clearly invalid chars
-      const hostname = normalizedWebsite.replace(/^https?:\/\//, '').split(/[/?#]/)[0];
-      let urlValid = !!hostname && !/[\s<>{}|\\^`]/.test(hostname);
-      if (urlValid) {
-        try { new URL(normalizedWebsite); } catch { urlValid = false; }
+      let urlValid = false;
+      try {
+        const parsed = new URL(normalizedWebsite);
+        // Only allow http(s), must have a real domain (label.tld, TLD ≥ 2 chars)
+        const hostname = parsed.hostname;
+        const validHostname = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(hostname);
+        urlValid = /^https?:$/.test(parsed.protocol) && validHostname;
+      } catch {
+        urlValid = false;
       }
       if (!urlValid) {
         setWebsiteError('Please enter a valid URL (e.g. https://example.com)');
@@ -122,7 +133,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
     }
   }, [displayName, bio, organization, website, expertise, avatarPreview, profile.displayName, onSave, onClose]);
 
-  const initials = profile.displayName.slice(0, 2).toUpperCase();
+  const initials = getInitials(profile.displayName);
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -220,7 +231,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
                     </button>
                     {avatarError
                       ? <span className={styles.avatarError}>{avatarError}</span>
-                      : <span className={styles.avatarHint}>JPG or PNG · Max 10 MB</span>
+                      : <span className={styles.avatarHint}>JPG or PNG · Max 2 MB</span>
                     }
                   </div>
                 </div>
