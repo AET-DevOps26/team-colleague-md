@@ -101,7 +101,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
         const validHostname = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(hostname);
         urlValid = /^https?:$/.test(parsed.protocol) && validHostname;
       } catch {
-        urlValid = false;
+        // urlValid stays false
       }
       if (!urlValid) {
         setWebsiteError('Please enter a valid URL (e.g. https://example.com)');
