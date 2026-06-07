@@ -89,21 +89,18 @@ def _get_llm(settings):
             api_key=settings.openrouter_api_key,
             base_url="https://openrouter.ai/api/v1",
             temperature=settings.llm_temperature,
-            max_tokens=settings.llm_max_tokens,
         )
     elif provider == "nvidia":
         return ChatNVIDIA(
             model=settings.llm_model,
             api_key=settings.nvidia_nim_api_key,
             temperature=settings.llm_temperature,
-            max_tokens=settings.llm_max_tokens,
         )
     elif provider == "google":
         return ChatGoogleGenerativeAI(
             model=settings.llm_model,
             google_api_key=settings.google_api_key,
             temperature=settings.llm_temperature,
-            max_output_tokens=settings.llm_max_tokens,
         )
     else:
         raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")

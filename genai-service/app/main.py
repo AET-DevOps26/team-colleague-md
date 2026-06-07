@@ -10,17 +10,20 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import get_settings
-from app.routers import health, summarize
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+from app.config import Settings, get_settings
+from app.routers import digest, health, summarize
 
 logger = logging.getLogger(__name__)
+
+
+def _configure_logging(settings: Settings) -> None:
+    level = getattr(logging, settings.log_level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        force=True,
+    )
 
 
 def create_app() -> FastAPI:
@@ -31,6 +34,7 @@ def create_app() -> FastAPI:
         Configured FastAPI instance with all routers and middleware.
     """
     settings = get_settings()
+    _configure_logging(settings)
 
     application = FastAPI(
         title=settings.app_name,
@@ -59,6 +63,7 @@ def create_app() -> FastAPI:
     # Add new routers here as features are built (e.g., tags_router, digest_router in W3).
     application.include_router(health.router)
     application.include_router(summarize.router)
+    application.include_router(digest.router)
 
     logger.info(
         "GenAI Service started (model=%s, cors=%s)",

@@ -137,6 +137,19 @@ cd backend/user-service
 
 Health check: `http://localhost:8081/actuator/health`
 
+Local `bootRun` uses the default `dev` Spring profile with PostgreSQL. Start `user-db`
+first, or provide `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` for another
+PostgreSQL instance. User portrait storage uses the MinIO defaults in
+`application.properties`; start MinIO with `docker compose up -d minio minio-init` when
+working on portrait uploads locally.
+
+To run with the production profile:
+
+```bash
+cd backend/user-service
+DB_HOST=localhost DB_NAME=verita_users DB_USER=verita_user DB_PASSWORD=verita_password ./gradlew bootRun --args="--spring.profiles.active=prod"
+```
+
 ---
 
 ### Backend — Content Service
@@ -149,6 +162,9 @@ cd backend/content-service
 ```
 
 Health check: `http://localhost:8082/actuator/health`
+
+Post photo storage uses the MinIO defaults in `application.properties`; start MinIO with
+`docker compose up -d minio minio-init` when working on post photo uploads locally.
 
 ---
 
