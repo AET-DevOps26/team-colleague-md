@@ -5,19 +5,27 @@ import com.verita.model.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import com.verita.userservice.service.AuthService;
 
+/**
+ * REST controller implementing the OpenAPI {@link AuthenticationApi} interface.
+ * Handles registration, login, token refresh, logout, and availability checks.
+ *
+ * <p>The refresh token is stored in an {@code HttpOnly} cookie scoped to
+ * {@code /api/v1/auth} so it is never exposed to JavaScript.
+ */
 @RestController
+@RequiredArgsConstructor
 public class AuthController implements AuthenticationApi {
 
     static final String REFRESH_COOKIE = "refreshToken";
 
-    @Autowired private AuthService authService;
-    @Autowired private HttpServletRequest httpRequest;
-    @Autowired private HttpServletResponse httpResponse;
+    private final AuthService authService;
+    private final HttpServletRequest httpRequest;
+    private final HttpServletResponse httpResponse;
 
     @Override
     public ResponseEntity<AuthResponse> loginUser(LoginRequest loginRequest) {

@@ -8,7 +8,7 @@ import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.security.JwtUtils;
 import com.verita.userservice.security.UserDetailsImpl;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -26,13 +26,14 @@ import java.util.UUID;
  * refresh-token rotation, and AuthResponse population are handled in one place.
  */
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
-    @Autowired private AuthenticationManager authenticationManager;
-    @Autowired private UserRepository userRepository;
-    @Autowired private PasswordEncoder encoder;
-    @Autowired private JwtUtils jwtUtils;
-    @Autowired private UserService userService;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder encoder;
+    private final JwtUtils jwtUtils;
+    private final UserService userService;
 
     /**
      * Registers a new user and returns a fully populated {@link AuthResponse}.
