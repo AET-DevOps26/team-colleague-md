@@ -1,25 +1,23 @@
 import axios from 'axios';
 import { getToken, setAccessToken, clearSession } from './tokenStore';
 import { emit } from './authEvents';
-import userApi from './userApi';
 
-const api = axios.create({
-  baseURL: 'http://localhost:8082',
+const userApi = axios.create({
+  baseURL: 'http://localhost:8081',
   headers: { 'Content-Type': 'application/json' },
-  withCredentials: true,
+  withCredentials: true, // send httpOnly refresh-token cookie on every request
 });
 
-api.interceptors.request.use((config) => {
+userApi.interceptors.request.use((config) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Mirror the same silent-refresh logic as userApi so content-service 401s
-// also attempt a token refresh before logging the user out.
+// On 401: attempt a silent refresh before giving up and logging the user out.
 let refreshing: Promise<string> | null = null;
 
-api.interceptors.response.use(
+userApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
@@ -38,7 +36,7 @@ api.interceptors.response.use(
       const newToken = await refreshing;
       setAccessToken(newToken);
       original.headers.Authorization = `Bearer ${newToken}`;
-      return api(original);
+      return userApi(original);
     } catch {
       clearSession();
       emit();
@@ -47,4 +45,14 @@ api.interceptors.response.use(
   },
 );
 
-export default api;
+export async function checkUsernameAvailable(username: string): Promise<boolean> {
+  const res = await userApi.get<{ available: boolean }>('/api/v1/auth/check-username', { params: { username } });
+  return res.data.available;
+}
+
+export async function checkEmailAvailable(email: string): Promise<boolean> {
+  const res = await userApi.get<{ available: boolean }>('/api/v1/auth/check-email', { params: { email } });
+  return res.data.available;
+}
+
+export default userApi;

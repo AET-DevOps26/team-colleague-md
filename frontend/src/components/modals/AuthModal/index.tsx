@@ -1,10 +1,35 @@
-import React, { useState, useRef, type FormEvent } from 'react';
+import React, { useState, useRef, useEffect, type FormEvent } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
+import { AuthError } from '../../../errors/AuthError';
+import { checkUsernameAvailable, checkEmailAvailable } from '../../../services/userApi';
 import styles from './AuthModal.module.css';
 
 type AuthScreen = 'login' | 'signup' | 'forgot' | 'otp';
+type AvailStatus = 'idle' | 'checking' | 'available' | 'taken';
+
+const USERNAME_RE = /^[a-zA-Z0-9_]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function validateUsername(v: string): string {
+  if (v.length < 3) return 'Must be at least 3 characters';
+  if (v.length > 20) return 'Must be 20 characters or fewer';
+  if (!USERNAME_RE.test(v)) return 'Letters, numbers, and underscores only';
+  return '';
+}
+
+function validateEmail(v: string): string {
+  if (!EMAIL_RE.test(v)) return 'Enter a valid email address';
+  return '';
+}
+
+function validatePassword(v: string): string {
+  if (v.length < 8) return 'Must be at least 8 characters';
+  if (!/[a-zA-Z]/.test(v)) return 'Must include at least one letter';
+  if (!/\d/.test(v)) return 'Must include at least one number';
+  return '';
+}
 
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -24,6 +49,12 @@ const WarnIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/>
     <path d="M12 8v4M12 16h.01"/>
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
   </svg>
 );
 
@@ -54,8 +85,38 @@ export default function AuthModal() {
   const [loading, setLoading] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(''));
+  const [usernameAvail, setUsernameAvail] = useState<AvailStatus>('idle');
+  const [emailAvail, setEmailAvail] = useState<AvailStatus>('idle');
+  const [usernameFieldError, setUsernameFieldError] = useState('');
+  const [emailFieldError, setEmailFieldError] = useState('');
+  const [passwordFieldError, setPasswordFieldError] = useState('');
   const [otpFocus, setOtpFocus] = useState(-1);
   const otpRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null));
+
+  // Only check availability when format is already valid — avoids API calls for "用户名" or "ab"
+  useEffect(() => {
+    if (screen !== 'signup' || validateUsername(username) !== '') { setUsernameAvail('idle'); return; }
+    setUsernameAvail('checking');
+    const timer = setTimeout(async () => {
+      try {
+        const available = await checkUsernameAvailable(username);
+        setUsernameAvail(available ? 'available' : 'taken');
+      } catch { setUsernameAvail('idle'); }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [username, screen]);
+
+  useEffect(() => {
+    if (screen !== 'signup' || validateEmail(email) !== '') { setEmailAvail('idle'); return; }
+    setEmailAvail('checking');
+    const timer = setTimeout(async () => {
+      try {
+        const available = await checkEmailAvailable(email);
+        setEmailAvail(available ? 'available' : 'taken');
+      } catch { setEmailAvail('idle'); }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [email, screen]);
 
   function resetAll() {
     setScreen('login');
@@ -67,6 +128,11 @@ export default function AuthModal() {
     setForgotEmail('');
     setOtpDigits(Array(6).fill(''));
     setOtpFocus(-1);
+    setUsernameAvail('idle');
+    setEmailAvail('idle');
+    setUsernameFieldError('');
+    setEmailFieldError('');
+    setPasswordFieldError('');
   }
 
   function handleOpenChange(o: boolean) {
@@ -92,8 +158,12 @@ export default function AuthModal() {
       await login(email, password);
       close();
       resetAll();
-    } catch {
-      setError('Invalid email or password.');
+    } catch (err) {
+      if (err instanceof AuthError && err.code === 'NETWORK_ERROR') {
+        setError('Cannot reach the server. Check your connection.');
+      } else {
+        setError('Invalid email or password.');
+      }
     } finally {
       setLoading(false);
     }
@@ -101,14 +171,29 @@ export default function AuthModal() {
 
   async function handleSignup(e: FormEvent) {
     e.preventDefault();
+    const uErr = validateUsername(username);
+    const eErr = validateEmail(email);
+    const pErr = validatePassword(password);
+    setUsernameFieldError(uErr);
+    setEmailFieldError(eErr);
+    setPasswordFieldError(pErr);
+    if (uErr || eErr || pErr) return;
+
     setError('');
     setLoading(true);
     try {
       await signup(username, email, password);
       close();
       resetAll();
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err) {
+      if (err instanceof AuthError) {
+        if (err.code === 'EMAIL_IN_USE') setError('An account with this email already exists.');
+        else if (err.code === 'USERNAME_IN_USE') setError('This username is already taken.');
+        else if (err.code === 'NETWORK_ERROR') setError('Cannot reach the server. Check your connection.');
+        else setError('Something went wrong. Please try again.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -253,52 +338,79 @@ export default function AuthModal() {
 
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Username</span></div>
-            <div className={styles.fieldBox}>
+            <div className={`${styles.fieldBox} ${usernameFieldError || usernameAvail === 'taken' ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="text"
                 placeholder="3–20 chars, letters / numbers / _"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (usernameFieldError) setUsernameFieldError(validateUsername(e.target.value));
+                }}
+                onBlur={() => setUsernameFieldError(validateUsername(username))}
                 autoComplete="nickname"
-                minLength={3}
               />
             </div>
+            {usernameFieldError ? (
+              <div className={styles.fieldError}><WarnIcon /><span>{usernameFieldError}</span></div>
+            ) : usernameAvail === 'available' ? (
+              <div className={styles.fieldAvailable}><CheckIcon /><span>Available</span></div>
+            ) : usernameAvail === 'taken' ? (
+              <div className={styles.fieldError}><WarnIcon /><span>Username already taken</span></div>
+            ) : usernameAvail === 'checking' ? (
+              <div className={styles.fieldChecking}>Checking…</div>
+            ) : null}
           </div>
 
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Email</span></div>
-            <div className={styles.fieldBox}>
+            <div className={`${styles.fieldBox} ${emailFieldError || emailAvail === 'taken' ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="email"
                 placeholder="you@domain.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailFieldError) setEmailFieldError(validateEmail(e.target.value));
+                }}
+                onBlur={() => setEmailFieldError(validateEmail(email))}
                 autoComplete="email"
               />
             </div>
+            {emailFieldError ? (
+              <div className={styles.fieldError}><WarnIcon /><span>{emailFieldError}</span></div>
+            ) : emailAvail === 'available' ? (
+              <div className={styles.fieldAvailable}><CheckIcon /><span>Available</span></div>
+            ) : emailAvail === 'taken' ? (
+              <div className={styles.fieldError}><WarnIcon /><span>An account with this email already exists</span></div>
+            ) : emailAvail === 'checking' ? (
+              <div className={styles.fieldChecking}>Checking…</div>
+            ) : null}
           </div>
 
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Password</span></div>
-            <div className={styles.fieldBox}>
+            <div className={`${styles.fieldBox} ${passwordFieldError ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="password"
                 placeholder="At least 8 characters"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordFieldError) setPasswordFieldError(validatePassword(e.target.value));
+                }}
+                onBlur={() => setPasswordFieldError(validatePassword(password))}
                 autoComplete="new-password"
-                minLength={8}
               />
             </div>
-            <div className={styles.fieldHint}>
-              Use 8 or more characters with a mix of letters and numbers.
-            </div>
+            {passwordFieldError ? (
+              <div className={styles.fieldError}><WarnIcon /><span>{passwordFieldError}</span></div>
+            ) : (
+              <div className={styles.fieldHint}>Use 8+ characters with a mix of letters and numbers.</div>
+            )}
           </div>
 
           {error && (

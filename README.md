@@ -76,6 +76,44 @@ Health check activity is visible in the compose log output. The frontend (nginx)
 - Python 3.11+ and `pip` (for genai-service)
 - Docker & Docker Compose
 
+### Backend Infrastructure (Database & Object Storage)
+
+When running individual backend services locally, start the required infrastructure first:
+
+```bash
+# PostgreSQL for user-service
+docker compose up -d user-db
+
+# MinIO object storage + bucket initialisation (needed for portrait/photo uploads)
+docker compose up -d minio minio-init
+```
+
+Or start both at once:
+
+```bash
+docker compose up -d user-db minio minio-init
+```
+
+**PostgreSQL connection details:**
+
+| Property | Value |
+|---|---|
+| Host | `localhost:5432` |
+| Database | `verita_users` |
+| User | `verita_user` |
+| Password | `verita_password` |
+
+**MinIO connection details:**
+
+| Property | Value |
+|---|---|
+| API endpoint | `http://localhost:9000` |
+| Console (browser) | `http://localhost:9001` |
+| Access key | `verita_minio` |
+| Secret key | `verita_minio_password` |
+
+---
+
 ### Frontend
 
 ```bash
@@ -90,8 +128,9 @@ Default dev server: `http://localhost:3000`
 
 ### Backend — User Service
 
+Start infrastructure first (see [Backend Infrastructure](#backend-infrastructure-database--object-storage) above), then:
+
 ```bash
-docker compose up -d user-db
 cd backend/user-service
 ./gradlew bootRun    # Windows: .\gradlew.bat bootRun
 ```
@@ -114,6 +153,8 @@ DB_HOST=localhost DB_NAME=verita_users DB_USER=verita_user DB_PASSWORD=verita_pa
 ---
 
 ### Backend — Content Service
+
+Start infrastructure first (see [Backend Infrastructure](#backend-infrastructure-database--object-storage) above), then:
 
 ```bash
 cd backend/content-service
