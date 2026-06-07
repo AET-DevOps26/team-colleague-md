@@ -39,16 +39,70 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
       MINIO_USER_PORTRAITS_BUCKET: ${STORAGE_USER_PORTRAITS_BUCKET:-verita-user-portraits}
       MINIO_POST_PHOTOS_BUCKET: ${STORAGE_POST_PHOTOS_BUCKET:-verita-post-photos}
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do
-        sleep 2;
-      done;
-      mc mb --ignore-existing local/$${MINIO_USER_PORTRAITS_BUCKET};
-      mc mb --ignore-existing local/$${MINIO_POST_PHOTOS_BUCKET};
-      mc anonymous set download local/$${MINIO_USER_PORTRAITS_BUCKET};
-      mc anonymous set download local/$${MINIO_POST_PHOTOS_BUCKET};
-      "
+      USER_SERVICE_S3_ACCESS_KEY: ${USER_SERVICE_S3_ACCESS_KEY:?USER_SERVICE_S3_ACCESS_KEY is required}
+      USER_SERVICE_S3_SECRET_KEY: ${USER_SERVICE_S3_SECRET_KEY:?USER_SERVICE_S3_SECRET_KEY is required}
+      CONTENT_SERVICE_S3_ACCESS_KEY: ${CONTENT_SERVICE_S3_ACCESS_KEY:?CONTENT_SERVICE_S3_ACCESS_KEY is required}
+      CONTENT_SERVICE_S3_SECRET_KEY: ${CONTENT_SERVICE_S3_SECRET_KEY:?CONTENT_SERVICE_S3_SECRET_KEY is required}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
+          sleep 2
+        done
+
+        mc mb --ignore-existing "local/$${MINIO_USER_PORTRAITS_BUCKET}"
+        mc mb --ignore-existing "local/$${MINIO_POST_PHOTOS_BUCKET}"
+
+        cat > /tmp/user-service-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+              "Resource": ["arn:aws:s3:::$${MINIO_USER_PORTRAITS_BUCKET}"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+              "Resource": ["arn:aws:s3:::$${MINIO_USER_PORTRAITS_BUCKET}/*"]
+            }
+          ]
+        }
+        EOF
+
+        cat > /tmp/content-service-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+              "Resource": ["arn:aws:s3:::$${MINIO_POST_PHOTOS_BUCKET}"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+              "Resource": ["arn:aws:s3:::$${MINIO_POST_PHOTOS_BUCKET}/*"]
+            }
+          ]
+        }
+        EOF
+
+        mc admin policy create local user-service-portraits-rw /tmp/user-service-policy.json || true
+        mc admin policy create local content-service-posts-rw /tmp/content-service-policy.json || true
+
+        mc admin user info local "$${USER_SERVICE_S3_ACCESS_KEY}" >/dev/null 2>&1 ||
+          mc admin user add local "$${USER_SERVICE_S3_ACCESS_KEY}" "$${USER_SERVICE_S3_SECRET_KEY}"
+        mc admin user info local "$${CONTENT_SERVICE_S3_ACCESS_KEY}" >/dev/null 2>&1 ||
+          mc admin user add local "$${CONTENT_SERVICE_S3_ACCESS_KEY}" "$${CONTENT_SERVICE_S3_SECRET_KEY}"
+
+        mc admin policy attach local user-service-portraits-rw --user "$${USER_SERVICE_S3_ACCESS_KEY}"
+        mc admin policy attach local content-service-posts-rw --user "$${CONTENT_SERVICE_S3_ACCESS_KEY}"
+
+        mc anonymous set download "local/$${MINIO_USER_PORTRAITS_BUCKET}"
+        mc anonymous set download "local/$${MINIO_POST_PHOTOS_BUCKET}"
 
   user-service:
     image: ghcr.io/aet-devops26/team-colleague-md/user-service:latest
@@ -64,8 +118,8 @@ services:
       - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-http://minio:9000}
       - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:-http://localhost:9000}
       - STORAGE_S3_REGION=${STORAGE_S3_REGION:-us-east-1}
-      - STORAGE_S3_ACCESS_KEY=${MINIO_ROOT_USER:-verita_minio}
-      - STORAGE_S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      - STORAGE_S3_ACCESS_KEY=${USER_SERVICE_S3_ACCESS_KEY:?USER_SERVICE_S3_ACCESS_KEY is required}
+      - STORAGE_S3_SECRET_KEY=${USER_SERVICE_S3_SECRET_KEY:?USER_SERVICE_S3_SECRET_KEY is required}
       - STORAGE_S3_PATH_STYLE_ACCESS=true
       - STORAGE_USER_PORTRAITS_BUCKET=${STORAGE_USER_PORTRAITS_BUCKET:-verita-user-portraits}
     depends_on:
@@ -90,8 +144,8 @@ services:
       - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-http://minio:9000}
       - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:-http://localhost:9000}
       - STORAGE_S3_REGION=${STORAGE_S3_REGION:-us-east-1}
-      - STORAGE_S3_ACCESS_KEY=${MINIO_ROOT_USER:-verita_minio}
-      - STORAGE_S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      - STORAGE_S3_ACCESS_KEY=${CONTENT_SERVICE_S3_ACCESS_KEY:?CONTENT_SERVICE_S3_ACCESS_KEY is required}
+      - STORAGE_S3_SECRET_KEY=${CONTENT_SERVICE_S3_SECRET_KEY:?CONTENT_SERVICE_S3_SECRET_KEY is required}
       - STORAGE_S3_PATH_STYLE_ACCESS=true
       - STORAGE_POST_PHOTOS_BUCKET=${STORAGE_POST_PHOTOS_BUCKET:-verita-post-photos}
     depends_on:
