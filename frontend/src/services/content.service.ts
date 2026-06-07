@@ -10,9 +10,9 @@ const MOCK_TAGS = [
 ];
 
 const MOCK_AUTHORS = [
-  { id: 'u1', username: 'sarahjkim', displayName: 'Sarah Kim', role: 'VERIFIED' as const, organization: 'DeepMind' },
+  { id: 'u1', username: 'sarahjkim', displayName: 'Sarah Kim', role: 'VERIFIED' as const, organisation: 'DeepMind' },
   { id: 'u2', username: 'marcello_r', displayName: 'Marcello Rossi', role: 'USER' as const },
-  { id: 'u3', username: 'priya_ml', displayName: 'Priya Nair', role: 'VERIFIED' as const, organization: 'Hugging Face' },
+  { id: 'u3', username: 'priya_ml', displayName: 'Priya Nair', role: 'VERIFIED' as const, organisation: 'Hugging Face' },
   { id: 'u4', username: 'tobiask', displayName: 'Tobias Klein', role: 'USER' as const },
   { id: 'user-1', username: 'alexchen', displayName: 'Alex Chen', role: 'USER' as const },
 ];
@@ -201,7 +201,7 @@ const MOCK_POST_DETAIL: PostDetail = {
     username: 'ananya_roy',
     displayName: 'Ananya Roy',
     role: 'VERIFIED',
-    organization: 'Anthropic',
+    organisation: 'Anthropic',
   },
   tags: [
     { id: 't-mech', name: 'mech-interp' },
@@ -227,7 +227,7 @@ const MOCK_POST_DETAIL: PostDetail = {
 const MOCK_COMMENTS: Comment[] = [
   {
     id: 'c1',
-    author: { id: 'u-olah', username: 'chris_olah', displayName: 'Chris Olah', role: 'VERIFIED', organization: 'Anthropic' },
+    author: { id: 'u-olah', username: 'chris_olah', displayName: 'Chris Olah', role: 'VERIFIED', organisation: 'Anthropic' },
     text: "This is great. The most interesting part for me is the \"skill induction only above 30B\" finding — it's consistent with what we've been seeing internally on the SAE side. There's a phase transition where some bundle of capabilities arrives together, and it really does look like a circuit-level thing rather than a smooth scaling curve.\n\nQuestion: did you check whether the same 140 heads transfer across finetunes? Curious whether they survive RLHF.",
     likeCount: 184,
     isLikedByMe: true,
@@ -235,7 +235,7 @@ const MOCK_COMMENTS: Comment[] = [
     replies: [
       {
         id: 'c1r1',
-        author: { id: 'u-ananya', username: 'ananya_roy', displayName: 'Ananya Roy', role: 'VERIFIED', organization: 'Anthropic' },
+        author: { id: 'u-ananya', username: 'ananya_roy', displayName: 'Ananya Roy', role: 'VERIFIED', organisation: 'Anthropic' },
         text: "Yes — we ran the same probe on three RLHF'd checkpoints. ~92% of the heads survive, but the selectivity sharpens: the \"format\" sub-population gets noticeably more decisive after RLHF. We have a follow-up draft on this. Will share next week.",
         likeCount: 96,
         isLikedByMe: false,
@@ -244,7 +244,7 @@ const MOCK_COMMENTS: Comment[] = [
       },
       {
         id: 'c1r2',
-        author: { id: 'u-sharkey', username: 'l_sharkey', displayName: 'L. Sharkey', role: 'USER', organization: 'Apollo' },
+        author: { id: 'u-sharkey', username: 'l_sharkey', displayName: 'L. Sharkey', role: 'USER', organisation: 'Apollo' },
         text: '+1 to this question — also curious about the cross-family case. Do the heads have a clean signature in residual space that survives different tokenizers? If yes, the "naming features" story actually has legs.',
         likeCount: 41,
         isLikedByMe: false,
@@ -255,7 +255,7 @@ const MOCK_COMMENTS: Comment[] = [
   },
   {
     id: 'c2',
-    author: { id: 'u-helena', username: 'helena_park', displayName: 'Helena Park', role: 'VERIFIED', organization: 'AISI' },
+    author: { id: 'u-helena', username: 'helena_park', displayName: 'Helena Park', role: 'VERIFIED', organisation: 'AISI' },
     text: "The line at the end — \"specific enough to be wrong\" — is the kind of framing this field has been missing. I want to push back gently on one thing though: ablation as evidence of necessity is fine, but it's not the same as evidence of mechanism. The cluster could be necessary because it's downstream of the real circuit, not because it is the real circuit.\n\nHave you tried activation patching from shuffled-demo runs into coherent-demo runs, instead of just ablating?",
     likeCount: 112,
     isLikedByMe: false,
@@ -273,7 +273,7 @@ const MOCK_COMMENTS: Comment[] = [
   },
   {
     id: 'c4',
-    author: { id: 'u-naomi', username: 'naomi_greene', displayName: 'Naomi Greene', role: 'VERIFIED', organization: 'DeepMind' },
+    author: { id: 'u-naomi', username: 'naomi_greene', displayName: 'Naomi Greene', role: 'VERIFIED', organisation: 'DeepMind' },
     text: "The three sub-populations — retrieval, format, predict — line up uncannily well with what we got from a totally different methodology (path patching on synthetic tasks). Either we're both seeing the same thing or we're both pattern-matching on the same coincidence. I'd bet on the former.",
     likeCount: 89,
     isLikedByMe: false,

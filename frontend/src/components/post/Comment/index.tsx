@@ -65,8 +65,8 @@ export default function Comment({ comment, isReply = false, isAuthor = false }: 
             {comment.author.displayName}
             {comment.author.role === 'VERIFIED' && <VerifiedIcon />}
           </span>
-          {comment.author.organization && (
-            <span className={styles.role}>{comment.author.organization.toLowerCase()}</span>
+          {comment.author.organisation && (
+            <span className={styles.role}>{comment.author.organisation.toLowerCase()}</span>
           )}
           {isAuthor && <span className={styles.opBadge}>Author</span>}
           <span>·</span>

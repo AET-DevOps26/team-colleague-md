@@ -329,12 +329,12 @@ export default function UserProfile() {
             )}
 
             <div className={styles.meta}>
-              {profile.organization && (
+              {profile.organisation && (
                 <div className={styles.metaItem} data-testid="profile-org">
                   <svg width="14" height="14" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4">
                     <circle cx="6.5" cy="5" r="2.5" /><path d="M2 11.5c0-2.485 2.015-4 4.5-4s4.5 1.515 4.5 4" />
                   </svg>
-                  {profile.organization}
+                  {profile.organisation}
                 </div>
               )}
               <div className={styles.metaItem}>

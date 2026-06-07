@@ -36,7 +36,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
 
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [bio, setBio] = useState(profile.bio ?? '');
-  const [organization, setOrganization] = useState(profile.organization ?? '');
+  const [organisation, setOrganisation] = useState(profile.organisation ?? '');
   const [website, setWebsite] = useState(profile.website ?? '');
   const [expertise, setExpertise] = useState((profile.expertiseAreas ?? []).join(', '));
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatarUrl ?? null);
@@ -122,7 +122,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
       await onSave({
         displayName: displayName.trim() || profile.displayName,
         bio: bio.trim() || null,
-        organization: organization.trim() || null,
+        organisation: organisation.trim() || null,
         website: normalizedWebsite || null,
         expertiseAreas: expertiseAreas.length > 0 ? expertiseAreas : null,
         avatarUrl: avatarPreview,
@@ -131,7 +131,7 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
     } finally {
       setSaving(false);
     }
-  }, [displayName, bio, organization, website, expertise, avatarPreview, profile.displayName, onSave, onClose]);
+  }, [displayName, bio, organisation, website, expertise, avatarPreview, profile.displayName, onSave, onClose]);
 
   const initials = getInitials(profile.displayName);
 
@@ -278,14 +278,14 @@ export default function EditProfileModal({ profile, isOpen, onClose, onSave }: P
 
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Organization</label>
+                    <label className={styles.label}>Organisation</label>
                     <input
                       className={styles.input}
                       type="text"
-                      value={organization}
-                      onChange={(e) => setOrganization(e.target.value)}
+                      value={organisation}
+                      onChange={(e) => setOrganisation(e.target.value)}
                       placeholder="e.g. DeepMind"
-                      data-testid="edit-organization"
+                      data-testid="edit-organisation"
                     />
                   </div>
                   <div className={styles.formGroup}>

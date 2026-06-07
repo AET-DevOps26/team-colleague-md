@@ -4,7 +4,7 @@ export interface User {
   displayName: string;
   avatarUrl?: string;
   role: 'USER' | 'VERIFIED' | 'ADMIN';
-  organization?: string;
+  organisation?: string;
 }
 
 export interface UserProfile {
@@ -14,7 +14,7 @@ export interface UserProfile {
   avatarUrl?: string | null;
   bio?: string | null;
   website?: string | null;
-  organization?: string | null;
+  organisation?: string | null;
   expertiseAreas?: string[];
   role: 'USER' | 'VERIFIED' | 'ADMIN';
   isBanned: boolean;
@@ -32,7 +32,7 @@ export interface UpdateUserRequest {
   bio?: string | null;
   avatarUrl?: string | null;
   website?: string | null;
-  organization?: string | null;
+  organisation?: string | null;
   expertiseAreas?: string[] | null;
 }
 

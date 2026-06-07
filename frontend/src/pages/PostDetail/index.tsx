@@ -111,9 +111,9 @@ export default function PostDetail() {
                 )}
               </div>
               <div className={styles.authorMeta}>
-                {post.author.organization && (
+                {post.author.organisation && (
                   <>
-                    <span>{post.author.organization}</span>
+                    <span>{post.author.organisation}</span>
                     <span className={styles.dotSep}>·</span>
                   </>
                 )}
