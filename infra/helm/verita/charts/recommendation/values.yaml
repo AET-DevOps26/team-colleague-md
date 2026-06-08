@@ -1,0 +1,10 @@
+﻿replicaCount: 1
+service:
+  type: ClusterIP
+  port: 8083
+
+db:
+  port: 5432
+  name: verita_recommendations
+  user: verita_user
+  secretKey: password

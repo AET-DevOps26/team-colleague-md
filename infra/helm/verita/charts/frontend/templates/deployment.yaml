@@ -1,25 +1,25 @@
 ﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "genai.fullname" . }}
+  name: {{ include "frontend.fullname" . }}
   labels:
-    {{- include "genai.labels" . | nindent 4 }}
+    {{- include "frontend.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "genai.selectorLabels" . | nindent 6 }}
+      {{- include "frontend.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "genai.selectorLabels" . | nindent 8 }}
+        {{- include "frontend.selectorLabels" . | nindent 8 }}
       annotations:
         # This forces a rolling restart whenever a new CI workflow runs
-        github.com/rollout-id: { { .Values.image.rolloutId | default "1" | quote } }
+        github.com/rollout-id: {{ .Values.image.rolloutId | default "1" | quote }}
     spec:
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ include "genai.image" . }}"
+          image: "{{ include "frontend.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
