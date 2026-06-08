@@ -1,17 +1,54 @@
 package com.verita.contentservice.service;
-import com.verita.contentservice.*;
-import com.verita.contentservice.dto.*;
-import com.verita.contentservice.repository.*;
+import com.verita.contentservice.BookmarkEntity;
+import com.verita.contentservice.CommentEntity;
+import com.verita.contentservice.PostEntity;
+import com.verita.contentservice.PostStatus;
+import com.verita.contentservice.TagEntity;
+import com.verita.contentservice.VoteEntity;
+import com.verita.contentservice.VoteTargetType;
+import com.verita.contentservice.VoteType;
+import com.verita.contentservice.dto.UserProfileDto;
+import com.verita.contentservice.repository.BookmarkRepository;
+import com.verita.contentservice.repository.CommentRepository;
+import com.verita.contentservice.repository.PostRepository;
+import com.verita.contentservice.repository.TagRepository;
+import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.support.Clients;
+import com.verita.model.AuthorSummary;
+import com.verita.model.CommentLikeResponse;
+import com.verita.model.CommentRequest;
+import com.verita.model.CommentResponse;
+import com.verita.model.LikeRequest;
+import com.verita.model.PostCard;
+import com.verita.model.PostLikeResponse;
+import com.verita.model.PostPage;
+import com.verita.model.PostRequest;
+import com.verita.model.PostResponse;
+import com.verita.model.Tag;
+import com.verita.model.TagResponse;
+import java.net.URI;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import static org.springframework.http.HttpStatus.*;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+
 @Service
 @Transactional
 public class ContentService {
@@ -21,9 +58,16 @@ public class ContentService {
     private final VoteRepository voteRepository;
     private final BookmarkRepository bookmarkRepository;
     private final Clients clients;
+
     public ContentService(PostRepository postRepository, TagRepository tagRepository, CommentRepository commentRepository, VoteRepository voteRepository, BookmarkRepository bookmarkRepository, Clients clients) {
-        this.postRepository = postRepository; this.tagRepository = tagRepository; this.commentRepository = commentRepository; this.voteRepository = voteRepository; this.bookmarkRepository = bookmarkRepository; this.clients = clients;
+        this.postRepository = postRepository;
+        this.tagRepository = tagRepository;
+        this.commentRepository = commentRepository;
+        this.voteRepository = voteRepository;
+        this.bookmarkRepository = bookmarkRepository;
+        this.clients = clients;
     }
+
     public PostResponse createPost(PostRequest request, String authorization) {
         UUID userId = currentUserId(authorization);
         PostEntity post = new PostEntity();
@@ -32,16 +76,19 @@ public class ContentService {
         post = postRepository.save(post);
         post.setContentSummary(generateSummary(authorization, post));
         post = postRepository.save(post);
-        return toPostResponse(post, userId, authorization);
+        return toPostResponse(post, userId);
     }
+
     public PostResponse updatePost(UUID id, PostRequest request, String authorization) {
         UUID userId = currentUserId(authorization);
         PostEntity post = mustOwnEditablePost(id, userId);
         applyPostRequest(post, request);
         post = postRepository.save(post);
         post.setContentSummary(generateSummary(authorization, post));
-        return toPostResponse(postRepository.save(post), userId, authorization);
+        post = postRepository.save(post);
+        return toPostResponse(post, userId);
     }
+
     public void deletePost(UUID id, String authorization) {
         UUID userId = currentUserId(authorization);
         PostEntity post = mustOwnEditablePost(id, userId);
@@ -49,19 +96,30 @@ public class ContentService {
         post.setDeletedAt(OffsetDateTime.now());
         postRepository.save(post);
     }
+
     @Transactional(readOnly = true)
     public PostPage getAllPosts(int page, int size, String tag, String authorization) {
-        var pageable = PageRequest.of(page, size);
-        var currentUser = optionalUserId(authorization);
-        var result = (tag == null || tag.isBlank())
+        PageRequest pageable = PageRequest.of(page, size);
+        UUID currentUser = optionalUserId(authorization);
+        Page<PostEntity> result = (tag == null || tag.isBlank())
                 ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
                 : postRepository.findByDeletedFalseAndStatusAndTags_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, tag, pageable);
-        return mapPage(result, currentUser, authorization);
+        return mapPage(result, currentUser);
     }
+
     @Transactional(readOnly = true)
     public PostPage searchPosts(String q, int page, int size, String authorization) {
-        var result = postRepository.searchPublished(q, PageRequest.of(page, size));
-        return mapPage(result, optionalUserId(authorization), authorization);
+        return mapPage(postRepository.searchPublished(q, PageRequest.of(page, size)), optionalUserId(authorization));
+    }
+
+    @Transactional(readOnly = true)
+    public PostResponse getPost(UUID id, String authorization) {
+        UUID currentUser = optionalUserId(authorization);
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
+            throw new ResponseStatusException(NOT_FOUND);
+        }
+        return toPostResponse(post, currentUser);
     }
 
     @Transactional(readOnly = true)
@@ -69,9 +127,9 @@ public class ContentService {
         UUID current = optionalUserId(authorization);
         if (current == null) throw new ResponseStatusException(UNAUTHORIZED);
         if (!Objects.equals(current, userId)) throw new ResponseStatusException(FORBIDDEN);
-        var posts = bookmarkRepository.findByUserId(userId).stream().map(BookmarkEntity::getPost).filter(p -> p != null && !p.isDeleted() && p.getStatus() == PostStatus.PUBLISHED).toList();
-        var slice = posts.stream().skip((long) page * size).limit(size).toList();
-        return new PostPage(slice.stream().map(p -> toPostResponse(p, current, authorization)).toList(), page, size, Math.max(1, (posts.size() + size - 1) / size), posts.size());
+        List<PostEntity> posts = bookmarkRepository.findByUserId(userId).stream().map(BookmarkEntity::getPost).filter(p -> p != null && !p.isDeleted() && p.getStatus() == PostStatus.PUBLISHED).toList();
+        List<PostEntity> slice = posts.stream().skip((long) page * size).limit(size).toList();
+        return new PostPage().content(slice.stream().map(p -> toPostResponse(p, current)).toList()).page(page).size(size).totalPages(Math.max(1, (posts.size() + size - 1) / size)).totalElements(posts.size());
     }
 
     @Transactional(readOnly = true)
@@ -79,10 +137,110 @@ public class ContentService {
         UUID current = optionalUserId(authorization);
         if (current == null) throw new ResponseStatusException(UNAUTHORIZED);
         if (!Objects.equals(current, userId)) throw new ResponseStatusException(FORBIDDEN);
-        var posts = voteRepository.findByUserIdAndTargetTypeAndVoteType(userId, VoteTargetType.POST, VoteType.UPVOTE).stream().map(v -> postRepository.findByIdAndDeletedFalse(v.getTargetId()).orElse(null)).filter(Objects::nonNull).filter(p -> p.getStatus() == PostStatus.PUBLISHED).toList();
-        var slice = posts.stream().skip((long) page * size).limit(size).toList();
-        return new PostPage(slice.stream().map(p -> toPostResponse(p, current, authorization)).toList(), page, size, Math.max(1, (posts.size() + size - 1) / size), posts.size());
+        List<PostEntity> posts = voteRepository.findByUserIdAndTargetTypeAndVoteType(userId, VoteTargetType.POST, VoteType.UPVOTE).stream().map(v -> postRepository.findByIdAndDeletedFalse(v.getTargetId()).orElse(null)).filter(Objects::nonNull).filter(p -> p.getStatus() == PostStatus.PUBLISHED).toList();
+        List<PostEntity> slice = posts.stream().skip((long) page * size).limit(size).toList();
+        return new PostPage().content(slice.stream().map(p -> toPostResponse(p, current)).toList()).page(page).size(size).totalPages(Math.max(1, (posts.size() + size - 1) / size)).totalElements(posts.size());
     }
+
+    @Transactional(readOnly = true)
+    public PostPage getUserPosts(UUID userId, int page, int size, String authorization) {
+        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.PUBLISHED, PageRequest.of(page, size)), optionalUserId(authorization));
+    }
+
+    @Transactional(readOnly = true)
+    public PostPage getMyDrafts(int page, int size, String authorization) {
+        UUID userId = currentUserId(authorization);
+        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.DRAFT, PageRequest.of(page, size)), userId);
+    }
+
+    public CommentResponse addComment(UUID postId, CommentRequest request, String authorization) {
+        UUID userId = currentUserId(authorization);
+        PostEntity post = postRepository.findByIdAndDeletedFalse(postId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
+        CommentEntity comment = new CommentEntity();
+        comment.setPost(post);
+        comment.setAuthorId(userId);
+        comment.setText(request.getText());
+        if (request.getParentId() != null && request.getParentId().isPresent()) {
+            comment.setParentComment(commentRepository.findByIdAndDeletedFalse(request.getParentId().get()).orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
+        }
+        comment = commentRepository.save(comment);
+        post.setCommentCount(post.getCommentCount() + 1);
+        postRepository.save(post);
+        return toCommentResponse(comment, userId, buildCommentTree(post.getId(), userId));
+    }
+
+    public List<CommentResponse> getComments(UUID postId, String authorization) {
+        UUID userId = optionalUserId(authorization);
+        PostEntity post = postRepository.findByIdAndDeletedFalse(postId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
+        return buildCommentTree(postId, userId);
+    }
+
+    public void deleteComment(UUID id, String authorization) {
+        UUID userId = currentUserId(authorization);
+        CommentEntity comment = commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (!Objects.equals(comment.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN);
+        comment.setDeleted(true);
+        comment.setDeletedAt(OffsetDateTime.now());
+        comment.setText("[deleted]");
+        commentRepository.save(comment);
+    }
+
+    public CommentLikeResponse likeComment(UUID id, String authorization) {
+        UUID userId = currentUserId(authorization);
+        CommentEntity comment = commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        applyVote(userId, VoteTargetType.COMMENT, id, VoteType.UPVOTE);
+        comment.setLikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.COMMENT, id, VoteType.UPVOTE));
+        commentRepository.save(comment);
+        return new CommentLikeResponse().likeCount((int) comment.getLikeCount()).isLikedByMe(true);
+    }
+
+    public PostLikeResponse likePost(UUID id, LikeRequest.TypeEnum type, String authorization) {
+        UUID userId = currentUserId(authorization);
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
+        VoteType newType = switch (type) {
+            case LIKE -> VoteType.UPVOTE;
+            case DISLIKE -> VoteType.DOWNVOTE;
+            case NONE -> null;
+        };
+        applyVote(userId, VoteTargetType.POST, post.getId(), newType);
+        post.setLikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.POST, post.getId(), VoteType.UPVOTE));
+        post.setDislikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.POST, post.getId(), VoteType.DOWNVOTE));
+        postRepository.save(post);
+        return new PostLikeResponse().likeCount((int) post.getLikeCount()).dislikeCount((int) post.getDislikeCount()).isLikedByMe(newType == VoteType.UPVOTE).isDislikedByMe(newType == VoteType.DOWNVOTE);
+    }
+
+    public void bookmarkPost(UUID id, String authorization) {
+        UUID userId = currentUserId(authorization);
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
+        var existing = bookmarkRepository.findByUserIdAndPost_Id(userId, id);
+        if (existing.isEmpty()) {
+            BookmarkEntity bookmark = new BookmarkEntity();
+            bookmark.setUserId(userId);
+            bookmark.setPost(post);
+            bookmarkRepository.save(bookmark);
+        }
+        post.setSaveCount(bookmarkRepository.countByPost_Id(id));
+        postRepository.save(post);
+    }
+
+    public void unbookmarkPost(UUID id, String authorization) {
+        UUID userId = currentUserId(authorization);
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        var existing = bookmarkRepository.findByUserIdAndPost_Id(userId, id);
+        existing.ifPresent(bookmarkRepository::delete);
+        post.setSaveCount(bookmarkRepository.countByPost_Id(id));
+        postRepository.save(post);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TagResponse> trendingTags() {
+        return tagRepository.findTop10ByOrderByUsageCountDesc().stream().map(t -> new TagResponse().id(t.getId()).name(t.getName()).usageCount((int) t.getUsageCount())).toList();
+    }
+
     @Transactional(readOnly = true)
     public List<PostCard> getCards(List<UUID> ids, String authorization) {
         if (ids.size() > 50) throw new ResponseStatusException(BAD_REQUEST, "max 50 ids");
@@ -91,110 +249,184 @@ public class ContentService {
         List<PostCard> cards = new ArrayList<>();
         for (UUID id : ids) {
             PostEntity post = posts.get(id);
-            if (post != null) cards.add(toCard(post, userId, authorization));
+            if (post != null) cards.add(toCard(post, userId));
         }
         return cards;
     }
-    @Transactional(readOnly = true)
-    public PostResponse getPost(UUID id, String authorization) {
-        UUID currentUser = optionalUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) throw new ResponseStatusException(NOT_FOUND);
-        return toPostResponse(post, currentUser, authorization);
-    }
-    @Transactional(readOnly = true)
-    public PostPage getMyDrafts(int page, int size, String authorization) {
-        UUID userId = currentUserId(authorization);
-        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.DRAFT, PageRequest.of(page, size)), userId, authorization);
-    }
-    @Transactional(readOnly = true)
-    public PostPage getUserPosts(UUID userId, int page, int size, String authorization) {
-        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.PUBLISHED, PageRequest.of(page, size)), optionalUserId(authorization), authorization);
-    }
-    public PostLikeResponse likePost(UUID id, String type, String authorization) {
-        UUID userId = currentUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
-        VoteType newType = switch (type.toUpperCase(Locale.ROOT)) { case "LIKE" -> VoteType.UPVOTE; case "DISLIKE" -> VoteType.DOWNVOTE; case "NONE" -> null; default -> throw new ResponseStatusException(BAD_REQUEST); };
-        applyVote(userId, VoteTargetType.POST, post.getId(), newType);
-        post.setLikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.POST, post.getId(), VoteType.UPVOTE));
-        post.setDislikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.POST, post.getId(), VoteType.DOWNVOTE));
-        postRepository.save(post);
-        return new PostLikeResponse(post.getLikeCount(), post.getDislikeCount(), newType == VoteType.UPVOTE, newType == VoteType.DOWNVOTE);
-    }
-    public void bookmarkPost(UUID id, String authorization, boolean remove) {
-        UUID userId = currentUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
-        var existing = bookmarkRepository.findByUserIdAndPost_Id(userId, id);
-        if (remove) { existing.ifPresent(bookmarkRepository::delete); }
-        else if (existing.isEmpty()) { BookmarkEntity bookmark = new BookmarkEntity(); bookmark.setUserId(userId); bookmark.setPost(post); bookmarkRepository.save(bookmark); }
-        post.setSaveCount(bookmarkRepository.countByPost_Id(id));
-        postRepository.save(post);
-    }
-    public CommentResponse addComment(UUID postId, CommentRequest request, String authorization) {
-        UUID userId = currentUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(postId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
-        CommentEntity comment = new CommentEntity();
-        comment.setPost(post);
-        comment.setAuthorId(userId);
-        comment.setText(request.text());
-        if (request.parentId() != null) comment.setParentComment(commentRepository.findByIdAndDeletedFalse(request.parentId()).orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
-        comment = commentRepository.save(comment);
-        post.setCommentCount(post.getCommentCount() + 1);
-        postRepository.save(post);
-        return toCommentResponse(comment, userId, authorization, buildCommentTree(post.getId(), userId, authorization));
-    }
-    public List<CommentResponse> getComments(UUID postId, String authorization) {
-        UUID userId = optionalUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(postId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
-        return buildCommentTree(postId, userId, authorization);
-    }
-    public void deleteComment(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
-        CommentEntity comment = commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (!Objects.equals(comment.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN);
-        comment.setDeleted(true); comment.setDeletedAt(OffsetDateTime.now()); comment.setText("[deleted]"); commentRepository.save(comment);
-    }
-    public CommentLikeResponse likeComment(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
-        CommentEntity comment = commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        applyVote(userId, VoteTargetType.COMMENT, id, VoteType.UPVOTE);
-        comment.setLikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.COMMENT, id, VoteType.UPVOTE));
-        commentRepository.save(comment);
-        return new CommentLikeResponse(comment.getLikeCount(), true);
-    }
-    public List<TagResponse> trendingTags() {
-        return tagRepository.findTop10ByOrderByUsageCountDesc().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getUsageCount())).toList();
-    }
+
     private void applyPostRequest(PostEntity post, PostRequest request) {
-        post.setTitle(request.title());
-        post.setContent(request.content());
-        post.setExcerpt(request.excerpt() != null ? request.excerpt() : summarizeLocally(request.content()));
-        post.setCoverImageUrl(request.coverImageUrl());
-        post.setSourceUrls(request.sourceUrl());
-        post.setStatus("DRAFT".equalsIgnoreCase(request.status()) ? PostStatus.DRAFT : PostStatus.PUBLISHED);
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        post.setExcerpt(request.getExcerpt() != null ? request.getExcerpt() : summarizeLocally(request.getContent()));
+        post.setCoverImageUrl(request.getCoverImageUrl() != null && request.getCoverImageUrl().isPresent() && request.getCoverImageUrl().get() != null ? request.getCoverImageUrl().get().toString() : null);
+        post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>() : request.getSourceUrl().stream().map(URI::toString).toList());
+        post.setStatus(request.getStatus() == PostRequest.StatusEnum.DRAFT ? PostStatus.DRAFT : PostStatus.PUBLISHED);
+
         Set<TagEntity> tags = new LinkedHashSet<>();
-        if (request.tags() != null) for (String name : request.tags()) tags.add(tagRepository.findByNameIgnoreCase(name).orElseGet(() -> { TagEntity t = new TagEntity(); t.setName(name); return tagRepository.save(t); }));
+        if (request.getTags() != null) {
+            for (String name : request.getTags()) {
+                tags.add(tagRepository.findByNameIgnoreCase(name).orElseGet(() -> {
+                    TagEntity t = new TagEntity();
+                    t.setName(name);
+                    return tagRepository.save(t);
+                }));
+            }
+        }
         post.setTags(tags);
         tags.forEach(t -> t.setUsageCount(t.getUsageCount() + 1));
-        tagRepository.saveAll(tags);
+        for (TagEntity tag : tags) {
+            tagRepository.save(tag);
+        }
     }
-    private String generateSummary(String authorization, PostEntity post) { try { return String.join("\n", clients.summarize(authorization, post.getId() == null ? UUID.randomUUID() : post.getId(), post.getTitle(), post.getContent()).summary()); } catch (Exception e) { return summarizeLocally(post.getContent()); } }
-    private String summarizeLocally(String content) { return content.length() <= 240 ? content : content.substring(0, 240); }
-    private UUID currentUserId(String authorization) { return requireCurrentUser(authorization).id(); }
-    private UUID optionalUserId(String authorization) { try { return requireCurrentUser(authorization).id(); } catch (Exception e) { return null; } }
-    private UserProfileDto requireCurrentUser(String authorization) { if (authorization == null || authorization.isBlank()) throw new ResponseStatusException(UNAUTHORIZED); return clients.getCurrentUser(authorization); }
-    private PostEntity mustOwnEditablePost(UUID id, UUID userId) { PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND)); if (!Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN); return post; }
-    private void applyVote(UUID userId, VoteTargetType targetType, UUID targetId, VoteType newType) { var existing = voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, targetType, targetId); if (newType == null) { existing.ifPresent(voteRepository::delete); return; } if (existing.isPresent()) { existing.get().setVoteType(newType); voteRepository.save(existing.get()); } else { VoteEntity vote = new VoteEntity(); vote.setUserId(userId); vote.setTargetType(targetType); vote.setTargetId(targetId); vote.setVoteType(newType); voteRepository.save(vote); } }
-    private PostPage mapPage(org.springframework.data.domain.Page<PostEntity> page, UUID currentUser, String authorization) { return new PostPage(page.map(p -> toPostResponse(p, currentUser, authorization)).toList(), page.getNumber(), page.getSize(), page.getTotalPages(), page.getTotalElements()); }
-    private PostResponse toPostResponse(PostEntity post, UUID currentUser, String authorization) { return new PostResponse(post.getId(), authorSummary(post.getAuthorId(), authorization), post.getStatus().name(), post.getTitle(), post.getExcerpt(), post.getContent(), post.getCoverImageUrl(), post.getTags().stream().map(t -> new TagDto(t.getId(), t.getName())).toList(), post.getSourceUrls(), readTime(post.getContent()), post.getLikeCount(), post.getDislikeCount(), post.getCommentCount(), post.getViewCount(), post.getSaveCount(), currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.UPVOTE).orElse(false), currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.DOWNVOTE).orElse(false), currentUser != null && bookmarkRepository.existsByUserIdAndPost_Id(currentUser, post.getId()), post.getCreatedAt(), post.getUpdatedAt(), post.getContentSummary()); }
-    private PostCard toCard(PostEntity post, UUID currentUser, String authorization) { return new PostCard(post.getId(), authorSummary(post.getAuthorId(), authorization), post.getTitle(), post.getExcerpt(), post.getCoverImageUrl(), post.getTags().stream().map(t -> new TagDto(t.getId(), t.getName())).toList(), readTime(post.getContent()), post.getLikeCount(), post.getCommentCount(), post.getViewCount(), currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.UPVOTE).orElse(false), post.getCreatedAt()); }
-    private AuthorSummary authorSummary(UUID userId, String authorization) { UserProfileDto u = null; try { u = clients.getUserById(userId); } catch (Exception ignored) {} return new AuthorSummary(userId, u != null ? u.username() : "unknown", u != null ? u.displayName() : "Unknown", u != null ? u.avatarUrl() : null, u != null ? u.role() : null, u != null ? u.organisation() : null); }
-    private int readTime(String content) { return Math.max(1, (content == null ? 0 : content.split("\\s+").length) / 200 + 1); }
-    private List<CommentResponse> buildCommentTree(UUID postId, UUID currentUser, String authorization) { Map<UUID, List<CommentEntity>> children = commentRepository.findByPost_IdAndDeletedFalseOrderByCreatedAtAsc(postId).stream().collect(Collectors.groupingBy(c -> c.getParentComment() == null ? null : c.getParentComment().getId(), LinkedHashMap::new, Collectors.toList())); return children.getOrDefault(null, List.of()).stream().map(c -> toCommentNode(c, children, currentUser, authorization)).toList(); }
-    private CommentResponse toCommentNode(CommentEntity comment, Map<UUID, List<CommentEntity>> children, UUID currentUser, String authorization) { return new CommentResponse(comment.getId(), authorSummary(comment.getAuthorId(), authorization), comment.getText(), comment.getLikeCount(), currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.COMMENT, comment.getId()).isPresent(), comment.getCreatedAt(), children.getOrDefault(comment.getId(), List.of()).stream().map(c -> toCommentNode(c, children, currentUser, authorization)).toList()); }
-    private CommentResponse toCommentResponse(CommentEntity comment, UUID currentUser, String authorization, List<CommentResponse> replies) { return new CommentResponse(comment.getId(), authorSummary(comment.getAuthorId(), authorization), comment.getText(), comment.getLikeCount(), currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.COMMENT, comment.getId()).isPresent(), comment.getCreatedAt(), replies); }
+
+    private String generateSummary(String authorization, PostEntity post) {
+        try {
+            return String.join("\n", clients.summarize(authorization, post.getId() == null ? UUID.randomUUID() : post.getId(), post.getTitle(), post.getContent()).summary());
+        } catch (Exception e) {
+            return summarizeLocally(post.getContent());
+        }
+    }
+
+    private String summarizeLocally(String content) {
+        return content == null ? "" : (content.length() <= 240 ? content : content.substring(0, 240));
+    }
+
+    private UUID currentUserId(String authorization) {
+        return requireCurrentUser(authorization).id();
+    }
+
+    private UUID optionalUserId(String authorization) {
+        try {
+            return requireCurrentUser(authorization).id();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private UserProfileDto requireCurrentUser(String authorization) {
+        if (authorization == null || authorization.isBlank()) throw new ResponseStatusException(UNAUTHORIZED);
+        return clients.getCurrentUser(authorization);
+    }
+
+    private PostEntity mustOwnEditablePost(UUID id, UUID userId) {
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (!Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN);
+        return post;
+    }
+
+    private void applyVote(UUID userId, VoteTargetType targetType, UUID targetId, VoteType newType) {
+        var existing = voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, targetType, targetId);
+        if (newType == null) {
+            existing.ifPresent(voteRepository::delete);
+            return;
+        }
+        if (existing.isPresent()) {
+            existing.get().setVoteType(newType);
+            voteRepository.save(existing.get());
+        } else {
+            VoteEntity vote = new VoteEntity();
+            vote.setUserId(userId);
+            vote.setTargetType(targetType);
+            vote.setTargetId(targetId);
+            vote.setVoteType(newType);
+            voteRepository.save(vote);
+        }
+    }
+
+    private PostPage mapPage(Page<PostEntity> page, UUID currentUser) {
+        return new PostPage().content(page.map(p -> toPostResponse(p, currentUser)).toList()).page(page.getNumber()).size(page.getSize()).totalPages(page.getTotalPages()).totalElements((int) page.getTotalElements());
+    }
+
+    private PostResponse toPostResponse(PostEntity post, UUID currentUser) {
+        PostResponse response = new PostResponse()
+                .id(post.getId())
+                .author(authorSummary(post.getAuthorId()))
+                .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
+                .title(post.getTitle())
+                .excerpt(post.getExcerpt())
+                .content(post.getContent())
+                .tags(post.getTags().stream().map(this::toApiTag).toList())
+                .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
+                .readTimeMinutes(readTime(post.getContent()))
+                .likeCount((int) post.getLikeCount())
+                .dislikeCount((int) post.getDislikeCount())
+                .commentCount((int) post.getCommentCount())
+                .viewCount((int) post.getViewCount())
+                .saveCount((int) post.getSaveCount())
+                .isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.UPVOTE).orElse(false))
+                .isDislikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.DOWNVOTE).orElse(false))
+                .isBookmarkedByMe(currentUser != null && bookmarkRepository.existsByUserIdAndPost_Id(currentUser, post.getId()))
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt());
+        if (post.getCoverImageUrl() != null && !post.getCoverImageUrl().isBlank()) {
+            response.coverImageUrl(URI.create(post.getCoverImageUrl()));
+        }
+        return response;
+    }
+
+    private CommentResponse toCommentResponse(CommentEntity comment, UUID currentUser, List<CommentResponse> replies) {
+        return new CommentResponse().id(comment.getId()).author(authorSummary(comment.getAuthorId())).text(comment.getText()).likeCount((int) comment.getLikeCount()).isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.COMMENT, comment.getId()).isPresent()).createdAt(comment.getCreatedAt()).replies(replies);
+    }
+
+    private CommentResponse toCommentNode(CommentEntity comment, Map<UUID, List<CommentEntity>> children, UUID currentUser) {
+        return new CommentResponse().id(comment.getId()).author(authorSummary(comment.getAuthorId())).text(comment.getText()).likeCount((int) comment.getLikeCount()).isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.COMMENT, comment.getId()).isPresent()).createdAt(comment.getCreatedAt()).replies(children.getOrDefault(comment.getId(), List.of()).stream().map(c -> toCommentNode(c, children, currentUser)).toList());
+    }
+
+    private List<CommentResponse> buildCommentTree(UUID postId, UUID currentUser) {
+        Map<UUID, List<CommentEntity>> children = new LinkedHashMap<>();
+        for (CommentEntity comment : commentRepository.findByPost_IdAndDeletedFalseOrderByCreatedAtAsc(postId)) {
+            UUID parentId = comment.getParentComment() == null ? null : comment.getParentComment().getId();
+            children.computeIfAbsent(parentId, k -> new ArrayList<>()).add(comment);
+        }
+        return children.getOrDefault(null, List.of()).stream().map(c -> toCommentNode(c, children, currentUser)).toList();
+    }
+
+    private AuthorSummary authorSummary(UUID userId) {
+        UserProfileDto u = null;
+        try {
+            u = clients.getUserById(userId);
+        } catch (Exception ignored) {
+        }
+        AuthorSummary summary = new AuthorSummary().id(userId).username(u != null && u.username() != null ? u.username() : "unknown").displayName(u != null && u.displayName() != null ? u.displayName() : "Unknown");
+        if (u != null) {
+            if (u.avatarUrl() != null && !u.avatarUrl().isBlank()) {
+                summary.avatarUrl(URI.create(u.avatarUrl()));
+            }
+            if (u.role() != null && !u.role().isBlank()) {
+                try {
+                    summary.role(AuthorSummary.RoleEnum.fromValue(u.role()));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+            if (u.organisation() != null && !u.organisation().isBlank()) {
+                summary.organisation(u.organisation());
+            }
+        }
+        return summary;
+    }
+
+    private Tag toApiTag(TagEntity entity) {
+        return new Tag().id(entity.getId()).name(entity.getName());
+    }
+
+    private PostCard toCard(PostEntity post, UUID currentUser) {
+        PostCard card = new PostCard().id(post.getId()).author(authorSummary(post.getAuthorId())).title(post.getTitle()).likeCount((int) post.getLikeCount()).commentCount((int) post.getCommentCount()).viewCount((int) post.getViewCount()).isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.UPVOTE).orElse(false)).createdAt(post.getCreatedAt());
+        if (post.getExcerpt() != null) {
+            card.excerpt(post.getExcerpt());
+        }
+        if (post.getCoverImageUrl() != null && !post.getCoverImageUrl().isBlank()) {
+            card.coverImageUrl(URI.create(post.getCoverImageUrl()));
+        }
+        if (post.getTags() != null) {
+            card.setTags(post.getTags().stream().map(this::toApiTag).toList());
+        }
+        if (post.getContent() != null) {
+            card.readTimeMinutes(readTime(post.getContent()));
+        }
+        return card;
+    }
+
+    private int readTime(String content) {
+        return Math.max(1, (content == null ? 0 : content.split("\\s+").length) / 200 + 1);
+    }
 }
