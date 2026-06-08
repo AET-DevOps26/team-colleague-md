@@ -213,7 +213,7 @@ export default function UserProfile() {
             id: post.id,
             title: post.title,
             excerpt: post.excerpt ?? '',
-            tags: post.tags,
+            topics: post.topics,
             updatedAt: new Date().toISOString(),
           };
           setDrafts((prevDrafts) => [draft, ...prevDrafts]);
@@ -574,7 +574,7 @@ function DraftCard({ draft, onPublish, onEdit, onDelete }: {
         <div className={styles.draftTitle}>{draft.title}</div>
         <div className={styles.draftExcerpt}>{draft.excerpt}</div>
         <div className={styles.cardTags}>
-          {draft.tags.map((tag) => (
+          {draft.topics.map((tag) => (
             <span key={tag.id} className={styles.cardTag}>{tag.name}</span>
           ))}
         </div>

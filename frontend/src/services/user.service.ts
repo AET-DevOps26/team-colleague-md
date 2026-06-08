@@ -117,14 +117,14 @@ const MOCK_DRAFTS: DraftPost[] = [
     id: 'd1',
     title: 'When RAG Fails: A Taxonomy of Retrieval Errors',
     excerpt: 'Three patterns I keep seeing across production RAG systems — and what you can actually do about them.',
-    tags: [{ id: 't4', name: 'RAG' }, { id: 't1', name: 'LLMs' }],
+    topics: [{ id: 't4', name: 'RAG' }, { id: 't1', name: 'LLMs' }],
     updatedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
   },
   {
     id: 'd2',
     title: 'Tool-Use Patterns for Agentic Systems',
     excerpt: 'What separates a demo agent from a production one usually isn\'t the model — it\'s how you define and validate tool schemas.',
-    tags: [{ id: 't2', name: 'Agents' }],
+    topics: [{ id: 't2', name: 'Agents' }],
     updatedAt: new Date(Date.now() - 26 * 3600 * 1000).toISOString(),
   },
 ];

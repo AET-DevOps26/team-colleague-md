@@ -40,7 +40,7 @@ export interface DraftPost {
   id: string;
   title: string;
   excerpt: string;
-  tags: Tag[];
+  topics: Topic[];
   updatedAt: string;
 }
 
