@@ -1,8 +1,67 @@
 ﻿global:
-  registry: registry.example.com
+  registry: ghcr.io/aet-devops26/team-colleague-md
   imagePullSecrets: []
+
+content:
+  replicaCount: 1
+  image:
+    repository: content-service
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8082
+
+user:
+  replicaCount: 1
+  image:
+    repository: user-service
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8081
+
+recommendation:
+  replicaCount: 1
+  image:
+    repository: recommendation-service
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8083
+
+genai:
+  replicaCount: 1
+  image:
+    repository: genai-service
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8000
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: frontend
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+
 ingress:
   enabled: true
-  host: verita.k8s.ase.cit.tum.de
+  host: dev.verita.stud.k8s.aet.cit.tum.de
   tls:
     secretName: verita-tls
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "32Mi"
+  limits:
+    cpu: "500m"
+    memory: "128Mi"
