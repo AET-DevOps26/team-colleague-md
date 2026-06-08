@@ -3,8 +3,8 @@ package com.verita.userservice.service;
 import com.verita.model.*;
 import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.openapitools.jackson.nullable.JsonNullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -21,29 +21,17 @@ import java.util.stream.Collectors;
  * enforced at the controller layer via Spring Security.
  */
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    /**
-     * Looks up a user by username and maps the result to the API DTO.
-     *
-     * @param username the username to look up
-     * @return the {@link User} DTO, or {@code null} if no user with that username exists
-     */
     public User getByUsername(String username) {
         return userRepository.findByUsername(username)
                 .map(this::mapToDto)
                 .orElse(null);
     }
 
-    /**
-     * Looks up a user by their UUID and maps the result to the API DTO.
-     *
-     * @param id the user's UUID
-     * @return the {@link User} DTO, or {@code null} if no user with that ID exists
-     */
     public User getById(UUID id) {
         return userRepository.findById(id)
                 .map(this::mapToDto)
@@ -87,12 +75,6 @@ public class UserService {
         userRepository.findByUsername(username).ifPresent(userRepository::delete);
     }
 
-    /**
-     * Returns the notification and privacy preferences for the given user.
-     *
-     * @param username the username whose preferences to retrieve
-     * @return the user's {@link UserPreferences}
-     */
     public UserPreferences getUserPreferences(String username) {
         UserEntity user = userRepository.findByUsername(username).orElseThrow();
         UserPreferences prefs = new UserPreferences();
@@ -133,13 +115,6 @@ public class UserService {
         return buildPaginatedUsers(entityPage);
     }
 
-    /**
-     * Returns a paginated list of all users, ordered by the repository default.
-     *
-     * @param page zero-based page index
-     * @param size number of results per page
-     * @return a {@link PaginatedUsers} containing the users and pagination metadata
-     */
     public PaginatedUsers getUsers(int page, int size) {
         Page<UserEntity> entityPage = userRepository.findAll(PageRequest.of(page, size));
         return buildPaginatedUsers(entityPage);
@@ -172,12 +147,6 @@ public class UserService {
         userRepository.save(entity);
     }
 
-    /**
-     * Updates the ban status of a user.
-     *
-     * @param userId                  the UUID of the user to update
-     * @param updateBanStatusRequest  the new ban status
-     */
     public void updateUserBanStatus(UUID userId, UpdateBanStatusRequest updateBanStatusRequest) {
         UserEntity entity = userRepository.findById(userId).orElseThrow();
         if (updateBanStatusRequest.getBanned() != null) {
@@ -188,12 +157,6 @@ public class UserService {
 
     // --- Private helpers ---
 
-    /**
-     * Converts a {@link Page} of {@link UserEntity} into a {@link PaginatedUsers} API response.
-     *
-     * @param entityPage the JPA page result
-     * @return the paginated API DTO
-     */
     private PaginatedUsers buildPaginatedUsers(Page<UserEntity> entityPage) {
         List<User> list = entityPage.getContent().stream()
                 .map(this::mapToDto)
@@ -229,7 +192,7 @@ public class UserService {
         dto.setAvatarUrl(toJsonNullableUri(entity.getAvatarUrl()));
         dto.setBio(toJsonNullableString(entity.getBio()));
         dto.setWebsite(toJsonNullableUri(entity.getWebsite()));
-        dto.setOrganization(toJsonNullableString(entity.getOrganization()));
+        dto.setOrganisation(toJsonNullableString(entity.getOrganisation()));
         dto.setExpertiseAreas(toJsonNullableList(entity.getExpertiseAreas()));
 
         dto.setFollowerCount(entity.getFollowerCount());

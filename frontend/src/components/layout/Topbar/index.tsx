@@ -51,7 +51,7 @@ export default function Topbar({ bottomRow }: TopbarProps) {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search Verita — papers, people, tags, ideas…"
+            placeholder="Search Verita — papers, people, topics, ideas…"
             aria-label="Search"
           />
         </form>
@@ -68,7 +68,7 @@ export default function Topbar({ bottomRow }: TopbarProps) {
         </div>
       </div>
       {bottomRow && (
-        <div className={styles.row2} data-testid="topbar-tag-row">
+        <div className={styles.row2} data-testid="topbar-topic-row">
           {bottomRow}
         </div>
       )}

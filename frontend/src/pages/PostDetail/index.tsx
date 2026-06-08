@@ -136,7 +136,7 @@ export default function PostDetail() {
           <PostBody />
 
           {/* Footer: tags + sources */}
-          <PostFooter tags={post.tags} sources={post.sources} />
+          <PostFooter topics={post.topics} sources={post.sources} />
 
           {/* Engagement strip */}
           <EngageRow

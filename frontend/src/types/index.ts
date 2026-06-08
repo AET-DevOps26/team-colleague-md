@@ -44,7 +44,7 @@ export interface DraftPost {
   updatedAt: string;
 }
 
-export interface Tag {
+export interface Topic {
   id: string;
   name: string;
 }
@@ -55,7 +55,7 @@ export interface Post {
   excerpt: string;
   coverImageUrl?: string;
   author: User;
-  tags: Tag[];
+  topics: Topic[];
   likeCount: number;
   commentCount: number;
   viewCount: number;

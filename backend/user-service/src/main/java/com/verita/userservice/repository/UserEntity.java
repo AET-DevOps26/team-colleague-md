@@ -1,13 +1,28 @@
 package com.verita.userservice.repository;
 
+import com.verita.model.DigestFrequency;
+import com.verita.model.UserRole;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.time.OffsetDateTime;
-import com.verita.model.UserRole;
-import com.verita.model.DigestFrequency;
 
+/**
+ * JPA entity representing a Verita user account.
+ *
+ * <p>Stores identity (username, email, hashed password), public profile fields,
+ * social counters, role/ban status, refresh-token state, and notification preferences.
+ * Cross-service references use {@link #id} (UUID); no database-level foreign keys
+ * exist to other services.
+ */
+@Getter
+@Setter
+@NoArgsConstructor
 @Entity
 @Table(name = "users")
 public class UserEntity {
@@ -24,8 +39,9 @@ public class UserEntity {
     @Column(unique = true, nullable = false)
     private String email;
 
+    /** Bcrypt-hashed password — never stored or returned in plaintext. */
     @Column(nullable = false)
-    private String password; // hashed password
+    private String password;
 
     private String avatarUrl;
 
@@ -33,7 +49,7 @@ public class UserEntity {
     private String bio;
 
     private String website;
-    private String organization;
+    private String organisation;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_expertise", joinColumns = @JoinColumn(name = "user_id"))
@@ -57,7 +73,6 @@ public class UserEntity {
     private String refreshToken;
     private OffsetDateTime refreshTokenExpiry;
 
-    // Preferences
     @Enumerated(EnumType.STRING)
     private DigestFrequency digestFrequency = DigestFrequency.WEEKLY;
 
@@ -74,51 +89,4 @@ public class UserEntity {
     public void preUpdate() {
         this.updatedAt = OffsetDateTime.now();
     }
-
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-    public String getDisplayName() { return displayName; }
-    public void setDisplayName(String displayName) { this.displayName = displayName; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-    public String getAvatarUrl() { return avatarUrl; }
-    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
-    public String getBio() { return bio; }
-    public void setBio(String bio) { this.bio = bio; }
-    public String getWebsite() { return website; }
-    public void setWebsite(String website) { this.website = website; }
-    public String getOrganization() { return organization; }
-    public void setOrganization(String organization) { this.organization = organization; }
-    public List<String> getExpertiseAreas() { return expertiseAreas; }
-    public void setExpertiseAreas(List<String> expertiseAreas) { this.expertiseAreas = expertiseAreas; }
-    public UserRole getRole() { return role; }
-    public void setRole(UserRole role) { this.role = role; }
-    public Boolean getIsBanned() { return isBanned; }
-    public void setIsBanned(Boolean isBanned) { this.isBanned = isBanned; }
-    public Integer getPostCount() { return postCount; }
-    public void setPostCount(Integer postCount) { this.postCount = postCount; }
-    public Integer getFollowerCount() { return followerCount; }
-    public void setFollowerCount(Integer followerCount) { this.followerCount = followerCount; }
-    public Integer getFollowingCount() { return followingCount; }
-    public void setFollowingCount(Integer followingCount) { this.followingCount = followingCount; }
-    public Integer getLikeReceivedCount() { return likeReceivedCount; }
-    public void setLikeReceivedCount(Integer likeReceivedCount) { this.likeReceivedCount = likeReceivedCount; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
-    public DigestFrequency getDigestFrequency() { return digestFrequency; }
-    public void setDigestFrequency(DigestFrequency digestFrequency) { this.digestFrequency = digestFrequency; }
-    public Boolean getShowBookmarks() { return showBookmarks; }
-    public void setShowBookmarks(Boolean showBookmarks) { this.showBookmarks = showBookmarks; }
-    public Boolean getShowLikes() { return showLikes; }
-    public void setShowLikes(Boolean showLikes) { this.showLikes = showLikes; }
-    public String getRefreshToken() { return refreshToken; }
-    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
-    public OffsetDateTime getRefreshTokenExpiry() { return refreshTokenExpiry; }
-    public void setRefreshTokenExpiry(OffsetDateTime refreshTokenExpiry) { this.refreshTokenExpiry = refreshTokenExpiry; }
 }

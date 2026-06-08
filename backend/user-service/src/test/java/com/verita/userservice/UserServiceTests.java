@@ -51,7 +51,7 @@ public class UserServiceTests {
         userEntity.setAvatarUrl("https://example.com/avatar.png");
         userEntity.setBio("Bio text");
         userEntity.setWebsite("https://example.com");
-        userEntity.setOrganization("Example Org");
+        userEntity.setOrganisation("Example Org");
         userEntity.setExpertiseAreas(List.of("java", "devops"));
 
         when(userRepository.findById(userEntity.getId())).thenReturn(Optional.of(userEntity));
@@ -65,8 +65,8 @@ public class UserServiceTests {
         assertEquals("Bio text", result.getBio().get());
         assertTrue(result.getWebsite().isPresent());
         assertEquals("https://example.com", result.getWebsite().get().toString());
-        assertTrue(result.getOrganization().isPresent());
-        assertEquals("Example Org", result.getOrganization().get());
+        assertTrue(result.getOrganisation().isPresent());
+        assertEquals("Example Org", result.getOrganisation().get());
         assertTrue(result.getExpertiseAreas().isPresent());
         assertEquals(List.of("java", "devops"), result.getExpertiseAreas().get());
     }

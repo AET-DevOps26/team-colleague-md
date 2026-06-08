@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.OffsetDateTime;
 
+/**
+ * Centralized exception handler for all controllers. Translates domain exceptions
+ * into structured {@link com.verita.model.ErrorResponse} HTTP responses so callers
+ * receive consistent error payloads regardless of which controller threw.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
