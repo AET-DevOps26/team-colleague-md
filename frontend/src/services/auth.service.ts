@@ -1,44 +1,98 @@
+import axios from 'axios';
+import userApi from './userApi';
+import { setAccessToken, setUser, clearSession, getUser } from './tokenStore';
+import { AuthError } from '../errors/AuthError';
 import type { AuthUser } from '../types';
 
-const MOCK_USER: AuthUser = {
-  id: 'user-1',
-  username: 'alexchen',
-  displayName: 'Alex Chen',
-  role: 'USER',
-  email: 'alex@example.com',
-};
+interface BackendUser {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string;
+  role: 'USER' | 'VERIFIED' | 'ADMIN';
+  avatarUrl?: string;
+}
 
-const TOKEN_KEY = 'verita_token';
-const USER_KEY = 'verita_user';
+interface BackendAuthResponse {
+  accessToken: string;
+  user: BackendUser;
+}
+
+function mapUser(u: BackendUser): AuthUser {
+  return {
+    id: u.id,
+    username: u.username,
+    displayName: u.displayName,
+    email: u.email,
+    role: u.role,
+    avatarUrl: u.avatarUrl,
+  };
+}
+
+function handleAxiosError(error: unknown, isRegister: boolean): never {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    const message: string = error.response?.data?.message ?? '';
+    if (isRegister && status === 409) {
+      if (message.toLowerCase().includes('username')) throw new AuthError('USERNAME_IN_USE');
+      throw new AuthError('EMAIL_IN_USE');
+    }
+    if (status === 401 || status === 404) throw new AuthError('INVALID_CREDENTIALS');
+    if (!error.response) throw new AuthError('NETWORK_ERROR');
+  }
+  throw new AuthError('UNKNOWN');
+}
 
 export const authService = {
-  login(_email: string, _password: string): Promise<AuthUser> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        localStorage.setItem(TOKEN_KEY, 'mock-jwt-token');
-        localStorage.setItem(USER_KEY, JSON.stringify(MOCK_USER));
-        resolve(MOCK_USER);
-      }, 600);
-    });
+  async login(email: string, password: string): Promise<AuthUser> {
+    try {
+      const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/login', { email, password });
+      const user = mapUser(data.user);
+      setAccessToken(data.accessToken);
+      setUser(user);
+      return user;
+    } catch (error) {
+      handleAxiosError(error, false);
+    }
   },
 
-  signup(_username: string, _email: string, _password: string): Promise<AuthUser> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        localStorage.setItem(TOKEN_KEY, 'mock-jwt-token');
-        localStorage.setItem(USER_KEY, JSON.stringify(MOCK_USER));
-        resolve(MOCK_USER);
-      }, 600);
-    });
+  async signup(username: string, email: string, password: string): Promise<AuthUser> {
+    try {
+      const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/register', { username, email, password });
+      const user = mapUser(data.user);
+      setAccessToken(data.accessToken);
+      setUser(user);
+      return user;
+    } catch (error) {
+      handleAxiosError(error, true);
+    }
   },
 
-  logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+  async logout(): Promise<void> {
+    try {
+      await userApi.post('/api/v1/auth/logout');
+    } catch {
+      // ignore — clear local state regardless
+    } finally {
+      clearSession();
+    }
+  },
+
+  // Attempts to restore a session using the httpOnly refresh-token cookie.
+  // Called on app mount. Returns the user if the cookie is still valid, null otherwise.
+  async restoreSession(): Promise<AuthUser | null> {
+    try {
+      const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/refresh');
+      const user = mapUser(data.user);
+      setAccessToken(data.accessToken);
+      setUser(user);
+      return user;
+    } catch {
+      return null;
+    }
   },
 
   getCurrentUser(): AuthUser | null {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
+    return getUser();
   },
 };
