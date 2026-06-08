@@ -13,6 +13,9 @@ spec:
     metadata:
       labels:
         {{- include "content.selectorLabels" . | nindent 8 }}
+      annotations:
+        # This forces a rolling restart whenever a new CI workflow runs
+        github.com/rollout-id: { { .Values.image.rolloutId | default "1" | quote } }
     spec:
       containers:
         - name: {{ .Chart.Name }}
