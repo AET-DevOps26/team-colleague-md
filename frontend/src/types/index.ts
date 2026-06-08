@@ -7,7 +7,7 @@ export interface User {
   organisation?: string;
 }
 
-export interface Tag {
+export interface Topic {
   id: string;
   name: string;
 }
@@ -18,7 +18,7 @@ export interface Post {
   excerpt: string;
   coverImageUrl?: string;
   author: User;
-  tags: Tag[];
+  topics: Topic[];
   likeCount: number;
   commentCount: number;
   viewCount: number;

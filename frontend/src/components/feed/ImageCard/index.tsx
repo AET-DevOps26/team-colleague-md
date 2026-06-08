@@ -14,7 +14,7 @@ export default function ImageCard({ post, onLike }: Props) {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
   const navigate = useNavigate();
-  const typeBadge = post.tags[0]?.name ?? 'Article';
+  const typeBadge = post.topics[0]?.name ?? 'Article';
 
   function handleLike(e: React.MouseEvent) {
     e.stopPropagation();

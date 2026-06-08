@@ -192,7 +192,7 @@ public class UserService {
         dto.setAvatarUrl(toJsonNullableUri(entity.getAvatarUrl()));
         dto.setBio(toJsonNullableString(entity.getBio()));
         dto.setWebsite(toJsonNullableUri(entity.getWebsite()));
-        dto.setOrganization(toJsonNullableString(entity.getOrganization()));
+        dto.setOrganisation(toJsonNullableString(entity.getOrganisation()));
         dto.setExpertiseAreas(toJsonNullableList(entity.getExpertiseAreas()));
 
         dto.setFollowerCount(entity.getFollowerCount());

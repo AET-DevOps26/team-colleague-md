@@ -49,7 +49,7 @@ public class UserEntity {
     private String bio;
 
     private String website;
-    private String organization;
+    private String organisation;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_expertise", joinColumns = @JoinColumn(name = "user_id"))

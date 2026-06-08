@@ -1,6 +1,6 @@
 import type { Comment, FeedPage, Post, PostDetail } from '../types';
 
-const MOCK_TAGS = [
+const MOCK_TOPICS = [
   { id: 't1', name: 'LLMs' },
   { id: 't2', name: 'Agents' },
   { id: 't3', name: 'Fine-tuning' },
@@ -23,7 +23,7 @@ const BASE_POSTS: Post[] = [
     excerpt: 'A practical walkthrough of QLoRA fine-tuning with Flash Attention 2, gradient checkpointing, and a few tricks that cut my training time by 40%.',
     coverImageUrl: 'https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=800&q=80',
     author: MOCK_AUTHORS[0],
-    tags: [MOCK_TAGS[2], MOCK_TAGS[5]],
+    topics: [MOCK_TOPICS[2], MOCK_TOPICS[5]],
     likeCount: 312,
     commentCount: 47,
     viewCount: 8920,
@@ -36,7 +36,7 @@ const BASE_POSTS: Post[] = [
     title: 'Building a research agent that actually works in production',
     excerpt: 'After six months running autonomous agents in production, here is what I learned about tool design, failure modes, and keeping humans in the loop.',
     author: MOCK_AUTHORS[1],
-    tags: [MOCK_TAGS[1], MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[1], MOCK_TOPICS[0]],
     likeCount: 198,
     commentCount: 31,
     viewCount: 5410,
@@ -49,7 +49,7 @@ const BASE_POSTS: Post[] = [
     excerpt: 'Naive fixed-size chunking kills retrieval quality. This post covers semantic chunking, late chunking, and ColBERT-style multi-vector retrieval.',
     coverImageUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80',
     author: MOCK_AUTHORS[2],
-    tags: [MOCK_TAGS[3], MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[3], MOCK_TOPICS[0]],
     likeCount: 445,
     commentCount: 62,
     viewCount: 12300,
@@ -62,7 +62,7 @@ const BASE_POSTS: Post[] = [
     title: 'GPT-4o vs Claude 3.5 Sonnet on code generation — a fair comparison',
     excerpt: 'I ran 200 coding tasks across both models with identical prompts and scoring criteria. The results surprised me.',
     author: MOCK_AUTHORS[3],
-    tags: [MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[0]],
     likeCount: 567,
     commentCount: 89,
     viewCount: 18700,
@@ -75,7 +75,7 @@ const BASE_POSTS: Post[] = [
     excerpt: 'A survey of multimodal models applied to radiology, pathology, and ophthalmology — with honest assessments of clinical readiness.',
     coverImageUrl: 'https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=800&q=80',
     author: MOCK_AUTHORS[0],
-    tags: [MOCK_TAGS[4], MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[4], MOCK_TOPICS[0]],
     likeCount: 231,
     commentCount: 28,
     viewCount: 6800,
@@ -88,7 +88,7 @@ const BASE_POSTS: Post[] = [
     title: 'Mixtral MoE: understanding sparse expert routing',
     excerpt: 'Mixture-of-experts routing is elegant but non-obvious. This post builds intuition from first principles and explores why Mixtral uses top-2 routing.',
     author: MOCK_AUTHORS[1],
-    tags: [MOCK_TAGS[0], MOCK_TAGS[5]],
+    topics: [MOCK_TOPICS[0], MOCK_TOPICS[5]],
     likeCount: 389,
     commentCount: 54,
     viewCount: 9200,
@@ -100,7 +100,7 @@ const BASE_POSTS: Post[] = [
     title: 'Prompt caching in Claude API — a practical guide',
     excerpt: 'Cache prefixes can cut latency by 85% and costs by 90% for repeated context. Here is exactly how to structure prompts to maximise cache hits.',
     author: MOCK_AUTHORS[2],
-    tags: [MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[0]],
     likeCount: 276,
     commentCount: 19,
     viewCount: 7100,
@@ -113,7 +113,7 @@ const BASE_POSTS: Post[] = [
     excerpt: 'Three root causes I have found across dozens of agent systems: ambiguous schemas, missing examples, and token budget pressure near context limits.',
     coverImageUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&q=80',
     author: MOCK_AUTHORS[3],
-    tags: [MOCK_TAGS[1], MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[1], MOCK_TOPICS[0]],
     likeCount: 412,
     commentCount: 73,
     viewCount: 11500,
@@ -135,7 +135,7 @@ const MOCK_POST_DETAIL: PostDetail = {
     role: 'VERIFIED',
     organisation: 'Anthropic',
   },
-  tags: [
+  topics: [
     { id: 't-mech', name: 'mech-interp' },
     { id: 't-paper', name: 'paper' },
     { id: 't-align', name: 'alignment' },
@@ -219,11 +219,11 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export const contentService = {
-  getPosts(cursor: string | null, tag: string | null): Promise<FeedPage> {
+  getPosts(cursor: string | null, topic: string | null): Promise<FeedPage> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        let posts = tag
-          ? BASE_POSTS.filter((p) => p.tags.some((t) => t.name === tag))
+        let posts = topic
+          ? BASE_POSTS.filter((p) => p.topics.some((t) => t.name === topic))
           : BASE_POSTS;
 
         if (cursor === 'page2') {
@@ -246,8 +246,8 @@ export const contentService = {
     });
   },
 
-  getAvailableTags() {
-    return MOCK_TAGS;
+  getAvailableTopics() {
+    return MOCK_TOPICS;
   },
 
   getPost(id: string): Promise<PostDetail> {
