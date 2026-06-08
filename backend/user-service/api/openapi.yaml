@@ -412,7 +412,7 @@ components:
         avatarUrl: { type: string, format: uri, nullable: true }
         bio: { type: string, nullable: true }
         website: { type: string, format: uri, nullable: true }
-        organization: { type: string, nullable: true }
+        organisation: { type: string, nullable: true }
         expertiseAreas:
           type: array
           items: { type: string }
@@ -477,7 +477,7 @@ components:
         bio: { type: string, maxLength: 250, nullable: true }
         avatarUrl: { type: string, format: uri, nullable: true }
         website: { type: string, format: uri, nullable: true }
-        organization: { type: string, nullable: true }
+        organisation: { type: string, nullable: true }
         expertiseAreas:
           type: array
           items: { type: string }

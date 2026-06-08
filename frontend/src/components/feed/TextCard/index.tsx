@@ -14,7 +14,7 @@ export default function TextCard({ post, onLike }: Props) {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
   const navigate = useNavigate();
-  const eyebrow = post.tags[0]?.name?.toUpperCase() ?? 'ARTICLE';
+  const eyebrow = post.topics[0]?.name?.toUpperCase() ?? 'ARTICLE';
 
   function handleLike(e: React.MouseEvent) {
     e.stopPropagation();
