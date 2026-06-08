@@ -90,10 +90,10 @@ deploy:
 
     # 1. Connect to your TUM Kubernetes Cluster
     - name: Set up Kubeconfig
-      uses: azure/k8s-set-context@v3
-      with:
-        method: kubeconfig
-        kubeconfig: ${{ secrets.KUBECONFIG }} # Assumes your cluster credentials are saved in GitHub Secrets
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+        chmod 600 ~/.kube/config
 
     # 2. Install Helm CLI
     - name: Set up Helm
