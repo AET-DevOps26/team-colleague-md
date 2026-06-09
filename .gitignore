@@ -68,6 +68,8 @@ AGENTS.md
 frontend/test-results/
 frontend/playwright-report/
 
+#Helm
+.tgz
 # Terraform
 **/.terraform/
 *.tfstate
