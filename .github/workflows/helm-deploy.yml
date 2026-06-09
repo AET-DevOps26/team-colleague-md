@@ -32,6 +32,12 @@ jobs:
         with:
           version: 'v3.14.0'
 
+      - name: Add Helm repositories and update dependencies
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          helm dependency update ./infra/helm/verita
+
       - name: Deploy Umbrella Chart via Helm
         run: |
           if [ "${{ github.event.workflow_run.head_branch }}" = "main" ]; then
@@ -42,12 +48,14 @@ jobs:
 
           echo "Deploying to environment: $DEPLOY_ENV"
 
-          helm upgrade --install verita-$DEPLOY_ENV ./infra/helm/verita \
+          helm upgrade --install verita \
+            ./infra/helm/verita \
+            -f ./infra/helm/verita/values.yaml \
             -f ./infra/helm/verita/values-$DEPLOY_ENV.yaml \
             --namespace verita-$DEPLOY_ENV \
             --create-namespace \
-            --set frontend.image.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set content.image.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set user.image.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set recommendation.image.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set genai.image.rolloutId=${{ github.event.workflow_run.run_id }}
+            --set services.frontend.rolloutId=${{ github.event.workflow_run.run_id }} \
+            --set services.content.rolloutId=${{ github.event.workflow_run.run_id }} \
+            --set services.user.rolloutId=${{ github.event.workflow_run.run_id }} \
+            --set services.recommendation.rolloutId=${{ github.event.workflow_run.run_id }} \
+            --set services.genai.rolloutId=${{ github.event.workflow_run.run_id }}
