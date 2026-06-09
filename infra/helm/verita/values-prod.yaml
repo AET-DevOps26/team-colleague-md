@@ -1,3 +1,11 @@
+services:
+  user:
+    springProfile: prod
+  content:
+    springProfile: prod
+  recommendation:
+    springProfile: prod
+
 ingress:
   host: verita.stud.k8s.aet.cit.tum.de
   clusterIssuer: letsencrypt-prod

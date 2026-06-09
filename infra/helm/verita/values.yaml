@@ -7,6 +7,10 @@ services:
     image: user-service
     tag: latest
     port: 8081
+    springProfile: dev
+    health:
+      path: /actuator/health
+      initialDelaySeconds: 45
     db:
       name: verita_users
       user: verita_user
@@ -22,6 +26,10 @@ services:
     image: content-service
     tag: latest
     port: 8082
+    springProfile: dev
+    health:
+      path: /actuator/health
+      initialDelaySeconds: 45
     db:
       name: verita_content
       user: verita_user
@@ -37,6 +45,10 @@ services:
     image: recommendation-service
     tag: latest
     port: 8083
+    springProfile: dev
+    health:
+      path: /actuator/health
+      initialDelaySeconds: 45
     db:
       name: verita_recommendations
       user: verita_user
@@ -52,6 +64,9 @@ services:
     image: genai-service
     tag: latest
     port: 8000
+    health:
+      path: /health
+      initialDelaySeconds: 15
     resources:
       requests:
         cpu: "100m"
@@ -64,6 +79,9 @@ services:
     image: frontend
     tag: latest
     port: 80
+    health:
+      path: /
+      initialDelaySeconds: 5
     resources:
       requests:
         cpu: "50m"
@@ -83,16 +101,19 @@ user-postgresql:
   enabled: true
   auth:
     username: verita_user
+    password: verita_password
     database: verita_users
 
 content-postgresql:
   enabled: true
   auth:
     username: verita_user
+    password: verita_password
     database: verita_content
 
 recommendation-postgresql:
   enabled: true
   auth:
     username: verita_user
+    password: verita_password
     database: verita_recommendations
