@@ -7,6 +7,7 @@ import com.verita.contentservice.TagEntity;
 import com.verita.contentservice.VoteEntity;
 import com.verita.contentservice.VoteTargetType;
 import com.verita.contentservice.VoteType;
+import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.CommentRepository;
@@ -125,16 +126,26 @@ public class ContentService {
     @Transactional(readOnly = true)
     public PostPage getUserBookmarks(UUID userId, int page, int size, String authorization) {
         UUID current = optionalUserId(authorization);
-        if (current == null) throw new ResponseStatusException(UNAUTHORIZED);
-        if (!Objects.equals(current, userId)) throw new ResponseStatusException(FORBIDDEN);
+        if (!Objects.equals(current, userId)) {
+            UserPreferencesDto prefs = null;
+            try { prefs = clients.getUserPreferences(userId); } catch (Exception ignored) {}
+            if (prefs == null || !Boolean.TRUE.equals(prefs.showBookmarks())) {
+                throw new ResponseStatusException(FORBIDDEN);
+            }
+        }
         return mapPage(postRepository.findBookmarkedPublishedPostsByUserId(userId, PageRequest.of(page, size)), current);
     }
 
     @Transactional(readOnly = true)
     public PostPage getUserLikes(UUID userId, int page, int size, String authorization) {
         UUID current = optionalUserId(authorization);
-        if (current == null) throw new ResponseStatusException(UNAUTHORIZED);
-        if (!Objects.equals(current, userId)) throw new ResponseStatusException(FORBIDDEN);
+        if (!Objects.equals(current, userId)) {
+            UserPreferencesDto prefs = null;
+            try { prefs = clients.getUserPreferences(userId); } catch (Exception ignored) {}
+            if (prefs == null || !Boolean.TRUE.equals(prefs.showLikes())) {
+                throw new ResponseStatusException(FORBIDDEN);
+            }
+        }
         return mapPage(postRepository.findLikedPublishedPostsByUserId(userId, PageRequest.of(page, size)), current);
     }
 
@@ -161,8 +172,7 @@ public class ContentService {
             comment.setParentComment(commentRepository.findByIdAndDeletedFalse(request.getParentId().get()).orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
         }
         comment = commentRepository.save(comment);
-        post.setCommentCount(post.getCommentCount() + 1);
-        postRepository.save(post);
+        postRepository.incrementCommentCount(post.getId());
         return toCommentResponse(comment, userId, buildCommentTree(post.getId(), userId));
     }
 
@@ -185,11 +195,11 @@ public class ContentService {
 
     public CommentLikeResponse likeComment(UUID id, String authorization) {
         UUID userId = currentUserId(authorization);
-        CommentEntity comment = commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         applyVote(userId, VoteTargetType.COMMENT, id, VoteType.UPVOTE);
-        comment.setLikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.COMMENT, id, VoteType.UPVOTE));
-        commentRepository.save(comment);
-        return new CommentLikeResponse().likeCount((int) comment.getLikeCount()).isLikedByMe(true);
+        commentRepository.refreshLikeCount(id);
+        CommentEntity updated = commentRepository.findByIdAndDeletedFalse(id).orElseThrow();
+        return new CommentLikeResponse().likeCount((int) updated.getLikeCount()).isLikedByMe(true);
     }
 
     public PostLikeResponse likePost(UUID id, LikeRequest.TypeEnum type, String authorization) {
@@ -202,10 +212,9 @@ public class ContentService {
             case NONE -> null;
         };
         applyVote(userId, VoteTargetType.POST, post.getId(), newType);
-        post.setLikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.POST, post.getId(), VoteType.UPVOTE));
-        post.setDislikeCount(voteRepository.countByTargetTypeAndTargetIdAndVoteType(VoteTargetType.POST, post.getId(), VoteType.DOWNVOTE));
-        postRepository.save(post);
-        return new PostLikeResponse().likeCount((int) post.getLikeCount()).dislikeCount((int) post.getDislikeCount()).isLikedByMe(newType == VoteType.UPVOTE).isDislikedByMe(newType == VoteType.DOWNVOTE);
+        postRepository.refreshVoteCounts(post.getId());
+        PostEntity updated = postRepository.findByIdAndDeletedFalse(post.getId()).orElseThrow();
+        return new PostLikeResponse().likeCount((int) updated.getLikeCount()).dislikeCount((int) updated.getDislikeCount()).isLikedByMe(newType == VoteType.UPVOTE).isDislikedByMe(newType == VoteType.DOWNVOTE);
     }
 
     public void bookmarkPost(UUID id, String authorization) {
@@ -219,17 +228,15 @@ public class ContentService {
             bookmark.setPost(post);
             bookmarkRepository.save(bookmark);
         }
-        post.setSaveCount(bookmarkRepository.countByPost_Id(id));
-        postRepository.save(post);
+        postRepository.refreshSaveCount(id);
     }
 
     public void unbookmarkPost(UUID id, String authorization) {
         UUID userId = currentUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         var existing = bookmarkRepository.findByUserIdAndPost_Id(userId, id);
         existing.ifPresent(bookmarkRepository::delete);
-        post.setSaveCount(bookmarkRepository.countByPost_Id(id));
-        postRepository.save(post);
+        postRepository.refreshSaveCount(id);
     }
 
     @Transactional(readOnly = true)
