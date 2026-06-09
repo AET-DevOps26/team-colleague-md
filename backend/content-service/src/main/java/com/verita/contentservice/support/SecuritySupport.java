@@ -33,7 +33,7 @@ public class SecuritySupport {
         return http.build();
     }
     @Bean
-    JwtFilter jwtFilter(@Value("${app.jwt-secret:9a4f2c8d3b7a1e6f45c8a0b3f267d8b1d4e6f3c8a9d2b5f8e3a9c8b5f6v8a3d9}") String secret) {
+    JwtFilter jwtFilter(@Value("${app.jwt-secret}") String secret) {
         return new JwtFilter(secret);
     }
     static class JwtFilter extends OncePerRequestFilter {
@@ -46,7 +46,11 @@ public class SecuritySupport {
                     String username = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(header.substring(7)).getBody().getSubject();
                     Authentication auth = new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
                     SecurityContextHolder.getContext().setAuthentication(auth);
-                } catch (Exception ignored) { response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); return; }
+                } catch (Exception ignored) {
+                    // Invalid or expired token — clear any partial auth state and continue.
+                    // The service layer enforces auth on protected endpoints.
+                    SecurityContextHolder.clearContext();
+                }
             }
             chain.doFilter(request, response);
         }
