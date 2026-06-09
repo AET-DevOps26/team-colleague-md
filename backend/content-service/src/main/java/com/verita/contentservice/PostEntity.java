@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.BatchSize;
 @Entity
 @Table(name = "posts")
 public class PostEntity extends BaseTimeEntity {
@@ -21,7 +22,8 @@ public class PostEntity extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String excerpt;
     private String coverImageUrl;
-    @ElementCollection(fetch = FetchType.EAGER)
+    @BatchSize(size = 50)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "post_source_urls", joinColumns = @JoinColumn(name = "post_id"))
     @Column(name = "source_url", columnDefinition = "TEXT")
     private List<String> sourceUrls = new ArrayList<>();
@@ -43,7 +45,8 @@ public class PostEntity extends BaseTimeEntity {
     @Column(nullable = false)
     private boolean deleted = false;
     private OffsetDateTime deletedAt;
-    @ManyToMany(fetch = FetchType.EAGER)
+    @BatchSize(size = 50)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "post_tags", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private Set<TagEntity> tags = new LinkedHashSet<>();
     public UUID getId() { return id; }

@@ -368,6 +368,8 @@ public class ContentService {
     }
 
     private PostResponse toPostResponse(PostEntity post, UUID currentUser) {
+        VoteEntity myVote = currentUser == null ? null :
+                voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).orElse(null);
         PostResponse response = new PostResponse()
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId()))
@@ -383,8 +385,8 @@ public class ContentService {
                 .commentCount((int) post.getCommentCount())
                 .viewCount((int) post.getViewCount())
                 .saveCount((int) post.getSaveCount())
-                .isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.UPVOTE).orElse(false))
-                .isDislikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.DOWNVOTE).orElse(false))
+                .isLikedByMe(myVote != null && myVote.getVoteType() == VoteType.UPVOTE)
+                .isDislikedByMe(myVote != null && myVote.getVoteType() == VoteType.DOWNVOTE)
                 .isBookmarkedByMe(currentUser != null && bookmarkRepository.existsByUserIdAndPost_Id(currentUser, post.getId()))
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt());
@@ -428,17 +430,25 @@ public class ContentService {
         return new CommentResponse().id(comment.getId()).author(authorSummary(comment.getAuthorId())).text(comment.getText()).likeCount((int) comment.getLikeCount()).isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.COMMENT, comment.getId()).isPresent()).createdAt(comment.getCreatedAt()).replies(replies);
     }
 
-    private CommentResponse toCommentNode(CommentEntity comment, Map<UUID, List<CommentEntity>> children, UUID currentUser) {
-        return new CommentResponse().id(comment.getId()).author(authorSummary(comment.getAuthorId())).text(comment.getText()).likeCount((int) comment.getLikeCount()).isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.COMMENT, comment.getId()).isPresent()).createdAt(comment.getCreatedAt()).replies(children.getOrDefault(comment.getId(), List.of()).stream().map(c -> toCommentNode(c, children, currentUser)).toList());
+    private CommentResponse toCommentNode(CommentEntity comment, Map<UUID, List<CommentEntity>> children, Set<UUID> likedCommentIds) {
+        return new CommentResponse().id(comment.getId()).author(authorSummary(comment.getAuthorId())).text(comment.getText()).likeCount((int) comment.getLikeCount()).isLikedByMe(likedCommentIds.contains(comment.getId())).createdAt(comment.getCreatedAt()).replies(children.getOrDefault(comment.getId(), List.of()).stream().map(c -> toCommentNode(c, children, likedCommentIds)).toList());
     }
 
     private List<CommentResponse> buildCommentTree(UUID postId, UUID currentUser) {
         Map<UUID, List<CommentEntity>> children = new LinkedHashMap<>();
-        for (CommentEntity comment : commentRepository.findByPost_IdAndDeletedFalseOrderByCreatedAtAsc(postId)) {
+        List<CommentEntity> allComments = commentRepository.findByPost_IdAndDeletedFalseOrderByCreatedAtAsc(postId);
+        for (CommentEntity comment : allComments) {
             UUID parentId = comment.getParentComment() == null ? null : comment.getParentComment().getId();
             children.computeIfAbsent(parentId, k -> new ArrayList<>()).add(comment);
         }
-        return children.getOrDefault(null, List.of()).stream().map(c -> toCommentNode(c, children, currentUser)).toList();
+        Set<UUID> likedCommentIds = Set.of();
+        if (currentUser != null && !allComments.isEmpty()) {
+            List<UUID> commentIds = allComments.stream().map(CommentEntity::getId).toList();
+            likedCommentIds = voteRepository.findByUserIdAndTargetTypeAndTargetIdIn(currentUser, VoteTargetType.COMMENT, commentIds)
+                    .stream().map(VoteEntity::getTargetId).collect(Collectors.toSet());
+        }
+        final Set<UUID> finalLikedIds = likedCommentIds;
+        return children.getOrDefault(null, List.of()).stream().map(c -> toCommentNode(c, children, finalLikedIds)).toList();
     }
 
     private AuthorSummary authorSummary(UUID userId) {
