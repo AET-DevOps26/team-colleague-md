@@ -11,8 +11,12 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class Clients {
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -26,6 +30,14 @@ public class Clients {
     }
     public UserProfileDto getUserById(UUID id) {
         return getJson(userServiceBaseUrl + "/api/v1/users/" + id, null, UserProfileDto.class);
+    }
+    public Map<UUID, UserProfileDto> getUsersByIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) return Map.of();
+        Map<UUID, UserProfileDto> result = new ConcurrentHashMap<>();
+        ids.parallelStream().forEach(id -> {
+            try { result.put(id, getUserById(id)); } catch (Exception ignored) {}
+        });
+        return Collections.unmodifiableMap(result);
     }
     public GenAiSummarizeResponse summarize(String authorization, UUID postId, String title, String content) {
         var request = new GenAiSummarizeRequest(postId.toString(), content, title);

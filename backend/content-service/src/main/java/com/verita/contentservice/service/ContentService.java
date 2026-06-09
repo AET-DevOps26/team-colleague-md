@@ -127,9 +127,7 @@ public class ContentService {
         UUID current = optionalUserId(authorization);
         if (current == null) throw new ResponseStatusException(UNAUTHORIZED);
         if (!Objects.equals(current, userId)) throw new ResponseStatusException(FORBIDDEN);
-        List<PostEntity> posts = bookmarkRepository.findByUserId(userId).stream().map(BookmarkEntity::getPost).filter(p -> p != null && !p.isDeleted() && p.getStatus() == PostStatus.PUBLISHED).toList();
-        List<PostEntity> slice = posts.stream().skip((long) page * size).limit(size).toList();
-        return new PostPage().content(slice.stream().map(p -> toPostResponse(p, current)).toList()).page(page).size(size).totalPages(Math.max(1, (posts.size() + size - 1) / size)).totalElements(posts.size());
+        return mapPage(postRepository.findBookmarkedPublishedPostsByUserId(userId, PageRequest.of(page, size)), current);
     }
 
     @Transactional(readOnly = true)
@@ -137,9 +135,7 @@ public class ContentService {
         UUID current = optionalUserId(authorization);
         if (current == null) throw new ResponseStatusException(UNAUTHORIZED);
         if (!Objects.equals(current, userId)) throw new ResponseStatusException(FORBIDDEN);
-        List<PostEntity> posts = voteRepository.findByUserIdAndTargetTypeAndVoteType(userId, VoteTargetType.POST, VoteType.UPVOTE).stream().map(v -> postRepository.findByIdAndDeletedFalse(v.getTargetId()).orElse(null)).filter(Objects::nonNull).filter(p -> p.getStatus() == PostStatus.PUBLISHED).toList();
-        List<PostEntity> slice = posts.stream().skip((long) page * size).limit(size).toList();
-        return new PostPage().content(slice.stream().map(p -> toPostResponse(p, current)).toList()).page(page).size(size).totalPages(Math.max(1, (posts.size() + size - 1) / size)).totalElements(posts.size());
+        return mapPage(postRepository.findLikedPublishedPostsByUserId(userId, PageRequest.of(page, size)), current);
     }
 
     @Transactional(readOnly = true)
@@ -244,14 +240,21 @@ public class ContentService {
     @Transactional(readOnly = true)
     public List<PostCard> getCards(List<UUID> ids, String authorization) {
         if (ids.size() > 50) throw new ResponseStatusException(BAD_REQUEST, "max 50 ids");
-        var posts = postRepository.findByIdInAndDeletedFalse(new LinkedHashSet<>(ids)).stream().filter(p -> p.getStatus() == PostStatus.PUBLISHED).collect(Collectors.toMap(PostEntity::getId, Function.identity()));
+        Map<UUID, PostEntity> postsMap = postRepository.findByIdInAndDeletedFalse(new LinkedHashSet<>(ids)).stream()
+                .filter(p -> p.getStatus() == PostStatus.PUBLISHED)
+                .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
         UUID userId = optionalUserId(authorization);
-        List<PostCard> cards = new ArrayList<>();
-        for (UUID id : ids) {
-            PostEntity post = posts.get(id);
-            if (post != null) cards.add(toCard(post, userId));
-        }
-        return cards;
+        List<PostEntity> ordered = ids.stream().map(postsMap::get).filter(Objects::nonNull).toList();
+        if (ordered.isEmpty()) return List.of();
+        List<UUID> postIds = ordered.stream().map(PostEntity::getId).toList();
+        Map<UUID, VoteEntity> votesByPostId = userId == null ? Map.of() :
+                voteRepository.findByUserIdAndTargetTypeAndTargetIdIn(userId, VoteTargetType.POST, postIds)
+                        .stream().collect(Collectors.toMap(VoteEntity::getTargetId, Function.identity()));
+        Map<UUID, UserProfileDto> authors = clients.getUsersByIds(
+                ordered.stream().map(PostEntity::getAuthorId).collect(Collectors.toSet()));
+        return ordered.stream()
+                .map(p -> toCard(p, userId, votesByPostId.get(p.getId()), authors.get(p.getAuthorId())))
+                .toList();
     }
 
     private void applyPostRequest(PostEntity post, PostRequest request) {
@@ -334,7 +337,27 @@ public class ContentService {
     }
 
     private PostPage mapPage(Page<PostEntity> page, UUID currentUser) {
-        return new PostPage().content(page.map(p -> toPostResponse(p, currentUser)).toList()).page(page.getNumber()).size(page.getSize()).totalPages(page.getTotalPages()).totalElements((int) page.getTotalElements());
+        List<PostEntity> posts = page.getContent();
+        if (posts.isEmpty()) {
+            return new PostPage().content(List.of()).page(page.getNumber()).size(page.getSize())
+                    .totalPages(page.getTotalPages()).totalElements((int) page.getTotalElements());
+        }
+        List<UUID> postIds = posts.stream().map(PostEntity::getId).toList();
+        Map<UUID, VoteEntity> votesByPostId = currentUser == null ? Map.of() :
+                voteRepository.findByUserIdAndTargetTypeAndTargetIdIn(currentUser, VoteTargetType.POST, postIds)
+                        .stream().collect(Collectors.toMap(VoteEntity::getTargetId, Function.identity()));
+        Set<UUID> bookmarkedIds = currentUser == null ? Set.of() :
+                bookmarkRepository.findByUserIdAndPost_IdIn(currentUser, postIds)
+                        .stream().map(b -> b.getPost().getId()).collect(Collectors.toSet());
+        Map<UUID, UserProfileDto> authors = clients.getUsersByIds(
+                posts.stream().map(PostEntity::getAuthorId).collect(Collectors.toSet()));
+        return new PostPage()
+                .content(posts.stream().map(p -> toPostResponse(p, currentUser,
+                        votesByPostId.get(p.getId()),
+                        bookmarkedIds.contains(p.getId()),
+                        authors.get(p.getAuthorId()))).toList())
+                .page(page.getNumber()).size(page.getSize())
+                .totalPages(page.getTotalPages()).totalElements((int) page.getTotalElements());
     }
 
     private PostResponse toPostResponse(PostEntity post, UUID currentUser) {
@@ -364,6 +387,36 @@ public class ContentService {
         return response;
     }
 
+    private PostResponse toPostResponse(PostEntity post, UUID currentUser,
+                                        VoteEntity myVote, boolean bookmarked, UserProfileDto author) {
+        boolean liked = myVote != null && myVote.getVoteType() == VoteType.UPVOTE;
+        boolean disliked = myVote != null && myVote.getVoteType() == VoteType.DOWNVOTE;
+        PostResponse response = new PostResponse()
+                .id(post.getId())
+                .author(authorSummary(post.getAuthorId(), author))
+                .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
+                .title(post.getTitle())
+                .excerpt(post.getExcerpt())
+                .content(post.getContent())
+                .tags(post.getTags().stream().map(this::toApiTag).toList())
+                .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
+                .readTimeMinutes(readTime(post.getContent()))
+                .likeCount((int) post.getLikeCount())
+                .dislikeCount((int) post.getDislikeCount())
+                .commentCount((int) post.getCommentCount())
+                .viewCount((int) post.getViewCount())
+                .saveCount((int) post.getSaveCount())
+                .isLikedByMe(liked)
+                .isDislikedByMe(disliked)
+                .isBookmarkedByMe(bookmarked)
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt());
+        if (post.getCoverImageUrl() != null && !post.getCoverImageUrl().isBlank()) {
+            response.coverImageUrl(URI.create(post.getCoverImageUrl()));
+        }
+        return response;
+    }
+
     private CommentResponse toCommentResponse(CommentEntity comment, UUID currentUser, List<CommentResponse> replies) {
         return new CommentResponse().id(comment.getId()).author(authorSummary(comment.getAuthorId())).text(comment.getText()).likeCount((int) comment.getLikeCount()).isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.COMMENT, comment.getId()).isPresent()).createdAt(comment.getCreatedAt()).replies(replies);
     }
@@ -383,24 +436,21 @@ public class ContentService {
 
     private AuthorSummary authorSummary(UUID userId) {
         UserProfileDto u = null;
-        try {
-            u = clients.getUserById(userId);
-        } catch (Exception ignored) {
-        }
-        AuthorSummary summary = new AuthorSummary().id(userId).username(u != null && u.username() != null ? u.username() : "unknown").displayName(u != null && u.displayName() != null ? u.displayName() : "Unknown");
+        try { u = clients.getUserById(userId); } catch (Exception ignored) {}
+        return authorSummary(userId, u);
+    }
+
+    private AuthorSummary authorSummary(UUID userId, UserProfileDto u) {
+        AuthorSummary summary = new AuthorSummary().id(userId)
+                .username(u != null && u.username() != null ? u.username() : "unknown")
+                .displayName(u != null && u.displayName() != null ? u.displayName() : "Unknown");
         if (u != null) {
-            if (u.avatarUrl() != null && !u.avatarUrl().isBlank()) {
-                summary.avatarUrl(URI.create(u.avatarUrl()));
-            }
+            if (u.avatarUrl() != null && !u.avatarUrl().isBlank()) summary.avatarUrl(URI.create(u.avatarUrl()));
             if (u.role() != null && !u.role().isBlank()) {
-                try {
-                    summary.role(AuthorSummary.RoleEnum.fromValue(u.role()));
-                } catch (IllegalArgumentException ignored) {
-                }
+                try { summary.role(AuthorSummary.RoleEnum.fromValue(u.role())); }
+                catch (IllegalArgumentException ignored) {}
             }
-            if (u.organisation() != null && !u.organisation().isBlank()) {
-                summary.organisation(u.organisation());
-            }
+            if (u.organisation() != null && !u.organisation().isBlank()) summary.organisation(u.organisation());
         }
         return summary;
     }
@@ -409,20 +459,23 @@ public class ContentService {
         return new Tag().id(entity.getId()).name(entity.getName());
     }
 
-    private PostCard toCard(PostEntity post, UUID currentUser) {
-        PostCard card = new PostCard().id(post.getId()).author(authorSummary(post.getAuthorId())).title(post.getTitle()).likeCount((int) post.getLikeCount()).commentCount((int) post.getCommentCount()).viewCount((int) post.getViewCount()).isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.POST, post.getId()).map(v -> v.getVoteType() == VoteType.UPVOTE).orElse(false)).createdAt(post.getCreatedAt());
-        if (post.getExcerpt() != null) {
-            card.excerpt(post.getExcerpt());
-        }
+    private PostCard toCard(PostEntity post, UUID currentUser, VoteEntity myVote, UserProfileDto author) {
+        boolean liked = myVote != null && myVote.getVoteType() == VoteType.UPVOTE;
+        PostCard card = new PostCard()
+                .id(post.getId())
+                .author(authorSummary(post.getAuthorId(), author))
+                .title(post.getTitle())
+                .likeCount((int) post.getLikeCount())
+                .commentCount((int) post.getCommentCount())
+                .viewCount((int) post.getViewCount())
+                .isLikedByMe(liked)
+                .createdAt(post.getCreatedAt());
+        if (post.getExcerpt() != null) card.excerpt(post.getExcerpt());
         if (post.getCoverImageUrl() != null && !post.getCoverImageUrl().isBlank()) {
             card.coverImageUrl(URI.create(post.getCoverImageUrl()));
         }
-        if (post.getTags() != null) {
-            card.setTags(post.getTags().stream().map(this::toApiTag).toList());
-        }
-        if (post.getContent() != null) {
-            card.readTimeMinutes(readTime(post.getContent()));
-        }
+        if (post.getTags() != null) card.setTags(post.getTags().stream().map(this::toApiTag).toList());
+        if (post.getContent() != null) card.readTimeMinutes(readTime(post.getContent()));
         return card;
     }
 

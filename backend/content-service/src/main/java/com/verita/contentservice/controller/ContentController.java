@@ -12,15 +12,19 @@ import com.verita.model.PostPage;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
 import com.verita.model.TagResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.UUID;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Validated
 public class ContentController implements ApiApi {
     private final ContentService service;
 
@@ -29,12 +33,12 @@ public class ContentController implements ApiApi {
     }
 
     @Override
-    public ResponseEntity<PostResponse> createPost(PostRequest postRequest) {
+    public ResponseEntity<PostResponse> createPost(@Valid PostRequest postRequest) {
         return ResponseEntity.status(201).body(service.createPost(postRequest, currentAuth()));
     }
 
     @Override
-    public ResponseEntity<PostResponse> updatePost(UUID id, PostRequest postRequest) {
+    public ResponseEntity<PostResponse> updatePost(UUID id, @Valid PostRequest postRequest) {
         return ResponseEntity.ok(service.updatePost(id, postRequest, currentAuth()));
     }
 
@@ -62,14 +66,14 @@ public class ContentController implements ApiApi {
     }
 
     @Override
-    public ResponseEntity<PostPage> searchPosts(String q, Integer page, Integer size) {
+    public ResponseEntity<PostPage> searchPosts(@NotBlank String q, Integer page, Integer size) {
         int p = page == null ? 0 : page;
         int s = size == null ? 10 : size;
         return ResponseEntity.ok(service.searchPosts(q, p, s, currentAuth()));
     }
 
     @Override
-    public ResponseEntity<PostLikeResponse> likePost(UUID id, LikeRequest likeRequest) {
+    public ResponseEntity<PostLikeResponse> likePost(UUID id, @Valid LikeRequest likeRequest) {
         return ResponseEntity.ok(service.likePost(id, likeRequest.getType(), currentAuth()));
     }
 
@@ -91,7 +95,7 @@ public class ContentController implements ApiApi {
     }
 
     @Override
-    public ResponseEntity<CommentResponse> createComment(UUID id, CommentRequest commentRequest) {
+    public ResponseEntity<CommentResponse> createComment(UUID id, @Valid CommentRequest commentRequest) {
         return ResponseEntity.status(201).body(service.addComment(id, commentRequest, currentAuth()));
     }
 
