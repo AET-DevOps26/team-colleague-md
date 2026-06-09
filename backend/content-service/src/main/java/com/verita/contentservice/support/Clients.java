@@ -4,6 +4,7 @@ import com.verita.contentservice.dto.GenAiSummarizeRequest;
 import com.verita.contentservice.dto.GenAiSummarizeResponse;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -25,7 +27,10 @@ public class Clients {
     public Clients(RestClient.Builder builder,
                    @Value("${app.user-service-base-url}") String userUrl,
                    @Value("${app.genai-service-base-url}") String genaiUrl) {
-        this.userClient  = builder.baseUrl(userUrl).build();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(10));
+        this.userClient  = builder.requestFactory(factory).baseUrl(userUrl).build();
         this.genaiClient = this.userClient.mutate().baseUrl(genaiUrl).build();
     }
 
