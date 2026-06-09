@@ -100,7 +100,7 @@ public class ContentService {
 
     @Transactional(readOnly = true)
     public PostPage getAllPosts(int page, int size, String tag, String authorization) {
-        PageRequest pageable = PageRequest.of(page, size);
+        PageRequest pageable = PageRequest.of(page, clampSize(size));
         UUID currentUser = optionalUserId(authorization);
         Page<PostEntity> result = (tag == null || tag.isBlank())
                 ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
@@ -110,7 +110,7 @@ public class ContentService {
 
     @Transactional(readOnly = true)
     public PostPage searchPosts(String q, int page, int size, String authorization) {
-        return mapPage(postRepository.searchPublished(q, PageRequest.of(page, size)), optionalUserId(authorization));
+        return mapPage(postRepository.searchPublished(q, PageRequest.of(page, clampSize(size))), optionalUserId(authorization));
     }
 
     @Transactional(readOnly = true)
@@ -133,7 +133,7 @@ public class ContentService {
                 throw new ResponseStatusException(FORBIDDEN);
             }
         }
-        return mapPage(postRepository.findBookmarkedPublishedPostsByUserId(userId, PageRequest.of(page, size)), current);
+        return mapPage(postRepository.findBookmarkedPublishedPostsByUserId(userId, PageRequest.of(page, clampSize(size))), current);
     }
 
     @Transactional(readOnly = true)
@@ -146,18 +146,18 @@ public class ContentService {
                 throw new ResponseStatusException(FORBIDDEN);
             }
         }
-        return mapPage(postRepository.findLikedPublishedPostsByUserId(userId, PageRequest.of(page, size)), current);
+        return mapPage(postRepository.findLikedPublishedPostsByUserId(userId, PageRequest.of(page, clampSize(size))), current);
     }
 
     @Transactional(readOnly = true)
     public PostPage getUserPosts(UUID userId, int page, int size, String authorization) {
-        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.PUBLISHED, PageRequest.of(page, size)), optionalUserId(authorization));
+        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.PUBLISHED, PageRequest.of(page, clampSize(size))), optionalUserId(authorization));
     }
 
     @Transactional(readOnly = true)
     public PostPage getMyDrafts(int page, int size, String authorization) {
         UUID userId = currentUserId(authorization);
-        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.DRAFT, PageRequest.of(page, size)), userId);
+        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.DRAFT, PageRequest.of(page, clampSize(size))), userId);
     }
 
     public CommentResponse addComment(UUID postId, CommentRequest request, String authorization) {
@@ -173,7 +173,7 @@ public class ContentService {
         }
         comment = commentRepository.save(comment);
         postRepository.incrementCommentCount(post.getId());
-        return toCommentResponse(comment, userId, buildCommentTree(post.getId(), userId));
+        return toCommentResponse(comment, userId, List.of());
     }
 
     public List<CommentResponse> getComments(UUID postId, String authorization) {
@@ -272,20 +272,34 @@ public class ContentService {
         post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>() : request.getSourceUrl().stream().map(URI::toString).toList());
         post.setStatus(request.getStatus() == PostRequest.StatusEnum.DRAFT ? PostStatus.DRAFT : PostStatus.PUBLISHED);
 
-        Set<TagEntity> tags = new LinkedHashSet<>();
+        Set<TagEntity> oldTags = post.getTags() != null ? new LinkedHashSet<>(post.getTags()) : new LinkedHashSet<>();
+        Set<UUID> oldTagIds = oldTags.stream().map(TagEntity::getId).collect(Collectors.toSet());
+
+        Set<TagEntity> newTags = new LinkedHashSet<>();
         if (request.getTags() != null) {
             for (String name : request.getTags()) {
-                tags.add(tagRepository.findByNameIgnoreCase(name).orElseGet(() -> {
+                newTags.add(tagRepository.findByNameIgnoreCase(name).orElseGet(() -> {
                     TagEntity t = new TagEntity();
                     t.setName(name);
                     return tagRepository.save(t);
                 }));
             }
         }
-        post.setTags(tags);
-        tags.forEach(t -> t.setUsageCount(t.getUsageCount() + 1));
-        for (TagEntity tag : tags) {
-            tagRepository.save(tag);
+        Set<UUID> newTagIds = newTags.stream().map(TagEntity::getId).collect(Collectors.toSet());
+
+        post.setTags(newTags);
+
+        for (TagEntity tag : oldTags) {
+            if (!newTagIds.contains(tag.getId())) {
+                tag.setUsageCount(Math.max(0, tag.getUsageCount() - 1));
+                tagRepository.save(tag);
+            }
+        }
+        for (TagEntity tag : newTags) {
+            if (!oldTagIds.contains(tag.getId())) {
+                tag.setUsageCount(tag.getUsageCount() + 1);
+                tagRepository.save(tag);
+            }
         }
     }
 
@@ -498,5 +512,9 @@ public class ContentService {
 
     private int readTime(String content) {
         return Math.max(1, (content == null ? 0 : content.split("\\s+").length) / 200 + 1);
+    }
+
+    private static int clampSize(int size) {
+        return Math.min(size, 100);
     }
 }
