@@ -1,41 +1,23 @@
-﻿apiVersion: v2
+apiVersion: v2
 name: verita
 description: Umbrella Helm chart for the Verita platform
 type: application
-version: 0.2.0
+version: 0.3.0
 appVersion: "0.1.0"
 
 dependencies:
-  # External Dependencies
   - name: postgresql
     version: 18.4.0
     repository: https://charts.bitnami.com/bitnami
     alias: user-postgresql
-    condition: userPostgresql.enabled
+    condition: user-postgresql.enabled
   - name: postgresql
     version: 18.4.0
     repository: https://charts.bitnami.com/bitnami
     alias: content-postgresql
-    condition: contentPostgresql.enabled
+    condition: content-postgresql.enabled
   - name: postgresql
     version: 18.4.0
     repository: https://charts.bitnami.com/bitnami
     alias: recommendation-postgresql
-    condition: recommendationPostgresql.enabled
-
-  # Local Subcharts (These must point to the folders in charts/)
-  - name: content
-    version: 0.1.0
-    repository: "file://./charts/content"
-  - name: frontend
-    version: 0.1.0
-    repository: "file://./charts/frontend"
-  - name: genai
-    version: 0.1.0
-    repository: "file://./charts/genai"
-  - name: recommendation
-    version: 0.1.0
-    repository: "file://./charts/recommendation"
-  - name: user
-    version: 0.1.0
-    repository: "file://./charts/user"
+    condition: recommendation-postgresql.enabled

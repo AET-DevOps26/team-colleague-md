@@ -8,20 +8,5 @@ dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
   version: 18.4.0
-- name: content
-  repository: file://./charts/content
-  version: 0.1.0
-- name: frontend
-  repository: file://./charts/frontend
-  version: 0.1.0
-- name: genai
-  repository: file://./charts/genai
-  version: 0.1.0
-- name: recommendation
-  repository: file://./charts/recommendation
-  version: 0.1.0
-- name: user
-  repository: file://./charts/user
-  version: 0.1.0
-digest: sha256:6d8b0221ae95fc2f2e387d0231e4cb6de23e3a2ea813b0f5b0f59ed87fcf16cf
-generated: "2026-06-04T11:52:32.7581213+02:00"
+digest: sha256:18ae7c98e6f3176dcc0de6327b5df92834cb5f9580d1eba3642824fbc6caccd4
+generated: "2026-06-09T17:39:54.610638068+02:00"

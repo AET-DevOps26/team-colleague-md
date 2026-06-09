@@ -1,6 +1,0 @@
-﻿apiVersion: v2
-name: recommendation
-description: Recommendation service for Verita
-type: application
-version: 0.1.0
-appVersion: "0.1.0"

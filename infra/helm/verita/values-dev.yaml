@@ -1,67 +1,29 @@
-﻿global:
-  registry: ghcr.io/aet-devops26/team-colleague-md
-  imagePullSecrets: []
-
-content:
-  replicaCount: 1
-  image:
-    repository: content-service
+services:
+  user:
     tag: dev
-    pullPolicy: Always
-  service:
-    type: ClusterIP
-    port: 8082
-
-user:
-  replicaCount: 1
-  image:
-    repository: user-service
+    resources:
+      requests: { cpu: "100m", memory: "256Mi" }
+      limits: { cpu: "300m", memory: "512Mi" }
+  content:
     tag: dev
-    pullPolicy: Always
-  service:
-    type: ClusterIP
-    port: 8081
-
-recommendation:
-  replicaCount: 1
-  image:
-    repository: recommendation-service
+    resources:
+      requests: { cpu: "100m", memory: "256Mi" }
+      limits: { cpu: "300m", memory: "512Mi" }
+  recommendation:
     tag: dev
-    pullPolicy: Always
-  service:
-    type: ClusterIP
-    port: 8083
-
-genai:
-  replicaCount: 1
-  image:
-    repository: genai-service
+    resources:
+      requests: { cpu: "100m", memory: "256Mi" }
+      limits: { cpu: "300m", memory: "512Mi" }
+  genai:
     tag: dev
-    pullPolicy: Always
-  service:
-    type: ClusterIP
-    port: 8000
-
-frontend:
-  replicaCount: 1
-  image:
-    repository: frontend
+    resources:
+      requests: { cpu: "50m", memory: "128Mi" }
+      limits: { cpu: "200m", memory: "256Mi" }
+  frontend:
     tag: dev
-    pullPolicy: Always
-  service:
-    type: ClusterIP
-    port: 80
+    resources:
+      requests: { cpu: "50m", memory: "64Mi" }
+      limits: { cpu: "100m", memory: "128Mi" }
 
 ingress:
-  enabled: true
   host: dev.verita.stud.k8s.aet.cit.tum.de
-  tls:
-    secretName: verita-tls
-
-resources:
-  requests:
-    cpu: "50m"
-    memory: "32Mi"
-  limits:
-    cpu: "500m"
-    memory: "128Mi"

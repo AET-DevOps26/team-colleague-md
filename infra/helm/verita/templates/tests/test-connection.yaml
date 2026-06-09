@@ -1,4 +1,4 @@
-﻿apiVersion: v1
+apiVersion: v1
 kind: Pod
 metadata:
   name: "{{ include "verita.fullname" . }}-test-connection"
@@ -13,5 +13,5 @@ spec:
       command:
         - sh
         - -c
-        - wget -qO- http://{{ printf "%s-%s" .Release.Name "frontend" }}:{{ .Values.frontend.service.port }}/
+        - wget -qO- http://{{ printf "%s-frontend" .Release.Name }}:{{ .Values.services.frontend.port }}/
   restartPolicy: Never
