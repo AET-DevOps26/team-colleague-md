@@ -103,6 +103,14 @@ user-postgresql:
     username: verita_user
     password: verita_password
     database: verita_users
+  primary:
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
 
 content-postgresql:
   enabled: true
@@ -110,6 +118,14 @@ content-postgresql:
     username: verita_user
     password: verita_password
     database: verita_content
+  primary:
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
 
 recommendation-postgresql:
   enabled: true
@@ -117,3 +133,11 @@ recommendation-postgresql:
     username: verita_user
     password: verita_password
     database: verita_recommendations
+  primary:
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
