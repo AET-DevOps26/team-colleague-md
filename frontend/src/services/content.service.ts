@@ -1,6 +1,6 @@
 import type { Comment, FeedPage, Post, PostDetail } from '../types';
 
-const MOCK_TAGS = [
+const MOCK_TOPICS = [
   { id: 't1', name: 'LLMs' },
   { id: 't2', name: 'Agents' },
   { id: 't3', name: 'Fine-tuning' },
@@ -14,6 +14,9 @@ const MOCK_AUTHORS = [
   { id: 'u2', username: 'marcello_r', displayName: 'Marcello Rossi', role: 'USER' as const },
   { id: 'u3', username: 'priya_ml', displayName: 'Priya Nair', role: 'VERIFIED' as const, organisation: 'Hugging Face' },
   { id: 'u4', username: 'tobiask', displayName: 'Tobias Klein', role: 'USER' as const },
+  { id: 'user-1', username: 'alexchen', displayName: 'Alex Chen', role: 'USER' as const },
+  { id: 'demo-alice', username: 'alice_verita', displayName: 'Alice Morgan', role: 'VERIFIED' as const, organisation: 'Verita Labs' },
+  { id: 'demo-bob', username: 'bob_verita', displayName: 'Bob Nakamura', role: 'USER' as const, organisation: 'CloudMind AI' },
 ];
 
 const BASE_POSTS: Post[] = [
@@ -23,7 +26,7 @@ const BASE_POSTS: Post[] = [
     excerpt: 'A practical walkthrough of QLoRA fine-tuning with Flash Attention 2, gradient checkpointing, and a few tricks that cut my training time by 40%.',
     coverImageUrl: 'https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=800&q=80',
     author: MOCK_AUTHORS[0],
-    tags: [MOCK_TAGS[2], MOCK_TAGS[5]],
+    topics: [MOCK_TOPICS[2], MOCK_TOPICS[5]],
     likeCount: 312,
     commentCount: 47,
     viewCount: 8920,
@@ -36,7 +39,7 @@ const BASE_POSTS: Post[] = [
     title: 'Building a research agent that actually works in production',
     excerpt: 'After six months running autonomous agents in production, here is what I learned about tool design, failure modes, and keeping humans in the loop.',
     author: MOCK_AUTHORS[1],
-    tags: [MOCK_TAGS[1], MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[1], MOCK_TOPICS[0]],
     likeCount: 198,
     commentCount: 31,
     viewCount: 5410,
@@ -49,7 +52,7 @@ const BASE_POSTS: Post[] = [
     excerpt: 'Naive fixed-size chunking kills retrieval quality. This post covers semantic chunking, late chunking, and ColBERT-style multi-vector retrieval.',
     coverImageUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80',
     author: MOCK_AUTHORS[2],
-    tags: [MOCK_TAGS[3], MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[3], MOCK_TOPICS[0]],
     likeCount: 445,
     commentCount: 62,
     viewCount: 12300,
@@ -62,7 +65,7 @@ const BASE_POSTS: Post[] = [
     title: 'GPT-4o vs Claude 3.5 Sonnet on code generation — a fair comparison',
     excerpt: 'I ran 200 coding tasks across both models with identical prompts and scoring criteria. The results surprised me.',
     author: MOCK_AUTHORS[3],
-    tags: [MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[0]],
     likeCount: 567,
     commentCount: 89,
     viewCount: 18700,
@@ -75,7 +78,7 @@ const BASE_POSTS: Post[] = [
     excerpt: 'A survey of multimodal models applied to radiology, pathology, and ophthalmology — with honest assessments of clinical readiness.',
     coverImageUrl: 'https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=800&q=80',
     author: MOCK_AUTHORS[0],
-    tags: [MOCK_TAGS[4], MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[4], MOCK_TOPICS[0]],
     likeCount: 231,
     commentCount: 28,
     viewCount: 6800,
@@ -88,7 +91,7 @@ const BASE_POSTS: Post[] = [
     title: 'Mixtral MoE: understanding sparse expert routing',
     excerpt: 'Mixture-of-experts routing is elegant but non-obvious. This post builds intuition from first principles and explores why Mixtral uses top-2 routing.',
     author: MOCK_AUTHORS[1],
-    tags: [MOCK_TAGS[0], MOCK_TAGS[5]],
+    topics: [MOCK_TOPICS[0], MOCK_TOPICS[5]],
     likeCount: 389,
     commentCount: 54,
     viewCount: 9200,
@@ -100,7 +103,7 @@ const BASE_POSTS: Post[] = [
     title: 'Prompt caching in Claude API — a practical guide',
     excerpt: 'Cache prefixes can cut latency by 85% and costs by 90% for repeated context. Here is exactly how to structure prompts to maximise cache hits.',
     author: MOCK_AUTHORS[2],
-    tags: [MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[0]],
     likeCount: 276,
     commentCount: 19,
     viewCount: 7100,
@@ -113,13 +116,174 @@ const BASE_POSTS: Post[] = [
     excerpt: 'Three root causes I have found across dozens of agent systems: ambiguous schemas, missing examples, and token budget pressure near context limits.',
     coverImageUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&q=80',
     author: MOCK_AUTHORS[3],
-    tags: [MOCK_TAGS[1], MOCK_TAGS[0]],
+    topics: [MOCK_TOPICS[1], MOCK_TOPICS[0]],
     likeCount: 412,
     commentCount: 73,
     viewCount: 11500,
     isLikedByMe: false,
     createdAt: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
     readTimeMinutes: 9,
+  },
+  // Alex Chen's posts
+  {
+    id: 'p-ac1',
+    title: 'Structured outputs are the most underrated feature in the OpenAI API',
+    excerpt: 'Constrained decoding lets you guarantee valid JSON every time. Here is how I replaced 80% of my output parsing code with a single schema definition.',
+    coverImageUrl: 'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=800&q=80',
+    author: MOCK_AUTHORS[4],
+    topics: [MOCK_TOPICS[0], MOCK_TOPICS[1]],
+    likeCount: 284,
+    commentCount: 38,
+    viewCount: 7400,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 7,
+  },
+  {
+    id: 'p-ac2',
+    title: 'I ran the same RAG eval on five chunking strategies. Here is what actually mattered.',
+    excerpt: 'Fixed-size, sentence, semantic, late, and proposition chunking — benchmarked on 1 200 questions across three domains. The winner is not what I expected.',
+    author: MOCK_AUTHORS[4],
+    topics: [MOCK_TOPICS[3], MOCK_TOPICS[0]],
+    likeCount: 517,
+    commentCount: 64,
+    viewCount: 14200,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 18 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'p-ac3',
+    title: 'Tool use patterns that survive production: a field guide',
+    excerpt: 'After 18 months running tool-using agents in production, here are the patterns that held up, the ones that failed, and why the difference matters.',
+    coverImageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80',
+    author: MOCK_AUTHORS[4],
+    topics: [MOCK_TOPICS[1], MOCK_TOPICS[0]],
+    likeCount: 392,
+    commentCount: 51,
+    viewCount: 9800,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 10,
+  },
+  {
+    id: 'p-ac4',
+    title: 'Fine-tuning on 4 consumer GPUs: a no-nonsense QLoRA guide for 2025',
+    excerpt: 'The landscape shifted again. Flash Attention 3, paged optimisers, and gradient checkpointing together let you fine-tune 7B models in 10 GB of VRAM.',
+    author: MOCK_AUTHORS[4],
+    topics: [MOCK_TOPICS[2], MOCK_TOPICS[5]],
+    likeCount: 631,
+    commentCount: 89,
+    viewCount: 21600,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'p-ac5',
+    title: 'Context window size is a red herring',
+    excerpt: 'Everyone is racing to 10M tokens. But retrieval quality degrades with context length, and most applications only need the right 2 000 tokens — not all of them.',
+    coverImageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+    author: MOCK_AUTHORS[4],
+    topics: [MOCK_TOPICS[0], MOCK_TOPICS[3]],
+    likeCount: 448,
+    commentCount: 72,
+    viewCount: 12900,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 5,
+  },
+  // Alice Morgan's posts
+  {
+    id: 'p-am1',
+    title: 'LLM evaluation is broken — and here is how to fix it',
+    excerpt: 'Most eval suites measure what is easy to measure, not what matters. I spent three months building an eval framework for production systems. This is what I learned.',
+    coverImageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80',
+    author: MOCK_AUTHORS[5],
+    topics: [MOCK_TOPICS[0]],
+    likeCount: 534,
+    commentCount: 81,
+    viewCount: 15800,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 9,
+  },
+  {
+    id: 'p-am2',
+    title: 'Prompt reliability at scale: what breaks when you have 10M calls per day',
+    excerpt: 'Small phrasing changes cause 15% output variance at scale. Here are the patterns I use to write prompts that hold up under distribution shift.',
+    author: MOCK_AUTHORS[5],
+    topics: [MOCK_TOPICS[0], MOCK_TOPICS[1]],
+    likeCount: 387,
+    commentCount: 53,
+    viewCount: 10200,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'p-am3',
+    title: 'From research to product: the alignment tax is real',
+    excerpt: 'Moving a fine-tuned model from benchmark-topping to actually-deployed costs more than you expect. A candid account of the last six months at Verita Labs.',
+    coverImageUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&q=80',
+    author: MOCK_AUTHORS[5],
+    topics: [MOCK_TOPICS[2], MOCK_TOPICS[0]],
+    likeCount: 712,
+    commentCount: 104,
+    viewCount: 22400,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 7,
+  },
+  {
+    id: 'p-am4',
+    title: 'Multi-agent evals: how do you test something that is partly non-deterministic?',
+    excerpt: 'Running evals on agent pipelines is hard. The outputs are long, the ground truth is fuzzy, and the system is stateful. Here is the framework that finally worked for us.',
+    author: MOCK_AUTHORS[5],
+    topics: [MOCK_TOPICS[1], MOCK_TOPICS[0]],
+    likeCount: 291,
+    commentCount: 44,
+    viewCount: 8700,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString(),
+  },
+  // Bob Nakamura's posts
+  {
+    id: 'p-bn1',
+    title: 'Speculative decoding in production: the numbers nobody tells you',
+    excerpt: 'Draft model acceptance rate drops sharply with longer prompts, and the memory overhead is non-trivial. Here are the real-world trade-offs from six months of running spec-dec at scale.',
+    coverImageUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80',
+    author: MOCK_AUTHORS[6],
+    topics: [MOCK_TOPICS[0]],
+    likeCount: 463,
+    commentCount: 67,
+    viewCount: 13600,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 9 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 8,
+  },
+  {
+    id: 'p-bn2',
+    title: 'KV cache is your biggest cost — here is how to shrink it',
+    excerpt: 'At 10K concurrent users, KV cache dominates your GPU memory budget. Multi-query attention, grouped-query attention, and prefix sharing explained with actual numbers.',
+    author: MOCK_AUTHORS[6],
+    topics: [MOCK_TOPICS[0], MOCK_TOPICS[3]],
+    likeCount: 318,
+    commentCount: 41,
+    viewCount: 9100,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'p-bn3',
+    title: 'MLOps for LLMs: what changed in 2025',
+    excerpt: 'The tooling landscape shifted fast. vLLM, SGLang, and TensorRT-LLM all matured. Here is an honest comparison for teams choosing an inference stack today.',
+    coverImageUrl: 'https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=800&q=80',
+    author: MOCK_AUTHORS[6],
+    topics: [MOCK_TOPICS[5], MOCK_TOPICS[0]],
+    likeCount: 225,
+    commentCount: 29,
+    viewCount: 6800,
+    isLikedByMe: false,
+    createdAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
+    readTimeMinutes: 6,
   },
 ];
 
@@ -135,7 +299,7 @@ const MOCK_POST_DETAIL: PostDetail = {
     role: 'VERIFIED',
     organisation: 'Anthropic',
   },
-  tags: [
+  topics: [
     { id: 't-mech', name: 'mech-interp' },
     { id: 't-paper', name: 'paper' },
     { id: 't-align', name: 'alignment' },
@@ -219,11 +383,11 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export const contentService = {
-  getPosts(cursor: string | null, tag: string | null): Promise<FeedPage> {
+  getPosts(cursor: string | null, topic: string | null): Promise<FeedPage> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        let posts = tag
-          ? BASE_POSTS.filter((p) => p.tags.some((t) => t.name === tag))
+        let posts = topic
+          ? BASE_POSTS.filter((p) => p.topics.some((t) => t.name === topic))
           : BASE_POSTS;
 
         if (cursor === 'page2') {
@@ -246,8 +410,8 @@ export const contentService = {
     });
   },
 
-  getAvailableTags() {
-    return MOCK_TAGS;
+  getAvailableTopics() {
+    return MOCK_TOPICS;
   },
 
   getPost(id: string): Promise<PostDetail> {
@@ -289,6 +453,10 @@ export const contentService = {
       );
       void postId;
     });
+  },
+
+  getPostsByAuthor(username: string): Post[] {
+    return BASE_POSTS.filter((p) => p.author.username === username);
   },
 
   getTodayDigest() {

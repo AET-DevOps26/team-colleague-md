@@ -4,14 +4,14 @@ import type { Post } from '../types';
 
 export function useFeed() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [activeTag, setActiveTagState] = useState<string | null>(null);
+  const [activeTopic, setActiveTopicState] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const loadInitial = useCallback(async (tag: string | null) => {
+  const loadInitial = useCallback(async (topic: string | null) => {
     setLoading(true);
-    const page = await contentService.getPosts(null, tag);
+    const page = await contentService.getPosts(null, topic);
     setPosts(page.posts);
     setCursor(page.nextCursor);
     setHasMore(page.nextCursor !== null);
@@ -19,26 +19,26 @@ export function useFeed() {
   }, []);
 
   useEffect(() => {
-    loadInitial(activeTag);
-  }, [activeTag, loadInitial]);
+    loadInitial(activeTopic);
+  }, [activeTopic, loadInitial]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loading || cursor === null) return;
     setLoading(true);
-    const page = await contentService.getPosts(cursor, activeTag);
+    const page = await contentService.getPosts(cursor, activeTopic);
     setPosts((prev) => [...prev, ...page.posts]);
     setCursor(page.nextCursor);
     setHasMore(page.nextCursor !== null);
     setLoading(false);
-  }, [hasMore, loading, cursor, activeTag]);
+  }, [hasMore, loading, cursor, activeTopic]);
 
-  const setTag = useCallback((tag: string | null) => {
-    setActiveTagState(tag);
+  const setTopic = useCallback((topic: string | null) => {
+    setActiveTopicState(topic);
   }, []);
 
   const refresh = useCallback(() => {
-    loadInitial(activeTag);
-  }, [activeTag, loadInitial]);
+    loadInitial(activeTopic);
+  }, [activeTopic, loadInitial]);
 
   const toggleLike = useCallback(async (postId: string) => {
     setPosts((prev) =>
@@ -51,5 +51,5 @@ export function useFeed() {
     await contentService.toggleLike(postId);
   }, []);
 
-  return { posts, activeTag, setTag, loadMore, hasMore, loading, refresh, toggleLike };
+  return { posts, activeTopic, setTopic, loadMore, hasMore, loading, refresh, toggleLike };
 }

@@ -3,11 +3,11 @@
 ## Branch Structure Overview
 ```
 main (protected) - [Production / Stable Release]
-  ↑ 
+  ↑
   ↑ Release Merge (Every 2-3 weeks at Sprint end)
   │
 dev (protected) - [Integration / Active Development]
-  ↑ 
+  ↑
   │   ↑ PR Merge when task is complete
   │   │
   │   ├── feature/user-service (from dev)
