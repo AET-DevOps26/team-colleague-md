@@ -16,6 +16,7 @@ import com.verita.contentservice.support.Clients;
 import com.verita.model.AuthorSummary;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
+import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
 import com.verita.model.Tag;
@@ -88,6 +89,43 @@ public class PostService {
         post = postRepository.save(post);
         eventPublisher.publishEvent(
                 new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent(), authorization));
+        return toPostResponse(post, userId);
+    }
+
+    public PostResponse patchPost(UUID id, @Valid PostPatchRequest request, String authorization) {
+        UUID userId = currentUserId(authorization);
+        PostEntity post = mustOwnEditablePost(id, userId);
+        boolean summaryInputChanged = false;
+        if (request.getTitle() != null) {
+            post.setTitle(request.getTitle());
+            summaryInputChanged = true;
+        }
+        if (request.getContent() != null) {
+            post.setContent(request.getContent());
+            summaryInputChanged = true;
+        }
+        if (request.getExcerpt() != null && request.getExcerpt().isPresent()) {
+            post.setExcerpt(request.getExcerpt().get());
+        }
+        if (request.getCoverImageUrl() != null && request.getCoverImageUrl().isPresent()) {
+            URI coverImageUrl = request.getCoverImageUrl().get();
+            post.setCoverImageUrl(coverImageUrl == null ? null : coverImageUrl.toString());
+        }
+        if (request.getSourceUrl() != null) {
+            post.setSourceUrls(request.getSourceUrl().stream().map(URI::toString).toList());
+        }
+        if (request.getTags() != null) {
+            applyTags(post, request.getTags());
+        }
+        if (request.getStatus() != null) {
+            post.setStatus(request.getStatus() == PostPatchRequest.StatusEnum.DRAFT
+                    ? PostStatus.DRAFT : PostStatus.PUBLISHED);
+        }
+        post = postRepository.save(post);
+        if (summaryInputChanged) {
+            eventPublisher.publishEvent(
+                    new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent(), authorization));
+        }
         return toPostResponse(post, userId);
     }
 
@@ -200,19 +238,20 @@ public class PostService {
         post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>()
                 : request.getSourceUrl().stream().map(URI::toString).toList());
         post.setStatus(request.getStatus() == PostRequest.StatusEnum.DRAFT ? PostStatus.DRAFT : PostStatus.PUBLISHED);
+        applyTags(post, request.getTags() == null ? List.of() : request.getTags());
+    }
 
+    private void applyTags(PostEntity post, List<String> tagNames) {
         Set<TagEntity> oldTags = post.getTags() != null ? new LinkedHashSet<>(post.getTags()) : new LinkedHashSet<>();
         Set<UUID> oldTagIds = oldTags.stream().map(TagEntity::getId).collect(Collectors.toSet());
 
         Set<TagEntity> newTags = new LinkedHashSet<>();
-        if (request.getTags() != null) {
-            for (String name : request.getTags()) {
-                newTags.add(tagRepository.findByNameIgnoreCase(name).orElseGet(() -> {
-                    TagEntity t = new TagEntity();
-                    t.setName(name);
-                    return tagRepository.save(t);
-                }));
-            }
+        for (String name : tagNames) {
+            newTags.add(tagRepository.findByNameIgnoreCase(name).orElseGet(() -> {
+                TagEntity t = new TagEntity();
+                t.setName(name);
+                return tagRepository.save(t);
+            }));
         }
         Set<UUID> newTagIds = newTags.stream().map(TagEntity::getId).collect(Collectors.toSet());
         post.setTags(newTags);

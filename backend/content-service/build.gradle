@@ -59,7 +59,10 @@ openApiGenerate {
             interfaceOnly: "true",
             useSpringBoot3: "true",
             useJakartaEe: "true",
-            skipDefaultInterface: "true"
+            skipDefaultInterface: "true",
+            // Omitted array fields deserialize as null instead of an empty list,
+            // so PATCH can distinguish "field not provided" from "set to []".
+            containerDefaultToNull: "true"
     ]
 }
 

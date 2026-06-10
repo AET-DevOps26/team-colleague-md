@@ -11,6 +11,7 @@ import com.verita.model.LikeRequest;
 import com.verita.model.PostCard;
 import com.verita.model.PostLikeResponse;
 import com.verita.model.PostPage;
+import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
 import com.verita.model.TagResponse;
@@ -47,6 +48,11 @@ public class ContentController implements ApiApi {
     @Override
     public ResponseEntity<PostResponse> updatePost(UUID id, @Valid PostRequest postRequest) {
         return ResponseEntity.ok(postService.updatePost(id, postRequest, currentAuth()));
+    }
+
+    @Override
+    public ResponseEntity<PostResponse> patchPost(UUID id, @Valid PostPatchRequest postPatchRequest) {
+        return ResponseEntity.ok(postService.patchPost(id, postPatchRequest, currentAuth()));
     }
 
     @Override

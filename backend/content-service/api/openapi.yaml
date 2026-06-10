@@ -4,7 +4,7 @@ info:
   description: |
     Comprehensive service for managing the lifecycle of posts, hierarchical comments,
     tagging systems, user interactions (likes/bookmarks), and content moderation.
-  version: 1.1.0
+  version: 1.2.0
   license:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
@@ -178,6 +178,40 @@ paths:
               schema: { $ref: '#/components/schemas/PostResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    patch:
+      operationId: patchPost
+      summary: Partially update an existing post
+      description: |
+        Updates only the fields provided in the request body; omitted fields are left
+        unchanged. Use this for single-field updates such as unpublishing a post
+        (`{"status": "DRAFT"}`) without re-sending the full post payload.
+        For full replacement (e.g. the post editor), use `PUT`.
+
+        Only the post author may patch a post.
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostPatchRequest' }
+      responses:
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
     delete:
@@ -194,6 +228,7 @@ paths:
         '204':
           description: Post deleted successfully
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   # --- LIKES ---
@@ -541,6 +576,20 @@ components:
         sourceUrl: { type: array, items: { type: string, format: uri } }
         tags: { type: array, items: { type: string }, description: "Tag names. New tags are created automatically." }
         status: { type: string, enum: [DRAFT, PUBLISHED], default: PUBLISHED }
+
+    PostPatchRequest:
+      type: object
+      description: |
+        Partial update payload. All fields are optional — only provided fields are applied.
+        Nullable fields (`excerpt`, `coverImageUrl`) can be cleared by sending an explicit null.
+      properties:
+        title: { type: string, minLength: 5, maxLength: 100 }
+        content: { type: string, minLength: 1, maxLength: 50000 }
+        excerpt: { type: string, maxLength: 500, nullable: true }
+        coverImageUrl: { type: string, format: uri, nullable: true }
+        sourceUrl: { type: array, items: { type: string, format: uri } }
+        tags: { type: array, items: { type: string }, description: "Tag names. Replaces the post's tags. New tags are created automatically." }
+        status: { type: string, enum: [DRAFT, PUBLISHED] }
 
     PostResponse:
       type: object
