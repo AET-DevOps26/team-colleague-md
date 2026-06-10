@@ -1,6 +1,5 @@
 package com.verita.contentservice.service;
-import com.verita.contentservice.domain.BookmarkEntity;
-import com.verita.contentservice.domain.CommentEntity;
+
 import com.verita.contentservice.domain.PostEntity;
 import com.verita.contentservice.domain.PostStatus;
 import com.verita.contentservice.domain.TagEntity;
@@ -10,30 +9,21 @@ import com.verita.contentservice.domain.VoteType;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.repository.BookmarkRepository;
-import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.TagRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.support.Clients;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import com.verita.model.AuthorSummary;
-import com.verita.model.CommentLikeResponse;
-import com.verita.model.CommentRequest;
-import com.verita.model.CommentResponse;
-import com.verita.model.LikeRequest;
 import com.verita.model.PostCard;
-import com.verita.model.PostLikeResponse;
 import com.verita.model.PostPage;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
 import com.verita.model.Tag;
 import com.verita.model.TagResponse;
+import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,10 +32,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -54,28 +48,29 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
+@Validated
 @Transactional
-public class ContentService {
-    private static final Logger log = LoggerFactory.getLogger(ContentService.class);
+public class PostService {
+    private static final Logger log = LoggerFactory.getLogger(PostService.class);
     private final PostRepository postRepository;
     private final TagRepository tagRepository;
-    private final CommentRepository commentRepository;
     private final VoteRepository voteRepository;
     private final BookmarkRepository bookmarkRepository;
     private final Clients clients;
     private final ApplicationEventPublisher eventPublisher;
 
-    public ContentService(PostRepository postRepository, TagRepository tagRepository, CommentRepository commentRepository, VoteRepository voteRepository, BookmarkRepository bookmarkRepository, Clients clients, ApplicationEventPublisher eventPublisher) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository,
+                       VoteRepository voteRepository, BookmarkRepository bookmarkRepository,
+                       Clients clients, ApplicationEventPublisher eventPublisher) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
-        this.commentRepository = commentRepository;
         this.voteRepository = voteRepository;
         this.bookmarkRepository = bookmarkRepository;
         this.clients = clients;
         this.eventPublisher = eventPublisher;
     }
 
-    public PostResponse createPost(PostRequest request, String authorization) {
+    public PostResponse createPost(@Valid PostRequest request, String authorization) {
         UUID userId = currentUserId(authorization);
         PostEntity post = new PostEntity();
         post.setAuthorId(userId);
@@ -86,7 +81,7 @@ public class ContentService {
         return toPostResponse(post, userId);
     }
 
-    public PostResponse updatePost(UUID id, PostRequest request, String authorization) {
+    public PostResponse updatePost(UUID id, @Valid PostRequest request, String authorization) {
         UUID userId = currentUserId(authorization);
         PostEntity post = mustOwnEditablePost(id, userId);
         applyPostRequest(post, request);
@@ -121,7 +116,8 @@ public class ContentService {
 
     public PostResponse getPost(UUID id, String authorization) {
         UUID currentUser = optionalUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
             throw new ResponseStatusException(NOT_FOUND);
         }
@@ -157,97 +153,22 @@ public class ContentService {
 
     @Transactional(readOnly = true)
     public PostPage getUserPosts(UUID userId, int page, int size, String authorization) {
-        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.PUBLISHED, PageRequest.of(page, clampSize(size))), optionalUserId(authorization));
+        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
+                userId, PostStatus.PUBLISHED, PageRequest.of(page, clampSize(size))), optionalUserId(authorization));
     }
 
     @Transactional(readOnly = true)
     public PostPage getMyDrafts(int page, int size, String authorization) {
         UUID userId = currentUserId(authorization);
-        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(userId, PostStatus.DRAFT, PageRequest.of(page, clampSize(size))), userId);
-    }
-
-    public CommentResponse addComment(UUID postId, CommentRequest request, String authorization) {
-        UUID userId = currentUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(postId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
-        CommentEntity comment = new CommentEntity();
-        comment.setPost(post);
-        comment.setAuthorId(userId);
-        comment.setText(request.getText());
-        if (request.getParentId() != null && request.getParentId().isPresent()) {
-            comment.setParentComment(commentRepository.findByIdAndDeletedFalse(request.getParentId().get()).orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
-        }
-        comment = commentRepository.save(comment);
-        postRepository.incrementCommentCount(post.getId());
-        return toCommentResponse(comment, userId, List.of());
-    }
-
-    public List<CommentResponse> getComments(UUID postId, String authorization) {
-        UUID userId = optionalUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(postId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
-        return buildCommentTree(postId, userId);
-    }
-
-    public void deleteComment(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
-        CommentEntity comment = commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (!Objects.equals(comment.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN);
-        comment.setDeleted(true);
-        comment.setDeletedAt(OffsetDateTime.now());
-        comment.setText("[deleted]");
-        commentRepository.save(comment);
-    }
-
-    public CommentLikeResponse likeComment(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
-        commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        applyVote(userId, VoteTargetType.COMMENT, id, VoteType.UPVOTE);
-        commentRepository.refreshLikeCount(id);
-        CommentEntity updated = commentRepository.findByIdAndDeletedFalse(id).orElseThrow();
-        return new CommentLikeResponse().likeCount((int) updated.getLikeCount()).isLikedByMe(true);
-    }
-
-    public PostLikeResponse likePost(UUID id, LikeRequest.TypeEnum type, String authorization) {
-        UUID userId = currentUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
-        VoteType newType = switch (type) {
-            case LIKE -> VoteType.UPVOTE;
-            case DISLIKE -> VoteType.DOWNVOTE;
-            case NONE -> null;
-        };
-        applyVote(userId, VoteTargetType.POST, post.getId(), newType);
-        postRepository.refreshVoteCounts(post.getId());
-        PostEntity updated = postRepository.findByIdAndDeletedFalse(post.getId()).orElseThrow();
-        return new PostLikeResponse().likeCount((int) updated.getLikeCount()).dislikeCount((int) updated.getDislikeCount()).isLikedByMe(newType == VoteType.UPVOTE).isDislikedByMe(newType == VoteType.DOWNVOTE);
-    }
-
-    public void bookmarkPost(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(NOT_FOUND);
-        var existing = bookmarkRepository.findByUserIdAndPost_Id(userId, id);
-        if (existing.isEmpty()) {
-            BookmarkEntity bookmark = new BookmarkEntity();
-            bookmark.setUserId(userId);
-            bookmark.setPost(post);
-            bookmarkRepository.save(bookmark);
-        }
-        postRepository.refreshSaveCount(id);
-    }
-
-    public void unbookmarkPost(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
-        postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        var existing = bookmarkRepository.findByUserIdAndPost_Id(userId, id);
-        existing.ifPresent(bookmarkRepository::delete);
-        postRepository.refreshSaveCount(id);
+        return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
+                userId, PostStatus.DRAFT, PageRequest.of(page, clampSize(size))), userId);
     }
 
     @Transactional(readOnly = true)
     public List<TagResponse> trendingTags() {
-        return tagRepository.findTop10ByOrderByUsageCountDesc().stream().map(t -> new TagResponse().id(t.getId()).name(t.getName()).usageCount((int) t.getUsageCount())).toList();
+        return tagRepository.findTop10ByOrderByUsageCountDesc().stream()
+                .map(t -> new TagResponse().id(t.getId()).name(t.getName()).usageCount((int) t.getUsageCount()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -274,8 +195,10 @@ public class ContentService {
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         post.setExcerpt(request.getExcerpt() != null ? request.getExcerpt() : summarizeLocally(request.getContent()));
-        post.setCoverImageUrl(request.getCoverImageUrl() != null && request.getCoverImageUrl().isPresent() && request.getCoverImageUrl().get() != null ? request.getCoverImageUrl().get().toString() : null);
-        post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>() : request.getSourceUrl().stream().map(URI::toString).toList());
+        post.setCoverImageUrl(request.getCoverImageUrl() != null && request.getCoverImageUrl().isPresent()
+                && request.getCoverImageUrl().get() != null ? request.getCoverImageUrl().get().toString() : null);
+        post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>()
+                : request.getSourceUrl().stream().map(URI::toString).toList());
         post.setStatus(request.getStatus() == PostRequest.StatusEnum.DRAFT ? PostStatus.DRAFT : PostStatus.PUBLISHED);
 
         Set<TagEntity> oldTags = post.getTags() != null ? new LinkedHashSet<>(post.getTags()) : new LinkedHashSet<>();
@@ -292,18 +215,13 @@ public class ContentService {
             }
         }
         Set<UUID> newTagIds = newTags.stream().map(TagEntity::getId).collect(Collectors.toSet());
-
         post.setTags(newTags);
 
         for (TagEntity tag : oldTags) {
-            if (!newTagIds.contains(tag.getId())) {
-                tagRepository.decrementUsageCount(tag.getId());
-            }
+            if (!newTagIds.contains(tag.getId())) tagRepository.decrementUsageCount(tag.getId());
         }
         for (TagEntity tag : newTags) {
-            if (!oldTagIds.contains(tag.getId())) {
-                tagRepository.incrementUsageCount(tag.getId());
-            }
+            if (!oldTagIds.contains(tag.getId())) tagRepository.incrementUsageCount(tag.getId());
         }
     }
 
@@ -329,28 +247,10 @@ public class ContentService {
     }
 
     private PostEntity mustOwnEditablePost(UUID id, UUID userId) {
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (!Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN);
         return post;
-    }
-
-    private void applyVote(UUID userId, VoteTargetType targetType, UUID targetId, VoteType newType) {
-        var existing = voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, targetType, targetId);
-        if (newType == null) {
-            existing.ifPresent(voteRepository::delete);
-            return;
-        }
-        if (existing.isPresent()) {
-            existing.get().setVoteType(newType);
-            voteRepository.save(existing.get());
-        } else {
-            VoteEntity vote = new VoteEntity();
-            vote.setUserId(userId);
-            vote.setTargetType(targetType);
-            vote.setTargetId(targetId);
-            vote.setVoteType(newType);
-            voteRepository.save(vote);
-        }
     }
 
     private PostPage mapPage(Page<PostEntity> page, UUID currentUser) {
@@ -370,8 +270,7 @@ public class ContentService {
                 posts.stream().map(PostEntity::getAuthorId).collect(Collectors.toSet()));
         return new PostPage()
                 .content(posts.stream().map(p -> toPostResponse(p, currentUser,
-                        votesByPostId.get(p.getId()),
-                        bookmarkedIds.contains(p.getId()),
+                        votesByPostId.get(p.getId()), bookmarkedIds.contains(p.getId()),
                         authors.get(p.getAuthorId()))).toList())
                 .page(page.getNumber()).size(page.getSize())
                 .totalPages(page.getTotalPages()).totalElements((int) page.getTotalElements());
@@ -436,32 +335,7 @@ public class ContentService {
         return response;
     }
 
-    private CommentResponse toCommentResponse(CommentEntity comment, UUID currentUser, List<CommentResponse> replies) {
-        return new CommentResponse().id(comment.getId()).author(authorSummary(comment.getAuthorId())).text(comment.getText()).likeCount((int) comment.getLikeCount()).isLikedByMe(currentUser != null && voteRepository.findByUserIdAndTargetTypeAndTargetId(currentUser, VoteTargetType.COMMENT, comment.getId()).isPresent()).createdAt(comment.getCreatedAt()).replies(replies);
-    }
-
-    private CommentResponse toCommentNode(CommentEntity comment, Map<UUID, List<CommentEntity>> children, Set<UUID> likedCommentIds) {
-        return new CommentResponse().id(comment.getId()).author(authorSummary(comment.getAuthorId())).text(comment.getText()).likeCount((int) comment.getLikeCount()).isLikedByMe(likedCommentIds.contains(comment.getId())).createdAt(comment.getCreatedAt()).replies(children.getOrDefault(comment.getId(), List.of()).stream().map(c -> toCommentNode(c, children, likedCommentIds)).toList());
-    }
-
-    private List<CommentResponse> buildCommentTree(UUID postId, UUID currentUser) {
-        Map<UUID, List<CommentEntity>> children = new LinkedHashMap<>();
-        List<CommentEntity> allComments = commentRepository.findByPost_IdAndDeletedFalseOrderByCreatedAtAsc(postId);
-        for (CommentEntity comment : allComments) {
-            UUID parentId = comment.getParentComment() == null ? null : comment.getParentComment().getId();
-            children.computeIfAbsent(parentId, k -> new ArrayList<>()).add(comment);
-        }
-        Set<UUID> likedCommentIds = Set.of();
-        if (currentUser != null && !allComments.isEmpty()) {
-            List<UUID> commentIds = allComments.stream().map(CommentEntity::getId).toList();
-            likedCommentIds = voteRepository.findByUserIdAndTargetTypeAndTargetIdIn(currentUser, VoteTargetType.COMMENT, commentIds)
-                    .stream().map(VoteEntity::getTargetId).collect(Collectors.toSet());
-        }
-        final Set<UUID> finalLikedIds = likedCommentIds;
-        return children.getOrDefault(null, List.of()).stream().map(c -> toCommentNode(c, children, finalLikedIds)).toList();
-    }
-
-    private AuthorSummary authorSummary(UUID userId) {
+    AuthorSummary authorSummary(UUID userId) {
         UserProfileDto u = null;
         try { u = clients.getUserById(userId); } catch (Exception e) {
             log.warn("Failed to fetch user {} for author summary: {}", userId, e.getMessage());
@@ -469,7 +343,7 @@ public class ContentService {
         return authorSummary(userId, u);
     }
 
-    private AuthorSummary authorSummary(UUID userId, UserProfileDto u) {
+    AuthorSummary authorSummary(UUID userId, UserProfileDto u) {
         AuthorSummary summary = new AuthorSummary().id(userId)
                 .username(u != null && u.username() != null ? u.username() : "unknown")
                 .displayName(u != null && u.displayName() != null ? u.displayName() : "Unknown");
@@ -512,7 +386,7 @@ public class ContentService {
         return Math.max(1, (content == null ? 0 : content.split("\\s+").length) / 200 + 1);
     }
 
-    private static int clampSize(int size) {
+    static int clampSize(int size) {
         return Math.min(size, 100);
     }
 }
