@@ -3,7 +3,7 @@ info:
   title: Verita Recommendation & Notification Service API
   description: |
     Discovery and signaling layer for the Verita platform.
-    Handles personalized and trending feeds, user/tag subscriptions, notifications,
+    Handles personalized and trending feeds, user/topic subscriptions, notifications,
     and behavioral interaction tracking for the recommendation engine.
 
     Feed endpoints return a `postIds` list. The frontend fetches card data by
@@ -24,7 +24,7 @@ paths:
       summary: Get personalized post feed for the logged-in user
       description: |
         Returns posts ranked by the personalization algorithm based on the user's
-        tag subscriptions and behavioral history. Tag filter is intentionally absent —
+        topic subscriptions and behavioral history. Topic filter is intentionally absent —
         the personal feed is already scoped to subscribed topics.
 
         Uses cursor-based pagination for stable infinite scroll: pass the `nextCursor`
@@ -53,8 +53,8 @@ paths:
       summary: Get globally trending content
       description: |
         Returns posts ranked by engagement score (likes, comments, views, recency).
-        Supply `tag` to browse trending posts within a topic — this is the ranked
-        alternative to `GET /api/v1/posts?tag=` in content-service.
+        Supply `topic` to browse trending posts within a topic — this is the ranked
+        alternative to `GET /api/v1/posts?topic=` in content-service.
         Authenticated requests populate `isLikedByMe`; unauthenticated requests return `false`.
 
         Uses cursor-based pagination for stable infinite scroll: pass the `nextCursor`
@@ -62,9 +62,9 @@ paths:
       tags: [Discovery]
       security: []
       parameters:
-        - name: tag
+        - name: topic
           in: query
-          description: Filter by tag name (case-insensitive).
+          description: Filter by topic name (case-insensitive).
           schema: { type: string, example: 'LLMs' }
         - name: cursor
           in: query
@@ -115,53 +115,53 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  # --- SUBSCRIPTIONS (Follow Tags) ---
-  /api/v1/subscriptions/tags:
+  # --- SUBSCRIPTIONS (Follow Topics) ---
+  /api/v1/subscriptions/topics:
     get:
-      operationId: getSubscribedTags
-      summary: List tags the current user is subscribed to
+      operationId: getSubscribedTopics
+      summary: List topics the current user is subscribed to
       tags: [Subscriptions]
       security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: List of subscribed tags
+          description: List of subscribed topics
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/TopicTag' }
+                items: { $ref: '#/components/schemas/Topic' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /api/v1/subscriptions/tags/{tagId}:
+  /api/v1/subscriptions/topics/{topicId}:
     post:
-      operationId: subscribeToTag
-      summary: Subscribe to a tag
+      operationId: subscribeToTopic
+      summary: Subscribe to a topic
       tags: [Subscriptions]
       security: [{ bearerAuth: [] }]
       parameters:
-        - name: tagId
+        - name: topicId
           in: path
           required: true
           schema: { type: string, format: uuid }
       responses:
         '201':
-          description: Tag subscription created successfully
+          description: Topic subscription created successfully
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
-      operationId: unsubscribeFromTag
-      summary: Unsubscribe from a tag
+      operationId: unsubscribeFromTopic
+      summary: Unsubscribe from a topic
       tags: [Subscriptions]
       security: [{ bearerAuth: [] }]
       parameters:
-        - name: tagId
+        - name: topicId
           in: path
           required: true
           schema: { type: string, format: uuid }
       responses:
         '204':
-          description: Tag subscription removed successfully
+          description: Topic subscription removed successfully
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
@@ -275,7 +275,7 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
-    TopicTag:
+    Topic:
       type: object
       required: [id, name]
       properties:
@@ -302,7 +302,7 @@ components:
         id: { type: string, format: uuid }
         type:
           type: string
-          enum: [COMMENT, LIKE, VERIFICATION_APPROVED, DAILY_DIGEST, NEW_POST_IN_SUBSCRIBED_TAG]
+          enum: [COMMENT, LIKE, VERIFICATION_APPROVED, DAILY_DIGEST, NEW_POST_IN_SUBSCRIBED_TOPIC]
         content:
           type: string
           example: 'Chris Olah liked your post'

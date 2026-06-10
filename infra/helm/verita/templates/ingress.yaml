@@ -1,0 +1,61 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "verita.fullname" . }}-ingress
+  labels:
+    {{- include "verita.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer }}
+spec:
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /user
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ printf "%s-user" .Release.Name }}
+                port:
+                  number: {{ .Values.services.user.port }}
+          - path: /content
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ printf "%s-content" .Release.Name }}
+                port:
+                  number: {{ .Values.services.content.port }}
+          - path: /recommendation
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ printf "%s-recommendation" .Release.Name }}
+                port:
+                  number: {{ .Values.services.recommendation.port }}
+          - path: /genai
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ printf "%s-genai" .Release.Name }}
+                port:
+                  number: {{ .Values.services.genai.port }}
+          - path: /summarization
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ printf "%s-genai" .Release.Name }}
+                port:
+                  number: {{ .Values.services.genai.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ printf "%s-frontend" .Release.Name }}
+                port:
+                  number: {{ .Values.services.frontend.port }}
+{{- end }}

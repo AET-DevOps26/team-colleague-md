@@ -47,6 +47,31 @@ public class UserServiceTests {
         assertEquals(userEntity.getId(), result.getId());
     }
     @Test
+    void getById_includesAllProfileFields() {
+        userEntity.setAvatarUrl("https://example.com/avatar.png");
+        userEntity.setBio("Bio text");
+        userEntity.setWebsite("https://example.com");
+        userEntity.setOrganisation("Example Org");
+        userEntity.setExpertiseAreas(List.of("java", "devops"));
+
+        when(userRepository.findById(userEntity.getId())).thenReturn(Optional.of(userEntity));
+
+        User result = userService.getById(userEntity.getId());
+
+        assertNotNull(result);
+        assertTrue(result.getAvatarUrl().isPresent());
+        assertEquals("https://example.com/avatar.png", result.getAvatarUrl().get().toString());
+        assertTrue(result.getBio().isPresent());
+        assertEquals("Bio text", result.getBio().get());
+        assertTrue(result.getWebsite().isPresent());
+        assertEquals("https://example.com", result.getWebsite().get().toString());
+        assertTrue(result.getOrganisation().isPresent());
+        assertEquals("Example Org", result.getOrganisation().get());
+        assertTrue(result.getExpertiseAreas().isPresent());
+        assertEquals(List.of("java", "devops"), result.getExpertiseAreas().get());
+    }
+
+    @Test
     void updateCurrentUser_success() {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
         UpdateUserRequest update = new UpdateUserRequest();
@@ -74,5 +99,3 @@ public class UserServiceTests {
         assertEquals(1, result.getTotalElements());
     }
 }
-
-
