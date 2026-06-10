@@ -1,0 +1,78 @@
+{{- range $name, $svc := .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-{{ $name }}
+  labels:
+    helm.sh/chart: {{ include "verita.chart" $ }}
+    app.kubernetes.io/name: {{ $name }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+spec:
+  replicas: {{ $svc.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $name }}
+        app.kubernetes.io/instance: {{ $.Release.Name }}
+      annotations:
+        github.com/rollout-id: {{ $svc.rolloutId | default "1" | quote }}
+    spec:
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ $.Values.global.registry }}/{{ $svc.image }}:{{ $svc.tag }}"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: {{ $svc.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+          {{- if $svc.health }}
+          readinessProbe:
+            httpGet:
+              path: {{ $svc.health.path }}
+              port: http
+            initialDelaySeconds: {{ $svc.health.initialDelaySeconds | default 10 }}
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.health.path }}
+              port: http
+            initialDelaySeconds: {{ $svc.health.initialDelaySeconds | default 10 }}
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          {{- end }}
+          env:
+            {{- if $svc.springProfile }}
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ $svc.springProfile | quote }}
+            {{- end }}
+            {{- if $svc.db }}
+            - name: DB_HOST
+              value: "{{ $.Release.Name }}-{{ $name }}-postgresql"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: {{ $svc.db.name | quote }}
+            - name: DB_USER
+              value: {{ $svc.db.user | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $.Release.Name }}-{{ $name }}-postgresql"
+                  key: password
+            {{- end }}
+{{- end }}

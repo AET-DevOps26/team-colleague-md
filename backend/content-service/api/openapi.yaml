@@ -3,8 +3,8 @@ info:
   title: Verita Content Service API
   description: |
     Comprehensive service for managing the lifecycle of posts, hierarchical comments,
-    tagging systems, user interactions (likes/bookmarks), and content moderation.
-  version: 1.2.0
+    adding topic, user interactions (likes/bookmarks), and content moderation.
+  version: 1.1.0
   license:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
@@ -19,17 +19,17 @@ paths:
       operationId: getAllPosts
       summary: Retrieve a paginated list of posts
       description: |
-        General-purpose endpoint for fetching a batch of posts with optional tag filtering.
-        Intended for use cases such as tag-based browsing, admin tooling, or any client
+        General-purpose endpoint for fetching a batch of posts with optional topic filtering.
+        Intended for use cases such as topic-based browsing, admin tooling, or any client
         that needs raw paginated post data.
 
         **Not** the homepage feed — the personalised and trending feeds are served by the
         Recommendation Service (`GET /api/v1/feed/personal` and `GET /api/v1/feed/trending`).
         Those endpoints apply algorithmic ranking and return enriched post payloads.
 
-        The `tag` parameter performs an exact-match filter and returns results in
-        reverse-chronological order. For popularity-ranked tag browsing, use
-        `GET /api/v1/feed/trending?tag=` in the Recommendation Service instead.
+        The `topic` parameter performs an exact-match filter and returns results in
+        reverse-chronological order. For popularity-ranked topic browsing, use
+        `GET /api/v1/feed/trending?topic=` in the Recommendation Service instead.
       tags: [Posts]
       security: []
       parameters:
@@ -39,7 +39,7 @@ paths:
         - name: size
           in: query
           schema: { type: integer, default: 10 }
-        - name: tag
+        - name: topic
           in: query
           schema: { type: string }
       responses:
@@ -484,19 +484,19 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  # --- TAGS ---
-  /api/v1/tags/trending:
+  # --- TOPICS ---
+  /api/v1/topics/trending:
     get:
-      operationId: getTrendingTags
-      summary: Get popular tags
+      operationId: getTrendingTopics
+      summary: Get popular topics
       tags: [Discovery]
       security: []
       responses:
         '200':
-          description: List of trending tags retrieved
+          description: List of trending topics retrieved
           content:
             application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/TagResponse' } }
+              schema: { type: array, items: { $ref: '#/components/schemas/TopicResponse' } }
         '400': { $ref: '#/components/responses/BadRequest' }
 
 components:
@@ -541,7 +541,7 @@ components:
         role: { type: string, enum: [USER, VERIFIED, ADMIN] }
         organisation: { type: string, nullable: true }
 
-    Tag:
+    Topic:
       type: object
       properties:
         id: { type: string, format: uuid }
@@ -557,7 +557,7 @@ components:
         title: { type: string }
         excerpt: { type: string, nullable: true }
         coverImageUrl: { type: string, format: uri, nullable: true }
-        tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
         readTimeMinutes: { type: integer, nullable: true }
         likeCount: { type: integer }
         commentCount: { type: integer }
@@ -574,7 +574,7 @@ components:
         excerpt: { type: string, maxLength: 500, description: "Short preview shown in feed cards. Auto-generated from content if omitted." }
         coverImageUrl: { type: string, format: uri, nullable: true }
         sourceUrl: { type: array, items: { type: string, format: uri } }
-        tags: { type: array, items: { type: string }, description: "Tag names. New tags are created automatically." }
+        topics: { type: array, items: { type: string }, description: "Topic names. New topics are created automatically." }
         status: { type: string, enum: [DRAFT, PUBLISHED], default: PUBLISHED }
 
     PostPatchRequest:
@@ -588,7 +588,7 @@ components:
         excerpt: { type: string, maxLength: 500, nullable: true }
         coverImageUrl: { type: string, format: uri, nullable: true }
         sourceUrl: { type: array, items: { type: string, format: uri } }
-        tags: { type: array, items: { type: string }, description: "Tag names. Replaces the post's tags. New tags are created automatically." }
+        tags: { type: array, items: { type: string }, description: "Topic names. Replaces the post's topics. New topic are created automatically." }
         status: { type: string, enum: [DRAFT, PUBLISHED] }
 
     PostResponse:
@@ -601,7 +601,7 @@ components:
         excerpt: { type: string, description: "Short preview text for feed cards" }
         content: { type: string, description: "Full post body (Markdown)" }
         coverImageUrl: { type: string, format: uri, nullable: true }
-        tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
         sourceUrl: { type: array, items: { type: string, format: uri } }
         readTimeMinutes: { type: integer }
         likeCount: { type: integer }
@@ -667,8 +667,8 @@ components:
         likeCount: { type: integer }
         isLikedByMe: { type: boolean }
 
-    # --- TAGS ---
-    TagResponse:
+    # --- TOPICS ---
+    TopicResponse:
       type: object
       properties:
         id: { type: string, format: uuid }

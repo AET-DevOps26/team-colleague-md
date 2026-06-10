@@ -11,10 +11,11 @@ Resolves #
 - Refactored...
 
 ## Testing Performed
-<!-- Describe the tests you ran locally. -->
+<!-- List the specific tests you ran locally. Add or remove items as needed. -->
 - [ ] PR targets `dev` (not `main`)
-- [ ] Local tests passed
-- [ ] Core functionality manually verified
+- [ ] <!-- e.g. `npm run build` + `npm run lint` passed -->
+- [ ] <!-- e.g. `./gradlew build` passed for affected service(s) -->
+- [ ] <!-- e.g. specific test class or E2E scenario verified -->
 
 ## Review Notes
 <!-- Are there specific areas the reviewer should focus on? Any new dependencies added? -->
