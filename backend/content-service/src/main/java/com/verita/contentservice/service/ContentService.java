@@ -113,13 +113,13 @@ public class ContentService {
         return mapPage(postRepository.searchPublished(q, PageRequest.of(page, clampSize(size))), optionalUserId(authorization));
     }
 
-    @Transactional(readOnly = true)
     public PostResponse getPost(UUID id, String authorization) {
         UUID currentUser = optionalUserId(authorization);
         PostEntity post = postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
             throw new ResponseStatusException(NOT_FOUND);
         }
+        postRepository.incrementViewCount(post.getId());
         return toPostResponse(post, currentUser);
     }
 

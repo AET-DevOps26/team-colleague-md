@@ -15,7 +15,7 @@ public class PostEntity extends BaseTimeEntity {
     private UUID id;
     @Column(nullable = false)
     private UUID authorId;
-    @Column(nullable = false, length = 120)
+    @Column(nullable = false, length = 100)
     private String title;
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
