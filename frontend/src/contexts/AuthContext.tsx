@@ -9,7 +9,8 @@ interface AuthContextValue {
   isRestoring: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: () => void;
+  updateUser: (patch: Partial<Pick<AuthUser, 'displayName' | 'avatarUrl'>>) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
@@ -18,7 +19,8 @@ export const AuthContext = createContext<AuthContextValue>({
   isRestoring: true,
   login: async () => {},
   signup: async () => {},
-  logout: async () => {},
+  logout: () => {},
+  updateUser: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -54,8 +56,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((patch: Partial<Pick<AuthUser, 'displayName' | 'avatarUrl'>>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      localStorage.setItem('verita_user', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: user !== null, isRestoring, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: user !== null, isRestoring, login, signup, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
