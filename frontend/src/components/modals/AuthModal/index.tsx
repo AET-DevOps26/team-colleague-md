@@ -81,6 +81,7 @@ export default function AuthModal() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
@@ -124,6 +125,7 @@ export default function AuthModal() {
     setPassword('');
     setUsername('');
     setShowPassword(false);
+    setShowSignupPassword(false);
     setError('');
     setForgotEmail('');
     setOtpDigits(Array(6).fill(''));
@@ -147,6 +149,9 @@ export default function AuthModal() {
 
   function switchTo(s: AuthScreen) {
     setError('');
+    setPassword('');
+    setShowPassword(false);
+    setShowSignupPassword(false);
     setScreen(s);
   }
 
@@ -252,17 +257,24 @@ export default function AuthModal() {
         <form onSubmit={handleLogin} className={styles.formBody}>
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Email</span></div>
-            <div className={styles.fieldBox}>
+            <div className={`${styles.fieldBox} ${emailFieldError ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="email"
                 placeholder="you@domain.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailFieldError) setEmailFieldError(validateEmail(e.target.value));
+                }}
+                onBlur={() => setEmailFieldError(validateEmail(email))}
                 required
                 autoComplete="email"
               />
             </div>
+            {emailFieldError && (
+              <div className={styles.fieldError}><WarnIcon /><span>{emailFieldError}</span></div>
+            )}
           </div>
 
           <div className={styles.field}>
@@ -395,7 +407,7 @@ export default function AuthModal() {
             <div className={`${styles.fieldBox} ${passwordFieldError ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
-                type="password"
+                type={showSignupPassword ? 'text' : 'password'}
                 placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => {
@@ -405,6 +417,15 @@ export default function AuthModal() {
                 onBlur={() => setPasswordFieldError(validatePassword(password))}
                 autoComplete="new-password"
               />
+              <button
+                type="button"
+                className={styles.fieldEye}
+                tabIndex={-1}
+                onClick={() => setShowSignupPassword((p) => !p)}
+                aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
+              >
+                {showSignupPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
             </div>
             {passwordFieldError ? (
               <div className={styles.fieldError}><WarnIcon /><span>{passwordFieldError}</span></div>

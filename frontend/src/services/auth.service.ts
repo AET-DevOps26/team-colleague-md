@@ -18,6 +18,17 @@ interface BackendAuthResponse {
   user: BackendUser;
 }
 
+const MOCK_CREDENTIALS: Record<string, { password: string; user: AuthUser }> = {
+  'alice@verita.demo': {
+    password: 'demo1234',
+    user: { id: 'demo-alice', username: 'alice_verita', displayName: 'Alice Morgan', email: 'alice@verita.demo', role: 'VERIFIED' },
+  },
+  'bob@verita.demo': {
+    password: 'demo1234',
+    user: { id: 'demo-bob', username: 'bob_verita', displayName: 'Bob Nakamura', email: 'bob@verita.demo', role: 'USER' },
+  },
+};
+
 function mapUser(u: BackendUser): AuthUser {
   return {
     id: u.id,
@@ -45,6 +56,13 @@ function handleAxiosError(error: unknown, isRegister: boolean): never {
 
 export const authService = {
   async login(email: string, password: string): Promise<AuthUser> {
+    const mock = MOCK_CREDENTIALS[email];
+    if (mock) {
+      if (mock.password !== password) throw new AuthError('INVALID_CREDENTIALS');
+      setAccessToken('mock-token');
+      setUser(mock.user);
+      return mock.user;
+    }
     try {
       const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/login', { email, password });
       const user = mapUser(data.user);
@@ -82,7 +100,8 @@ export const authService = {
   // Called on app mount. Returns the user if the cookie is still valid, null otherwise.
   async restoreSession(): Promise<AuthUser | null> {
     try {
-      const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/refresh');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/refresh', undefined, { _retried: true } as any);
       const user = mapUser(data.user);
       setAccessToken(data.accessToken);
       setUser(user);

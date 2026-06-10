@@ -5,7 +5,8 @@ import { emit } from './authEvents';
 const userApi = axios.create({
   baseURL: 'http://localhost:8081',
   headers: { 'Content-Type': 'application/json' },
-  withCredentials: true, // send httpOnly refresh-token cookie on every request
+  withCredentials: true,
+  timeout: 10000,
 });
 
 userApi.interceptors.request.use((config) => {
@@ -29,7 +30,8 @@ userApi.interceptors.response.use(
     try {
       if (!refreshing) {
         refreshing = userApi
-          .post<{ accessToken: string }>('/api/v1/auth/refresh')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .post<{ accessToken: string }>('/api/v1/auth/refresh', undefined, { _retried: true } as any)
           .then((r) => r.data.accessToken)
           .finally(() => { refreshing = null; });
       }
