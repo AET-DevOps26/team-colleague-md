@@ -1,4 +1,4 @@
-package com.verita.contentservice;
+package com.verita.contentservice.domain;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;

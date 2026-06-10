@@ -1,4 +1,4 @@
-package com.verita.contentservice;
+package com.verita.contentservice.domain;
 public enum VoteType {
     UPVOTE,
     DOWNVOTE

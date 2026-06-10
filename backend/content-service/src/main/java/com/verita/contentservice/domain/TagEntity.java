@@ -1,4 +1,4 @@
-package com.verita.contentservice;
+package com.verita.contentservice.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
