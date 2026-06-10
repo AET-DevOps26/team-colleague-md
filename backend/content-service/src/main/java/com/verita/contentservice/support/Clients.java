@@ -10,6 +10,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Component
 public class Clients {
+    private static final Logger log = LoggerFactory.getLogger(Clients.class);
     private final RestClient userClient;
     private final RestClient genaiClient;
 
@@ -67,7 +70,9 @@ public class Clients {
         if (ids.isEmpty()) return Map.of();
         Map<UUID, UserProfileDto> result = new ConcurrentHashMap<>();
         ids.parallelStream().forEach(id -> {
-            try { result.put(id, getUserById(id)); } catch (Exception ignored) {}
+            try { result.put(id, getUserById(id)); } catch (Exception e) {
+                log.warn("Failed to fetch user {}: {}", id, e.getMessage());
+            }
         });
         return Collections.unmodifiableMap(result);
     }

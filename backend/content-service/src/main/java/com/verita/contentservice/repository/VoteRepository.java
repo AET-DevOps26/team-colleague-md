@@ -1,7 +1,7 @@
 package com.verita.contentservice.repository;
-import com.verita.contentservice.VoteEntity;
-import com.verita.contentservice.VoteTargetType;
-import com.verita.contentservice.VoteType;
+import com.verita.contentservice.domain.VoteEntity;
+import com.verita.contentservice.domain.VoteTargetType;
+import com.verita.contentservice.domain.VoteType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Collection;
 import java.util.List;

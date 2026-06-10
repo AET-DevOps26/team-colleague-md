@@ -1,12 +1,12 @@
 package com.verita.contentservice.service;
-import com.verita.contentservice.BookmarkEntity;
-import com.verita.contentservice.CommentEntity;
-import com.verita.contentservice.PostEntity;
-import com.verita.contentservice.PostStatus;
-import com.verita.contentservice.TagEntity;
-import com.verita.contentservice.VoteEntity;
-import com.verita.contentservice.VoteTargetType;
-import com.verita.contentservice.VoteType;
+import com.verita.contentservice.domain.BookmarkEntity;
+import com.verita.contentservice.domain.CommentEntity;
+import com.verita.contentservice.domain.PostEntity;
+import com.verita.contentservice.domain.PostStatus;
+import com.verita.contentservice.domain.TagEntity;
+import com.verita.contentservice.domain.VoteEntity;
+import com.verita.contentservice.domain.VoteTargetType;
+import com.verita.contentservice.domain.VoteType;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.repository.BookmarkRepository;
@@ -15,6 +15,8 @@ import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.TagRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.support.Clients;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import com.verita.model.AuthorSummary;
 import com.verita.model.CommentLikeResponse;
@@ -54,6 +56,7 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 @Service
 @Transactional
 public class ContentService {
+    private static final Logger log = LoggerFactory.getLogger(ContentService.class);
     private final PostRepository postRepository;
     private final TagRepository tagRepository;
     private final CommentRepository commentRepository;
@@ -294,14 +297,12 @@ public class ContentService {
 
         for (TagEntity tag : oldTags) {
             if (!newTagIds.contains(tag.getId())) {
-                tag.setUsageCount(Math.max(0, tag.getUsageCount() - 1));
-                tagRepository.save(tag);
+                tagRepository.decrementUsageCount(tag.getId());
             }
         }
         for (TagEntity tag : newTags) {
             if (!oldTagIds.contains(tag.getId())) {
-                tag.setUsageCount(tag.getUsageCount() + 1);
-                tagRepository.save(tag);
+                tagRepository.incrementUsageCount(tag.getId());
             }
         }
     }
@@ -462,7 +463,9 @@ public class ContentService {
 
     private AuthorSummary authorSummary(UUID userId) {
         UserProfileDto u = null;
-        try { u = clients.getUserById(userId); } catch (Exception ignored) {}
+        try { u = clients.getUserById(userId); } catch (Exception e) {
+            log.warn("Failed to fetch user {} for author summary: {}", userId, e.getMessage());
+        }
         return authorSummary(userId, u);
     }
 

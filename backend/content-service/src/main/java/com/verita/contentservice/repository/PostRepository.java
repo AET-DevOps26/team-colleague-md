@@ -1,6 +1,6 @@
 package com.verita.contentservice.repository;
-import com.verita.contentservice.PostEntity;
-import com.verita.contentservice.PostStatus;
+import com.verita.contentservice.domain.PostEntity;
+import com.verita.contentservice.domain.PostStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
