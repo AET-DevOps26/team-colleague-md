@@ -3,6 +3,17 @@
 
 Technical documentation for all Verita microservices.
 
+## Demo Accounts
+
+Two pre-configured accounts are available for exploring the platform. No registration required — log in at the deployed frontend or at `http://localhost:3000` after running `docker compose up --build`.
+
+| Display Name | Email | Password | Role |
+|---|---|---|---|
+| Alice Morgan | `alice@verita.demo` | `demo1234` | Verified |
+| Bob Nakamura | `bob@verita.demo` | `demo1234` | User |
+
+Both accounts have complete profiles (bio, organisation, expertise areas) and populated posts, bookmarks, and liked-posts tabs in the User Profile page.
+
 ## Docker Compose (Recommended)
 
 The fastest way to run the full platform. From the repository root:

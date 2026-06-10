@@ -4,6 +4,44 @@ import { contentService } from './content.service';
 const PROFILE_KEY_PREFIX = 'verita_profile_';
 
 const MOCK_PROFILES: Record<string, UserProfile> = {
+  alice_verita: {
+    id: 'demo-alice',
+    username: 'alice_verita',
+    displayName: 'Alice Morgan',
+    avatarUrl: null,
+    bio: 'Senior ML engineer at a Series B startup. I work on LLM evaluation, prompt reliability, and anything that sits between a research paper and a shipped product. Writing here to think out loud.',
+    website: 'https://alicemorgan.dev',
+    organisation: 'Verita Labs',
+    expertiseAreas: ['LLMs', 'Evaluation', 'Agents', 'Fine-tuning'],
+    role: 'VERIFIED',
+    isBanned: false,
+    postCount: 4,
+    followerCount: 874,
+    followingCount: 141,
+    likeReceivedCount: 3620,
+    createdAt: '2024-02-01T09:00:00Z',
+    updatedAt: '2025-06-01T10:00:00Z',
+    email: 'alice@verita.demo',
+  },
+  bob_verita: {
+    id: 'demo-bob',
+    username: 'bob_verita',
+    displayName: 'Bob Nakamura',
+    avatarUrl: null,
+    bio: 'AI infrastructure engineer. I care about latency, cost, and making models actually useful in production. Currently obsessed with speculative decoding and KV cache optimisation.',
+    website: null,
+    organisation: 'CloudMind AI',
+    expertiseAreas: ['Inference', 'RAG', 'MLOps'],
+    role: 'USER',
+    isBanned: false,
+    postCount: 3,
+    followerCount: 389,
+    followingCount: 76,
+    likeReceivedCount: 1230,
+    createdAt: '2024-04-10T14:00:00Z',
+    updatedAt: '2025-05-28T08:30:00Z',
+    email: 'bob@verita.demo',
+  },
   alexchen: {
     id: 'user-1',
     username: 'alexchen',
@@ -99,6 +137,8 @@ const FALLBACK_PROFILE: UserProfile = {
 };
 
 const MOCK_BOOKMARKS: Record<string, Post[]> = {
+  alice_verita: contentService.getPostsByAuthor('sarahjkim').concat(contentService.getPostsByAuthor('priya_ml').slice(0, 1)),
+  bob_verita: contentService.getPostsByAuthor('alexchen').slice(0, 2),
   alexchen: contentService.getPostsByAuthor('sarahjkim').slice(0, 3),
   sarahjkim: contentService.getPostsByAuthor('priya_ml').slice(0, 2),
   priya_ml: contentService.getPostsByAuthor('marcello_r').slice(0, 2),
@@ -106,6 +146,8 @@ const MOCK_BOOKMARKS: Record<string, Post[]> = {
 };
 
 const MOCK_LIKED: Record<string, Post[]> = {
+  alice_verita: contentService.getPostsByAuthor('priya_ml').concat(contentService.getPostsByAuthor('marcello_r')),
+  bob_verita: contentService.getPostsByAuthor('sarahjkim').slice(0, 2).concat(contentService.getPostsByAuthor('alexchen').slice(0, 1)),
   alexchen: contentService.getPostsByAuthor('priya_ml').concat(contentService.getPostsByAuthor('marcello_r')),
   sarahjkim: contentService.getPostsByAuthor('marcello_r'),
   priya_ml: contentService.getPostsByAuthor('sarahjkim').slice(0, 2),
