@@ -15,6 +15,7 @@ import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.TagRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.support.Clients;
+import org.springframework.context.ApplicationEventPublisher;
 import com.verita.model.AuthorSummary;
 import com.verita.model.CommentLikeResponse;
 import com.verita.model.CommentRequest;
@@ -59,14 +60,16 @@ public class ContentService {
     private final VoteRepository voteRepository;
     private final BookmarkRepository bookmarkRepository;
     private final Clients clients;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public ContentService(PostRepository postRepository, TagRepository tagRepository, CommentRepository commentRepository, VoteRepository voteRepository, BookmarkRepository bookmarkRepository, Clients clients) {
+    public ContentService(PostRepository postRepository, TagRepository tagRepository, CommentRepository commentRepository, VoteRepository voteRepository, BookmarkRepository bookmarkRepository, Clients clients, ApplicationEventPublisher eventPublisher) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
         this.commentRepository = commentRepository;
         this.voteRepository = voteRepository;
         this.bookmarkRepository = bookmarkRepository;
         this.clients = clients;
+        this.eventPublisher = eventPublisher;
     }
 
     public PostResponse createPost(PostRequest request, String authorization) {
@@ -75,8 +78,8 @@ public class ContentService {
         post.setAuthorId(userId);
         applyPostRequest(post, request);
         post = postRepository.save(post);
-        post.setContentSummary(generateSummary(authorization, post));
-        post = postRepository.save(post);
+        eventPublisher.publishEvent(
+                new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent(), authorization));
         return toPostResponse(post, userId);
     }
 
@@ -85,8 +88,8 @@ public class ContentService {
         PostEntity post = mustOwnEditablePost(id, userId);
         applyPostRequest(post, request);
         post = postRepository.save(post);
-        post.setContentSummary(generateSummary(authorization, post));
-        post = postRepository.save(post);
+        eventPublisher.publishEvent(
+                new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent(), authorization));
         return toPostResponse(post, userId);
     }
 
@@ -300,14 +303,6 @@ public class ContentService {
                 tag.setUsageCount(tag.getUsageCount() + 1);
                 tagRepository.save(tag);
             }
-        }
-    }
-
-    private String generateSummary(String authorization, PostEntity post) {
-        try {
-            return String.join("\n", clients.summarize(authorization, post.getId() == null ? UUID.randomUUID() : post.getId(), post.getTitle(), post.getContent()).summary());
-        } catch (Exception e) {
-            return summarizeLocally(post.getContent());
         }
     }
 

@@ -16,8 +16,13 @@ public interface PostRepository extends JpaRepository<PostEntity, UUID> {
     Page<PostEntity> findByDeletedFalseAndStatusAndTags_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, String tagName, Pageable pageable);
     Page<PostEntity> findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(UUID authorId, PostStatus status, Pageable pageable);
     Optional<PostEntity> findByIdAndDeletedFalse(UUID id);
-    @Query("select p from PostEntity p where p.deleted = false and p.status = 'PUBLISHED' and (lower(p.title) like lower(concat('%', :query, '%')) or lower(p.content) like lower(concat('%', :query, '%')))")
-    Page<PostEntity> searchPublished(String query, Pageable pageable);
+    @Query(value = "SELECT * FROM posts WHERE deleted = false AND status = 'PUBLISHED'" +
+                   " AND search_vector @@ plainto_tsquery('english', :query)" +
+                   " ORDER BY ts_rank(search_vector, plainto_tsquery('english', :query)) DESC",
+           countQuery = "SELECT COUNT(*) FROM posts WHERE deleted = false AND status = 'PUBLISHED'" +
+                        " AND search_vector @@ plainto_tsquery('english', :query)",
+           nativeQuery = true)
+    Page<PostEntity> searchPublished(@Param("query") String query, Pageable pageable);
     List<PostEntity> findByIdInAndDeletedFalse(Set<UUID> ids);
     @Query(value = "select p from PostEntity p where p.id in (select b.post.id from BookmarkEntity b where b.userId = :userId) and p.deleted = false and p.status = 'PUBLISHED' order by p.createdAt desc",
            countQuery = "select count(p) from PostEntity p where p.id in (select b.post.id from BookmarkEntity b where b.userId = :userId) and p.deleted = false and p.status = 'PUBLISHED'")
@@ -25,6 +30,10 @@ public interface PostRepository extends JpaRepository<PostEntity, UUID> {
     @Query(value = "select p from PostEntity p where p.id in (select v.targetId from VoteEntity v where v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE') and p.deleted = false and p.status = 'PUBLISHED' order by p.createdAt desc",
            countQuery = "select count(p) from PostEntity p where p.id in (select v.targetId from VoteEntity v where v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE') and p.deleted = false and p.status = 'PUBLISHED'")
     Page<PostEntity> findLikedPublishedPostsByUserId(@Param("userId") UUID userId, Pageable pageable);
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE PostEntity p SET p.contentSummary = :summary WHERE p.id = :id")
+    void updateSummary(@Param("id") UUID id, @Param("summary") String summary);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE posts SET like_count = (SELECT COUNT(*) FROM votes WHERE target_type = 'POST' AND target_id = :id AND vote_type = 'UPVOTE'), dislike_count = (SELECT COUNT(*) FROM votes WHERE target_type = 'POST' AND target_id = :id AND vote_type = 'DOWNVOTE') WHERE id = :id",
            nativeQuery = true)
