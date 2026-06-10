@@ -14,7 +14,7 @@ import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
-import com.verita.model.TagResponse;
+import com.verita.model.TopicResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -62,10 +62,10 @@ public class ContentController implements ApiApi {
     }
 
     @Override
-    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String tag) {
+    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String topic) {
         int p = page == null ? 0 : page;
         int s = size == null ? 10 : size;
-        return ResponseEntity.ok(postService.getAllPosts(p, s, tag, currentAuth()));
+        return ResponseEntity.ok(postService.getAllPosts(p, s, topic, currentAuth()));
     }
 
     @Override
@@ -152,8 +152,8 @@ public class ContentController implements ApiApi {
     }
 
     @Override
-    public ResponseEntity<List<TagResponse>> getTrendingTags() {
-        return ResponseEntity.ok(postService.trendingTags());
+    public ResponseEntity<List<TopicResponse>> getTrendingTopics() {
+        return ResponseEntity.ok(postService.trendingTopics());
     }
 
     private String currentAuth() {

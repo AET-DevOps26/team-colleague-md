@@ -19,8 +19,8 @@ import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
-import com.verita.model.Tag;
-import com.verita.model.TagResponse;
+import com.verita.model.Topic;
+import com.verita.model.TopicResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.OffsetDateTime;
@@ -114,8 +114,8 @@ public class PostService {
         if (request.getSourceUrl() != null) {
             post.setSourceUrls(request.getSourceUrl().stream().map(URI::toString).toList());
         }
-        if (request.getTags() != null) {
-            applyTags(post, request.getTags());
+        if (request.getTopics() != null) {
+            applyTags(post, request.getTopics());
         }
         if (request.getStatus() != null) {
             post.setStatus(request.getStatus() == PostPatchRequest.StatusEnum.DRAFT
@@ -138,12 +138,12 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostPage getAllPosts(int page, int size, String tag, String authorization) {
+    public PostPage getAllPosts(int page, int size, String topic, String authorization) {
         PageRequest pageable = PageRequest.of(page, clampSize(size));
         UUID currentUser = optionalUserId(authorization);
-        Page<PostEntity> result = (tag == null || tag.isBlank())
+        Page<PostEntity> result = (topic == null || topic.isBlank())
                 ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
-                : postRepository.findByDeletedFalseAndStatusAndTags_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, tag, pageable);
+                : postRepository.findByDeletedFalseAndStatusAndTags_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, topic, pageable);
         return mapPage(result, currentUser);
     }
 
@@ -203,9 +203,9 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public List<TagResponse> trendingTags() {
+    public List<TopicResponse> trendingTopics() {
         return tagRepository.findTop10ByOrderByUsageCountDesc().stream()
-                .map(t -> new TagResponse().id(t.getId()).name(t.getName()).usageCount((int) t.getUsageCount()))
+                .map(t -> new TopicResponse().id(t.getId()).name(t.getName()).usageCount((int) t.getUsageCount()))
                 .toList();
     }
 
@@ -238,7 +238,7 @@ public class PostService {
         post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>()
                 : request.getSourceUrl().stream().map(URI::toString).toList());
         post.setStatus(request.getStatus() == PostRequest.StatusEnum.DRAFT ? PostStatus.DRAFT : PostStatus.PUBLISHED);
-        applyTags(post, request.getTags() == null ? List.of() : request.getTags());
+        applyTags(post, request.getTopics() == null ? List.of() : request.getTopics());
     }
 
     private void applyTags(PostEntity post, List<String> tagNames) {
@@ -325,7 +325,7 @@ public class PostService {
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .content(post.getContent())
-                .tags(post.getTags().stream().map(this::toApiTag).toList())
+                .topics(post.getTags().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
                 .readTimeMinutes(readTime(post.getContent()))
                 .likeCount((int) post.getLikeCount())
@@ -355,7 +355,7 @@ public class PostService {
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .content(post.getContent())
-                .tags(post.getTags().stream().map(this::toApiTag).toList())
+                .topics(post.getTags().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
                 .readTimeMinutes(readTime(post.getContent()))
                 .likeCount((int) post.getLikeCount())
@@ -397,8 +397,8 @@ public class PostService {
         return summary;
     }
 
-    private Tag toApiTag(TagEntity entity) {
-        return new Tag().id(entity.getId()).name(entity.getName());
+    private Topic toApiTopic(TagEntity entity) {
+        return new Topic().id(entity.getId()).name(entity.getName());
     }
 
     private PostCard toCard(PostEntity post, UUID currentUser, VoteEntity myVote, UserProfileDto author) {
@@ -416,7 +416,7 @@ public class PostService {
         if (post.getCoverImageUrl() != null && !post.getCoverImageUrl().isBlank()) {
             card.coverImageUrl(URI.create(post.getCoverImageUrl()));
         }
-        if (post.getTags() != null) card.setTags(post.getTags().stream().map(this::toApiTag).toList());
+        if (post.getTags() != null) card.setTopics(post.getTags().stream().map(this::toApiTopic).toList());
         if (post.getContent() != null) card.readTimeMinutes(readTime(post.getContent()));
         return card;
     }

@@ -44,7 +44,7 @@ public class SecuritySupport {
                                 "/api/v1/users/{id}/posts",
                                 "/api/v1/users/{id}/bookmarks",
                                 "/api/v1/users/{id}/likes",
-                                "/api/v1/tags/trending").permitAll()
+                                "/api/v1/topics/trending").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) ->

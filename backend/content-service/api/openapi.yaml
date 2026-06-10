@@ -588,7 +588,7 @@ components:
         excerpt: { type: string, maxLength: 500, nullable: true }
         coverImageUrl: { type: string, format: uri, nullable: true }
         sourceUrl: { type: array, items: { type: string, format: uri } }
-        tags: { type: array, items: { type: string }, description: "Tag names. Replaces the post's tags. New tags are created automatically." }
+        topics: { type: array, items: { type: string }, description: "Topic names. Replaces the post's topics. New topics are created automatically." }
         status: { type: string, enum: [DRAFT, PUBLISHED] }
 
     PostResponse:
