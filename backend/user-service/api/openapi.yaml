@@ -1,4 +1,4 @@
-﻿openapi: 3.0.3
+openapi: 3.0.3
 info:
   title: Verita User Service API
   description: |
@@ -76,7 +76,7 @@ paths:
       tags: [Authentication]
       security: []
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
@@ -123,44 +123,6 @@ paths:
           description: Password reset successful
         '400': { $ref: '#/components/responses/BadRequest' }
 
-  /api/v1/auth/check-username:
-    get:
-      operationId: checkUsername
-      summary: Check if a username is available
-      tags: [Authentication]
-      security: []
-      parameters:
-        - name: username
-          in: query
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Availability result
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-
-  /api/v1/auth/check-email:
-    get:
-      operationId: checkEmail
-      summary: Check if an email address is available
-      tags: [Authentication]
-      security: []
-      parameters:
-        - name: email
-          in: query
-          required: true
-          schema: { type: string, format: email }
-      responses:
-        '200':
-          description: Availability result
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-
   # --- CURRENT USER ---
   /api/v1/users/me:
     get:
@@ -174,7 +136,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     put:
       operationId: updateCurrentUser
       summary: Update the current user's profile
@@ -236,25 +198,6 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   # --- PUBLIC USER PROFILES ---
-  /api/v1/users/by-username/{username}:
-    get:
-      operationId: getUserByUsername
-      summary: Get a user's public profile by username
-      tags: [Users]
-      security: []
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: User profile
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/User' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
   /api/v1/users/{userId}:
     get:
       operationId: getUserById
@@ -385,15 +328,6 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
-    AvailabilityResponse:
-      type: object
-      description: Result of a username or email availability check.
-      required: [available]
-      properties:
-        available:
-          type: boolean
-          description: True if the value is not yet taken.
-
     UserRole:
       type: string
       enum: [USER, VERIFIED, ADMIN]
@@ -412,7 +346,7 @@ components:
         avatarUrl: { type: string, format: uri, nullable: true }
         bio: { type: string, nullable: true }
         website: { type: string, format: uri, nullable: true }
-        organisation: { type: string, nullable: true }
+        organization: { type: string, nullable: true }
         expertiseAreas:
           type: array
           items: { type: string }
@@ -430,9 +364,9 @@ components:
       type: object
       required: [username, email, password]
       properties:
-        username: { type: string, minLength: 3, maxLength: 20, pattern: '^[a-zA-Z0-9_]+$' }
+        username: { type: string, minLength: 3, maxLength: 30 }
         email: { type: string, format: email }
-        password: { type: string, minLength: 8, pattern: '^(?=.*[a-zA-Z])(?=.*\d).+$' }
+        password: { type: string, minLength: 8 }
 
     LoginRequest:
       type: object
@@ -453,7 +387,7 @@ components:
 
     RefreshTokenRequest:
       type: object
-      description: Body is optional — the refresh token is read from the httpOnly cookie.
+      required: [refreshToken]
       properties:
         refreshToken: { type: string }
 
@@ -477,7 +411,7 @@ components:
         bio: { type: string, maxLength: 250, nullable: true }
         avatarUrl: { type: string, format: uri, nullable: true }
         website: { type: string, format: uri, nullable: true }
-        organisation: { type: string, nullable: true }
+        organization: { type: string, nullable: true }
         expertiseAreas:
           type: array
           items: { type: string }

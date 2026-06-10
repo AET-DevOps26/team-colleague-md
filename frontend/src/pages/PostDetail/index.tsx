@@ -11,7 +11,6 @@ import EngageRow from '../../components/post/EngageRow';
 import CommentSection from '../../components/post/CommentSection';
 import BottomBar from '../../components/post/BottomBar';
 import Toast from '../../components/ui/Toast';
-import { timeAgo } from '../../utils/timeAgo';
 import styles from './PostDetail.module.css';
 
 const AI_BULLETS = [
@@ -21,6 +20,13 @@ const AI_BULLETS = [
   { html: 'The circuit appears <em>only above 30B parameters</em>; smaller models show statistically null versions of the same heads.' },
   { html: 'Activation patching localises the effect to a sparse, <code style="font-family:var(--font-mono);font-size:12.5px;background:#fff;padding:1px 5px;border-radius:3px;border:1px solid var(--border-subtle)">&lt; 800-feature</code> subspace in the residual stream — small enough to start naming individual features.' },
 ];
+
+function timeAgo(iso: string) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
@@ -136,7 +142,7 @@ export default function PostDetail() {
           <PostBody />
 
           {/* Footer: tags + sources */}
-          <PostFooter topics={post.topics} sources={post.sources} />
+          <PostFooter tags={post.tags} sources={post.sources} />
 
           {/* Engagement strip */}
           <EngageRow

@@ -1,7 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
-import Avatar from '../../ui/Avatar';
 import styles from './PostDetailTopbar.module.css';
 
 export default function PostDetailTopbar() {
@@ -27,8 +26,15 @@ export default function PostDetailTopbar() {
             className={styles.avatarBtn}
             onClick={() => navigate(`/profile/${user!.username}`)}
             aria-label="Profile"
+            title={user!.displayName}
           >
-            <Avatar displayName={user!.displayName} avatarUrl={user!.avatarUrl} size={36} borderRadius={10} />
+            {user!.avatarUrl ? (
+              <img src={user!.avatarUrl} alt={user!.displayName} />
+            ) : (
+              <span className={styles.avatarInitials}>
+                {user!.displayName.slice(0, 2).toUpperCase()}
+              </span>
+            )}
           </button>
         ) : (
           <button className={styles.signinBtn} onClick={() => openAuth('login')}>

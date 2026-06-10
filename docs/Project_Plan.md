@@ -29,7 +29,7 @@
 | W1   | May 11–17 | OpenAPI spec + DB schema                   | Research & learning                   | Research & learning                  | Pre-commit, CI, Docker Compose         |
 | W2   | May 18–24 | User Service auth + profile                | Auth UI                               | LangChain + summarization            | Full CI, multi-stage Docker            |
 | W3   | May 25–31 | *(carry-over resolved)*                    | *(carry-over resolved)*               | *(carry-over resolved)*              | IaC: Terraform + Ansible + CD to VM    |
-| W4   | Jun 1–7   | Content Service + Recommendation bootstrap | Feed, post pages, user profile        | Digest schema + topic subscription   | Kubernetes + CD to AET cluster         |
+| W4   | Jun 1–7   | Content Service + Recommendation bootstrap | Feed, post pages, user profile        | Digest schema + tag subscription     | Kubernetes + CD to AET cluster         |
 | W5   | Jun 8–14  | Recommendation Service                     | Personalized feed + digest management | Daily digest generation              | API gateway + Prometheus               |
 | W6   | Jun 15–21 | Verification + admin                       | Verification + admin UI               | *(P2 features if time permits)*      | Grafana dashboards + alerts            |
 | W7   | Jun 22–28 | Integration + bug fixes                    | E2E tests + polish                    | Integration testing                  | Final deployment + README              |
@@ -54,16 +54,16 @@
 **Complete OpenAPI Specification for All Services** ✅
 Labels: `all-tracks` `P0` `W1`
 - [x] User Service: auth, profile, verification, role management
-- [x] Content Service: posts, comments, topics, votes, bookmarks
+- [x] Content Service: posts, comments, tags, votes, bookmarks
 - [x] Recommendation Service: feed, subscriptions, notifications, interactions
-- [x] GenAI Service: summarize, suggest-topics, daily-digest
+- [x] GenAI Service: summarize, suggest-tags, daily-digest
 - [x] Spec validated; HTML documentation generated
 
 **Finalize Database Schema** ✅
 Labels: `backend` `P0` `W1`
 - [x] User schema: users, verification requests
-- [x] Content schema: posts, comments, topics, votes, bookmarks
-- [x] Recommendation schema: interactions, topic subscriptions, notifications
+- [x] Content schema: posts, comments, tags, votes, bookmarks
+- [x] Recommendation schema: interactions, tag subscriptions, notifications
 - [x] Team review completed
 
 **CI Pipeline and Pre-commit Setup** ✅
@@ -110,7 +110,7 @@ Labels: `frontend` `P0` `W2`
 - [x] Users can sign up and log in via a modal; JWT stored in localStorage
 - [ ] Auth Modal wired to real User Service backend (currently mock) *(carries to W4)*
 - [x] Unauthenticated users are redirected to the auth modal
-- [x] Home feed page layout: sidebar, topbar, topic filter bar, post cards
+- [x] Home feed page layout: sidebar, topbar, tag filter bar, post cards
 - [x] Settings modal: digest frequency and privacy toggles
 
 **GenAI Service Foundation** ✅ — Issue #49
@@ -123,7 +123,7 @@ Labels: `genai` `P1` `W2`
 Labels: `infrastructure` `P0` `W2`
 - [x] PostgreSQL initializes all service databases on first start
 - [ ] MinIO provides S3-compatible storage for file uploads *(carries to W4)*
-- [ ] Seed script creates test users, posts, and topics for manual testing *(carries to W4)*
+- [ ] Seed script creates test users, posts, and tags for manual testing *(carries to W4)*
 - [x] All services confirm storage connectivity on startup
 
 **Full CI Pipeline + Docker Improvements** ✅ — Issue #51
@@ -164,7 +164,7 @@ Labels: `infrastructure` `P0` `W3`
 **Content Service** *(carry-over to W4)*
 Labels: `backend` `P0` `W3`
 - [ ] Authors can create, edit, and delete their own posts
-- [ ] Feed supports topic filtering: unauthenticated → chronological results (Content Service); authenticated → engagement-ranked results for that topic (Recommendation Service)
+- [ ] Feed supports tag filtering: unauthenticated → chronological results (Content Service); authenticated → engagement-ranked results for that topic (Recommendation Service)
 - [ ] Users can comment on posts and reply to other comments
 - [ ] Users can upvote posts and comments
 - [ ] Users can bookmark posts and view their saved posts
@@ -175,8 +175,8 @@ Labels: `backend` `P0` `W3`
 **Feed and Post Pages** *(carry-over to W4)*
 Labels: `frontend` `P0` `W3`
 - [ ] Home feed displays real posts from Content Service
-- [ ] Topic filter bar: selecting a topic shows engagement-ranked results for logged-in users (`/feed/trending?topic=`) or chronological results for guests (`/posts?topic=`); UI shows "For You" vs topic mode clearly
-- [ ] Authors can write posts in a Markdown editor with topic input and cover image
+- [ ] Tag filter bar: selecting a tag shows engagement-ranked results for logged-in users (`/feed/trending?tag=`) or chronological results for guests (`/posts?tag=`); UI shows "For You" vs topic mode clearly
+- [ ] Authors can write posts in a Markdown editor with tag input and cover image
 - [ ] Post detail page shows full content, auto-generated AI summary, and vote controls
 - [ ] Comment section supports threaded replies
 - [ ] Authors can edit and delete their own posts and comments
@@ -191,7 +191,7 @@ Labels: `frontend` `P0` `W3`
 - [ ] Auth Modal sign-up and log-in working against real User Service
 - [ ] MinIO storage and seed data script working locally
 - [ ] Home feed displays real posts from Content Service; post detail shows auto-generated AI summary
-- [ ] Digest topic preferences can be saved and retrieved per user
+- [ ] Digest tag preferences can be saved and retrieved per user
 - [ ] All services deploy to AET K8s cluster via CD pipeline
 - [ ] All W3 carry-over issues closed
 - [ ] *(optional)* Post editor, user profile page, and Digest Management page complete
@@ -209,7 +209,7 @@ Labels: `frontend` `P0` `W4`
 **MinIO + Seed Data Setup** *(carry-over from W2)*
 Labels: `infrastructure` `P0` `W4`
 - [ ] MinIO provides S3-compatible storage for file uploads (post cover images, user avatars)
-- [ ] Seed script creates test users, posts, topics, and comments for manual testing
+- [ ] Seed script creates test users, posts, tags, and comments for manual testing
 - [ ] All services confirm storage connectivity on startup
 
 **Resolve W3 Infrastructure Carry-overs**
@@ -221,7 +221,7 @@ Labels: `infrastructure` `P0` `W4`
 **Content Service** *(carry-over from W3)*
 Labels: `backend` `P0` `W4`
 - [ ] Authors can create, edit, and delete their own posts
-- [ ] Users can browse and filter the post feed by topic
+- [ ] Users can browse and filter the post feed by tag
 - [ ] Users can comment on posts and reply to other comments
 - [ ] Users can upvote posts and comments
 - [ ] Users can bookmark posts and view their saved posts
@@ -238,13 +238,13 @@ Labels: `frontend` `P2` `W4`
 **Feed and Post Pages** *(carry-over from W3)*
 Labels: `frontend` `P0` `W4`
 - [ ] Home feed displays real posts from Content Service
-- [ ] Topic filter bar: selecting a topic shows engagement-ranked results for logged-in users (`/feed/trending?topic=`) or chronological results for guests (`/posts?topic=`); UI shows "For You" vs topic mode clearly
-- [ ] Authors can write posts in a Markdown editor with topic input and cover image *(post editor — optional if not reached)*
+- [ ] Tag filter bar: selecting a tag shows engagement-ranked results for logged-in users (`/feed/trending?tag=`) or chronological results for guests (`/posts?tag=`); UI shows "For You" vs topic mode clearly
+- [ ] Authors can write posts in a Markdown editor with tag input and cover image *(post editor — optional if not reached)*
 - [ ] Post detail page shows full content, auto-generated AI summary, and vote controls
 - [ ] Comment section supports threaded replies
 - [ ] Authors can edit and delete their own posts and comments
 
-**Digest Management — Topic Preferences** *(backend)*
+**Digest Management — Tag Preferences** *(backend)*
 Labels: `backend` `P0` `W4`
 - [ ] Users can save a list of topics they are interested in
 - [ ] Saved topic preferences are stored per user and retrievable by other services
@@ -253,13 +253,13 @@ Labels: `backend` `P0` `W4`
 **Digest Management — Page** *(optional — complete in W5 if not reached)*
 Labels: `frontend` `P2` `W4`
 - [ ] Users can open the Digest Management page from the sidebar
-- [ ] Users can search, add, and remove topics from their digest preferences
+- [ ] Users can search, add, and remove tags from their digest preferences
 - [ ] Previously saved preferences are loaded and editable
-- [ ] Past digests are listed and viewable (date, summary per subscribed topic)
+- [ ] Past digests are listed and viewable (date, summary per subscribed tag)
 
 **Daily Digest — Schema Design + Content Service Update**
 Labels: `genai` `backend` `P1` `W4`
-- [ ] Define Digest schema: digest record linked to user, date, subscribed topics, and generated content per topic
+- [ ] Define Digest schema: digest record linked to user, date, subscribed tags, and generated content per tag
 - [ ] Content Service updated to expose the data fields required for digest generation
 - [ ] Schema reviewed by backend and GenAI tracks before W5 implementation begins
 
@@ -270,7 +270,7 @@ Labels: `genai` `backend` `P1` `W4`
 - **Backend + Frontend**: register/login → profile view/edit tested end-to-end against real User Service
 - **Backend + Frontend**: home feed wired to real Content Service; post creation form live
 - **Backend + GenAI**: post summary auto-generated by GenAI on every new post creation
-- **Backend + GenAI**: topic suggestions returned to the post editor from GenAI
+- **Backend + GenAI**: tag suggestions returned to the post editor from GenAI
 - **All three**: `docker-compose up` brings all 5 services up; data flows verified between them
 
 ---
@@ -299,7 +299,7 @@ Labels: `backend` `P1` `W5`
 **Personalized Homepage + Notifications**
 Labels: `frontend` `P1` `W5`
 - [ ] Homepage feed default ("For You"): personalized via `/feed/personal` for logged-in users; chronological for guests
-- [ ] Topic selected state ("Topic: X"): engagement-ranked via `/feed/trending?topic=` for logged-in users; chronological via `/posts?topic=` for guests — two modes are mutually exclusive, clearly indicated in UI
+- [ ] Tag selected state ("Topic: X"): engagement-ranked via `/feed/trending?tag=` for logged-in users; chronological via `/posts?tag=` for guests — two modes are mutually exclusive, clearly indicated in UI
 - [ ] Notification list shows new activity with mark-as-read and delete actions
 - [ ] Digest Management page: today's generated digest is displayed under the preferences section
 

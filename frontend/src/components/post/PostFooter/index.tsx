@@ -1,19 +1,19 @@
-import type { PostSource, Topic } from '../../../types';
+import type { PostSource, Tag } from '../../../types';
 import styles from './PostFooter.module.css';
 
 interface PostFooterProps {
-  topics: Topic[];
+  tags: Tag[];
   sources: PostSource[];
 }
 
-export default function PostFooter({ topics, sources }: PostFooterProps) {
+export default function PostFooter({ tags, sources }: PostFooterProps) {
   return (
     <div className={styles.footer}>
-      {topics.length > 0 && (
+      {tags.length > 0 && (
         <div className={styles.tags}>
-          {topics.map((topic) => (
-            <span key={topic.id} className={styles.tagPill}>
-              #{topic.name}
+          {tags.map((tag) => (
+            <span key={tag.id} className={styles.tagPill}>
+              #{tag.name}
             </span>
           ))}
         </div>

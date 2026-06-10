@@ -144,49 +144,42 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
 
 .profile-content { max-width: 900px; margin: 0 auto; padding: 40px 32px 80px; width: 100%; }
 
-.profile-header { display: flex; gap: 36px; align-items: flex-start; justify-content: center; margin-bottom: 36px; }
-.profile-avatar-wrap {
-  position: relative; flex-shrink: 0;
-  width: 160px; height: 160px; border-radius: 50%;
-  border: 4px solid var(--bg-base); box-shadow: 0 0 0 1.5px var(--border-default);
-}
+.profile-header { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 32px; }
+.profile-avatar-wrap { position: relative; flex-shrink: 0; }
 .profile-avatar {
-  width: 100%; height: 100%; border-radius: 50%;
-  background: var(--accent); color: #fff; font-size: 56px; font-weight: 700; letter-spacing: -0.02em;
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 28px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid var(--bg-base); box-shadow: 0 0 0 1.5px var(--border-default); overflow: hidden;
 }
 .profile-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .profile-avatar-edit {
-  position: absolute; right: 4px; bottom: 4px;
-  width: 38px; height: 38px; border-radius: 50%;
-  background: var(--bg-surface); color: var(--text-primary);
-  border: 1.5px solid var(--border-default);
+  position: absolute; bottom: 0; right: 0; width: 26px; height: 26px;
+  background: var(--bg-base); border: 1.5px solid var(--border-default); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
+  cursor: pointer; transition: background 120ms, border-color 120ms;
 }
-.profile-avatar-edit:hover { background: var(--bg-base); border-color: var(--text-primary); }
-.profile-avatar-edit svg { width: 16px; height: 16px; }
+.profile-avatar-edit:hover { background: var(--bg-elevated); border-color: var(--accent); }
+.profile-avatar-edit svg { width: 12px; height: 12px; color: var(--text-secondary); }
 
-.profile-info { flex: 0 1 620px; min-width: 0; }
+.profile-info { flex: 1; min-width: 0; }
 .profile-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
 .profile-name { font-size: 22px; font-weight: 700; line-height: 1.2; color: var(--text-primary); }
 .verified-badge {
   display: inline-flex; align-items: center; gap: 3px;
   background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 600;
   padding: 2px 7px 2px 5px; border-radius: 999px;
-  position: relative; top: 2px;
 }
 .verified-badge svg { width: 11px; height: 11px; }
 .profile-handle { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 10px; }
 .profile-bio { font-size: 14px; line-height: 1.6; color: var(--text-secondary); max-width: 560px; margin-bottom: 14px; }
-.profile-meta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 13.5px; color: var(--text-tertiary); margin-bottom: 18px; }
-.profile-meta-item { display: flex; align-items: center; gap: 5px; }
-.profile-meta-item svg { width: 14px; height: 14px; }
-.profile-stats { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 18px; }
-.profile-stat { display: flex; align-items: baseline; gap: 5px; }
-.stat-count { font-size: 17px; font-weight: 700; color: var(--text-primary); }
-.stat-label { font-size: 14px; color: var(--text-secondary); }
+.profile-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 16px; }
+.profile-meta-item { display: flex; align-items: center; gap: 4px; }
+.profile-meta-item svg { width: 13px; height: 13px; }
+.profile-stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.profile-stat { display: flex; align-items: baseline; gap: 4px; }
+.stat-count { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.stat-label { font-size: 12.5px; color: var(--text-secondary); }
 
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -206,20 +199,18 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
   background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-subtle); margin: 0 -32px; padding: 0 32px;
 }
-.profile-tabs { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; justify-content: stretch; }
+.profile-tabs { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .profile-tabs::-webkit-scrollbar { display: none; }
 .tab-item {
-  display: flex; align-items: center; justify-content: center; gap: 7px; padding: 16px 16px;
-  font-size: 15px; font-weight: 500; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 6px; padding: 14px 16px;
+  font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
   cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
   transition: color 120ms, border-color 120ms; position: relative; top: 1px;
   background: none; border-left: none; border-right: none; border-top: none; border-radius: 0;
-  flex: 1 1 0;
 }
 .tab-item:hover { color: var(--text-primary); }
 .tab-item.active { color: var(--text-primary); font-weight: 600; border-bottom-color: var(--accent); }
-.tab-icon { width: 16px; height: 16px; flex-shrink: 0; }
-.tab-count { font-size: 12px; font-weight: 600; color: var(--text-tertiary); background: var(--bg-elevated); padding: 2px 6px; border-radius: 4px; }
+.tab-count { font-size: 11px; font-weight: 600; color: var(--text-tertiary); background: var(--bg-elevated); padding: 1px 5px; border-radius: 4px; }
 .tab-item.active .tab-count { background: var(--accent); color: #fff; }
 .tab-private-icon { color: var(--text-tertiary); width: 12px; height: 12px; }
 
@@ -231,8 +222,6 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
 @media (max-width: 1100px) { .posts-grid { columns: 2; } }
 @media (max-width: 720px)  { .posts-grid { columns: 1; } }
 
-/* ─── POST CARDS — Home parity (image cards = bare cover + title + author row;
-     text cards = cream block w/ eyebrow + pull-quote, then bare title + author row below) ─── */
 .post-card {
   break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid;
   display: inline-block; width: 100%;
@@ -244,105 +233,64 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
 .post-card:hover { transform: translateY(-1px); }
 .post-card:hover .card-cover { box-shadow: 0 8px 24px -14px rgba(0,0,0,0.16); }
 
-/* Image cover — 16:10 to match Home */
-.card-cover { aspect-ratio: 16 / 10; position: relative; overflow: hidden; border-radius: 12px; transition: box-shadow 220ms ease-out; }
-.card-cover-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.card-cover { aspect-ratio: 4/3; position: relative; overflow: hidden; border-radius: 12px; transition: box-shadow 220ms ease-out; }
+.card-cover-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+.card-badge { position: absolute; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 999px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.card-badge-type { top: 12px; left: 12px; background: rgba(255,255,255,0.92); color: var(--text-primary); }
+.card-badge-time { top: 12px; right: 12px; background: rgba(10,10,10,0.75); color: rgba(255,255,255,0.92); }
 
-/* Badge pills on cover — top-left = type, top-right = read-time / Saved / 3-dot slot */
-.card-badge { position: absolute; top: 12px; font: 600 11px var(--font-sans); letter-spacing: 0.02em; padding: 5px 10px; border-radius: 999px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: inline-flex; align-items: center; gap: 4px; }
-.card-badge-type { left: 12px; background: rgba(255,255,255,0.92); color: var(--text-primary); }
-.card-badge-time { right: 12px; background: rgba(10,10,10,0.72); color: #fff; }
-.card-badge-saved { right: 12px; background: rgba(10,10,10,0.72); color: #fff; }
-.card-badge-saved svg { width: 11px; height: 11px; }
+.card-body { padding: 12px 2px 4px; }
+.card-title { font-size: 19px; font-weight: 700; line-height: 1.3; letter-spacing: -0.015em; color: var(--text-primary); margin: 0 0 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-wrap: pretty; }
+.card-summary { font-size: 12.5px; font-style: italic; color: var(--text-secondary); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px; }
+.card-summary-icon { font-size: 11px; margin-right: 3px; }
+.card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.card-tag { font-size: 10.5px; font-weight: 500; padding: 3px 7px; border-radius: 4px; background: var(--bg-elevated); color: var(--text-secondary); }
 
-.card-body { padding: 12px 8px 4px; }
-.card-title {
-  font-size: 16px; font-weight: 700; line-height: 1.3; letter-spacing: -0.018em;
-  color: var(--text-primary); margin: 0 auto 6px;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-  max-width: 97%;
-  hyphens: manual; -webkit-hyphens: manual;
-}
+.card-footer { border-top: 0; padding: 4px 2px 0; display: flex; align-items: center; gap: 9px; }
+.card-author-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.card-author-name { font-size: 13px; font-weight: 500; color: var(--text-primary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.card-likes { display: flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--text-secondary); font-weight: 500; }
+.card-likes svg { width: 14px; height: 14px; color: var(--text-tertiary); }
+.card-time { font-size: 12px; color: var(--text-tertiary); }
 
-/* Author row — 22px avatar, name (+verified), dot, ago, likes pushed right */
-.author-row { display: flex; align-items: center; gap: 8px; padding-top: 0; margin-top: 0; }
-.author-row .av { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #ccc, #888); display: grid; place-items: center; color: #fff; font-size: 9.5px; font-weight: 700; flex-shrink: 0; }
-.author-row .name { font-size: 12.5px; font-weight: 500; color: var(--text-primary); display: flex; align-items: center; gap: 5px; min-width: 0; }
-.author-row .name .verified { color: var(--accent); width: 12px; height: 12px; flex-shrink: 0; }
-.author-row .dot-sep { color: var(--text-tertiary); font-size: 11.5px; }
-.author-row .ago { font-size: 11.5px; color: var(--text-tertiary); }
-.author-row .likes { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; font-weight: 500; }
-.author-row .likes svg { color: var(--text-tertiary); width: 13px; height: 13px; }
-
-/* Text-only card — cream block functions as the "cover" holding eyebrow + pull-quote.
-   Title + author row sit BELOW the block as bare text — exact parity with image cards. */
+/* Text-only card: cream block holds title + summary */
 .post-card.text-only { background: transparent; }
-.post-card.text-only .card-text {
-  position: relative;
-  background: oklch(97% 0.012 80);
-  border-radius: 12px;
-  padding: 14px 28px 14px 16px;
-  overflow: hidden;
-  transition: box-shadow 220ms ease-out;
-}
-.post-card.text-only:hover .card-text { box-shadow: 0 8px 24px -14px rgba(0,0,0,0.12); }
-.post-card.text-only .card-text .eyebrow {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text-secondary); margin: 0 0 10px;
-  display: inline-flex; align-items: center;
-}
-.post-card.text-only .card-text .pull-quote {
-  font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 16px; line-height: 1.7;
-  color: var(--text-primary); border-left: 2px solid var(--border-default);
-  padding-left: 12px; margin: 0;
-  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
-  text-wrap: pretty;
-}
-.post-card.text-only .card-text .pull-quote.is-short { -webkit-line-clamp: 3; }
+.post-card.text-only .card-body { background: oklch(97% 0.012 80); border-radius: 12px; padding: 18px 18px 20px; transition: box-shadow 220ms ease-out; }
+.post-card.text-only:hover .card-body { box-shadow: 0 8px 24px -14px rgba(0,0,0,0.12); }
+.post-card.text-only .card-title { font-size: 18px; -webkit-line-clamp: 3; }
+.post-card.text-only .card-footer { background: transparent; border-top: 0; padding: 12px 2px 0; }
 
-/* Saved badge inside text-card cream block (top-right corner) */
-.card-text .text-badge-saved {
-  position: absolute; top: 10px; right: 10px;
-  background: rgba(10,10,10,0.72); color: #fff;
-  font: 600 10.5px var(--font-sans); letter-spacing: 0.02em;
-  padding: 4px 9px; border-radius: 999px;
-  display: inline-flex; align-items: center; gap: 4px;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-}
-.card-text .text-badge-saved svg { width: 10px; height: 10px; }
+.card-bookmark-flag { position: absolute; top: 8px; right: 8px; background: rgba(10,10,10,0.75); color: rgba(255,255,255,0.9); padding: 3px 7px; border-radius: 5px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; backdrop-filter: blur(6px); }
+.card-bookmark-flag svg { width: 11px; height: 11px; }
 
 /* ─── POST MANAGE MENU ─────────────────────────────── */
-/* Image cards: 3-dot button takes the top-right slot (where read-time would normally sit).
-   Light pill (vs Saved's dark pill) so action and status are visually distinguishable. */
 .card-manage-btn {
-  position: absolute; top: 12px; right: 12px;
-  border: none; cursor: pointer;
-  padding: 5px 10px; border-radius: 999px;
-  background: rgba(255,255,255,0.92); color: var(--text-secondary);
-  display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--font-sans);
-  opacity: 0.9;
-  transition: opacity 140ms ease-out, background 120ms, color 120ms;
+  position: absolute; top: 8px; right: 8px;
+  width: 32px; height: 32px; border-radius: 8px;
+  background: rgba(255,255,255,0.92); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  transition: opacity 140ms ease-out, background 120ms, color 120ms, box-shadow 120ms;
   z-index: 10; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.14);
 }
 .card-manage-btn:hover,
-.card-manage-btn:focus { background: #fff; color: var(--text-primary); opacity: 1; outline: none; }
+.card-manage-btn:focus { background: #fff; color: var(--text-primary); opacity: 1; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
 .card-manage-btn svg { width: 14px; height: 14px; }
 
-/* Text cards: 3-dot button sits absolute top-right inside the cream block */
-.card-manage-text {
-  position: absolute; top: 8px; right: 8px;
-  width: 28px; height: 28px; border-radius: 999px;
-  background: transparent; border: none; cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-  color: var(--text-secondary);
-  opacity: 0.55;
-  transition: opacity 140ms, background 120ms, color 120ms;
-  z-index: 10; font-family: var(--font-sans);
+/* for text-only cards (no cover) */
+.card-manage-inline {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 7px;
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); transition: background 120ms, color 120ms, border-color 120ms;
+  font-family: var(--font-sans);
 }
-.card-manage-text:hover,
-.card-manage-text:focus { background: rgba(10,10,10,0.06); color: var(--text-primary); opacity: 1; outline: none; }
-.card-manage-text svg { width: 14px; height: 14px; }
+.card-manage-inline:hover,
+.card-manage-inline:focus { background: var(--bg-base); border-color: var(--border-default); color: var(--text-primary); outline: none; }
+.card-manage-inline svg { width: 14px; height: 14px; }
 
 /* dropdown is portaled to body — no wrapper needed */
 #manage-portal {
@@ -394,9 +342,6 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
 .draft-action-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
 .draft-action-btn.publish:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .draft-action-btn svg { width: 12px; height: 12px; }
-/* Legacy tag/summary pills used only inside drafts */
-.draft-card .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-.draft-card .card-tag { font-size: 10.5px; font-weight: 500; padding: 3px 7px; border-radius: 4px; background: var(--bg-elevated); color: var(--text-secondary); }
 
 /* ─── DELETE CONFIRM MODAL ─────────────────────────── */
 .delete-modal-backdrop {
@@ -452,9 +397,8 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
 .modal-avatar-section { display: flex; align-items: center; gap: 16px; padding: 14px; background: var(--bg-surface); border-radius: 10px; border: 1px solid var(--border-subtle); }
 .modal-avatar-large { width: 60px; height: 60px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
 .modal-avatar-large img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.modal-avatar-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.modal-avatar-actions { display: flex; flex-direction: column; gap: 6px; }
 .modal-avatar-actions .btn { font-size: 12px; padding: 5px 12px; }
-.modal-avatar-hint { font-size: 11px; color: var(--text-tertiary); line-height: 1.4; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
 .form-input, .form-textarea { width: 100%; padding: 9px 12px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 8px; font-size: 13.5px; font-family: var(--font-sans); color: var(--text-primary); outline: none; transition: border-color 120ms, box-shadow 120ms, background 120ms; }
@@ -519,9 +463,9 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
     <div class="profile-header">
       <div class="profile-avatar-wrap">
         <div class="profile-avatar">LZ</div>
-        <button class="profile-avatar-edit" onclick="openModal()" aria-label="Edit profile photo" title="Edit photo">
-          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l1 1L5 10l-2 .5.5-2z"/></svg>
-        </button>
+        <div class="profile-avatar-edit" onclick="openModal()" title="Change photo">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.5 2.5L9.5 4.5M2 10h2L9.5 4.5 7.5 2.5 2 8v2z"/></svg>
+        </div>
       </div>
       <div class="profile-info">
         <div class="profile-name-row">
@@ -558,10 +502,10 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
 
     <div class="profile-tabs-wrap">
       <div class="profile-tabs">
-        <button class="tab-item active" onclick="switchTab('posts', this)"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>Posts <span class="tab-count">47</span></button>
-        <button class="tab-item" onclick="switchTab('bookmarks', this)"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Bookmarks <span class="tab-count">28</span></button>
-        <button class="tab-item" onclick="switchTab('likes', this)"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Likes <span class="tab-count">312</span></button>
-        <button class="tab-item" onclick="switchTab('drafts', this)"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Drafts <span class="tab-count">3</span></button>
+        <button class="tab-item active" onclick="switchTab('posts', this)">Posts <span class="tab-count">47</span></button>
+        <button class="tab-item" onclick="switchTab('bookmarks', this)">Bookmarks <span class="tab-count">28</span></button>
+        <button class="tab-item" onclick="switchTab('drafts', this)">Drafts <span class="tab-count">3</span></button>
+        <button class="tab-item" onclick="switchTab('likes', this)">Likes <span class="tab-count">312</span></button>
       </div>
     </div>
 
@@ -581,32 +525,36 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
             </div>
             <div class="card-body">
               <div class="card-title">Why RLHF Doesn't Scale the Way We Hoped</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#d97757,#b15a3c);">LZ</span>
-                <span class="name">Lena Zhang<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">3d</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>842</span>
+              <div class="card-summary"><span class="card-summary-icon">✦</span> An honest look at reward hacking, distributional shift, and why preference data quality matters more than quantity.</div>
+              <div class="card-tags"><span class="card-tag">RLHF</span><span class="card-tag">Alignment</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar">LZ</div>
+              <span class="card-author-name">Lena Zhang</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>842</span>
+                <span class="card-time">3 days ago</span>
               </div>
             </div>
           </div>
 
           <div class="post-card text-only" data-post-id="2" data-post-title="The Transformer Is Not a Brain. It's a Filing Cabinet.">
-            <div class="card-text">
-              <div class="eyebrow">Essay</div>
-              <blockquote class="pull-quote">Attention heads are associative memory retrieval — and that framing actually matters for interpretability.</blockquote>
-              <button class="card-manage-text" onclick="toggleManageMenu(event, this)" aria-label="Manage post">
-                <svg viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="2.5" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>
-              </button>
+            <div class="card-body" style="padding: 16px 16px 8px;">
+              <div style="display:flex; align-items:flex-start; gap:6px;">
+                <div class="card-title" style="font-size:15.5px; margin-bottom:10px; flex:1;">The Transformer Is Not a Brain. It's a Filing Cabinet.</div>
+                <button class="card-manage-inline" onclick="toggleManageMenu(event, this)" aria-label="Manage post" style="flex-shrink:0; margin-top:1px;">
+                  <svg viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="2.5" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>
+                </button>
+              </div>
+              <div class="card-summary" style="-webkit-line-clamp:3;"><span class="card-summary-icon">✦</span> Drawing parallels between attention heads and associative memory retrieval — and why that framing actually matters for interpretability research.</div>
+              <div class="card-tags" style="margin-top:8px;"><span class="card-tag">Transformers</span><span class="card-tag">Interpretability</span></div>
             </div>
-            <div class="card-body">
-              <div class="card-title">The Transformer Is Not a Brain. It's a Filing Cabinet.</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#d97757,#b15a3c);">LZ</span>
-                <span class="name">Lena Zhang<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">1w</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>1.2k</span>
+            <div class="card-footer">
+              <div class="card-author-avatar">LZ</div>
+              <span class="card-author-name">Lena Zhang</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>1.2k</span>
+                <span class="card-time">1 week ago</span>
               </div>
             </div>
           </div>
@@ -621,12 +569,15 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
             </div>
             <div class="card-body">
               <div class="card-title">Gemini 1.5 Technical Report: What the Benchmarks Don't Tell You</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#d97757,#b15a3c);">LZ</span>
-                <span class="name">Lena Zhang<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">2w</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>590</span>
+              <div class="card-summary"><span class="card-summary-icon">✦</span> Beyond the headline numbers — digging into long-context retrieval failure modes and the needle-in-haystack degradation patterns.</div>
+              <div class="card-tags"><span class="card-tag">Benchmarks</span><span class="card-tag">LLM</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar">LZ</div>
+              <span class="card-author-name">Lena Zhang</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>590</span>
+                <span class="card-time">2 weeks ago</span>
               </div>
             </div>
           </div>
@@ -641,32 +592,36 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
             </div>
             <div class="card-body">
               <div class="card-title">Attention Is All You Need to Misunderstand Attention</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#d97757,#b15a3c);">LZ</span>
-                <span class="name">Lena Zhang<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">1mo</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>2.3k</span>
+              <div class="card-summary"><span class="card-summary-icon">✦</span> A visual explainer on scaled dot-product attention — and three intuitions that will lead you astray when scaling to 128k context.</div>
+              <div class="card-tags"><span class="card-tag">Explainer</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar">LZ</div>
+              <span class="card-author-name">Lena Zhang</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>2.3k</span>
+                <span class="card-time">1 month ago</span>
               </div>
             </div>
           </div>
 
           <div class="post-card text-only" data-post-id="5" data-post-title="Six Things I Wish I Knew Before Starting ML Research">
-            <div class="card-text">
-              <div class="eyebrow">Career</div>
-              <blockquote class="pull-quote">Your first three papers probably won't matter. That's fine — and learning why takes longer than the papers themselves.</blockquote>
-              <button class="card-manage-text" onclick="toggleManageMenu(event, this)" aria-label="Manage post">
-                <svg viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="2.5" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>
-              </button>
+            <div class="card-body" style="padding: 16px 16px 8px;">
+              <div style="display:flex; align-items:flex-start; gap:6px;">
+                <div class="card-title" style="flex:1;">Six Things I Wish I Knew Before Starting ML Research</div>
+                <button class="card-manage-inline" onclick="toggleManageMenu(event, this)" aria-label="Manage post" style="flex-shrink:0; margin-top:1px;">
+                  <svg viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="2.5" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>
+                </button>
+              </div>
+              <div class="card-summary" style="-webkit-line-clamp:3;"><span class="card-summary-icon">✦</span> On compute allocation, negative results, advisor dynamics, and why your first three papers probably won't matter — and that's fine.</div>
+              <div class="card-tags" style="margin-top:8px;"><span class="card-tag">Career</span><span class="card-tag">Research</span></div>
             </div>
-            <div class="card-body">
-              <div class="card-title">Six Things I Wish I Knew Before Starting ML Research</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#d97757,#b15a3c);">LZ</span>
-                <span class="name">Lena Zhang<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">2mo</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>3.1k</span>
+            <div class="card-footer">
+              <div class="card-author-avatar">LZ</div>
+              <span class="card-author-name">Lena Zhang</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>3.1k</span>
+                <span class="card-time">2 months ago</span>
               </div>
             </div>
           </div>
@@ -681,12 +636,15 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
             </div>
             <div class="card-body">
               <div class="card-title">Supervised Fine-Tuning vs. Constitutional AI: A Head-to-Head on Safety Metrics</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#d97757,#b15a3c);">LZ</span>
-                <span class="name">Lena Zhang<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">3mo</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>677</span>
+              <div class="card-summary"><span class="card-summary-icon">✦</span> Comparing outputs across 400 red-teaming prompts — where each method wins, where both fail.</div>
+              <div class="card-tags"><span class="card-tag">Safety</span><span class="card-tag">Fine-tuning</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar">LZ</div>
+              <span class="card-author-name">Lena Zhang</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>677</span>
+                <span class="card-time">3 months ago</span>
               </div>
             </div>
           </div>
@@ -700,35 +658,36 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
           <div class="post-card">
             <div class="card-cover">
               <div class="card-cover-placeholder" style="background: linear-gradient(135deg, #2b2b2b 0%, #4a4a6a 100%); color: rgba(255,255,255,0.8); font-family: var(--font-mono);">RAG</div>
-              <span class="card-badge card-badge-type">Essay</span>
-              <span class="card-badge card-badge-saved"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 2h7v9L5.5 9 2 11V2z"/></svg>Saved</span>
+              <div class="card-bookmark-flag"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 2h7v9L5.5 9 2 11V2z"/></svg>Saved</div>
             </div>
             <div class="card-body">
               <div class="card-title">Retrieval-Augmented Generation Is Harder Than It Looks</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#5b6ee1,#3a4dad);">JL</span>
-                <span class="name">James Liu</span>
-                <span class="dot-sep">·</span>
-                <span class="ago">5d</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>1.4k</span>
+              <div class="card-summary"><span class="card-summary-icon">✦</span> On chunk boundary artifacts, embedding misalignment, and why RAG pipelines degrade gracefully (until they don't).</div>
+              <div class="card-tags"><span class="card-tag">RAG</span><span class="card-tag">Retrieval</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar" style="background:#5b6ee1;">JL</div>
+              <span class="card-author-name">James Liu</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>1.4k</span>
+                <span class="card-time">5 days ago</span>
               </div>
             </div>
           </div>
 
           <div class="post-card text-only">
-            <div class="card-text">
-              <div class="eyebrow">Paper Notes</div>
-              <blockquote class="pull-quote">A close reading of the critique-revision loop — and where Constitutional AI's harmlessness margin actually comes from.</blockquote>
-              <span class="text-badge-saved"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 2h7v9L5.5 9 2 11V2z"/></svg>Saved</span>
+            <div class="card-body" style="padding: 16px 16px 8px; position:relative;">
+              <div style="position:absolute; top:12px; right:14px; background:var(--bg-elevated); padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; color:var(--text-tertiary); display:flex; align-items:center; gap:3px;"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4" style="width:10px;height:10px;"><path d="M2 2h7v9L5.5 9 2 11V2z"/></svg>Saved</div>
+              <div class="card-title" style="font-size:15px; padding-right: 60px;">Constitutional AI: Harmlessness from AI Feedback — Reading Notes</div>
+              <div class="card-summary" style="-webkit-line-clamp:2;"><span class="card-summary-icon">✦</span> Dense annotation of Anthropic's Constitutional AI paper, with emphasis on the critique-revision loop implementation details.</div>
+              <div class="card-tags" style="margin-top:8px;"><span class="card-tag">Alignment</span><span class="card-tag">Paper</span></div>
             </div>
-            <div class="card-body">
-              <div class="card-title">Constitutional AI: Harmlessness from AI Feedback — Reading Notes</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#b45309,#7c3a05);">MS</span>
-                <span class="name">Maya Singh<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">2w</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>2.8k</span>
+            <div class="card-footer">
+              <div class="card-author-avatar" style="background:#b45309;">MS</div>
+              <span class="card-author-name">Maya Singh</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>2.8k</span>
+                <span class="card-time">2 weeks ago</span>
               </div>
             </div>
           </div>
@@ -736,17 +695,19 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
           <div class="post-card">
             <div class="card-cover">
               <div class="card-cover-placeholder" style="background: linear-gradient(135deg, #1e3a5f 0%, #2a6496 100%); color: rgba(255,255,255,0.8); font-family: var(--font-mono);">MoE</div>
-              <span class="card-badge card-badge-type">Architecture</span>
-              <span class="card-badge card-badge-saved"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 2h7v9L5.5 9 2 11V2z"/></svg>Saved</span>
+              <div class="card-bookmark-flag"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 2h7v9L5.5 9 2 11V2z"/></svg>Saved</div>
             </div>
             <div class="card-body">
               <div class="card-title">Mixture of Experts: The Architecture Behind GPT-4</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#047857,#025c44);">AK</span>
-                <span class="name">Arjun Kumar<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">3w</span>
-                <span class="likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>3.5k</span>
+              <div class="card-summary"><span class="card-summary-icon">✦</span> Explaining sparse MoE routing, expert collapse avoidance, and inference-time compute gains — with annotated pseudocode.</div>
+              <div class="card-tags"><span class="card-tag">Architecture</span><span class="card-tag">MoE</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar" style="background:#047857;">AK</div>
+              <span class="card-author-name">Arjun Kumar</span>
+              <div class="card-meta-right">
+                <span class="card-likes"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>3.5k</span>
+                <span class="card-time">3 weeks ago</span>
               </div>
             </div>
           </div>
@@ -813,28 +774,30 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
             </div>
             <div class="card-body">
               <div class="card-title">Direct Preference Optimization: Cleaner Than RLHF, But at What Cost?</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);">RN</span>
-                <span class="name">Rohan Nair<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5 14.2 4l3.3-.5.8 3.2L21 9l-1.4 3 1 3.1-3 1.7-.6 3.3-3.3-.4-2.7 2-2.7-2-3.3.4L4.4 17 1.4 15l1-3.1L1 9l2.7-1.3.8-3.2L7.8 4 12 1.5z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="dot-sep">·</span>
-                <span class="ago">1w</span>
-                <span class="likes" style="color:var(--danger);"><svg viewBox="0 0 24 24" fill="var(--danger)" stroke="var(--danger)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>2.1k</span>
+              <div class="card-summary"><span class="card-summary-icon">✦</span> A close reading of the DPO formulation — where the implicit reward model lives and why it matters for downstream safety.</div>
+              <div class="card-tags"><span class="card-tag">DPO</span><span class="card-tag">Alignment</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar" style="background:#7c3aed;">RN</div>
+              <span class="card-author-name">Rohan Nair</span>
+              <div class="card-meta-right">
+                <span class="card-likes" style="color:var(--danger);"><svg viewBox="0 0 12 12" fill="var(--danger)" stroke="none"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>2.1k</span>
+                <span class="card-time">1 week ago</span>
               </div>
             </div>
           </div>
           <div class="post-card text-only">
-            <div class="card-text">
-              <div class="eyebrow">Critique</div>
-              <blockquote class="pull-quote">MMLU was stale before it was famous. Every benchmark is broken in a slightly different way — and we keep racing to publish anyway.</blockquote>
-            </div>
-            <div class="card-body">
+            <div class="card-body" style="padding: 16px 16px 8px;">
               <div class="card-title">Every ML Benchmark Is Broken In a Slightly Different Way</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#0369a1,#075985);">EC</span>
-                <span class="name">Elena Chen</span>
-                <span class="dot-sep">·</span>
-                <span class="ago">4d</span>
-                <span class="likes" style="color:var(--danger);"><svg viewBox="0 0 24 24" fill="var(--danger)" stroke="var(--danger)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>4.7k</span>
+              <div class="card-summary" style="-webkit-line-clamp:3;"><span class="card-summary-icon">✦</span> On contamination, distributional overlap, metric gaming, and the uncomfortable truth that MMLU was stale before it was famous.</div>
+              <div class="card-tags" style="margin-top:8px;"><span class="card-tag">Benchmarks</span><span class="card-tag">Critique</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar" style="background:#0369a1;">EC</div>
+              <span class="card-author-name">Elena Chen</span>
+              <div class="card-meta-right">
+                <span class="card-likes" style="color:var(--danger);"><svg viewBox="0 0 12 12" fill="var(--danger)" stroke="none"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>4.7k</span>
+                <span class="card-time">4 days ago</span>
               </div>
             </div>
           </div>
@@ -846,12 +809,15 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
             </div>
             <div class="card-body">
               <div class="card-title">Mamba and the Post-Transformer Moment: Real or Hype?</div>
-              <div class="author-row">
-                <span class="av" style="background:linear-gradient(135deg,#065f46,#064e3b);">TW</span>
-                <span class="name">Tyler Wang</span>
-                <span class="dot-sep">·</span>
-                <span class="ago">2w</span>
-                <span class="likes" style="color:var(--danger);"><svg viewBox="0 0 24 24" fill="var(--danger)" stroke="var(--danger)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>1.8k</span>
+              <div class="card-summary"><span class="card-summary-icon">✦</span> State-space models promise linear-time inference. Here's what the evals actually show — and what they don't.</div>
+              <div class="card-tags"><span class="card-tag">Mamba</span><span class="card-tag">Architecture</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-author-avatar" style="background:#065f46;">TW</div>
+              <span class="card-author-name">Tyler Wang</span>
+              <div class="card-meta-right">
+                <span class="card-likes" style="color:var(--danger);"><svg viewBox="0 0 12 12" fill="var(--danger)" stroke="none"><path d="M6 10.5S1 7.5 1 4.5C1 3 2.5 2 4 2.5c.8.3 1.5.9 2 1.5.5-.6 1.2-1.2 2-1.5C9.5 2 11 3 11 4.5c0 3-5 6-5 6z"/></svg>1.8k</span>
+                <span class="card-time">2 weeks ago</span>
               </div>
             </div>
           </div>
@@ -874,7 +840,7 @@ body:has(.sidebar:hover) { grid-template-columns: var(--sidebar-w) 1fr; }
         <div class="modal-avatar-large">LZ</div>
         <div class="modal-avatar-actions">
           <button class="btn btn-outline" style="font-size:12px; padding:5px 12px;"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M7 2v10M2 7h10"/></svg>Upload Photo</button>
-          <div class="modal-avatar-hint">JPG or PNG · Max 2MB</div>
+          <button class="btn btn-outline" style="font-size:12px; padding:5px 12px; color:var(--danger); border-color:var(--danger);">Remove Photo</button>
         </div>
       </div>
       <div class="form-row">

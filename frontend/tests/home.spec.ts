@@ -110,10 +110,10 @@ test.describe('Layout', () => {
     expect(box?.width).toBe(240);
   });
 
-  test('LT-6: topbar has search row and topic row', async ({ page }) => {
+  test('LT-6: topbar has search row and tag row', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('[data-testid="topbar-search-row"]')).toBeVisible();
-    await expect(page.locator('[data-testid="topbar-topic-row"]')).toBeVisible();
+    await expect(page.locator('[data-testid="topbar-tag-row"]')).toBeVisible();
   });
 
   test('LT-7: feed has both image cards and text cards', async ({ page }) => {
@@ -124,9 +124,9 @@ test.describe('Layout', () => {
 });
 
 test.describe('Interactions', () => {
-  test('I-8: topic chip click updates active state', async ({ page }) => {
+  test('I-8: tag chip click updates active state', async ({ page }) => {
     await page.goto('/');
-    const chips = page.locator('[data-testid="topbar-topic-row"] button');
+    const chips = page.locator('[data-testid="topbar-tag-row"] button');
     const second = chips.nth(1);
     await second.click();
     await expect(second).toHaveClass(/active/);
@@ -166,14 +166,14 @@ test.describe('Auth State', () => {
       (el) => window.getComputedStyle(el).pointerEvents
     );
     expect(pointerEvents).toBe('none');
-    await expect(page.locator('[data-testid="topbar-topic-row"] button').first()).toHaveText('Trending');
+    await expect(page.locator('[data-testid="topbar-tag-row"] button').first()).toHaveText('Trending');
   });
 
   test('S-13: logged-in — banner absent, first chip is For you, digest badge visible', async ({ page }) => {
     await login(page);
     await page.goto('/');
     await expect(page.locator('[data-testid="auth-banner"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="topbar-topic-row"] button').first()).toHaveText('For you');
+    await expect(page.locator('[data-testid="topbar-tag-row"] button').first()).toHaveText('For you');
     await expect(page.locator('[data-testid="digest-badge"]')).toBeVisible();
   });
 });

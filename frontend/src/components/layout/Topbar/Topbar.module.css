@@ -71,14 +71,43 @@
 }
 
 .avatarBtn {
-  display: block;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #c0a4ff 0%, #ff8a8a 45%, #ffc28a 100%);
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  display: block;
   transition: transform var(--motion-card-lift), box-shadow var(--motion-card-lift);
 }
 
 .avatarBtn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.25);
+}
+
+.avatarBtn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 35%, #fff 0 7px, transparent 8px),
+    radial-gradient(circle at 65% 32%, #fff 0 7px, transparent 8px),
+    radial-gradient(ellipse at 50% 70%, #0a0a0a 0 9px, transparent 10px),
+    linear-gradient(135deg, #c0a4ff 0%, #ff8a8a 45%, #ffc28a 100%);
+}
+
+.avatarBtn::after {
+  content: '';
+  position: absolute;
+  left: 30%;
+  top: 35%;
+  width: 3px;
+  height: 3px;
+  background: #0a0a0a;
+  border-radius: 50%;
+  box-shadow: 25px 0 0 #0a0a0a;
 }
 
 .signinBtn {

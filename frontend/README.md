@@ -109,11 +109,9 @@ npx serve .
 
 ## Mock Data Layer
 
-The app works without a running backend for content browsing. `src/services/content.service.ts` returns in-memory mock posts, comments, and digests.
+The app works without a running backend. `src/services/content.service.ts` and `src/services/auth.service.ts` generate mock posts, users, and digests. Auth state persists in `localStorage` under the keys `verita_user` and `verita_token`.
 
-Auth (`src/services/auth.service.ts`) now calls the real User Service at `http://localhost:8081`. Start the User Service (or run `docker compose up`) before using sign-in or registration. Auth session is stored in `localStorage` under the keys `verita_user` and `verita_token`.
-
-To simulate a logged-in session in the browser console without a backend:
+To simulate a logged-in session in the browser console:
 ```js
 localStorage.setItem('verita_user', JSON.stringify({ id: '1', username: 'you', displayName: 'Your Name', role: 'USER', email: 'you@example.com' }))
 localStorage.setItem('verita_token', 'dev-token')
@@ -124,18 +122,7 @@ localStorage.setItem('verita_token', 'dev-token')
 
 ## End-to-End Tests
 
-Tests live in `frontend/tests/`. Playwright starts the dev server automatically.
-
-### Test ID prefixes
-
-| Prefix | Meaning | File |
-|---|---|---|
-| `VR-` | Visual Regression — pixel snapshot comparisons | `home.spec.ts` |
-| `LT-` | Layout — dimension and structural assertions | `home.spec.ts` |
-| `I-` | Interaction — clicks, navigation, dynamic behaviour | `home.spec.ts` |
-| `S-` | State — logged-in vs logged-out conditional rendering | `home.spec.ts` |
-| `AM-` | AuthModal — sign-in, register, error handling, 401 flow | `auth.spec.ts` |
-| `SM-` | SettingsModal — settings panel UI and interactions | `settings.spec.ts` |
+Tests live in `frontend/tests/home.spec.ts`. Playwright starts the dev server automatically.
 
 ```bash
 # Run all tests
@@ -148,7 +135,7 @@ npx playwright test --grep-invert "VR-"
 npx playwright test --grep "VR-" --update-snapshots
 ```
 
-Auth modal tests (`AM-`) mock the User Service HTTP routes — no backend required. Visual snapshots are stored in `tests/snapshots/`. Commit them alongside any intentional visual change.
+Visual snapshots are stored in `tests/snapshots/`. Commit them alongside any intentional visual change.
 
 ---
 

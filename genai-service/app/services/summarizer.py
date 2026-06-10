@@ -82,25 +82,28 @@ def _get_llm(settings):
     LLM Factory: returns the correct LangChain model based on the provider config.
     """
     provider = settings.llm_provider.lower()
-
+    
     if provider == "openrouter":
         return ChatOpenAI(
             model=settings.llm_model,
             api_key=settings.openrouter_api_key,
             base_url="https://openrouter.ai/api/v1",
             temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
         )
     elif provider == "nvidia":
         return ChatNVIDIA(
             model=settings.llm_model,
             api_key=settings.nvidia_nim_api_key,
             temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
         )
     elif provider == "google":
         return ChatGoogleGenerativeAI(
             model=settings.llm_model,
             google_api_key=settings.google_api_key,
             temperature=settings.llm_temperature,
+            max_output_tokens=settings.llm_max_tokens,
         )
     else:
         raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")
@@ -171,7 +174,7 @@ async def summarize(request: SummarizeRequest) -> SummarizeResponse:
     # Invoke the LCEL chain
     # Use ainvoke for async execution (FastAPI is async-native)
     ai_message = await chain.ainvoke({"input_text": input_text})
-
+    
     # ai_message.content can theoretically be a list of blocks, but for this prompt it is a string.
     raw_output = ai_message.content if isinstance(ai_message.content, str) else str(ai_message.content)
 

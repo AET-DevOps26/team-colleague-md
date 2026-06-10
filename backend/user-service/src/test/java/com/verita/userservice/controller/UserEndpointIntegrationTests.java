@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -192,23 +191,6 @@ class UserEndpointIntegrationTests {
 
         UserEntity bannedUser = userRepository.findById(target.getId()).orElseThrow();
         assertTrue(bannedUser.getIsBanned());
-    }
-
-    @Test
-    void getByUsernameEndpointReturnsCorrectProfile() throws Exception {
-        saveUser("alexchen", "alexchen@example.com", UserRole.USER);
-
-        mockMvc.perform(get("/api/v1/users/by-username/{username}", "alexchen")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("alexchen"));
-    }
-
-    @Test
-    void getByUsernameEndpointReturns404WhenNotFound() throws Exception {
-        mockMvc.perform(get("/api/v1/users/by-username/{username}", "doesnotexist")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
     }
 
     private UserEntity saveUser(String username, String email, UserRole role) {
