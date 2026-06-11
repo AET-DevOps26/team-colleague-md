@@ -6,6 +6,24 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    host: true, // Listen on all local IPs
-  }
+    host: true,
+    proxy: {
+      '/user': {
+        target: 'http://localhost:8081',
+        rewrite: (path) => path.replace(/^\/user/, ''),
+      },
+      '/content': {
+        target: 'http://localhost:8082',
+        rewrite: (path) => path.replace(/^\/content/, ''),
+      },
+      '/recommendation': {
+        target: 'http://localhost:8083',
+        rewrite: (path) => path.replace(/^\/recommendation/, ''),
+      },
+      '/genai': {
+        target: 'http://localhost:8000',
+        rewrite: (path) => path.replace(/^\/genai/, ''),
+      },
+    },
+  },
 })

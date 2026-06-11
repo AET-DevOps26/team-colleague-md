@@ -23,7 +23,6 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-verita_minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
     ports:
-      - "9000:9000"
       - "127.0.0.1:9001:9001"
     volumes:
       - minio-data:/data
@@ -106,8 +105,6 @@ services:
 
   user-service:
     image: ghcr.io/aet-devops26/team-colleague-md/user-service:latest
-    ports:
-      - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_HOST=user-db
@@ -116,7 +113,7 @@ services:
       - DB_USER=${DB_USER:-verita_user}
       - DB_PASSWORD=${DB_PASSWORD}
       - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-http://minio:9000}
-      - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+      - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:?STORAGE_S3_PUBLIC_ENDPOINT is required — set to http://<VM_IP>/storage}
       - STORAGE_S3_REGION=${STORAGE_S3_REGION:-us-east-1}
       - STORAGE_S3_ACCESS_KEY=${USER_SERVICE_S3_ACCESS_KEY:?USER_SERVICE_S3_ACCESS_KEY is required}
       - STORAGE_S3_SECRET_KEY=${USER_SERVICE_S3_SECRET_KEY:?USER_SERVICE_S3_SECRET_KEY is required}
@@ -137,12 +134,10 @@ services:
 
   content-service:
     image: ghcr.io/aet-devops26/team-colleague-md/content-service:latest
-    ports:
-      - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-http://minio:9000}
-      - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+      - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:?STORAGE_S3_PUBLIC_ENDPOINT is required — set to http://<VM_IP>/storage}
       - STORAGE_S3_REGION=${STORAGE_S3_REGION:-us-east-1}
       - STORAGE_S3_ACCESS_KEY=${CONTENT_SERVICE_S3_ACCESS_KEY:?CONTENT_SERVICE_S3_ACCESS_KEY is required}
       - STORAGE_S3_SECRET_KEY=${CONTENT_SERVICE_S3_SECRET_KEY:?CONTENT_SERVICE_S3_SECRET_KEY is required}
@@ -161,8 +156,6 @@ services:
 
   recommendation-service:
     image: ghcr.io/aet-devops26/team-colleague-md/recommendation-service:latest
-    ports:
-      - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
     restart: unless-stopped
@@ -175,8 +168,6 @@ services:
 
   genai-service:
     image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
-    ports:
-      - "8000:8000"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -189,6 +180,12 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/frontend:latest
     ports:
       - "80:80"
+    environment:
+      - USER_SERVICE_URL=http://user-service:8081
+      - CONTENT_SERVICE_URL=http://content-service:8082
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:8083
+      - GENAI_SERVICE_URL=http://genai-service:8000
+      - MINIO_URL=http://minio:9000
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]

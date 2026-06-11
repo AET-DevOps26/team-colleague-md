@@ -14,12 +14,13 @@ services:
     db:
       name: verita_users
       user: verita_user
+    storage: true
     resources:
       requests:
         cpu: "100m"
         memory: "256Mi"
       limits:
-        cpu: "500m"
+        cpu: "300m"
         memory: "512Mi"
 
   content:
@@ -33,12 +34,13 @@ services:
     db:
       name: verita_content
       user: verita_user
+    storage: true
     resources:
       requests:
         cpu: "100m"
         memory: "256Mi"
       limits:
-        cpu: "500m"
+        cpu: "300m"
         memory: "512Mi"
 
   recommendation:
@@ -57,7 +59,7 @@ services:
         cpu: "100m"
         memory: "256Mi"
       limits:
-        cpu: "500m"
+        cpu: "300m"
         memory: "512Mi"
 
   genai:
@@ -72,13 +74,14 @@ services:
         cpu: "100m"
         memory: "128Mi"
       limits:
-        cpu: "500m"
+        cpu: "200m"
         memory: "256Mi"
 
   frontend:
     image: frontend
     tag: latest
     port: 80
+    proxyBackend: true
     health:
       path: /
       initialDelaySeconds: 5
@@ -103,6 +106,14 @@ user-postgresql:
     username: verita_user
     password: verita_password
     database: verita_users
+  primary:
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "150m"
+        memory: "256Mi"
 
 content-postgresql:
   enabled: true
@@ -110,6 +121,14 @@ content-postgresql:
     username: verita_user
     password: verita_password
     database: verita_content
+  primary:
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "150m"
+        memory: "256Mi"
 
 recommendation-postgresql:
   enabled: true
@@ -117,3 +136,25 @@ recommendation-postgresql:
     username: verita_user
     password: verita_password
     database: verita_recommendations
+  primary:
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "150m"
+        memory: "256Mi"
+
+minio:
+  enabled: true
+  auth:
+    rootUser: verita_minio
+    rootPassword: verita_minio_password
+  defaultBuckets: "verita-user-portraits,verita-post-photos"
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "150m"
+      memory: "256Mi"
