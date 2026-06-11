@@ -55,8 +55,8 @@ jobs:
             --namespace verita-$DEPLOY_ENV \
             --create-namespace \
             --set minio.auth.rootPassword=${{ secrets.MINIO_ROOT_PASSWORD }} \
-            --set services.frontend.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set services.content.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set services.user.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set services.recommendation.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set services.genai.rolloutId=${{ github.event.workflow_run.run_id }}
+            --set services.frontend.rolloutId=${{ github.event.workflow_run.id }} \
+            --set services.content.rolloutId=${{ github.event.workflow_run.id }} \
+            --set services.user.rolloutId=${{ github.event.workflow_run.id }} \
+            --set services.recommendation.rolloutId=${{ github.event.workflow_run.id }} \
+            --set services.genai.rolloutId=${{ github.event.workflow_run.id }}
