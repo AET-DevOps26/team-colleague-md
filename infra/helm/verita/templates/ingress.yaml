@@ -7,6 +7,8 @@ metadata:
     {{- include "verita.labels" . | nindent 4 }}
   annotations:
     cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer }}
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   tls:
     - hosts:
@@ -16,36 +18,36 @@ spec:
     - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
-          - path: /user
-            pathType: Prefix
+          - path: /user(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: {{ printf "%s-user" .Release.Name }}
                 port:
                   number: {{ .Values.services.user.port }}
-          - path: /content
-            pathType: Prefix
+          - path: /content(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: {{ printf "%s-content" .Release.Name }}
                 port:
                   number: {{ .Values.services.content.port }}
-          - path: /recommendation
-            pathType: Prefix
+          - path: /recommendation(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: {{ printf "%s-recommendation" .Release.Name }}
                 port:
                   number: {{ .Values.services.recommendation.port }}
-          - path: /genai
-            pathType: Prefix
+          - path: /genai(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: {{ printf "%s-genai" .Release.Name }}
                 port:
                   number: {{ .Values.services.genai.port }}
-          - path: /summarization
-            pathType: Prefix
+          - path: /summarization(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: {{ printf "%s-genai" .Release.Name }}

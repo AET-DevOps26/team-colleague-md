@@ -75,4 +75,32 @@ spec:
                   name: "{{ $.Release.Name }}-{{ $name }}-postgresql"
                   key: password
             {{- end }}
+            {{- if $svc.proxyBackend }}
+            - name: USER_SERVICE_URL
+              value: "http://{{ $.Release.Name }}-user:{{ (index $.Values.services "user").port }}"
+            - name: CONTENT_SERVICE_URL
+              value: "http://{{ $.Release.Name }}-content:{{ (index $.Values.services "content").port }}"
+            - name: MINIO_URL
+              value: "http://{{ $.Release.Name }}-minio:9000"
+            {{- end }}
+            {{- if $svc.storage }}
+            - name: STORAGE_S3_ENDPOINT
+              value: "http://{{ $.Release.Name }}-minio:9000"
+            - name: STORAGE_S3_PUBLIC_ENDPOINT
+              value: "https://{{ $.Values.ingress.host }}/storage"
+            - name: STORAGE_S3_REGION
+              value: "us-east-1"
+            - name: STORAGE_S3_PATH_STYLE_ACCESS
+              value: "true"
+            - name: STORAGE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $.Release.Name }}-minio"
+                  key: root-user
+            - name: STORAGE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $.Release.Name }}-minio"
+                  key: root-password
+            {{- end }}
 {{- end }}

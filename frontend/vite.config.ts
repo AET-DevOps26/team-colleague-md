@@ -6,6 +6,16 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    host: true, // Listen on all local IPs
-  }
+    host: true,
+    proxy: {
+      '/api/user': {
+        target: 'http://localhost:8081',
+        rewrite: (path) => path.replace(/^\/api\/user/, ''),
+      },
+      '/api/content': {
+        target: 'http://localhost:8082',
+        rewrite: (path) => path.replace(/^\/api\/content/, ''),
+      },
+    },
+  },
 })

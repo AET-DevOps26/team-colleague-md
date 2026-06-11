@@ -6,6 +6,15 @@ COPY . .
 RUN npm run build
 
 FROM nginx:alpine
+RUN apk add --no-cache gettext
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 EXPOSE 80
+CMD ["/bin/sh", "-c", \
+  "export USER_SERVICE_URL=${USER_SERVICE_URL:-http://localhost:8081}; \
+   export CONTENT_SERVICE_URL=${CONTENT_SERVICE_URL:-http://localhost:8082}; \
+   export MINIO_URL=${MINIO_URL:-http://localhost:9000}; \
+   envsubst '${USER_SERVICE_URL} ${CONTENT_SERVICE_URL} ${MINIO_URL}' \
+     < /etc/nginx/conf.d/default.conf.template \
+     > /etc/nginx/conf.d/default.conf && \
+   nginx -g 'daemon off;'"]
