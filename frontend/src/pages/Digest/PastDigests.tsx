@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthModal } from '../../contexts/ModalContext';
@@ -13,7 +13,7 @@ function getWeekLabel(dateStr: string): string {
   today.setHours(0, 0, 0, 0);
   const d = new Date(dateStr + 'T00:00:00');
   const diffDays = Math.floor((today.getTime() - d.getTime()) / 86400000);
-  if (diffDays < 7) return 'This week';
+  if (diffDays < 7) return 'This week';  // covers diffDays <= 0 (future dates) as well
   if (diffDays < 14) return 'Last week';
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
@@ -39,6 +39,10 @@ export default function PastDigests() {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [isLoggedIn]);
 
   const todayDigest = contentService.getTodayDigest();
   const allDigests = contentService.getDigestList(isLoggedIn);
@@ -166,7 +170,12 @@ function DigestCard({ item, onClick }: { item: DigestListItem; onClick: () => vo
       role="button"
       tabIndex={0}
       aria-label={`Read digest for ${item.displayDate}`}
-      onKeyDown={e => e.key === 'Enter' && onClick()}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
       <div className={styles.histCardBlock}>
         <div className={styles.histEyebrow}>
