@@ -1,4 +1,4 @@
-import type { Comment, FeedPage, Post, PostDetail } from '../types';
+import type { Comment, FeedPage, Post, PostDetail, DigestListItem, TopicCategory, TodayDigest } from '../types';
 
 const MOCK_TOPICS = [
   { id: 't1', name: 'LLMs' },
@@ -382,6 +382,105 @@ function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
+// ── Digest follow state (session-persistent) ──────────────
+const _defaultFollowed = new Set<string>([
+  'alignment', 'mech-interp', 'openai', 'anthropic', 'open-source', 'agents',
+]);
+const _followedTopics = new Set<string>(_defaultFollowed);
+let _savedTopics = new Set<string>(_defaultFollowed);
+
+// ── Digest mock data ───────────────────────────────────────
+const DIGEST_LIST_LOGGEDIN: DigestListItem[] = [
+  { date: '2026-06-10', displayDate: 'Wed Jun 10', title: 'GPT-5o sets new reasoning benchmarks', eventCount: 6, readTimeMinutes: 7 },
+  { date: '2026-06-09', displayDate: 'Tue Jun 09', title: 'Anthropic publishes Constitutional AI 2.0 update', eventCount: 5, readTimeMinutes: 5 },
+  { date: '2026-06-08', displayDate: 'Mon Jun 08', title: 'Agents week: 10 teams ship autonomous coding tools', eventCount: 9, readTimeMinutes: 10 },
+  { date: '2026-06-07', displayDate: 'Sun Jun 07', title: 'RLHF under scrutiny — alignment researchers push back', eventCount: 7, readTimeMinutes: 8 },
+  { date: '2026-06-06', displayDate: 'Sat Jun 06', title: 'Gemini 3.5 Flash launches with 2M context window', eventCount: 10, readTimeMinutes: 11 },
+  { date: '2026-06-05', displayDate: 'Fri Jun 05', title: 'Sparse autoencoders reveal hidden model circuits', eventCount: 6, readTimeMinutes: 6 },
+  { date: '2026-06-04', displayDate: 'Thu Jun 04', title: 'Claude 4 Opus scores 87% on SWE-bench', eventCount: 8, readTimeMinutes: 9 },
+  { date: '2026-06-03', displayDate: 'Wed Jun 03', title: 'Figure 02 robot learns manipulation from video', eventCount: 5, readTimeMinutes: 5 },
+  { date: '2026-06-02', displayDate: 'Tue Jun 02', title: 'OpenAI and Google race to ship voice-native models', eventCount: 7, readTimeMinutes: 7 },
+  { date: '2026-06-01', displayDate: 'Mon Jun 01', title: 'New evals expose reasoning gaps in frontier models', eventCount: 11, readTimeMinutes: 12 },
+  { date: '2026-05-31', displayDate: 'Sun May 31', title: 'Multi-agent orchestration: the new infrastructure layer', eventCount: 6, readTimeMinutes: 6 },
+  { date: '2026-05-30', displayDate: 'Sat May 30', title: 'vLLM 0.5 cuts inference latency by 40%', eventCount: 7, readTimeMinutes: 8 },
+  { date: '2026-05-29', displayDate: 'Fri May 29', title: 'Meta releases Llama 4 Scout — 109B MoE, open weights', eventCount: 8, readTimeMinutes: 9 },
+  { date: '2026-05-28', displayDate: 'Thu May 28', title: 'HuggingFace hits 1M public models milestone', eventCount: 4, readTimeMinutes: 4 },
+  { date: '2026-05-27', displayDate: 'Wed May 27', title: 'Robotics-foundation models: a progress report', eventCount: 7, readTimeMinutes: 8 },
+  { date: '2026-05-26', displayDate: 'Tue May 26', title: 'Mistral Medium 3 matches GPT-4o on coding benchmarks', eventCount: 5, readTimeMinutes: 5 },
+  { date: '2026-05-25', displayDate: 'Mon May 25', title: 'Five key mechanistic interpretability papers this week', eventCount: 10, readTimeMinutes: 11 },
+  { date: '2026-05-24', displayDate: 'Sun May 24', title: 'RAG vs fine-tuning: enterprise teams weigh in', eventCount: 6, readTimeMinutes: 7 },
+  { date: '2026-05-23', displayDate: 'Sat May 23', title: 'Google DeepMind ships Gemma 3 27B open model', eventCount: 5, readTimeMinutes: 5 },
+  { date: '2026-05-22', displayDate: 'Fri May 22', title: 'What chain-of-thought actually does under the microscope', eventCount: 9, readTimeMinutes: 10 },
+  { date: '2026-05-21', displayDate: 'Thu May 21', title: 'Browser-use and computer-use agents proliferate', eventCount: 7, readTimeMinutes: 7 },
+  { date: '2026-05-20', displayDate: 'Wed May 20', title: 'Multimodal week: audio, video, and 3D at the frontier', eventCount: 8, readTimeMinutes: 9 },
+  { date: '2026-05-19', displayDate: 'Tue May 19', title: 'LangChain 0.3 overhauls agent abstractions', eventCount: 4, readTimeMinutes: 4 },
+  { date: '2026-05-18', displayDate: 'Mon May 18', title: 'Benchmark inflation: why MMLU scores are plateauing', eventCount: 6, readTimeMinutes: 6 },
+  { date: '2026-05-17', displayDate: 'Sun May 17', title: 'OpenAI o4-mini tops math olympiad problems', eventCount: 7, readTimeMinutes: 8 },
+  { date: '2026-05-16', displayDate: 'Sat May 16', title: 'Pretraining data wars: quality over quantity', eventCount: 5, readTimeMinutes: 5 },
+  { date: '2026-05-15', displayDate: 'Fri May 15', title: 'Inference at scale: Groq, Cerebras, and vLLM compared', eventCount: 8, readTimeMinutes: 9 },
+  { date: '2026-05-14', displayDate: 'Thu May 14', title: 'Constitutional AI 2.0 — Anthropic details the next iteration', eventCount: 7, readTimeMinutes: 8 },
+  { date: '2026-05-13', displayDate: 'Wed May 13', title: 'Computer vision meets robotics: five breakout projects', eventCount: 6, readTimeMinutes: 6 },
+  { date: '2026-05-12', displayDate: 'Tue May 12', title: 'The state of open-source LLMs: May 2026 edition', eventCount: 9, readTimeMinutes: 10 },
+];
+
+const DIGEST_LIST_LOGGEDOUT: DigestListItem[] = [
+  { date: '2026-06-10', displayDate: 'Wed Jun 10', title: 'Gemini 3.5 launches — what the benchmarks show', eventCount: 8, readTimeMinutes: 8 },
+  { date: '2026-06-09', displayDate: 'Tue Jun 09', title: 'GPT-5o and the weekend reasoning wars', eventCount: 6, readTimeMinutes: 6 },
+  { date: '2026-06-08', displayDate: 'Mon Jun 08', title: 'Agents everywhere: a week of autonomous AI releases', eventCount: 12, readTimeMinutes: 13 },
+  { date: '2026-06-04', displayDate: 'Thu Jun 04', title: 'Claude 4 Opus scores 87% on SWE-bench', eventCount: 7, readTimeMinutes: 7 },
+];
+
+const TOPIC_CATEGORIES: TopicCategory[] = [
+  {
+    id: 'research',
+    label: 'Research',
+    topics: [
+      { id: 'alignment',   tag: 'alignment',   postCount: 142, isTrending: true,  activityRatio: 0.92, followerCount: 4210 },
+      { id: 'mech-interp', tag: 'mech-interp', postCount: 87,  isTrending: true,  activityRatio: 0.78, followerCount: 2890 },
+      { id: 'rlhf',        tag: 'rlhf',        postCount: 64,  isTrending: false, activityRatio: 0.55, followerCount: 1940 },
+      { id: 'reasoning',   tag: 'reasoning',   postCount: 109, isTrending: true,  activityRatio: 0.85, followerCount: 3120 },
+      { id: 'fine-tuning', tag: 'fine-tuning', postCount: 48,  isTrending: false, activityRatio: 0.42, followerCount: 1530 },
+      { id: 'pretraining', tag: 'pretraining', postCount: 33,  isTrending: false, activityRatio: 0.30, followerCount: 980  },
+    ],
+  },
+  {
+    id: 'models',
+    label: 'Models & Labs',
+    topics: [
+      { id: 'openai',          tag: 'openai',          postCount: 188, isTrending: true,  activityRatio: 0.98, followerCount: 9840 },
+      { id: 'anthropic',       tag: 'anthropic',       postCount: 165, isTrending: true,  activityRatio: 0.95, followerCount: 7720 },
+      { id: 'google-deepmind', tag: 'google-deepmind', postCount: 122, isTrending: true,  activityRatio: 0.82, followerCount: 6230 },
+      { id: 'meta-ai',         tag: 'meta-ai',         postCount: 98,  isTrending: false, activityRatio: 0.66, followerCount: 4110 },
+      { id: 'mistral',         tag: 'mistral',         postCount: 56,  isTrending: false, activityRatio: 0.48, followerCount: 2200 },
+      { id: 'open-source',     tag: 'open-source',     postCount: 74,  isTrending: false, activityRatio: 0.60, followerCount: 3350 },
+    ],
+  },
+  {
+    id: 'applications',
+    label: 'Applications',
+    topics: [
+      { id: 'agents',          tag: 'agents',          postCount: 221, isTrending: true,  activityRatio: 1.00, followerCount: 11200 },
+      { id: 'rag',             tag: 'rag',             postCount: 84,  isTrending: false, activityRatio: 0.62, followerCount: 3740  },
+      { id: 'coding',          tag: 'coding',          postCount: 67,  isTrending: false, activityRatio: 0.54, followerCount: 2890  },
+      { id: 'computer-vision', tag: 'computer-vision', postCount: 45,  isTrending: false, activityRatio: 0.38, followerCount: 1640  },
+      { id: 'robotics',        tag: 'robotics',        postCount: 39,  isTrending: false, activityRatio: 0.33, followerCount: 1420  },
+      { id: 'multimodal',      tag: 'multimodal',      postCount: 77,  isTrending: true,  activityRatio: 0.65, followerCount: 2970  },
+    ],
+  },
+  {
+    id: 'engineering',
+    label: 'Engineering',
+    topics: [
+      { id: 'inference',   tag: 'inference',   postCount: 58, isTrending: false, activityRatio: 0.50, followerCount: 2010 },
+      { id: 'vllm',        tag: 'vllm',        postCount: 44, isTrending: false, activityRatio: 0.40, followerCount: 1580 },
+      { id: 'langchain',   tag: 'langchain',   postCount: 36, isTrending: false, activityRatio: 0.32, followerCount: 1230 },
+      { id: 'benchmarks',  tag: 'benchmarks',  postCount: 93, isTrending: true,  activityRatio: 0.75, followerCount: 3480 },
+      { id: 'evals',       tag: 'evals',       postCount: 71, isTrending: false, activityRatio: 0.58, followerCount: 2620 },
+      { id: 'huggingface', tag: 'huggingface', postCount: 82, isTrending: false, activityRatio: 0.68, followerCount: 3070 },
+    ],
+  },
+];
+
 export const contentService = {
   getPosts(cursor: string | null, topic: string | null): Promise<FeedPage> {
     return new Promise((resolve) => {
@@ -459,13 +558,50 @@ export const contentService = {
     return BASE_POSTS.filter((p) => p.author.username === username);
   },
 
-  getTodayDigest() {
+  getTodayDigest(): TodayDigest {
+    const today = new Date();
+    const weekday = today.toLocaleDateString('en-US', { weekday: 'long' });
     return {
-      date: new Date().toISOString().split('T')[0],
-      title: "Today's AI Digest",
-      topStorySubtitle: 'OpenAI releases o3-mini with extended thinking at competitive pricing',
+      date: today.toISOString().split('T')[0],
+      title: `Your ${weekday} Digest`,
+      subtitle: 'Gemini 3.5 launches, Claude 4 tops SWE-bench, and the agents week in review',
       eventCount: 8,
-      readTimeMinutes: 6,
+      readTimeMinutes: 8,
+      generatedAt: '06:00 AM',
+      status: 'generated',
     };
+  },
+
+  getDigestList(isLoggedIn: boolean): DigestListItem[] {
+    return isLoggedIn ? DIGEST_LIST_LOGGEDIN : DIGEST_LIST_LOGGEDOUT;
+  },
+
+  getTopicCategories(): TopicCategory[] {
+    return TOPIC_CATEGORIES;
+  },
+
+  getFollowedTopics(): Set<string> {
+    return new Set(_followedTopics);
+  },
+
+  toggleTopicFollow(tag: string): void {
+    if (_followedTopics.has(tag)) {
+      _followedTopics.delete(tag);
+    } else {
+      _followedTopics.add(tag);
+    }
+  },
+
+  saveTopicPreferences(): void {
+    _savedTopics = new Set(_followedTopics);
+  },
+
+  getLastSavedTopics(): Set<string> {
+    return new Set(_savedTopics);
+  },
+
+  resetTopicPreferences(): void {
+    _followedTopics.clear();
+    _savedTopics.forEach(tag => _followedTopics.add(tag));
   },
 };
