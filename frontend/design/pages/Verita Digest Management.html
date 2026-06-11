@@ -51,8 +51,6 @@
 
   /* Topbar */
   .topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,0.88);backdrop-filter:saturate(160%) blur(10px);-webkit-backdrop-filter:saturate(160%) blur(10px);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;flex-shrink:0}
-  .back-btn{display:inline-flex;align-items:center;gap:5px;color:var(--text-secondary);font-size:12.5px;font-weight:500;padding:6px 8px 6px 4px;border-radius:7px;transition:background 120ms,color 120ms;flex-shrink:0}
-  .back-btn:hover{background:var(--bg-elevated);color:var(--text-primary)}
   .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto}
   .signin-btn{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:8px;background:var(--accent);color:#fff;font-size:12.5px;font-weight:600;transition:background 120ms}
   .signin-btn:hover{background:var(--accent-hover)}
@@ -61,11 +59,22 @@
   .avatar-btn::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 35%,#fff 0 5px,transparent 6px),radial-gradient(circle at 65% 32%,#fff 0 5px,transparent 6px),radial-gradient(ellipse at 50% 70%,#0a0a0a 0 7px,transparent 8px),linear-gradient(135deg,#c0a4ff 0%,#ff8a8a 45%,#ffc28a 100%)}
   .avatar-btn::after{content:"";position:absolute;left:30%;top:35%;width:2.5px;height:2.5px;background:#0a0a0a;border-radius:50%;box-shadow:18px 0 0 #0a0a0a}
 
-  /* Tab bar */
-  .tab-bar{display:flex;align-items:center;border-bottom:1px solid var(--border-subtle);padding:0 32px;background:var(--bg-base);flex-shrink:0}
-  .tab-btn{display:flex;align-items:center;gap:7px;padding:15px 2px;margin-right:28px;font-size:13.5px;font-weight:500;color:var(--text-tertiary);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 120ms,border-color 120ms}
+  /* Topbar back button — same as sister pages (Post Detail, Search, Profile) */
+  .back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);padding:6px 10px 6px 6px;border-radius:8px;font-size:12.5px;font-weight:500;flex-shrink:0;transition:background 120ms ease-out,color 120ms ease-out}
+  .back-btn:hover{background:var(--bg-elevated);color:var(--text-primary)}
+
+  /* Divider between the back-button and the tab group, so they read as
+     two separate units rather than one long row of links */
+  .topbar-divider{width:1px;height:20px;background:var(--border-default);flex-shrink:0;margin:0 4px}
+
+  /* Tabs living in the topbar — bottom-anchored underline so the active
+     tab visually "owns" the content below by meeting the topbar's bottom edge */
+  .topbar-tabs{display:flex;align-items:stretch;height:100%;flex-shrink:0;gap:0}
+  .tab-btn{position:relative;display:inline-flex;align-items:center;height:100%;padding:0 4px;margin-right:24px;font-size:13px;font-weight:500;color:var(--text-tertiary);transition:color 120ms ease-out;white-space:nowrap}
+  .tab-btn::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:transparent;transition:background 120ms ease-out}
   .tab-btn:hover{color:var(--text-primary)}
-  .tab-btn.active{color:var(--text-primary);border-bottom-color:var(--accent)}
+  .tab-btn.active{color:var(--text-primary);font-weight:600}
+  .tab-btn.active::after{background:var(--accent)}
 
   /* Content */
   .content{flex:1;position:relative}
@@ -73,11 +82,12 @@
   .tab-panel.active{display:block}
 
   /* Past Digests */
-  .past-digests-wrap{padding:28px 32px 120px;max-width:1400px}
+  .past-digests-wrap{padding:28px 32px 120px;max-width:1400px;margin:0 auto;width:100%}
 
   /* Today hero */
   .today-hero{background:#0A0A0A;color:#fff;border-radius:14px;padding:22px 24px 20px;margin-bottom:32px;position:relative;overflow:hidden}
   .today-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 80% 50%,rgba(255,255,255,0.04) 0%,transparent 60%);pointer-events:none}
+  .today-hero::after{content:"";position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:0.05;mix-blend-mode:overlay;pointer-events:none}
   .today-hero-inner{display:flex;align-items:flex-start;gap:20px;position:relative}
   .today-hero-text{flex:1;min-width:0}
   .today-label{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#ABABAB;margin-bottom:10px}
@@ -112,6 +122,8 @@
   .history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .history-header h2{font-size:13.5px;font-weight:600;color:var(--text-primary)}
   .history-header .count{font-size:12px;color:var(--text-tertiary);font-variant-numeric:tabular-nums}
+  .digest-group{margin-bottom:28px}
+  .digest-group-label{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border-subtle)}
   .digest-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
   @media(max-width:1200px){.digest-grid{grid-template-columns:repeat(3,1fr)}}
   @media(max-width:900px){.digest-grid{grid-template-columns:repeat(2,1fr)}}
@@ -120,15 +132,15 @@
   .hist-card:hover{transform:translateY(-1px)}
   .hist-card-block{background:oklch(97% 0.012 80);border-radius:12px;padding:18px 18px 16px;transition:box-shadow 220ms ease-out}
   .hist-card:hover .hist-card-block{box-shadow:0 8px 24px -14px rgba(0,0,0,0.12)}
-  .hist-date{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:14px;font-family:var(--font-sans)}
+  .hist-eyebrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .hist-date{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);font-family:var(--font-sans)}
+  .hist-meta-inline{font-size:10px;color:var(--text-tertiary);font-variant-numeric:tabular-nums;letter-spacing:0.02em}
   .hist-pull{font-family:var(--font-serif);font-style:italic;font-weight:500;font-size:16px;line-height:1.5;color:var(--text-primary);border-left:2px solid var(--border-default);padding-left:12px;margin:0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}
   .hist-body{padding:12px 2px 4px}
-  .hist-title{font-family:var(--font-sans);font-style:normal;font-weight:700;font-size:17px;line-height:1.3;letter-spacing:-0.015em;color:var(--text-primary);margin:0 0 10px;text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-  .hist-pills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+  .hist-title{font-family:var(--font-sans);font-style:normal;font-weight:700;font-size:19px;line-height:1.3;letter-spacing:-0.015em;color:var(--text-primary);margin:0 0 10px;text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .hist-pills{display:none}
   .hist-pill{font-size:10.5px;font-weight:500;color:var(--text-secondary);background:var(--bg-elevated);padding:3px 7px;border-radius:4px}
-  .hist-footer{display:flex;align-items:center;justify-content:space-between;padding-top:4px;margin-top:4px}
-  .hist-footer-meta{font-size:12px;color:var(--text-tertiary);display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
-  .hist-footer-meta .dot-sep{opacity:0.5}
+  .hist-footer{display:flex;align-items:center;justify-content:flex-end;padding-top:4px;margin-top:4px}
   .hist-read-link{font-size:12px;font-weight:500;color:var(--text-secondary);display:flex;align-items:center;gap:3px;transition:color 120ms}
   .hist-card:hover .hist-read-link{color:var(--text-primary)}
 
@@ -138,7 +150,7 @@
   .load-more-btn:hover{background:var(--bg-elevated);color:var(--text-primary)}
 
   /* Manage Topics */
-  .topics-wrap{padding:24px 32px 100px;max-width:1400px}
+  .topics-wrap{padding:24px 32px 100px;max-width:1400px;margin:0 auto;width:100%}
   .topics-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
   .topics-title{font-size:13.5px;font-weight:600;color:var(--text-secondary)}
   .topics-search{height:36px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-surface);padding:0 12px 0 34px;font:400 13px var(--font-sans);color:var(--text-primary);width:260px;outline:none;transition:border-color 120ms,box-shadow 120ms,background 120ms}
@@ -160,13 +172,14 @@
   .topic-card.overflow-hidden{display:none}
   .topic-row.expanded .topic-card.overflow-hidden{display:block;animation:card-appear 180ms ease-out both}
   @keyframes card-appear{from{opacity:0;transform:translateY(6px) scale(0.97)}to{opacity:1;transform:none}}
-  .topic-card{background:var(--bg-base);border:1px solid var(--border-default);border-radius:10px;padding:14px 16px 12px;transition:border-color 120ms,background 120ms;min-width:0}
+  .topic-card{background:var(--bg-base);border:1px solid var(--border-default);border-radius:10px;padding:14px 16px 12px;transition:border-color 120ms,background 120ms;min-width:0;display:flex;flex-direction:column}
   .topic-card.followed{background:var(--bg-surface);border-color:var(--text-primary)}
   .topic-card .tag-name{font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:4px;line-height:1.2}
   .topic-card .tag-name .hash{color:var(--text-tertiary);font-weight:600}
-  .topic-card .post-count{font-size:11.5px;color:var(--text-secondary);margin-bottom:10px;display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
-  .post-count .hot{color:var(--success);font-weight:600}
-  .activity-bar-wrap{height:3px;background:var(--bg-elevated);border-radius:2px;margin-bottom:12px;overflow:hidden}
+  .topic-card .post-count{font-size:11.5px;color:var(--text-secondary);margin-bottom:2px;font-variant-numeric:tabular-nums}
+  .trending-row{font-size:11px;font-weight:600;color:var(--success);height:1.4em;margin-bottom:8px}
+  .trending-row.empty{visibility:hidden}
+  .activity-bar-wrap{height:3px;background:var(--bg-elevated);border-radius:2px;margin-bottom:12px;overflow:hidden;margin-top:auto}
   .activity-bar{height:100%;background:var(--text-tertiary);border-radius:2px;transition:background 200ms}
   .topic-card.followed .activity-bar{background:var(--accent)}
   .topic-card-footer{display:flex;align-items:center;justify-content:space-between;gap:6px}
@@ -231,10 +244,15 @@
 
 <main class="main">
   <header class="topbar">
-    <a class="back-btn" href="#">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Explore
+    <a class="back-btn" id="backBtn" href="#" aria-label="Back to Explore">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <span>Explore</span>
     </a>
+    <span class="topbar-divider" aria-hidden="true"></span>
+    <div class="topbar-tabs" role="tablist" aria-label="Digest views">
+      <button class="tab-btn active" id="tab-past" type="button" role="tab" aria-selected="true" onclick="switchTab('past')">Past Digests</button>
+      <button class="tab-btn" id="tab-topics" type="button" role="tab" aria-selected="false" onclick="switchTab('topics')">Manage Topics</button>
+    </div>
     <div class="topbar-auth-toggle">
       <span class="topbar-auth-toggle-label">Preview state</span>
       <div class="topbar-auth-toggle-row" role="group">
@@ -244,11 +262,6 @@
     </div>
 <div class="topbar-right" id="topbar-right"></div>
   </header>
-
-  <div class="tab-bar">
-    <button class="tab-btn active" id="tab-past" type="button" onclick="switchTab('past')">Past Digests</button>
-    <button class="tab-btn" id="tab-topics" type="button" onclick="switchTab('topics')">Manage Topics</button>
-  </div>
 
   <div class="tab-panel active" id="panel-past">
     <div class="past-digests-wrap">
@@ -291,7 +304,7 @@
         <h2>Past digests</h2>
         <span class="count" id="history-count"></span>
       </div>
-      <div class="digest-grid" id="digest-grid"></div>
+      <div id="digest-grid"></div>
       <div class="load-more-wrap" id="load-more-wrap" style="display:none">
         <button class="load-more-btn" type="button" onclick="loadMoreDigests()">Load more <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button>
       </div>
@@ -426,7 +439,8 @@ function renderTopicCard(t, catId, isOverflow){
   var barW = Math.round(t.activity*100);
   return '<div class="topic-card'+(t.followed?' followed':'')+(isOverflow?' overflow-hidden':'')+'" id="tc-'+t.tag+'" data-tag="'+t.tag+'">'
     +'<div class="tag-name"><span class="hash">#</span>'+t.tag+'</div>'
-    +'<div class="post-count">'+t.posts+' posts this week'+(t.hot?'<span class="hot"> ↑ trending</span>':'')+'</div>'
+    +'<div class="post-count">'+t.posts+' posts this week</div>'
+    +'<div class="trending-row'+(t.hot?'':' empty')+'">'+(t.hot?'↑ trending':'↑ trending')+'</div>'
     +'<div class="activity-bar-wrap"><div class="activity-bar" style="width:'+barW+'%"></div></div>'
     +'<div class="topic-card-footer">'
     +'<button class="follow-btn" onclick="toggleFollow(\''+t.tag+'\')" type="button">'+(t.followed?'Following':'Follow')+'</button>'
@@ -462,16 +476,41 @@ function renderAllCategories(filter){
 function renderDigestCard(d){
   return '<a class="hist-card" href="#">'
     +'<div class="hist-card-block">'
+    +'<div class="hist-eyebrow">'
     +'<div class="hist-date">'+d.date+'</div>'
+    +'<div class="hist-meta-inline">'+d.events+' events · ~'+d.mins+' min</div>'
+    +'</div>'
     +'<blockquote class="hist-pull">'+d.title+'</blockquote>'
     +'</div>'
     +'<div class="hist-body">'
     +'<div class="hist-pills">'+d.pills.slice(0,3).map(function(p){ return '<span class="hist-pill">#'+p+'</span>'; }).join('')+'</div>'
     +'<div class="hist-footer">'
-    +'<div class="hist-footer-meta"><span>'+d.events+' events</span><span class="dot-sep"> · </span><span>~'+d.mins+' min</span></div>'
     +'<span class="hist-read-link">Read <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>'
     +'</div>'
     +'</div></a>';
+}
+
+function getWeekLabel(dateStr){
+  var months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  var parts = dateStr.trim().split(' ');
+  var mon = months[parts[1]]; var day = parseInt(parts[2],10);
+  var today = new Date(2026,4,13);
+  var d = new Date(2026, mon !== undefined ? mon : 4, day);
+  var diffDays = Math.round((today - d) / 86400000);
+  if(diffDays < 7) return 'This week';
+  if(diffDays < 14) return 'Last week';
+  return parts[1]+' '+parts[2].replace(/\d+/,function(m){ return parseInt(m); }).replace(/^(\w+ )(\d+).*$/,'$1')+parts[2];
+}
+
+function groupDigestsByWeek(data){
+  var groups = [];
+  var seen = {};
+  data.forEach(function(d){
+    var label = getWeekLabel(d.date);
+    if(!seen[label]){ seen[label]=true; groups.push({label:label, items:[]}); }
+    groups[groups.length-1].items.push(d);
+  });
+  return groups;
 }
 
 function renderDigestGrid(){
@@ -479,7 +518,14 @@ function renderDigestGrid(){
   var data = isLoggedIn ? DIGESTS : DIGESTS_LOGGEDOUT;
   var visible = data.slice(0, PAGE_SIZE);
   document.getElementById('history-count').textContent = data.length+' digests';
-  document.getElementById('digest-grid').innerHTML = visible.map(renderDigestCard).join('');
+  var groups = groupDigestsByWeek(visible);
+  var html = groups.map(function(g){
+    return '<div class="digest-group">'
+      +'<div class="digest-group-label">'+g.label+'</div>'
+      +'<div class="digest-grid">'+g.items.map(renderDigestCard).join('')+'</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('digest-grid').innerHTML = html;
   var wrap = document.getElementById('load-more-wrap');
   wrap.style.display = data.length > PAGE_SIZE ? 'block' : 'none';
 }
@@ -488,13 +534,28 @@ function loadMoreDigests(){
   digestPage++;
   var data = isLoggedIn ? DIGESTS : DIGESTS_LOGGEDOUT;
   var newCards = data.slice((digestPage-1)*PAGE_SIZE, digestPage*PAGE_SIZE);
-  var grid = document.getElementById('digest-grid');
-  newCards.forEach(function(d){
-    var tmp = document.createElement('div');
-    tmp.innerHTML = renderDigestCard(d).trim();
-    var card = tmp.firstChild;
-    card.style.animation = 'card-appear 200ms ease-out both';
-    grid.appendChild(card);
+  var container = document.getElementById('digest-grid');
+  var groups = groupDigestsByWeek(newCards);
+  groups.forEach(function(g){
+    var existingGroups = container.querySelectorAll('.digest-group-label');
+    var matchGroup = null;
+    existingGroups.forEach(function(el){ if(el.textContent===g.label) matchGroup=el.parentNode; });
+    if(matchGroup){
+      var grid = matchGroup.querySelector('.digest-grid');
+      g.items.forEach(function(d){
+        var tmp = document.createElement('div');
+        tmp.innerHTML = renderDigestCard(d).trim();
+        var card = tmp.firstChild;
+        card.style.animation = 'card-appear 200ms ease-out both';
+        grid.appendChild(card);
+      });
+    } else {
+      var groupDiv = document.createElement('div');
+      groupDiv.className = 'digest-group';
+      groupDiv.innerHTML = '<div class="digest-group-label">'+g.label+'</div>'
+        +'<div class="digest-grid">'+g.items.map(renderDigestCard).join('')+'</div>';
+      container.appendChild(groupDiv);
+    }
   });
   var shown = digestPage * PAGE_SIZE;
   document.getElementById('load-more-wrap').style.display = shown >= data.length ? 'none' : 'block';
@@ -528,8 +589,11 @@ function setHeroState(state){
 function switchTab(tab){
   document.getElementById('tab-past').classList.toggle('active', tab==='past');
   document.getElementById('tab-topics').classList.toggle('active', tab==='topics');
+  document.getElementById('tab-past').setAttribute('aria-selected', tab==='past' ? 'true' : 'false');
+  document.getElementById('tab-topics').setAttribute('aria-selected', tab==='topics' ? 'true' : 'false');
   document.getElementById('panel-past').classList.toggle('active', tab==='past');
   document.getElementById('panel-topics').classList.toggle('active', tab==='topics');
+
 }
 
 function toggleFollow(tag){
@@ -601,7 +665,7 @@ setAuthState(true);
       if (label.startsWith('settings')) { e.preventDefault(); nav('Verita Settings.html'); return; }
     }
 
-    if (el.closest('.back-btn') || el.closest('.topbar-back')) { e.preventDefault(); nav('Verita Home.html'); return; }
+    if (el.closest('.back-btn') || el.closest('.topbar-back') || el.closest('.crumb-link')) { e.preventDefault(); nav('Verita Home.html'); return; }
     if (el.closest('.nav-cta')) { e.preventDefault(); nav('Verita Post Editor.html'); return; }
   }, true);
 })();
