@@ -27,13 +27,12 @@ public class Clients {
     private final RestClient userClient;
     private final RestClient genaiClient;
 
-    public Clients(RestClient.Builder builder,
-                   @Value("${app.user-service-base-url}") String userUrl,
+    public Clients(@Value("${app.user-service-base-url}") String userUrl,
                    @Value("${app.genai-service-base-url}") String genaiUrl) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
         factory.setReadTimeout(Duration.ofSeconds(10));
-        this.userClient  = builder.requestFactory(factory).baseUrl(userUrl).build();
+        this.userClient  = RestClient.builder().requestFactory(factory).baseUrl(userUrl).build();
         this.genaiClient = this.userClient.mutate().baseUrl(genaiUrl).build();
     }
 
