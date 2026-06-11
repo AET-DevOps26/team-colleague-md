@@ -22,7 +22,6 @@ export default function Digest() {
 
   const handleSave = useCallback(() => {
     contentService.saveTopicPreferences();
-    setFollowedTopics(new Set(contentService.getFollowedTopics()));
     setToastVisible(true);
   }, []);
 
