@@ -1,41 +1,53 @@
-/* ── Tab bar ─────────────────────────────────────── */
-.tabBar {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border-subtle);
-  padding: 0 32px;
-  background: var(--bg-base);
-  flex-shrink: 0;
-}
-
+/* ── Tabs (live inside PostDetailTopbar) ─────────── */
 .tabBtn {
-  display: flex;
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 18px 4px;
-  margin-right: 32px;
-  font-size: 15px;
+  height: 100%;
+  padding: 0 4px;
+  margin-right: 24px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-tertiary);
   border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
   background: none;
   cursor: pointer;
-  transition: color 120ms, border-color 120ms;
+  white-space: nowrap;
+  transition: color 120ms ease-out;
+}
+
+.tabBtn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: transparent;
+  transition: background 120ms ease-out;
 }
 
 .tabBtn:hover { color: var(--text-primary); }
 
 .tabBtnActive {
   color: var(--text-primary);
-  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.tabBtnActive::after { background: var(--accent); }
+
+/* ── Content area ────────────────────────────────── */
+.content {
+  flex: 1;
+  position: relative;
 }
 
 /* ── Past Digests ─────────────────────────────────── */
 .pastDigestsWrap {
   padding: 28px 32px 120px;
   max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* Today hero */
@@ -401,6 +413,8 @@
 .topicsWrap {
   padding: 24px 32px 100px;
   max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .topicsHeader {

@@ -32,33 +32,41 @@ export default function Digest() {
 
   const hideToast = useCallback(() => setToastVisible(false), []);
 
+  const tabs = (
+    <>
+      <button
+        className={`${styles.tabBtn} ${activeTab === 'past' ? styles.tabBtnActive : ''}`}
+        role="tab"
+        aria-selected={activeTab === 'past'}
+        onClick={() => setActiveTab('past')}
+      >
+        Past Digests
+      </button>
+      <button
+        className={`${styles.tabBtn} ${activeTab === 'topics' ? styles.tabBtnActive : ''}`}
+        role="tab"
+        aria-selected={activeTab === 'topics'}
+        onClick={() => setActiveTab('topics')}
+      >
+        Manage Topics
+      </button>
+    </>
+  );
+
   return (
     <>
-      <PostDetailTopbar />
-      <div className={styles.tabBar}>
-        <button
-          className={`${styles.tabBtn} ${activeTab === 'past' ? styles.tabBtnActive : ''}`}
-          onClick={() => setActiveTab('past')}
-        >
-          Past Digests
-        </button>
-        <button
-          className={`${styles.tabBtn} ${activeTab === 'topics' ? styles.tabBtnActive : ''}`}
-          onClick={() => setActiveTab('topics')}
-        >
-          Manage Topics
-        </button>
+      <PostDetailTopbar tabs={tabs} />
+      <div className={styles.content}>
+        {activeTab === 'past' && <PastDigests />}
+        {activeTab === 'topics' && (
+          <ManageTopics
+            followedTopics={followedTopics}
+            onToggle={handleToggle}
+            onSave={handleSave}
+            onReset={handleReset}
+          />
+        )}
       </div>
-
-      {activeTab === 'past' && <PastDigests />}
-      {activeTab === 'topics' && (
-        <ManageTopics
-          followedTopics={followedTopics}
-          onToggle={handleToggle}
-          onSave={handleSave}
-          onReset={handleReset}
-        />
-      )}
 
       <Toast message="Preferences saved" show={toastVisible} onHide={hideToast} />
     </>
