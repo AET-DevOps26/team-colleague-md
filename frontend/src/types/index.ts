@@ -72,6 +72,39 @@ export interface DigestSummary {
   readTimeMinutes: number;
 }
 
+export interface TodayDigest {
+  date: string;
+  title: string;
+  subtitle: string;
+  eventCount: number;
+  readTimeMinutes: number;
+  generatedAt: string;
+  status: 'generated' | 'generating';
+}
+
+export interface DigestListItem {
+  date: string;
+  displayDate: string;
+  title: string;
+  eventCount: number;
+  readTimeMinutes: number;
+}
+
+export interface TopicItem {
+  id: string;
+  tag: string;
+  postCount: number;
+  isTrending: boolean;
+  activityRatio: number;
+  followerCount: number;
+}
+
+export interface TopicCategory {
+  id: string;
+  label: string;
+  topics: TopicItem[];
+}
+
 export interface FeedPage {
   posts: Post[];
   nextCursor: string | null;
