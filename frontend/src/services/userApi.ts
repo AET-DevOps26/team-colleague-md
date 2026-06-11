@@ -3,7 +3,7 @@ import { getToken, setAccessToken, clearSession } from './tokenStore';
 import { emit } from './authEvents';
 
 const userApi = axios.create({
-  baseURL: 'http://localhost:8081',
+  baseURL: '/user',
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
   timeout: 10000,

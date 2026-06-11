@@ -21,3 +21,8 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     alias: recommendation-postgresql
     condition: recommendation-postgresql.enabled
+  - name: minio
+    version: 14.6.8
+    repository: https://charts.bitnami.com/bitnami
+    alias: minio
+    condition: minio.enabled
