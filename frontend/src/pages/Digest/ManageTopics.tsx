@@ -16,13 +16,13 @@ interface ManageTopicsProps {
   onReset: () => void;
 }
 
+const DEFAULT_VISIBLE = 5;
+
 export default function ManageTopics({ followedTopics, onToggle, onSave, onReset }: ManageTopicsProps) {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
-
-  const DEFAULT_VISIBLE = 5;
   const allCategories = contentService.getTopicCategories();
 
   const filteredCategories: TopicCategory[] = searchQuery
@@ -78,7 +78,7 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
               type="text"
               placeholder="Filter topics…"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => { setSearchQuery(e.target.value); setExpandedCats(new Set()); }}
             />
           </div>
         </div>
@@ -151,7 +151,7 @@ function TopicCard({
       </div>
       <div className={styles.postCount}>{topic.postCount} posts this week</div>
       <div className={`${styles.trendingRow} ${!topic.isTrending ? styles.trendingRowEmpty : ''}`}>
-        {topic.isTrending ? '↑ trending' : ' '}
+        {topic.isTrending ? '↑ trending' : null}
       </div>
       <div className={styles.activityBarWrap}>
         <div
@@ -163,6 +163,7 @@ function TopicCard({
         <button
           className={`${styles.followBtn} ${followed ? styles.followBtnFollowed : ''}`}
           onClick={() => onToggle(topic.tag)}
+          aria-label={followed ? `Unfollow ${topic.tag}` : `Follow ${topic.tag}`}
         >
           {followed ? 'Following' : 'Follow'}
         </button>
