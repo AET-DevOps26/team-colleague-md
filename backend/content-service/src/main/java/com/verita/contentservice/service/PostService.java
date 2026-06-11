@@ -20,7 +20,6 @@ import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
 import com.verita.model.Topic;
-import com.verita.model.TopicResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.OffsetDateTime;
@@ -200,13 +199,6 @@ public class PostService {
         UUID userId = currentUserId(authorization);
         return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
                 userId, PostStatus.DRAFT, PageRequest.of(page, clampSize(size))), userId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<TopicResponse> trendingTopics() {
-        return topicRepository.findTop10ByOrderByTotalPostCountDesc().stream()
-                .map(t -> new TopicResponse().id(t.getId()).name(t.getName()).usageCount(t.getTotalPostCount()))
-                .toList();
     }
 
     @Transactional(readOnly = true)

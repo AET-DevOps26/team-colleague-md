@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 public interface TopicRepository extends JpaRepository<TopicEntity, UUID> {
     Optional<TopicEntity> findByNameIgnoreCase(String name);
     List<TopicEntity> findTop10ByOrderByTotalPostCountDesc();
@@ -16,6 +17,27 @@ public interface TopicRepository extends JpaRepository<TopicEntity, UUID> {
     @Modifying
     @Query(value = "UPDATE topics SET total_post_count = GREATEST(0, total_post_count - 1) WHERE id = :id", nativeQuery = true)
     void decrementTotalPostCount(@Param("id") UUID id);
+
+    @Query(value = """
+            SELECT t.* FROM topics t
+            LEFT JOIN topic_categories c ON c.id = t.category_id
+            ORDER BY COALESCE(c.sort_order, 9999) ASC, t.sort_order ASC
+            """, nativeQuery = true)
+    List<TopicEntity> findAllOrderedByCategoryAndTopicSort();
+
+    @Query(value = """
+            SELECT * FROM topics
+            WHERE name ILIKE '%' || :q || '%'
+               OR display_name ILIKE '%' || :q || '%'
+            ORDER BY total_post_count DESC
+            LIMIT 20
+            """, nativeQuery = true)
+    List<TopicEntity> searchByQuery(@Param("q") String q);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE TopicEntity t SET t.followerCount = GREATEST(0, t.followerCount + :delta) WHERE t.name = :name")
+    int applyFollowerCountDelta(@Param("name") String name, @Param("delta") int delta);
 
     @Modifying
     @Query(value = """

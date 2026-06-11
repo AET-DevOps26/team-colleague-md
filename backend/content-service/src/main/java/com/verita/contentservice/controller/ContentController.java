@@ -4,9 +4,11 @@ import com.verita.api.ApiApi;
 import com.verita.contentservice.service.CommentService;
 import com.verita.contentservice.service.InteractionService;
 import com.verita.contentservice.service.PostService;
+import com.verita.contentservice.service.TopicService;
 import com.verita.model.CommentLikeResponse;
 import com.verita.model.CommentRequest;
 import com.verita.model.CommentResponse;
+import com.verita.model.FollowerCountDeltaRequest;
 import com.verita.model.LikeRequest;
 import com.verita.model.PostCard;
 import com.verita.model.PostLikeResponse;
@@ -14,6 +16,7 @@ import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
+import com.verita.model.TopicCategoryGroup;
 import com.verita.model.TopicResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -32,12 +35,14 @@ public class ContentController implements ApiApi {
     private final PostService postService;
     private final CommentService commentService;
     private final InteractionService interactionService;
+    private final TopicService topicService;
 
     public ContentController(PostService postService, CommentService commentService,
-                             InteractionService interactionService) {
+                             InteractionService interactionService, TopicService topicService) {
         this.postService = postService;
         this.commentService = commentService;
         this.interactionService = interactionService;
+        this.topicService = topicService;
     }
 
     @Override
@@ -152,8 +157,24 @@ public class ContentController implements ApiApi {
     }
 
     @Override
+    public ResponseEntity<List<TopicCategoryGroup>> getTopics() {
+        return ResponseEntity.ok(topicService.getAllGrouped());
+    }
+
+    @Override
+    public ResponseEntity<List<TopicResponse>> searchTopics(String q) {
+        return ResponseEntity.ok(topicService.search(q));
+    }
+
+    @Override
+    public ResponseEntity<Void> updateTopicFollowerCounts(FollowerCountDeltaRequest followerCountDeltaRequest) {
+        topicService.applyFollowerCountDeltas(followerCountDeltaRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
     public ResponseEntity<List<TopicResponse>> getTrendingTopics() {
-        return ResponseEntity.ok(postService.trendingTopics());
+        return ResponseEntity.ok(topicService.trendingTopics());
     }
 
     private String currentAuth() {

@@ -485,11 +485,62 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
   # --- TOPICS ---
+  /api/v1/topics:
+    get:
+      operationId: getTopics
+      summary: Get all topics grouped by category
+      description: Returns all topics with full stats, grouped by category. Used by the Manage Topics page.
+      tags: [Topics]
+      security: []
+      responses:
+        '200':
+          description: Topics grouped by category
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/TopicCategoryGroup' } }
+
+  /api/v1/topics/search:
+    get:
+      operationId: searchTopics
+      summary: Autocomplete topic search
+      tags: [Topics]
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Matching topics (max 20)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/TopicResponse' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/topics/follower-counts:
+    post:
+      operationId: updateTopicFollowerCounts
+      summary: Apply batch follower-count deltas
+      description: Increments or decrements follower_count for each named topic. +1 = follow, -1 = unfollow.
+      tags: [Topics]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FollowerCountDeltaRequest' }
+      responses:
+        '204':
+          description: Deltas applied
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /api/v1/topics/trending:
     get:
       operationId: getTrendingTopics
       summary: Get popular topics
-      tags: [Discovery]
+      tags: [Topics]
       security: []
       responses:
         '200':
@@ -673,7 +724,35 @@ components:
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
-        usageCount: { type: integer }
+        displayName: { type: string, nullable: true }
+        categoryId: { type: string, nullable: true }
+        sortOrder: { type: integer }
+        totalPostCount: { type: integer }
+        postsThisWeek: { type: integer }
+        postsPrevWeek: { type: integer }
+        activityScore: { type: number, description: "Normalised 0.000–1.000" }
+        isHot: { type: boolean }
+        followerCount: { type: integer }
+
+    TopicCategoryGroup:
+      type: object
+      description: A category with all its topics, used by the Manage Topics page.
+      properties:
+        id: { type: string, description: "Category slug, e.g. 'research'" }
+        label: { type: string }
+        sortOrder: { type: integer }
+        topics:
+          type: array
+          items: { $ref: '#/components/schemas/TopicResponse' }
+
+    FollowerCountDeltaRequest:
+      type: object
+      required: [deltas]
+      description: Batch follower-count adjustment. Keys are topic name slugs, values are +1 (follow) or -1 (unfollow).
+      properties:
+        deltas:
+          type: object
+          additionalProperties: { type: integer }
 
     # --- ERRORS ---
     ErrorResponse:
