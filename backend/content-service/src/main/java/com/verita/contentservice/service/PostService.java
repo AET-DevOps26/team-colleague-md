@@ -2,7 +2,7 @@ package com.verita.contentservice.service;
 
 import com.verita.contentservice.domain.PostEntity;
 import com.verita.contentservice.domain.PostStatus;
-import com.verita.contentservice.domain.TagEntity;
+import com.verita.contentservice.domain.TopicEntity;
 import com.verita.contentservice.domain.VoteEntity;
 import com.verita.contentservice.domain.VoteTargetType;
 import com.verita.contentservice.domain.VoteType;
@@ -10,7 +10,7 @@ import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.PostRepository;
-import com.verita.contentservice.repository.TagRepository;
+import com.verita.contentservice.repository.TopicRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.support.Clients;
 import com.verita.model.AuthorSummary;
@@ -54,17 +54,17 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 public class PostService {
     private static final Logger log = LoggerFactory.getLogger(PostService.class);
     private final PostRepository postRepository;
-    private final TagRepository tagRepository;
+    private final TopicRepository topicRepository;
     private final VoteRepository voteRepository;
     private final BookmarkRepository bookmarkRepository;
     private final Clients clients;
     private final ApplicationEventPublisher eventPublisher;
 
-    public PostService(PostRepository postRepository, TagRepository tagRepository,
+    public PostService(PostRepository postRepository, TopicRepository topicRepository,
                        VoteRepository voteRepository, BookmarkRepository bookmarkRepository,
                        Clients clients, ApplicationEventPublisher eventPublisher) {
         this.postRepository = postRepository;
-        this.tagRepository = tagRepository;
+        this.topicRepository = topicRepository;
         this.voteRepository = voteRepository;
         this.bookmarkRepository = bookmarkRepository;
         this.clients = clients;
@@ -115,7 +115,7 @@ public class PostService {
             post.setSourceUrls(request.getSourceUrl().stream().map(URI::toString).toList());
         }
         if (request.getTopics() != null) {
-            applyTags(post, request.getTopics());
+            applyTopics(post, request.getTopics());
         }
         if (request.getStatus() != null) {
             post.setStatus(request.getStatus() == PostPatchRequest.StatusEnum.DRAFT
@@ -143,7 +143,7 @@ public class PostService {
         UUID currentUser = optionalUserId(authorization);
         Page<PostEntity> result = (topic == null || topic.isBlank())
                 ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
-                : postRepository.findByDeletedFalseAndStatusAndTags_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, topic, pageable);
+                : postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, topic, pageable);
         return mapPage(result, currentUser);
     }
 
@@ -204,7 +204,7 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public List<TopicResponse> trendingTopics() {
-        return tagRepository.findTop10ByOrderByUsageCountDesc().stream()
+        return topicRepository.findTop10ByOrderByUsageCountDesc().stream()
                 .map(t -> new TopicResponse().id(t.getId()).name(t.getName()).usageCount((int) t.getUsageCount()))
                 .toList();
     }
@@ -238,29 +238,29 @@ public class PostService {
         post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>()
                 : request.getSourceUrl().stream().map(URI::toString).toList());
         post.setStatus(request.getStatus() == PostRequest.StatusEnum.DRAFT ? PostStatus.DRAFT : PostStatus.PUBLISHED);
-        applyTags(post, request.getTopics() == null ? List.of() : request.getTopics());
+        applyTopics(post, request.getTopics() == null ? List.of() : request.getTopics());
     }
 
-    private void applyTags(PostEntity post, List<String> tagNames) {
-        Set<TagEntity> oldTags = post.getTags() != null ? new LinkedHashSet<>(post.getTags()) : new LinkedHashSet<>();
-        Set<UUID> oldTagIds = oldTags.stream().map(TagEntity::getId).collect(Collectors.toSet());
+    private void applyTopics(PostEntity post, List<String> topicNames) {
+        Set<TopicEntity> oldTopics = post.getTopics() != null ? new LinkedHashSet<>(post.getTopics()) : new LinkedHashSet<>();
+        Set<UUID> oldTopicIds = oldTopics.stream().map(TopicEntity::getId).collect(Collectors.toSet());
 
-        Set<TagEntity> newTags = new LinkedHashSet<>();
-        for (String name : tagNames) {
-            newTags.add(tagRepository.findByNameIgnoreCase(name).orElseGet(() -> {
-                TagEntity t = new TagEntity();
+        Set<TopicEntity> newTopics = new LinkedHashSet<>();
+        for (String name : topicNames) {
+            newTopics.add(topicRepository.findByNameIgnoreCase(name).orElseGet(() -> {
+                TopicEntity t = new TopicEntity();
                 t.setName(name);
-                return tagRepository.save(t);
+                return topicRepository.save(t);
             }));
         }
-        Set<UUID> newTagIds = newTags.stream().map(TagEntity::getId).collect(Collectors.toSet());
-        post.setTags(newTags);
+        Set<UUID> newTopicIds = newTopics.stream().map(TopicEntity::getId).collect(Collectors.toSet());
+        post.setTopics(newTopics);
 
-        for (TagEntity tag : oldTags) {
-            if (!newTagIds.contains(tag.getId())) tagRepository.decrementUsageCount(tag.getId());
+        for (TopicEntity topic : oldTopics) {
+            if (!newTopicIds.contains(topic.getId())) topicRepository.decrementUsageCount(topic.getId());
         }
-        for (TagEntity tag : newTags) {
-            if (!oldTagIds.contains(tag.getId())) tagRepository.incrementUsageCount(tag.getId());
+        for (TopicEntity topic : newTopics) {
+            if (!oldTopicIds.contains(topic.getId())) topicRepository.incrementUsageCount(topic.getId());
         }
     }
 
@@ -325,7 +325,7 @@ public class PostService {
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .content(post.getContent())
-                .topics(post.getTags().stream().map(this::toApiTopic).toList())
+                .topics(post.getTopics().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
                 .readTimeMinutes(readTime(post.getContent()))
                 .likeCount((int) post.getLikeCount())
@@ -355,7 +355,7 @@ public class PostService {
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .content(post.getContent())
-                .topics(post.getTags().stream().map(this::toApiTopic).toList())
+                .topics(post.getTopics().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
                 .readTimeMinutes(readTime(post.getContent()))
                 .likeCount((int) post.getLikeCount())
@@ -397,7 +397,7 @@ public class PostService {
         return summary;
     }
 
-    private Topic toApiTopic(TagEntity entity) {
+    private Topic toApiTopic(TopicEntity entity) {
         return new Topic().id(entity.getId()).name(entity.getName());
     }
 
@@ -416,7 +416,7 @@ public class PostService {
         if (post.getCoverImageUrl() != null && !post.getCoverImageUrl().isBlank()) {
             card.coverImageUrl(URI.create(post.getCoverImageUrl()));
         }
-        if (post.getTags() != null) card.setTopics(post.getTags().stream().map(this::toApiTopic).toList());
+        if (post.getTopics() != null) card.setTopics(post.getTopics().stream().map(this::toApiTopic).toList());
         if (post.getContent() != null) card.readTimeMinutes(readTime(post.getContent()));
         return card;
     }

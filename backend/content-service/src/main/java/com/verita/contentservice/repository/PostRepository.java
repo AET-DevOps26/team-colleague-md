@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 public interface PostRepository extends JpaRepository<PostEntity, UUID> {
     Page<PostEntity> findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus status, Pageable pageable);
-    Page<PostEntity> findByDeletedFalseAndStatusAndTags_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, String tagName, Pageable pageable);
+    Page<PostEntity> findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, String topicName, Pageable pageable);
     Page<PostEntity> findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(UUID authorId, PostStatus status, Pageable pageable);
     Optional<PostEntity> findByIdAndDeletedFalse(UUID id);
     @Query(value = "SELECT * FROM posts WHERE deleted = false AND status = 'PUBLISHED'" +

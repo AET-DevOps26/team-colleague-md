@@ -8,8 +8,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
 @Entity
-@Table(name = "tags", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
-public class TagEntity extends BaseTimeEntity {
+@Table(name = "topics", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
+public class TopicEntity extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

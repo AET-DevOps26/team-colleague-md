@@ -47,8 +47,8 @@ public class PostEntity extends BaseTimeEntity {
     private OffsetDateTime deletedAt;
     @BatchSize(size = 50)
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "post_tags", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
-    private Set<TagEntity> tags = new LinkedHashSet<>();
+    @JoinTable(name = "post_topics", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "topic_id"))
+    private Set<TopicEntity> topics = new LinkedHashSet<>();
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public UUID getAuthorId() { return authorId; }
@@ -81,8 +81,8 @@ public class PostEntity extends BaseTimeEntity {
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
     public OffsetDateTime getDeletedAt() { return deletedAt; }
     public void setDeletedAt(OffsetDateTime deletedAt) { this.deletedAt = deletedAt; }
-    public Set<TagEntity> getTags() { return tags; }
-    public void setTags(Set<TagEntity> tags) { this.tags = tags == null ? new LinkedHashSet<>() : tags; }
+    public Set<TopicEntity> getTopics() { return topics; }
+    public void setTopics(Set<TopicEntity> topics) { this.topics = topics == null ? new LinkedHashSet<>() : topics; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }
