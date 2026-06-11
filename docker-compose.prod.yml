@@ -183,6 +183,8 @@ services:
     environment:
       - USER_SERVICE_URL=http://user-service:8081
       - CONTENT_SERVICE_URL=http://content-service:8082
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:8083
+      - GENAI_SERVICE_URL=http://genai-service:8000
       - MINIO_URL=http://minio:9000
     restart: unless-stopped
     healthcheck:

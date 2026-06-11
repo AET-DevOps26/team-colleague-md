@@ -46,13 +46,6 @@ spec:
                 name: {{ printf "%s-genai" .Release.Name }}
                 port:
                   number: {{ .Values.services.genai.port }}
-          - path: /summarization(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: {{ printf "%s-genai" .Release.Name }}
-                port:
-                  number: {{ .Values.services.genai.port }}
           - path: /
             pathType: Prefix
             backend:

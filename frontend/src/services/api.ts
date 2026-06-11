@@ -4,7 +4,7 @@ import { emit } from './authEvents';
 import userApi from './userApi';
 
 const api = axios.create({
-  baseURL: '/api/content',
+  baseURL: '/content',
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 });

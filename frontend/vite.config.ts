@@ -8,13 +8,21 @@ export default defineConfig({
     port: 3000,
     host: true,
     proxy: {
-      '/api/user': {
+      '/user': {
         target: 'http://localhost:8081',
-        rewrite: (path) => path.replace(/^\/api\/user/, ''),
+        rewrite: (path) => path.replace(/^\/user/, ''),
       },
-      '/api/content': {
+      '/content': {
         target: 'http://localhost:8082',
-        rewrite: (path) => path.replace(/^\/api\/content/, ''),
+        rewrite: (path) => path.replace(/^\/content/, ''),
+      },
+      '/recommendation': {
+        target: 'http://localhost:8083',
+        rewrite: (path) => path.replace(/^\/recommendation/, ''),
+      },
+      '/genai': {
+        target: 'http://localhost:8000',
+        rewrite: (path) => path.replace(/^\/genai/, ''),
       },
     },
   },
