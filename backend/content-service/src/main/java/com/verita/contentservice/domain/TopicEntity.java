@@ -14,30 +14,46 @@ public class TopicEntity extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private String name;
+    @Column(length = 100)
+    private String displayName;
+    @Column(name = "category_id", length = 50)
+    private String categoryId;
     @Column(nullable = false)
-    private long usageCount = 0;
+    private int sortOrder = 0;
     @Column(nullable = false)
-    private long postsThisWeek = 0;
+    private int totalPostCount = 0;
     @Column(nullable = false)
-    private long postsPrevWeek = 0;
-    @Column(nullable = false, precision = 6, scale = 3)
+    private int postsThisWeek = 0;
+    @Column(nullable = false)
+    private int postsPrevWeek = 0;
+    @Column(nullable = false, precision = 4, scale = 3)
     private BigDecimal activityScore = BigDecimal.ZERO;
     @Column(nullable = false)
     private boolean isHot = false;
+    @Column(nullable = false)
+    private int followerCount = 0;
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public long getUsageCount() { return usageCount; }
-    public void setUsageCount(long usageCount) { this.usageCount = usageCount; }
-    public long getPostsThisWeek() { return postsThisWeek; }
-    public void setPostsThisWeek(long postsThisWeek) { this.postsThisWeek = postsThisWeek; }
-    public long getPostsPrevWeek() { return postsPrevWeek; }
-    public void setPostsPrevWeek(long postsPrevWeek) { this.postsPrevWeek = postsPrevWeek; }
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
+    public String getCategoryId() { return categoryId; }
+    public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+    public int getSortOrder() { return sortOrder; }
+    public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
+    public int getTotalPostCount() { return totalPostCount; }
+    public void setTotalPostCount(int totalPostCount) { this.totalPostCount = totalPostCount; }
+    public int getPostsThisWeek() { return postsThisWeek; }
+    public void setPostsThisWeek(int postsThisWeek) { this.postsThisWeek = postsThisWeek; }
+    public int getPostsPrevWeek() { return postsPrevWeek; }
+    public void setPostsPrevWeek(int postsPrevWeek) { this.postsPrevWeek = postsPrevWeek; }
     public BigDecimal getActivityScore() { return activityScore; }
     public void setActivityScore(BigDecimal activityScore) { this.activityScore = activityScore; }
     public boolean isHot() { return isHot; }
     public void setHot(boolean isHot) { this.isHot = isHot; }
+    public int getFollowerCount() { return followerCount; }
+    public void setFollowerCount(int followerCount) { this.followerCount = followerCount; }
 }

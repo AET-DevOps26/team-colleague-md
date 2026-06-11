@@ -204,8 +204,8 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public List<TopicResponse> trendingTopics() {
-        return topicRepository.findTop10ByOrderByUsageCountDesc().stream()
-                .map(t -> new TopicResponse().id(t.getId()).name(t.getName()).usageCount((int) t.getUsageCount()))
+        return topicRepository.findTop10ByOrderByTotalPostCountDesc().stream()
+                .map(t -> new TopicResponse().id(t.getId()).name(t.getName()).usageCount(t.getTotalPostCount()))
                 .toList();
     }
 
@@ -257,10 +257,10 @@ public class PostService {
         post.setTopics(newTopics);
 
         for (TopicEntity topic : oldTopics) {
-            if (!newTopicIds.contains(topic.getId())) topicRepository.decrementUsageCount(topic.getId());
+            if (!newTopicIds.contains(topic.getId())) topicRepository.decrementTotalPostCount(topic.getId());
         }
         for (TopicEntity topic : newTopics) {
-            if (!oldTopicIds.contains(topic.getId())) topicRepository.incrementUsageCount(topic.getId());
+            if (!oldTopicIds.contains(topic.getId())) topicRepository.incrementTotalPostCount(topic.getId());
         }
     }
 

@@ -9,13 +9,13 @@ import java.util.Optional;
 import java.util.UUID;
 public interface TopicRepository extends JpaRepository<TopicEntity, UUID> {
     Optional<TopicEntity> findByNameIgnoreCase(String name);
-    List<TopicEntity> findTop10ByOrderByUsageCountDesc();
+    List<TopicEntity> findTop10ByOrderByTotalPostCountDesc();
     @Modifying
-    @Query("UPDATE TopicEntity t SET t.usageCount = t.usageCount + 1 WHERE t.id = :id")
-    void incrementUsageCount(@Param("id") UUID id);
+    @Query("UPDATE TopicEntity t SET t.totalPostCount = t.totalPostCount + 1 WHERE t.id = :id")
+    void incrementTotalPostCount(@Param("id") UUID id);
     @Modifying
-    @Query(value = "UPDATE topics SET usage_count = GREATEST(0, usage_count - 1) WHERE id = :id", nativeQuery = true)
-    void decrementUsageCount(@Param("id") UUID id);
+    @Query(value = "UPDATE topics SET total_post_count = GREATEST(0, total_post_count - 1) WHERE id = :id", nativeQuery = true)
+    void decrementTotalPostCount(@Param("id") UUID id);
 
     @Modifying
     @Query(value = """
