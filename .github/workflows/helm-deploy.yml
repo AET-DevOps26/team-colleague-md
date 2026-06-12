@@ -5,6 +5,14 @@ on:
     workflows: ["Docker Build and Publish"]
     branches: [main, dev]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options: [dev, prod]
 
 permissions:
   contents: read
@@ -14,12 +22,15 @@ jobs:
     name: Deploy to Kubernetes (${{ github.event.workflow_run.head_branch }})
     runs-on: ubuntu-latest
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.environment == 'prod' && 'main' || 'dev') || '' }}
 
       - name: Set up Kubeconfig
         run: |
@@ -40,7 +51,9 @@ jobs:
 
       - name: Deploy Umbrella Chart via Helm
         run: |
-          if [ "${{ github.event.workflow_run.head_branch }}" = "main" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            DEPLOY_ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.event.workflow_run.head_branch }}" = "main" ]; then
             DEPLOY_ENV="prod"
           else
             DEPLOY_ENV="dev"
@@ -55,8 +68,8 @@ jobs:
             --namespace verita-$DEPLOY_ENV \
             --create-namespace \
             --set minio.auth.rootPassword=${{ secrets.MINIO_ROOT_PASSWORD }} \
-            --set services.frontend.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set services.content.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set services.user.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set services.recommendation.rolloutId=${{ github.event.workflow_run.run_id }} \
-            --set services.genai.rolloutId=${{ github.event.workflow_run.run_id }}
+            --set services.frontend.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
+            --set services.content.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
+            --set services.user.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
+            --set services.recommendation.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
+            --set services.genai.rolloutId=${{ github.event.workflow_run.id || github.run_id }}

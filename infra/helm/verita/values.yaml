@@ -66,6 +66,7 @@ services:
     image: genai-service
     tag: latest
     port: 8000
+    replicaCount: 2
     health:
       path: /health
       initialDelaySeconds: 15
@@ -81,6 +82,7 @@ services:
     image: frontend
     tag: latest
     port: 80
+    replicaCount: 2
     proxyBackend: true
     health:
       path: /
