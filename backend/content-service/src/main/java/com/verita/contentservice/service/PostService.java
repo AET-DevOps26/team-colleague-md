@@ -139,7 +139,7 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public PostPage getAllPosts(int page, int size, String topic, String authorization) {
-        PageRequest pageable = PageRequest.of(page, clampSize(size));
+        PageRequest pageable = PageRequest.of(page, clampPageSize(size));
         UUID currentUser = optionalUserId(authorization);
         Page<PostEntity> result = (topic == null || topic.isBlank())
                 ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
@@ -149,7 +149,7 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public PostPage searchPosts(String q, int page, int size, String authorization) {
-        return mapPage(postRepository.searchPublished(q, PageRequest.of(page, clampSize(size))), optionalUserId(authorization));
+        return mapPage(postRepository.searchPublished(q, PageRequest.of(page, clampPageSize(size))), optionalUserId(authorization));
     }
 
     public PostResponse getPost(UUID id, String authorization) {
@@ -173,7 +173,7 @@ public class PostService {
                 throw new ResponseStatusException(FORBIDDEN);
             }
         }
-        return mapPage(postRepository.findBookmarkedPublishedPostsByUserId(userId, PageRequest.of(page, clampSize(size))), current);
+        return mapPage(postRepository.findBookmarkedPublishedPostsByUserId(userId, PageRequest.of(page, clampPageSize(size))), current);
     }
 
     @Transactional(readOnly = true)
@@ -186,20 +186,20 @@ public class PostService {
                 throw new ResponseStatusException(FORBIDDEN);
             }
         }
-        return mapPage(postRepository.findLikedPublishedPostsByUserId(userId, PageRequest.of(page, clampSize(size))), current);
+        return mapPage(postRepository.findLikedPublishedPostsByUserId(userId, PageRequest.of(page, clampPageSize(size))), current);
     }
 
     @Transactional(readOnly = true)
     public PostPage getUserPosts(UUID userId, int page, int size, String authorization) {
         return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
-                userId, PostStatus.PUBLISHED, PageRequest.of(page, clampSize(size))), optionalUserId(authorization));
+                userId, PostStatus.PUBLISHED, PageRequest.of(page, clampPageSize(size))), optionalUserId(authorization));
     }
 
     @Transactional(readOnly = true)
     public PostPage getMyDrafts(int page, int size, String authorization) {
         UUID userId = currentUserId(authorization);
         return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
-                userId, PostStatus.DRAFT, PageRequest.of(page, clampSize(size))), userId);
+                userId, PostStatus.DRAFT, PageRequest.of(page, clampPageSize(size))), userId);
     }
 
     @Transactional(readOnly = true)
@@ -420,7 +420,7 @@ public class PostService {
         return Math.max(1, (content == null ? 0 : content.split("\\s+").length) / 200 + 1);
     }
 
-    static int clampSize(int size) {
+    static int clampPageSize(int size) {
         return Math.min(size, MAX_PAGE_SIZE);
     }
 }
