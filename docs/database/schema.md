@@ -1,18 +1,18 @@
 # Database Schema — Overview
 
-> Derived from [Class Diagram v2](../diagrams/Class%20Diagram%20v2.json)
+Each microservice owns its own PostgreSQL database. Cross-service references store `UUID` values but have **no database-level foreign key constraints** — integrity is maintained at the application layer via API calls.
 
-Each microservice owns its own PostgreSQL database. Cross-service references store `UUID` values but have **no database-level foreign key constraints** — data integrity is maintained at the application layer via API calls.
+This overview reflects the baseline (P0/P1) design. P2-only tables are noted but not modeled in the per-service docs.
 
 ---
 
 ## Service Schema Files
 
-| Service                  | Schema File                                                          | Tables                                                                  |
-| ------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **User Service**         | [user_service_schema.md](./user_service_schema.md)                   | `users`, `verification_requests`                                        |
-| **Content Service**      | [content_service_schema.md](./content_service_schema.md)             | `posts`, `comments`, `tags`, `post_tags`, `votes`, `bookmarks`          |
-| **Recommendation Service** | [recommendation_service_schema.md](./recommendation_service_schema.md) | `user_interactions`, `tag_subscriptions`, `trending_posts`, `notifications` |
+| Service                  | Schema File                                                          | Tables                                                                                                  |
+| ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **User Service**         | [user_service_schema.md](./user_service_schema.md)                   | `users`                                                                                                 |
+| **Content Service**      | [content_service_schema.md](./content_service_schema.md)             | `posts`, `comments`, `topics`, `topic_categories`, `topic_weekly_stats`, `post_topics`, `post_reactions`, `comment_likes`, `bookmarks` |
+| **Recommendation Service** | [recommendation_service_schema.md](./recommendation_service_schema.md) | `user_interactions`, `topic_subscriptions` <br>(P2 optional: `user_follows`, `notifications`)         |
 
 ---
 
@@ -22,47 +22,45 @@ Each microservice owns its own PostgreSQL database. Cross-service references sto
 graph LR
     subgraph US["User Service DB"]
         users
-        verification_requests
     end
 
     subgraph CS["Content Service DB"]
         posts
         comments
-        tags
-        votes
+        topics
+        post_reactions
+        comment_likes
         bookmarks
     end
 
     subgraph RS["Recommendation Service DB"]
         user_interactions
-        tag_subscriptions
-        trending_posts
-        notifications
+        topic_subscriptions
     end
 
     posts -.->|user_id| users
     comments -.->|user_id| users
-    votes -.->|user_id| users
+    post_reactions -.->|user_id| users
+    comment_likes -.->|user_id| users
     bookmarks -.->|user_id| users
-    notifications -.->|user_id| users
-    notifications -.->|related_post_id| posts
     user_interactions -.->|user_id| users
     user_interactions -.->|post_id| posts
-    tag_subscriptions -.->|user_id| users
-    tag_subscriptions -.->|tag_id| tags
-    trending_posts -.->|post_id| posts
+    topic_subscriptions -.->|user_id| users
+    topic_subscriptions -.->|topic_id| topics
 ```
 
-> **Legend:** Dashed arrows (`-.->`) represent cross-service UUID references (no DB-level FK).
+> **Legend:** Dashed arrows (`-.->`) are cross-service UUID references (no DB-level FK).
+> Within a service, references (e.g. `post_topics` → `posts`/`topics`, `comments` → `posts`) are real foreign keys — see each service's schema doc.
 
 ---
 
 ## Conventions
 
-| Convention         | Detail                                                      |
-| ------------------ | ----------------------------------------------------------- |
-| **Primary Keys**   | `UUID` with `gen_random_uuid()` default                     |
-| **String columns** | `TEXT` (PostgreSQL treats `TEXT` and `VARCHAR` identically)  |
-| **Timestamps**     | `TIMESTAMP` with `CURRENT_TIMESTAMP` default                |
-| **Enums**          | PostgreSQL custom enum types, scoped per service database   |
-| **Cross-service**  | Marked with 🔗 in column descriptions, no FK constraint     |
+| Convention         | Detail                                                                            |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **Primary Keys**   | `UUID` with `gen_random_uuid()` default (except curated `topic_categories.id`, a slug) |
+| **String columns** | `TEXT` by default; `VARCHAR(n)` where a length cap is meaningful (e.g. topic slug/label) |
+| **Timestamps**     | `TIMESTAMP` with `CURRENT_TIMESTAMP` default                                     |
+| **Enums**          | Stored as strings via `@Enumerated(EnumType.STRING)` — **not** native PostgreSQL enum types |
+| **Cross-service**  | Stored as plain `UUID`, no FK constraint; resolved via inter-service API calls   |
+| **Soft delete**    | Content uses `is_deleted` flags (posts, comments) rather than hard deletes       |
