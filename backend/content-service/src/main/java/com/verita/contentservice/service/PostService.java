@@ -51,6 +51,7 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 @Validated
 @Transactional
 public class PostService {
+    private static final int MAX_PAGE_SIZE = 100;
     private static final Logger log = LoggerFactory.getLogger(PostService.class);
     private final PostRepository postRepository;
     private final TopicRepository topicRepository;
@@ -420,6 +421,6 @@ public class PostService {
     }
 
     static int clampSize(int size) {
-        return Math.min(size, 100);
+        return Math.min(size, MAX_PAGE_SIZE);
     }
 }
