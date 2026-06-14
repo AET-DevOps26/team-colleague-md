@@ -49,6 +49,15 @@ public class ErrorHandling {
                 .message(message));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(new ErrorResponse()
+                .timestamp(OffsetDateTime.now())
+                .status(400)
+                .error("BAD_REQUEST")
+                .message(ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleOther(Exception ex) {
         log.error("Unhandled exception", ex);

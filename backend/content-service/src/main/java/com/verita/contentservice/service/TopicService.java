@@ -72,7 +72,9 @@ public class TopicService {
         Map<String, Integer> deltas = request.getDeltas();
         if (deltas == null || deltas.isEmpty()) return;
         deltas.forEach((name, delta) -> {
-            if (delta != null && delta != 0) topicRepository.applyFollowerCountDelta(name, delta);
+            if (delta == null || (delta != 1 && delta != -1))
+                throw new IllegalArgumentException("Follower count delta must be +1 or -1, got: " + delta);
+            topicRepository.applyFollowerCountDelta(name, delta);
         });
     }
 

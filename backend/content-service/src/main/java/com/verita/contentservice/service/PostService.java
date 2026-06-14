@@ -113,12 +113,12 @@ public class PostService {
         if (request.getSourceUrl() != null) {
             post.setSourceUrls(request.getSourceUrl().stream().map(URI::toString).toList());
         }
-        if (request.getTopics() != null) {
-            applyTopics(post, request.getTopics());
-        }
         if (request.getStatus() != null) {
             post.setStatus(request.getStatus() == PostPatchRequest.StatusEnum.DRAFT
                     ? PostStatus.DRAFT : PostStatus.PUBLISHED);
+        }
+        if (request.getTopics() != null) {
+            applyTopics(post, request.getTopics());
         }
         post = postRepository.save(post);
         if (summaryInputChanged) {
@@ -248,11 +248,13 @@ public class PostService {
         Set<UUID> newTopicIds = newTopics.stream().map(TopicEntity::getId).collect(Collectors.toSet());
         post.setTopics(newTopics);
 
-        for (TopicEntity topic : oldTopics) {
-            if (!newTopicIds.contains(topic.getId())) topicRepository.decrementTotalPostCount(topic.getId());
-        }
-        for (TopicEntity topic : newTopics) {
-            if (!oldTopicIds.contains(topic.getId())) topicRepository.incrementTotalPostCount(topic.getId());
+        if (post.getStatus() == PostStatus.PUBLISHED) {
+            for (TopicEntity topic : oldTopics) {
+                if (!newTopicIds.contains(topic.getId())) topicRepository.decrementTotalPostCount(topic.getId());
+            }
+            for (TopicEntity topic : newTopics) {
+                if (!oldTopicIds.contains(topic.getId())) topicRepository.incrementTotalPostCount(topic.getId());
+            }
         }
     }
 
