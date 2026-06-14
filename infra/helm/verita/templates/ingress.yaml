@@ -46,8 +46,11 @@ spec:
                 name: {{ printf "%s-genai" .Release.Name }}
                 port:
                   number: {{ .Values.services.genai.port }}
-          - path: /
-            pathType: Prefix
+          # Two capture groups so the global rewrite-target /$2 preserves the
+          # full path (e.g. /assets/app.js stays intact). A plain "/" path would
+          # rewrite every request to "/" and serve index.html for static assets.
+          - path: /()(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: {{ printf "%s-frontend" .Release.Name }}

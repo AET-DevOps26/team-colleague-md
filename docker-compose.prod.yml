@@ -107,6 +107,7 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/user-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required — set to http://<VM_IP>}
       - DB_HOST=user-db
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-verita_users}
