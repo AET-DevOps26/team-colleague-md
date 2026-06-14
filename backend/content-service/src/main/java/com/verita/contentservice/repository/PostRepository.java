@@ -46,6 +46,9 @@ public interface PostRepository extends JpaRepository<PostEntity, UUID> {
     @Query("update PostEntity p set p.commentCount = p.commentCount + 1 where p.id = :id")
     void incrementCommentCount(@Param("id") UUID id);
     @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update PostEntity p set p.commentCount = greatest(p.commentCount - 1, 0) where p.id = :id")
+    void decrementCommentCount(@Param("id") UUID id);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update PostEntity p set p.viewCount = p.viewCount + 1 where p.id = :id")
     void incrementViewCount(@Param("id") UUID id);
 }

@@ -90,6 +90,7 @@ public class CommentService {
         comment.setDeletedAt(OffsetDateTime.now());
         comment.setText("[deleted]");
         commentRepository.save(comment);
+        postRepository.decrementCommentCount(comment.getPost().getId());
     }
 
     private CommentResponse toCommentResponse(CommentEntity comment, UUID currentUser, List<CommentResponse> replies) {
