@@ -135,6 +135,9 @@ public class PostService {
         post.setDeleted(true);
         post.setDeletedAt(OffsetDateTime.now());
         postRepository.save(post);
+        if (post.getStatus() == PostStatus.PUBLISHED && post.getTopics() != null) {
+            post.getTopics().forEach(t -> topicRepository.decrementTotalPostCount(t.getId()));
+        }
     }
 
     @Transactional(readOnly = true)
