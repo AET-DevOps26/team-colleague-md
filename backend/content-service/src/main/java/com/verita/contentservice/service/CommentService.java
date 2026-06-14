@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
@@ -64,8 +65,11 @@ public class CommentService {
         comment.setAuthorId(userId);
         comment.setText(request.getText());
         if (request.getParentId() != null && request.getParentId().isPresent()) {
-            comment.setParentComment(commentRepository.findByIdAndDeletedFalse(request.getParentId().get())
-                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
+            CommentEntity parent = commentRepository.findByIdAndDeletedFalse(request.getParentId().get())
+                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+            if (!Objects.equals(parent.getPost().getId(), postId))
+                throw new ResponseStatusException(BAD_REQUEST, "Parent comment does not belong to this post");
+            comment.setParentComment(parent);
         }
         comment = commentRepository.save(comment);
         postRepository.incrementCommentCount(post.getId());
