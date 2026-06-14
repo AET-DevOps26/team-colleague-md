@@ -120,7 +120,7 @@ public class CommentService {
 
     private List<CommentResponse> buildCommentTree(UUID postId, UUID currentUser) {
         Map<UUID, List<CommentEntity>> children = new LinkedHashMap<>();
-        List<CommentEntity> allComments = commentRepository.findByPost_IdAndDeletedFalseOrderByCreatedAtAsc(postId);
+        List<CommentEntity> allComments = commentRepository.findByPost_IdOrderByCreatedAtAsc(postId);
         for (CommentEntity comment : allComments) {
             UUID parentId = comment.getParentComment() == null ? null : comment.getParentComment().getId();
             children.computeIfAbsent(parentId, k -> new ArrayList<>()).add(comment);
