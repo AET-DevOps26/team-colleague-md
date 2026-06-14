@@ -16,6 +16,21 @@ services:
       timeout: 5s
       retries: 5
 
+  content-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${CONTENT_DB_NAME:-verita_content}
+      POSTGRES_USER: ${CONTENT_DB_USER:-verita_content_user}
+      POSTGRES_PASSWORD: ${CONTENT_DB_PASSWORD}
+    volumes:
+      - content-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONTENT_DB_USER:-verita_content_user} -d ${CONTENT_DB_NAME:-verita_content}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
     command: server /data --console-address ":9001"
@@ -141,6 +156,9 @@ services:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://content-db:5432/${CONTENT_DB_NAME:-verita_content}
+      - DB_USERNAME=${CONTENT_DB_USER:-verita_content_user}
+      - DB_PASSWORD=${CONTENT_DB_PASSWORD}
       - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-http://minio:9000}
       - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:-http://localhost:9000}
       - STORAGE_S3_REGION=${STORAGE_S3_REGION:-us-east-1}
@@ -149,6 +167,8 @@ services:
       - STORAGE_S3_PATH_STYLE_ACCESS=true
       - STORAGE_POST_PHOTOS_BUCKET=${STORAGE_POST_PHOTOS_BUCKET:-verita-post-photos}
     depends_on:
+      content-db:
+        condition: service_healthy
       minio-init:
         condition: service_completed_successfully
     restart: unless-stopped
@@ -199,4 +219,5 @@ services:
 
 volumes:
   user-db-data:
+  content-db-data:
   minio-data:
