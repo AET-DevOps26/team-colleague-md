@@ -23,6 +23,8 @@ public class InteractionMapper {
         entity.setUserId(userId);
         entity.setPostId(request.getPostId());
         entity.setInteractionType(request.getInteractionType().getValue());
+        entity.setDurationSeconds(request.getDurationSeconds());
+        entity.setScrollDepth(request.getScrollDepth());
 
         Map<String, Object> meta = request.getMetadata();
         if (meta != null && !meta.isEmpty()) {
