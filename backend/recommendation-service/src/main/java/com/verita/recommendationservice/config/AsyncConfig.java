@@ -20,6 +20,7 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("interaction-");
         // Caller runs rejected tasks rather than dropping them silently
         executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setTaskDecorator(new MdcTaskDecorator());
         executor.initialize();
         return executor;
     }
