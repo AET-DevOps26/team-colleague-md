@@ -1,29 +1,24 @@
-﻿import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+package com.verita.recommendationservice.controllers;
+
+import com.verita.api.DiscoveryApi;
+import com.verita.model.FeedPage;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+
 import java.util.ArrayList;
 
 @RestController
-@RequestMapping("/api/v1/feed")
-public class FeedController {
+public class FeedController implements DiscoveryApi {
 
-    @RequestMapping(value = "/personal", method = RequestMethod.GET)
-    public ResponseEntity<FeedPage> getPersonalFeed(
-            @RequestParam(value = "cursor", required = false) String cursor,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
-
+    @Override
+    public ResponseEntity<FeedPage> getPersonalFeed(String cursor, Integer size) {
         // TODO: Call Recommendation Engine Service
-        FeedPage page = new FeedPage(new ArrayList<UUID>(), null);
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(new FeedPage(new ArrayList<>(), null));
     }
 
-    @RequestMapping(value = "/trending", method = RequestMethod.GET)
-    public ResponseEntity<FeedPage> getTrendingFeed(
-            @RequestParam(value = "tag", required = false) String tag,
-            @RequestParam(value = "cursor", required = false) String cursor,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
-
+    @Override
+    public ResponseEntity<FeedPage> getTrendingFeed(String tag, String cursor, Integer size) {
         // TODO: Call Trending Algorithm Service
-        FeedPage page = new FeedPage(new ArrayList<UUID>(), null);
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(new FeedPage(new ArrayList<>(), null));
     }
 }
