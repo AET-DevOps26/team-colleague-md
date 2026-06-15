@@ -2,7 +2,6 @@ package com.verita.recommendationservice.service;
 
 import com.verita.model.InteractionRequest;
 import com.verita.recommendationservice.mapper.InteractionMapper;
-import com.verita.recommendationservice.repository.InteractionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -16,20 +15,21 @@ public class InteractionService {
     private static final Logger log = LoggerFactory.getLogger(InteractionService.class);
 
     private final InteractionMapper interactionMapper;
-    private final InteractionRepository interactionRepository;
+    private final InteractionBuffer interactionBuffer;
 
-    public InteractionService(InteractionMapper interactionMapper, InteractionRepository interactionRepository) {
+    public InteractionService(InteractionMapper interactionMapper, InteractionBuffer interactionBuffer) {
         this.interactionMapper = interactionMapper;
-        this.interactionRepository = interactionRepository;
+        this.interactionBuffer = interactionBuffer;
     }
 
     @Async("interactionExecutor")
     public void process(InteractionRequest request, UUID userId) {
         try {
-            log.debug("Processing interaction: type={} postId={}", request.getInteractionType(), request.getPostId());
-            interactionRepository.save(interactionMapper.toEntity(request, userId));
+            log.debug("Buffering interaction: type={} postId={}", request.getInteractionType(), request.getPostId());
+            // Hand off to the buffer; the actual DB write is batched (see InteractionBuffer).
+            interactionBuffer.add(interactionMapper.toEntity(request, userId));
         } catch (Exception ex) {
-            log.error("Failed to process interaction: type={} postId={}", request.getInteractionType(), request.getPostId(), ex);
+            log.error("Failed to buffer interaction: type={} postId={}", request.getInteractionType(), request.getPostId(), ex);
         }
     }
 }

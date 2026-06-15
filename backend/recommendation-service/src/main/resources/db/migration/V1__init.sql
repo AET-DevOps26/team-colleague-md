@@ -24,7 +24,7 @@ CREATE TABLE interactions (
     post_id          UUID        NOT NULL,
     interaction_type VARCHAR(32) NOT NULL,
     duration_seconds INTEGER     CHECK (duration_seconds >= 0),
-    scroll_depth     SMALLINT    CHECK (scroll_depth BETWEEN 0 AND 100),
+    scroll_depth     INTEGER     CHECK (scroll_depth BETWEEN 0 AND 100),
     metadata         JSONB,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

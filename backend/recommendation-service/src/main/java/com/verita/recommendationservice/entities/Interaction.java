@@ -2,6 +2,8 @@ package com.verita.recommendationservice.entities;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -35,7 +37,9 @@ public class Interaction {
     @Column(name = "scroll_depth")
     private Integer scrollDepth;
 
-    // Stored as JSON text; use jsonb column type defined in the migration
+    // Stored as JSON text; SqlTypes.JSON binds the String to the jsonb column
+    // (Postgres rejects a plain varchar bind into a jsonb column).
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String metadata;
 
