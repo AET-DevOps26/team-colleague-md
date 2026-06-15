@@ -98,11 +98,11 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: "{{ $.Release.Name }}-minio"
-                  key: root-user
+                  key: rootUser
             - name: STORAGE_S3_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: "{{ $.Release.Name }}-minio"
-                  key: root-password
+                  key: rootPassword
             {{- end }}
 {{- end }}

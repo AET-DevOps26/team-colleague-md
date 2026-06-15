@@ -67,7 +67,7 @@ jobs:
             -f ./infra/helm/verita/values-$DEPLOY_ENV.yaml \
             --namespace verita-$DEPLOY_ENV \
             --create-namespace \
-            --set minio.auth.rootPassword=${{ secrets.MINIO_ROOT_PASSWORD }} \
+            --set minio.rootPassword=${{ secrets.MINIO_ROOT_PASSWORD }} \
             --set services.frontend.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
             --set services.content.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
             --set services.user.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \

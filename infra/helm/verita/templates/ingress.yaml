@@ -1,12 +1,18 @@
 {{- if .Values.ingress.enabled }}
+# Two Ingress resources because the nginx rewrite-target annotation applies to
+# the whole Ingress. The backend Ingress strips the service-name prefix via
+# rewrite-target /$2; the frontend Ingress has no rewrite so it receives paths
+# (including /assets/*) untouched and can serve the SPA correctly.
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "verita.fullname" . }}-ingress
+  name: {{ include "verita.fullname" . }}-backend-ingress
   labels:
     {{- include "verita.labels" . | nindent 4 }}
   annotations:
-    cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer }}
+    # No cert-manager annotation here: the frontend Ingress owns the certificate
+    # for this host. This Ingress just reuses the same TLS secret.
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
@@ -46,11 +52,26 @@ spec:
                 name: {{ printf "%s-genai" .Release.Name }}
                 port:
                   number: {{ .Values.services.genai.port }}
-          # Two capture groups so the global rewrite-target /$2 preserves the
-          # full path (e.g. /assets/app.js stays intact). A plain "/" path would
-          # rewrite every request to "/" and serve index.html for static assets.
-          - path: /()(.*)
-            pathType: ImplementationSpecific
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "verita.fullname" . }}-frontend-ingress
+  labels:
+    {{- include "verita.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer }}
+spec:
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
             backend:
               service:
                 name: {{ printf "%s-frontend" .Release.Name }}

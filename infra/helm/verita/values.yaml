@@ -147,12 +147,31 @@ recommendation-postgresql:
         cpu: "150m"
         memory: "256Mi"
 
+# MinIO via the official chart (https://charts.min.io/). The Bitnami subchart
+# was dropped because Bitnami removed all free images. Single standalone
+# instance is plenty for our lightweight usage (user-service avatars and
+# content-service post photos). The chart provisions buckets via the
+# post-install job and exposes a Secret named "<release>-minio" with keys
+# rootUser/rootPassword, consumed by the storage env in deployment.yaml.
 minio:
   enabled: true
-  auth:
-    rootUser: verita_minio
-    rootPassword: verita_minio_password
-  defaultBuckets: "verita-user-portraits,verita-post-photos"
+  mode: standalone
+  replicas: 1
+  rootUser: verita_minio
+  rootPassword: verita_minio_password
+  # The default fsGroupChangePolicy "OnRootMismatch" does not trigger the
+  # volume chown on the csi-rbd storage class (the root dir already has a
+  # lost+found owned by root), so MinIO (uid 1000) cannot write to /export.
+  # "Always" forces the recursive chown, matching what the PostgreSQL pods use.
+  securityContext:
+    enabled: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    fsGroupChangePolicy: "Always"
+  persistence:
+    enabled: true
+    size: 8Gi
   resources:
     requests:
       cpu: "50m"
@@ -160,3 +179,35 @@ minio:
     limits:
       cpu: "150m"
       memory: "256Mi"
+  # We use the root credentials directly (services read them from the
+  # <release>-minio Secret), so clear the chart's default "console" user —
+  # it ships with a known default password and we do not need it.
+  users: []
+  # Buckets created by the post-install job; "download" allows anonymous
+  # GET so public asset URLs (/storage/...) resolve.
+  buckets:
+    - name: verita-user-portraits
+      policy: download
+      purge: false
+    - name: verita-post-photos
+      policy: download
+      purge: false
+  # The namespace ResourceQuota requires every pod to declare limits. The
+  # post-install job runs two containers (make-bucket and make-user), so both
+  # need an explicit resources block with limits.
+  makeBucketJob:
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
+  makeUserJob:
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
