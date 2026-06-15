@@ -97,7 +97,11 @@ public class UserService {
      * @param username the username of the account to delete
      */
     public void deleteUser(String username) {
-        userRepository.findByUsername(username).ifPresent(userRepository::delete);
+        userRepository.findByUsername(username).ifPresent(user -> {
+            String avatarUrl = user.getAvatarUrl();
+            userRepository.delete(user);
+            avatarStorageService.deleteAvatar(avatarUrl);
+        });
     }
 
     public UserPreferences getUserPreferences(String username) {
