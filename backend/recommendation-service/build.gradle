@@ -7,7 +7,7 @@ plugins {
 
 group = 'com.verita'
 version = '0.0.1-SNAPSHOT'
-description = 'user-service'
+description = 'recommendation-service'
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
