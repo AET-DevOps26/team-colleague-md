@@ -3,11 +3,13 @@ package com.verita.recommendationservice.controllers;
 import com.verita.api.NotificationsApi;
 import com.verita.model.GetUserNotifications200Response;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.UUID;
 
+@Validated
 @RestController
 public class NotificationsController implements NotificationsApi {
 

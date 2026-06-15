@@ -3,12 +3,14 @@ package com.verita.recommendationservice.controllers;
 import com.verita.api.SubscriptionsApi;
 import com.verita.model.TopicTag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Validated
 @RestController
 public class SubscriptionsController implements SubscriptionsApi {
 

@@ -3,10 +3,12 @@ package com.verita.recommendationservice.controllers;
 import com.verita.api.DiscoveryApi;
 import com.verita.model.FeedPage;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 
+@Validated
 @RestController
 public class FeedController implements DiscoveryApi {
 
