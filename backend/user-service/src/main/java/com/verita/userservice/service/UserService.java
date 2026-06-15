@@ -8,6 +8,7 @@ import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final AvatarStorageService avatarStorageService;
 
     public User getByUsername(String username) {
         return userRepository.findByUsername(username)
@@ -57,12 +59,35 @@ public class UserService {
             URI website = request.getWebsite().get();
             user.setWebsite(website != null ? website.toString() : null);
         }
-        if (request.getAvatarUrl() != null && request.getAvatarUrl().isPresent()) {
-            URI avatarUrl = request.getAvatarUrl().get();
-            user.setAvatarUrl(avatarUrl != null ? avatarUrl.toString() : null);
+        userRepository.save(user);
+        return mapToDto(user);
+    }
+
+    public User updateCurrentUserAvatar(String username, MultipartFile avatar) {
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String previousAvatarUrl = user.getAvatarUrl();
+        String newAvatarUrl = avatarStorageService.storeAvatar(user.getId(), avatar);
+
+        user.setAvatarUrl(newAvatarUrl);
+        try {
+            userRepository.save(user);
+        } catch (RuntimeException ex) {
+            avatarStorageService.deleteAvatar(newAvatarUrl);
+            throw ex;
         }
 
+        avatarStorageService.deleteAvatar(previousAvatarUrl);
+        return mapToDto(user);
+    }
+
+    public User deleteCurrentUserAvatar(String username) {
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String previousAvatarUrl = user.getAvatarUrl();
+
+        user.setAvatarUrl(null);
         userRepository.save(user);
+        avatarStorageService.deleteAvatar(previousAvatarUrl);
+
         return mapToDto(user);
     }
 
