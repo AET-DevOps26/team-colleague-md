@@ -2,6 +2,7 @@ package com.verita.userservice;
 import com.verita.model.*;
 import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.repository.UserRepository;
+import com.verita.userservice.service.AvatarStorageService;
 import com.verita.userservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.mock.web.MockMultipartFile;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +22,8 @@ import static org.mockito.Mockito.*;
 public class UserServiceTests {
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private AvatarStorageService avatarStorageService;
     @InjectMocks
     private UserService userService;
     private UserEntity userEntity;
@@ -82,6 +86,55 @@ public class UserServiceTests {
         assertEquals("New Name", result.getDisplayName());
         verify(userRepository, times(1)).save(any(UserEntity.class));
     }
+
+    @Test
+    void updateCurrentUserAvatar_successStoresUrlAndDeletesOldAvatar() {
+        userEntity.setAvatarUrl("http://localhost:9000/verita-user-portraits/users/old/avatar-old.png");
+        MockMultipartFile avatar = new MockMultipartFile("avatar", "avatar.png", "image/png", new byte[]{1, 2, 3});
+        String newAvatarUrl = "http://localhost:9000/verita-user-portraits/users/new/avatar-new.png";
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
+        when(avatarStorageService.storeAvatar(eq(userEntity.getId()), same(avatar))).thenReturn(newAvatarUrl);
+        when(userRepository.save(any(UserEntity.class))).thenReturn(userEntity);
+
+        User result = userService.updateCurrentUserAvatar("testuser", avatar);
+
+        assertTrue(result.getAvatarUrl().isPresent());
+        assertEquals(newAvatarUrl, result.getAvatarUrl().get().toString());
+        verify(userRepository, times(1)).save(userEntity);
+        verify(avatarStorageService, times(1)).deleteAvatar("http://localhost:9000/verita-user-portraits/users/old/avatar-old.png");
+    }
+
+    @Test
+    void updateCurrentUserAvatar_deletesNewAvatarWhenSaveFails() {
+        MockMultipartFile avatar = new MockMultipartFile("avatar", "avatar.png", "image/png", new byte[]{1, 2, 3});
+        String newAvatarUrl = "http://localhost:9000/verita-user-portraits/users/new/avatar-new.png";
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
+        when(avatarStorageService.storeAvatar(eq(userEntity.getId()), same(avatar))).thenReturn(newAvatarUrl);
+        when(userRepository.save(any(UserEntity.class))).thenThrow(new RuntimeException("database unavailable"));
+
+        assertThrows(RuntimeException.class, () -> userService.updateCurrentUserAvatar("testuser", avatar));
+
+        verify(avatarStorageService, times(1)).deleteAvatar(newAvatarUrl);
+    }
+
+    @Test
+    void deleteCurrentUserAvatar_successClearsUrlAndDeletesOldAvatar() {
+        String oldAvatarUrl = "http://localhost:9000/verita-user-portraits/users/old/avatar-old.png";
+        userEntity.setAvatarUrl(oldAvatarUrl);
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
+        when(userRepository.save(any(UserEntity.class))).thenReturn(userEntity);
+
+        User result = userService.deleteCurrentUserAvatar("testuser");
+
+        assertNull(userEntity.getAvatarUrl());
+        assertFalse(result.getAvatarUrl().isPresent());
+        verify(userRepository, times(1)).save(userEntity);
+        verify(avatarStorageService, times(1)).deleteAvatar(oldAvatarUrl);
+    }
+
     @Test
     void deleteUser_success() {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
