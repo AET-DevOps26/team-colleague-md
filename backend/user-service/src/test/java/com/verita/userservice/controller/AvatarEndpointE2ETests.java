@@ -40,6 +40,7 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -156,6 +157,25 @@ class AvatarEndpointE2ETests {
 
         UserEntity updatedUser = userRepository.findById(user.getId()).orElseThrow();
         assertNull(updatedUser.getAvatarUrl());
+        assertThrows(NoSuchKeyException.class, () -> s3Client.headObject(request -> request.bucket(BUCKET).key(objectKey)));
+    }
+
+    @Test
+    void deleteCurrentUserRemovesUserRecordAndAvatarObject() throws Exception {
+        UserEntity user = saveBasicUser("deleteavataruser", "deleteavatar@example.com", UserRole.USER);
+        String objectKey = "users/" + user.getId() + "/avatar-old.png";
+        s3Client.putObject(
+                request -> request.bucket(BUCKET).key(objectKey).contentType("image/png"),
+                RequestBody.fromBytes(new byte[]{1, 2, 3})
+        );
+        user.setAvatarUrl(minioEndpoint() + "/" + BUCKET + "/" + objectKey);
+        user = userRepository.save(user);
+
+        mockMvc.perform(delete("/api/v1/users/me")
+                        .with(user(UserDetailsImpl.build(user))))
+                .andExpect(status().isNoContent());
+
+        assertFalse(userRepository.existsById(user.getId()));
         assertThrows(NoSuchKeyException.class, () -> s3Client.headObject(request -> request.bucket(BUCKET).key(objectKey)));
     }
 
