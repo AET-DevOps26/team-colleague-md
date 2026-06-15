@@ -1,6 +1,7 @@
 package com.verita.recommendationservice.entities;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -37,8 +38,9 @@ public class Interaction {
     @Column(columnDefinition = "jsonb")
     private String metadata;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ DEFAULT NOW()")
+    private OffsetDateTime createdAt;
 
     public UUID getId() { return id; }
 
