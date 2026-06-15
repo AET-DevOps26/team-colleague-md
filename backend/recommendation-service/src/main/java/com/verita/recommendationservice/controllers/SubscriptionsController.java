@@ -1,7 +1,7 @@
 package com.verita.recommendationservice.controllers;
 
 import com.verita.api.SubscriptionsApi;
-import com.verita.model.TopicTag;
+import com.verita.model.Topic;
 import com.verita.recommendationservice.security.SecurityUtils;
 import com.verita.recommendationservice.service.SubscriptionService;
 import org.springframework.http.ResponseEntity;
@@ -24,17 +24,17 @@ public class SubscriptionsController implements SubscriptionsApi {
     }
 
     @Override
-    public ResponseEntity<List<TopicTag>> getSubscribedTags() {
+    public ResponseEntity<List<Topic>> getSubscribedTopics() {
         UUID userId = securityUtils.getCurrentUserId();
-        List<TopicTag> tags = subscriptionService.getSubscribedTags(userId).stream()
-                .map(sub -> new TopicTag().id(sub.getTagId()).name(""))
+        List<Topic> topics = subscriptionService.getSubscribedTags(userId).stream()
+                .map(sub -> new Topic().id(sub.getTagId()).name(""))
                 .toList();
-        return ResponseEntity.ok(tags);
+        return ResponseEntity.ok(topics);
     }
 
     @Override
-    public ResponseEntity<Void> subscribeToTag(UUID tagId) {
-        subscriptionService.subscribeToTag(securityUtils.getCurrentUserId(), tagId);
+    public ResponseEntity<Void> subscribeToTopic(UUID topicId) {
+        subscriptionService.subscribeToTag(securityUtils.getCurrentUserId(), topicId);
         return ResponseEntity.status(201).build();
     }
 
@@ -45,8 +45,8 @@ public class SubscriptionsController implements SubscriptionsApi {
     }
 
     @Override
-    public ResponseEntity<Void> unsubscribeFromTag(UUID tagId) {
-        subscriptionService.unsubscribeFromTag(tagId, securityUtils.getCurrentUserId());
+    public ResponseEntity<Void> unsubscribeFromTopic(UUID topicId) {
+        subscriptionService.unsubscribeFromTag(topicId, securityUtils.getCurrentUserId());
         return ResponseEntity.noContent().build();
     }
 
