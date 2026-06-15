@@ -22,8 +22,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // spec: security: [] — unauthenticated access permitted
                 .requestMatchers(HttpMethod.GET, "/api/v1/feed/trending").permitAll()
-                // actuator health is infrastructure, not part of the API contract
-                .requestMatchers("/actuator/health").permitAll()
                 // everything else requires a valid JWT
                 .anyRequest().authenticated()
             )
