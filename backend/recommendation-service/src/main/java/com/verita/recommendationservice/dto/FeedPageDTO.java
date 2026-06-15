@@ -1,7 +1,9 @@
-﻿import java.util.List;
+package com.verita.recommendationservice.dto;
+
+import java.util.List;
 import java.util.UUID;
 
-public class FeedPage {
+class FeedPage {
     private List<UUID> postIds;
     private String nextCursor;
 
@@ -9,5 +11,9 @@ public class FeedPage {
         this.postIds = postIds;
         this.nextCursor = nextCursor;
     }
-    // Getters and Setters
+
+    public List<UUID> getPostIds() { return postIds; }
+    public void setPostIds(List<UUID> postIds) { this.postIds = postIds; }
+    public String getNextCursor() { return nextCursor; }
+    public void setNextCursor(String nextCursor) { this.nextCursor = nextCursor; }
 }
