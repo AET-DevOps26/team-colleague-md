@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -24,9 +25,12 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -143,6 +147,39 @@ public class UsersControllerTests {
                 .with(SecurityMockMvcRequestPostProcessors.user(userDetails))
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testUpdateCurrentUserAvatar_Authenticated_ReturnsUpdatedUser() throws Exception {
+        com.verita.model.User user = new com.verita.model.User();
+        user.setId(UUID.randomUUID());
+        user.setUsername("testuser");
+        user.setEmail("testuser@example.com");
+        user.avatarUrl(java.net.URI.create("http://localhost:9000/verita-user-portraits/users/test/avatar.png"));
+
+        when(userService.updateCurrentUserAvatar(any(), any())).thenReturn(user);
+
+        UserEntity userEntity = new UserEntity();
+        userEntity.setId(user.getId());
+        userEntity.setUsername("testuser");
+        userEntity.setEmail("testuser@example.com");
+        userEntity.setPassword("password");
+        userEntity.setRole(UserRole.USER);
+
+        MockMultipartFile avatar = new MockMultipartFile("avatar", "avatar.png", "image/png", new byte[]{1, 2, 3});
+
+        mockMvc.perform(multipart("/api/v1/users/me/avatar")
+                .file(avatar)
+                .with(request -> {
+                    request.setMethod("PUT");
+                    return request;
+                })
+                .with(SecurityMockMvcRequestPostProcessors.user(UserDetailsImpl.build(userEntity)))
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.avatarUrl").value("http://localhost:9000/verita-user-portraits/users/test/avatar.png"));
+
+        verify(userService).updateCurrentUserAvatar(eq("testuser"), any());
     }
 
     @Test
