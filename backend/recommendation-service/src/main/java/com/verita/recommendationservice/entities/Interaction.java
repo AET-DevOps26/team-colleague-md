@@ -10,7 +10,8 @@ import java.util.UUID;
     name = "interactions",
     indexes = {
         @Index(name = "idx_interactions_user_post", columnList = "user_id, post_id"),
-        @Index(name = "idx_interactions_post_type", columnList = "post_id, interaction_type")
+        @Index(name = "idx_interactions_post_type", columnList = "post_id, interaction_type"),
+        @Index(name = "idx_interactions_created_at", columnList = "created_at")
     }
 )
 public class Interaction {
