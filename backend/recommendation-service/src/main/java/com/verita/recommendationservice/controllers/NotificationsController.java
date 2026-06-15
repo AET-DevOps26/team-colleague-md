@@ -2,12 +2,15 @@ package com.verita.recommendationservice.controllers;
 
 import com.verita.api.NotificationsApi;
 import com.verita.model.GetUserNotifications200Response;
+import com.verita.model.NotificationResponse;
+import com.verita.recommendationservice.entities.Notification;
 import com.verita.recommendationservice.security.SecurityUtils;
+import com.verita.recommendationservice.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Validated
@@ -15,39 +18,54 @@ import java.util.UUID;
 public class NotificationsController implements NotificationsApi {
 
     private final SecurityUtils securityUtils;
+    private final NotificationService notificationService;
 
-    public NotificationsController(SecurityUtils securityUtils) {
+    public NotificationsController(SecurityUtils securityUtils, NotificationService notificationService) {
         this.securityUtils = securityUtils;
+        this.notificationService = notificationService;
     }
 
     @Override
     public ResponseEntity<GetUserNotifications200Response> getUserNotifications(
             Boolean unreadOnly, Integer page, Integer size) {
-        // TODO: Fetch paginated notifications for the authenticated user.
-        // Use securityUtils.getCurrentUserId() as the filter — never trust a userId from the request.
+        UUID userId = securityUtils.getCurrentUserId();
+        var notifPage = notificationService.getNotifications(
+                userId, Boolean.TRUE.equals(unreadOnly), page, size);
+
+        List<NotificationResponse> content = notifPage.getContent().stream()
+                .map(this::toDto)
+                .toList();
+
         GetUserNotifications200Response response = new GetUserNotifications200Response()
-                .content(new ArrayList<>())
-                .page(page)
-                .size(size)
-                .totalPages(0)
-                .totalElements(0L)
-                .hasNext(false);
+                .content(content)
+                .page(notifPage.getNumber())
+                .size(notifPage.getSize())
+                .totalPages(notifPage.getTotalPages())
+                .totalElements(notifPage.getTotalElements())
+                .hasNext(notifPage.hasNext());
+
         return ResponseEntity.ok(response);
     }
 
     @Override
     public ResponseEntity<Void> markAllNotificationsRead() {
-        // TODO: Mark all notifications as read for the authenticated user.
-        // Pass securityUtils.getCurrentUserId() directly to the repository — no entity ownership check needed
-        // because the query is scoped to that userId by construction.
+        notificationService.markAllRead(securityUtils.getCurrentUserId());
         return ResponseEntity.ok().build();
     }
 
     @Override
     public ResponseEntity<Void> markNotificationRead(UUID id) {
-        // TODO: Mark the specified notification as read.
-        // Load the Notification by id, then verify entity.getUserId().equals(securityUtils.getCurrentUserId())
-        // before persisting changes — return 403 or 404 if the check fails.
+        notificationService.markRead(id, securityUtils.getCurrentUserId());
         return ResponseEntity.ok().build();
+    }
+
+    private NotificationResponse toDto(Notification n) {
+        return new NotificationResponse()
+                .id(n.getId())
+                .type(NotificationResponse.TypeEnum.fromValue(n.getType()))
+                .content(n.getContent())
+                .relatedPostId(n.getRelatedPostId())
+                .isRead(n.isRead())
+                .createdAt(n.getCreatedAt());
     }
 }
