@@ -21,7 +21,7 @@ public class InteractionMapper {
     public Interaction toEntity(InteractionRequest request, UUID userId) {
         Interaction entity = new Interaction();
         entity.setUserId(userId);
-        entity.setPostId(request.getTargetId());
+        entity.setPostId(request.getPostId());
         entity.setInteractionType(request.getInteractionType().getValue());
 
         Map<String, Object> meta = request.getMetadata();

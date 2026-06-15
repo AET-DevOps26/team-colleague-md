@@ -26,10 +26,10 @@ public class InteractionService {
     @Async("interactionExecutor")
     public void process(InteractionRequest request, UUID userId) {
         try {
-            log.debug("Processing interaction: type={} postId={}", request.getInteractionType(), request.getTargetId());
+            log.debug("Processing interaction: type={} postId={}", request.getInteractionType(), request.getPostId());
             interactionRepository.save(interactionMapper.toEntity(request, userId));
         } catch (Exception ex) {
-            log.error("Failed to process interaction: type={} postId={}", request.getInteractionType(), request.getTargetId(), ex);
+            log.error("Failed to process interaction: type={} postId={}", request.getInteractionType(), request.getPostId(), ex);
         }
     }
 }
