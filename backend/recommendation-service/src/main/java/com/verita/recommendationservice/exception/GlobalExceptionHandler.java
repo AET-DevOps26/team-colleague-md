@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NoResourceFoundException ex) {
-        return build(HttpStatus.NOT_FOUND, ex.getMessage());
+        return build(HttpStatus.NOT_FOUND, "The requested resource was not found");
     }
 
     @ExceptionHandler(Exception.class)
