@@ -57,6 +57,9 @@ venv/
 .env
 *.egg
 
+### Node ###
+node_modules/
+
 ### basedpyright ###
 pyrightconfig.json
 # Claude Code instructions (local only)

@@ -123,6 +123,56 @@ docker compose up -d user-db minio minio-init
 | Access key | `verita_minio` |
 | Secret key | `verita_minio_password` |
 
+### Local Seed Data
+
+The repository includes a cross-platform TypeScript seed command for local mock data. It
+expects PostgreSQL and MinIO to already be running and fails with a clear message if they
+are not reachable.
+
+```bash
+docker compose up -d user-db minio minio-init user-service
+npm install
+npm run seed:local
+```
+
+The first seed domain creates 8 curated users, uploads their default avatar PNGs to the
+existing `verita-user-portraits` MinIO bucket, and stores public avatar URLs on the user
+rows. It is idempotent and non-destructive for unrelated local users: known seeded users
+are updated by their fixed UUIDs, but identity conflicts on username/email fail instead of
+rewriting primary keys.
+
+The seed writes directly to the local user database, so `user-service` must have started
+once to let Hibernate create the `users` and `user_expertise` tables.
+
+Seeded users are login-capable with this shared dev-only password:
+
+```text
+Password123!
+```
+
+Useful options:
+
+```bash
+npm run seed:local -- --dry-run
+npm run seed:local -- --only users
+npm run seed:local -- --dry-run --only users
+```
+
+Connection defaults match `docker-compose.yml` and can be overridden:
+
+| Variable | Default |
+|---|---|
+| `USER_DB_HOST` | `localhost` |
+| `USER_DB_PORT` | `5432` |
+| `USER_DB_NAME` | `verita_users` |
+| `USER_DB_USER` | `verita_user` |
+| `USER_DB_PASSWORD` | `verita_password` |
+| `MINIO_ENDPOINT` | `http://localhost:9000` |
+| `MINIO_PUBLIC_ENDPOINT` | `http://localhost:9000` |
+| `MINIO_ACCESS_KEY` | `verita_minio` |
+| `MINIO_SECRET_KEY` | `verita_minio_password` |
+| `USER_PORTRAITS_BUCKET` | `verita-user-portraits` |
+
 ---
 
 ### Frontend

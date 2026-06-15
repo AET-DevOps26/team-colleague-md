@@ -1,0 +1,96 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { Client as MinioClient } from "minio";
+import type { SeedConfig } from "../config.ts";
+import type { SeedUser } from "../data/users.ts";
+import { AVATAR_ASSETS_DIR } from "../data/users.ts";
+
+export interface  AvatarObject {
+  user: SeedUser;
+  filePath: string;
+  objectName: string;
+  publicUrl: string;
+}
+
+export function buildAvatarObjects(config: SeedConfig, users: SeedUser[]): AvatarObject[] {
+  return users.map((user) => {
+    const objectName = `${user.username}/avatar.png`;
+    return {
+      user,
+      filePath: path.join(AVATAR_ASSETS_DIR, user.avatarFile),
+      objectName,
+      publicUrl: `${config.minio.publicEndpoint}/${config.minio.userPortraitsBucket}/${objectName}`,
+    };
+  });
+}
+
+export async function assertAvatarFilesExist(avatars: AvatarObject[]) {
+  const missing: string[] = [];
+
+  for (const avatar of avatars) {
+    try {
+      await fs.access(avatar.filePath);
+    } catch {
+      missing.push(avatar.filePath);
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`Missing avatar fixture file(s): ${missing.join(", ")}`);
+  }
+}
+
+export function createMinioClient(config: SeedConfig): MinioClient {
+  const endpoint = new URL(config.minio.endpoint);
+  const useSSL = endpoint.protocol === "https:";
+  const defaultPort = useSSL ? 443 : 80;
+
+  return new MinioClient({
+    endPoint: endpoint.hostname,
+    port: endpoint.port ? Number(endpoint.port) : defaultPort,
+    useSSL,
+    accessKey: config.minio.accessKey,
+    secretKey: config.minio.secretKey,
+  });
+}
+
+export async function assertUserPortraitsBucketExists(client: MinioClient, config: SeedConfig) {
+  let exists = false;
+  try {
+    exists = await client.bucketExists(config.minio.userPortraitsBucket);
+  } catch (error) {
+    const message = formatError(error);
+    throw new Error(
+      `Could not connect to MinIO at ${config.minio.endpoint}: ${message}. ` +
+        "Start local object storage with: docker compose up -d minio minio-init",
+    );
+  }
+
+  if (!exists) {
+    throw new Error(
+      `MinIO bucket "${config.minio.userPortraitsBucket}" does not exist. ` +
+        "Start bucket initialisation with: docker compose up -d minio minio-init",
+    );
+  }
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === "object" && error !== null && "code" in error) {
+    return String((error as { code: unknown }).code);
+  }
+  return String(error);
+}
+
+export async function uploadAvatars(client: MinioClient, config: SeedConfig, avatars: AvatarObject[]) {
+  for (const avatar of avatars) {
+    await client.fPutObject(
+      config.minio.userPortraitsBucket,
+      avatar.objectName,
+      avatar.filePath,
+      { "Content-Type": "image/png" },
+    );
+  }
+}
