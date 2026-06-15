@@ -16,20 +16,130 @@ services:
       timeout: 5s
       retries: 5
 
+  content-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${CONTENT_DB_NAME:-verita_content}
+      POSTGRES_USER: ${CONTENT_DB_USER:-verita_content_user}
+      POSTGRES_PASSWORD: ${CONTENT_DB_PASSWORD}
+    volumes:
+      - content-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONTENT_DB_USER:-verita_content_user} -d ${CONTENT_DB_NAME:-verita_content}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-verita_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    ports:
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-verita_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      MINIO_USER_PORTRAITS_BUCKET: ${STORAGE_USER_PORTRAITS_BUCKET:-verita-user-portraits}
+      MINIO_POST_PHOTOS_BUCKET: ${STORAGE_POST_PHOTOS_BUCKET:-verita-post-photos}
+      USER_SERVICE_S3_ACCESS_KEY: ${USER_SERVICE_S3_ACCESS_KEY:?USER_SERVICE_S3_ACCESS_KEY is required}
+      USER_SERVICE_S3_SECRET_KEY: ${USER_SERVICE_S3_SECRET_KEY:?USER_SERVICE_S3_SECRET_KEY is required}
+      CONTENT_SERVICE_S3_ACCESS_KEY: ${CONTENT_SERVICE_S3_ACCESS_KEY:?CONTENT_SERVICE_S3_ACCESS_KEY is required}
+      CONTENT_SERVICE_S3_SECRET_KEY: ${CONTENT_SERVICE_S3_SECRET_KEY:?CONTENT_SERVICE_S3_SECRET_KEY is required}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
+          sleep 2
+        done
+
+        mc mb --ignore-existing "local/$${MINIO_USER_PORTRAITS_BUCKET}"
+        mc mb --ignore-existing "local/$${MINIO_POST_PHOTOS_BUCKET}"
+
+        cat > /tmp/user-service-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+              "Resource": ["arn:aws:s3:::$${MINIO_USER_PORTRAITS_BUCKET}"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+              "Resource": ["arn:aws:s3:::$${MINIO_USER_PORTRAITS_BUCKET}/*"]
+            }
+          ]
+        }
+        EOF
+
+        cat > /tmp/content-service-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+              "Resource": ["arn:aws:s3:::$${MINIO_POST_PHOTOS_BUCKET}"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+              "Resource": ["arn:aws:s3:::$${MINIO_POST_PHOTOS_BUCKET}/*"]
+            }
+          ]
+        }
+        EOF
+
+        mc admin policy create local user-service-portraits-rw /tmp/user-service-policy.json || true
+        mc admin policy create local content-service-posts-rw /tmp/content-service-policy.json || true
+
+        mc admin user info local "$${USER_SERVICE_S3_ACCESS_KEY}" >/dev/null 2>&1 ||
+          mc admin user add local "$${USER_SERVICE_S3_ACCESS_KEY}" "$${USER_SERVICE_S3_SECRET_KEY}"
+        mc admin user info local "$${CONTENT_SERVICE_S3_ACCESS_KEY}" >/dev/null 2>&1 ||
+          mc admin user add local "$${CONTENT_SERVICE_S3_ACCESS_KEY}" "$${CONTENT_SERVICE_S3_SECRET_KEY}"
+
+        mc admin policy attach local user-service-portraits-rw --user "$${USER_SERVICE_S3_ACCESS_KEY}"
+        mc admin policy attach local content-service-posts-rw --user "$${CONTENT_SERVICE_S3_ACCESS_KEY}"
+
+        mc anonymous set download "local/$${MINIO_USER_PORTRAITS_BUCKET}"
+        mc anonymous set download "local/$${MINIO_POST_PHOTOS_BUCKET}"
+
   user-service:
     image: ghcr.io/aet-devops26/team-colleague-md/user-service:latest
-    ports:
-      - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required — set to http://<VM_IP>}
       - DB_HOST=user-db
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-verita_users}
       - DB_USER=${DB_USER:-verita_user}
       - DB_PASSWORD=${DB_PASSWORD}
+      - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-http://minio:9000}
+      - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:?STORAGE_S3_PUBLIC_ENDPOINT is required — set to http://<VM_IP>/storage}
+      - STORAGE_S3_REGION=${STORAGE_S3_REGION:-us-east-1}
+      - STORAGE_S3_ACCESS_KEY=${USER_SERVICE_S3_ACCESS_KEY:?USER_SERVICE_S3_ACCESS_KEY is required}
+      - STORAGE_S3_SECRET_KEY=${USER_SERVICE_S3_SECRET_KEY:?USER_SERVICE_S3_SECRET_KEY is required}
+      - STORAGE_S3_PATH_STYLE_ACCESS=true
+      - STORAGE_USER_PORTRAITS_BUCKET=${STORAGE_USER_PORTRAITS_BUCKET:-verita-user-portraits}
     depends_on:
       user-db:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
@@ -40,13 +150,26 @@ services:
 
   content-service:
     image: ghcr.io/aet-devops26/team-colleague-md/content-service:latest
-    ports:
-      - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://content-db:5432/${CONTENT_DB_NAME:-verita_content}
+      - DB_USERNAME=${CONTENT_DB_USER:-verita_content_user}
+      - DB_PASSWORD=${CONTENT_DB_PASSWORD}
+      - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-http://minio:9000}
+      - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:?STORAGE_S3_PUBLIC_ENDPOINT is required — set to http://<VM_IP>/storage}
+      - STORAGE_S3_REGION=${STORAGE_S3_REGION:-us-east-1}
+      - STORAGE_S3_ACCESS_KEY=${CONTENT_SERVICE_S3_ACCESS_KEY:?CONTENT_SERVICE_S3_ACCESS_KEY is required}
+      - STORAGE_S3_SECRET_KEY=${CONTENT_SERVICE_S3_SECRET_KEY:?CONTENT_SERVICE_S3_SECRET_KEY is required}
+      - STORAGE_S3_PATH_STYLE_ACCESS=true
+      - STORAGE_POST_PHOTOS_BUCKET=${STORAGE_POST_PHOTOS_BUCKET:-verita-post-photos}
+    depends_on:
+      content-db:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -54,13 +177,11 @@ services:
 
   recommendation-service:
     image: ghcr.io/aet-devops26/team-colleague-md/recommendation-service:latest
-    ports:
-      - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -68,11 +189,9 @@ services:
 
   genai-service:
     image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
-    ports:
-      - "8000:8000"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -82,6 +201,12 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/frontend:latest
     ports:
       - "80:80"
+    environment:
+      - USER_SERVICE_URL=http://user-service:8081
+      - CONTENT_SERVICE_URL=http://content-service:8082
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:8083
+      - GENAI_SERVICE_URL=http://genai-service:8000
+      - MINIO_URL=http://minio:9000
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]
@@ -92,3 +217,5 @@ services:
 
 volumes:
   user-db-data:
+  content-db-data:
+  minio-data:

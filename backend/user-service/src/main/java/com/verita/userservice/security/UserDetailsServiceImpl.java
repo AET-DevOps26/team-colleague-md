@@ -2,28 +2,29 @@ package com.verita.userservice.security;
 
 import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
-//adapter that loads user from the DB for authentication. Spring Security needs a UserDetailsService to validate credentials or create Authentication.
+/**
+ * Adapter that loads a {@link UserEntity} from the database and wraps it in a
+ * {@link UserDetailsImpl} so Spring Security can validate credentials and build
+ * the authenticated {@code Authentication} object.
+ */
 @Service
+@RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
-    private final UserRepository userRepository;
 
-    public UserDetailsServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
-
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
         return UserDetailsImpl.build(user);
     }
 }

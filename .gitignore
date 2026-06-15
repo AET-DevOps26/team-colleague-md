@@ -57,15 +57,22 @@ venv/
 .env
 *.egg
 
+### Node ###
+node_modules/
+
 ### basedpyright ###
 pyrightconfig.json
 # Claude Code instructions (local only)
 CLAUDE.md
+# Agent instructions (local only)
+AGENTS.md
 
 # Playwright failure artifacts (auto-generated, not for version control)
 frontend/test-results/
 frontend/playwright-report/
 
+#Helm
+.tgz
 # Terraform
 **/.terraform/
 *.tfstate

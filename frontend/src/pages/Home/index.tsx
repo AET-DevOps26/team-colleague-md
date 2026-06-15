@@ -1,7 +1,7 @@
 import { useAuth } from '../../hooks/useAuth';
 import { useFeed } from '../../hooks/useFeed';
 import Topbar from '../../components/layout/Topbar';
-import TagFilterBar from '../../components/feed/TagFilterBar';
+import TopicFilterBar from '../../components/feed/TopicFilterBar';
 import AuthBanner from '../../components/feed/AuthBanner';
 import FeedGrid from '../../components/feed/FeedGrid';
 import RefreshFAB from '../../components/feed/RefreshFAB';
@@ -9,13 +9,13 @@ import styles from './Home.module.css';
 
 export default function Home() {
   const { isLoggedIn } = useAuth();
-  const { posts, activeTag, setTag, loadMore, hasMore, loading, refresh, toggleLike } = useFeed();
+  const { posts, activeTopic, setTopic, loadMore, hasMore, loading, refresh, toggleLike } = useFeed();
 
   return (
     <>
       <Topbar
         bottomRow={
-          <TagFilterBar activeTag={activeTag} onTagChange={setTag} />
+          <TopicFilterBar activeTopic={activeTopic} onTopicChange={setTopic} />
         }
       />
       <section className={styles.feedWrap}>

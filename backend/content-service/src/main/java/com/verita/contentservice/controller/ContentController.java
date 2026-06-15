@@ -1,164 +1,188 @@
 package com.verita.contentservice.controller;
 
 import com.verita.api.ApiApi;
-import com.verita.model.*;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
+import com.verita.contentservice.service.CommentService;
+import com.verita.contentservice.service.InteractionService;
+import com.verita.contentservice.service.PostService;
+import com.verita.contentservice.service.TopicService;
+import com.verita.model.CommentLikeResponse;
+import com.verita.model.CommentRequest;
+import com.verita.model.CommentResponse;
+import com.verita.model.FollowerCountDeltaRequest;
+import com.verita.model.LikeRequest;
+import com.verita.model.PostCard;
+import com.verita.model.PostLikeResponse;
+import com.verita.model.PostPage;
+import com.verita.model.PostPatchRequest;
+import com.verita.model.PostRequest;
+import com.verita.model.PostResponse;
+import com.verita.model.TopicCategoryGroup;
+import com.verita.model.TopicResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @RestController
+@Validated
 public class ContentController implements ApiApi {
+    private final PostService postService;
+    private final CommentService commentService;
+    private final InteractionService interactionService;
+    private final TopicService topicService;
 
-    @Override
-    public ResponseEntity<Void> bookmarkPost(UUID id) {
-        // TODO: Add post to authenticated user's bookmarks
-        return ResponseEntity.noContent().build();
+    public ContentController(PostService postService, CommentService commentService,
+                             InteractionService interactionService, TopicService topicService) {
+        this.postService = postService;
+        this.commentService = commentService;
+        this.interactionService = interactionService;
+        this.topicService = topicService;
     }
 
     @Override
-    public ResponseEntity<CommentResponse> createComment(UUID id, CommentRequest commentRequest) {
-        // TODO: Persist and return the new comment
-        return ResponseEntity.status(201).build();
+    public ResponseEntity<PostResponse> createPost(@Valid PostRequest postRequest) {
+        return ResponseEntity.status(201).body(postService.createPost(postRequest, currentAuth()));
     }
 
     @Override
-    public ResponseEntity<PostResponse> createPost(PostRequest postRequest) {
-        // TODO: Persist and return the new post
-        return ResponseEntity.status(201).build();
+    public ResponseEntity<PostResponse> updatePost(UUID id, @Valid PostRequest postRequest) {
+        return ResponseEntity.ok(postService.updatePost(id, postRequest, currentAuth()));
     }
 
     @Override
-    public ResponseEntity<Void> deleteComment(UUID id) {
-        // TODO: Soft-delete the comment if owned by the authenticated user
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<PostResponse> patchPost(UUID id, @Valid PostPatchRequest postPatchRequest) {
+        return ResponseEntity.ok(postService.patchPost(id, postPatchRequest, currentAuth()));
     }
 
     @Override
     public ResponseEntity<Void> deletePost(UUID id) {
-        // TODO: Soft-delete the post if owned by the authenticated user
+        postService.deletePost(id, currentAuth());
         return ResponseEntity.noContent().build();
     }
 
     @Override
-    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String tag) {
-        // TODO: Return paginated posts, optionally filtered by tag
-        PostPage postPage = new PostPage()
-                .content(new ArrayList<>())
-                .page(page)
-                .size(size)
-                .totalPages(0)
-                .totalElements(0);
-        return ResponseEntity.ok(postPage);
-    }
-
-    @Override
-    public ResponseEntity<List<CommentResponse>> getCommentsByPost(UUID id) {
-        // TODO: Return hierarchical comments for the given post
-        return ResponseEntity.ok(new ArrayList<>());
-    }
-
-    @Override
-    public ResponseEntity<PostPage> getMyDrafts(Integer page, Integer size) {
-        // TODO: Return draft posts for the authenticated user
-        PostPage postPage = new PostPage()
-                .content(new ArrayList<>())
-                .page(page)
-                .size(size)
-                .totalPages(0)
-                .totalElements(0);
-        return ResponseEntity.ok(postPage);
+    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String topic) {
+        int p = page == null ? 0 : page;
+        int s = size == null ? 10 : size;
+        return ResponseEntity.ok(postService.getAllPosts(p, s, topic, currentAuth()));
     }
 
     @Override
     public ResponseEntity<PostResponse> getPostById(UUID id) {
-        // TODO: Return post details or 404
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(postService.getPost(id, currentAuth()));
     }
 
     @Override
     public ResponseEntity<List<PostCard>> getPostCards(List<UUID> ids) {
-        // TODO: Return lightweight post cards for the given IDs
-        return ResponseEntity.ok(new ArrayList<>());
+        return ResponseEntity.ok(postService.getCards(ids, currentAuth()));
     }
 
     @Override
-    public ResponseEntity<List<TagResponse>> getTrendingTags() {
-        // TODO: Return list of trending tags
-        return ResponseEntity.ok(new ArrayList<>());
+    public ResponseEntity<PostPage> searchPosts(@NotBlank String q, Integer page, Integer size) {
+        int p = page == null ? 0 : page;
+        int s = size == null ? 10 : size;
+        return ResponseEntity.ok(postService.searchPosts(q, p, s, currentAuth()));
     }
 
     @Override
-    public ResponseEntity<PostPage> getUserBookmarks(UUID id, Integer page, Integer size) {
-        // TODO: Return bookmarked posts for the given user, respecting showBookmarks preference
-        PostPage postPage = new PostPage()
-                .content(new ArrayList<>())
-                .page(page)
-                .size(size)
-                .totalPages(0)
-                .totalElements(0);
-        return ResponseEntity.ok(postPage);
+    public ResponseEntity<PostLikeResponse> likePost(UUID id, @Valid LikeRequest likeRequest) {
+        return ResponseEntity.ok(interactionService.likePost(id, likeRequest.getType(), currentAuth()));
     }
 
     @Override
-    public ResponseEntity<PostPage> getUserLikes(UUID id, Integer page, Integer size) {
-        // TODO: Return liked posts for the given user, respecting showLikes preference
-        PostPage postPage = new PostPage()
-                .content(new ArrayList<>())
-                .page(page)
-                .size(size)
-                .totalPages(0)
-                .totalElements(0);
-        return ResponseEntity.ok(postPage);
-    }
-
-    @Override
-    public ResponseEntity<PostPage> getUserPosts(UUID id, Integer page, Integer size) {
-        // TODO: Return published posts authored by the given user
-        PostPage postPage = new PostPage()
-                .content(new ArrayList<>())
-                .page(page)
-                .size(size)
-                .totalPages(0)
-                .totalElements(0);
-        return ResponseEntity.ok(postPage);
-    }
-
-    @Override
-    public ResponseEntity<CommentLikeResponse> likeComment(UUID id) {
-        // TODO: Toggle like on the comment and return updated counts
-        return ResponseEntity.ok(new CommentLikeResponse());
-    }
-
-    @Override
-    public ResponseEntity<PostLikeResponse> likePost(UUID id, LikeRequest likeRequest) {
-        // TODO: Apply like/dislike/none reaction and return updated counts
-        return ResponseEntity.ok(new PostLikeResponse());
-    }
-
-    @Override
-    public ResponseEntity<PostPage> searchPosts(String q, Integer page, Integer size) {
-        // TODO: Full-text search across post titles and content
-        PostPage postPage = new PostPage()
-                .content(new ArrayList<>())
-                .page(page)
-                .size(size)
-                .totalPages(0)
-                .totalElements(0);
-        return ResponseEntity.ok(postPage);
-    }
-
-    @Override
-    public ResponseEntity<Void> unbookmarkPost(UUID id) {
-        // TODO: Remove post from authenticated user's bookmarks
+    public ResponseEntity<Void> bookmarkPost(UUID id) {
+        interactionService.bookmarkPost(id, currentAuth());
         return ResponseEntity.noContent().build();
     }
 
     @Override
-    public ResponseEntity<PostResponse> updatePost(UUID id, PostRequest postRequest) {
-        // TODO: Update and return the post, or 404
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<Void> unbookmarkPost(UUID id) {
+        interactionService.unbookmarkPost(id, currentAuth());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<List<CommentResponse>> getCommentsByPost(UUID id) {
+        return ResponseEntity.ok(commentService.getComments(id, currentAuth()));
+    }
+
+    @Override
+    public ResponseEntity<CommentResponse> createComment(UUID id, @Valid CommentRequest commentRequest) {
+        return ResponseEntity.status(201).body(commentService.addComment(id, commentRequest, currentAuth()));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteComment(UUID id) {
+        commentService.deleteComment(id, currentAuth());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<CommentLikeResponse> likeComment(UUID id) {
+        return ResponseEntity.ok(interactionService.likeComment(id, currentAuth()));
+    }
+
+    @Override
+    public ResponseEntity<PostPage> getMyDrafts(Integer page, Integer size) {
+        int p = page == null ? 0 : page;
+        int s = size == null ? 10 : size;
+        return ResponseEntity.ok(postService.getMyDrafts(p, s, currentAuth()));
+    }
+
+    @Override
+    public ResponseEntity<PostPage> getUserPosts(UUID id, Integer page, Integer size) {
+        int p = page == null ? 0 : page;
+        int s = size == null ? 10 : size;
+        return ResponseEntity.ok(postService.getUserPosts(id, p, s, currentAuth()));
+    }
+
+    @Override
+    public ResponseEntity<PostPage> getUserBookmarks(UUID id, Integer page, Integer size) {
+        int p = page == null ? 0 : page;
+        int s = size == null ? 10 : size;
+        return ResponseEntity.ok(postService.getUserBookmarks(id, p, s, currentAuth()));
+    }
+
+    @Override
+    public ResponseEntity<PostPage> getUserLikes(UUID id, Integer page, Integer size) {
+        int p = page == null ? 0 : page;
+        int s = size == null ? 10 : size;
+        return ResponseEntity.ok(postService.getUserLikes(id, p, s, currentAuth()));
+    }
+
+    @Override
+    public ResponseEntity<List<TopicCategoryGroup>> getTopics() {
+        return ResponseEntity.ok(topicService.getAllGrouped());
+    }
+
+    @Override
+    public ResponseEntity<List<TopicResponse>> searchTopics(String q) {
+        return ResponseEntity.ok(topicService.search(q));
+    }
+
+    @Override
+    public ResponseEntity<Void> updateTopicFollowerCounts(FollowerCountDeltaRequest followerCountDeltaRequest) {
+        topicService.applyFollowerCountDeltas(followerCountDeltaRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<List<TopicResponse>> getTrendingTopics() {
+        return ResponseEntity.ok(topicService.trendingTopics());
+    }
+
+    private String currentAuth() {
+        var attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof ServletRequestAttributes servletRequestAttributes) {
+            HttpServletRequest request = servletRequestAttributes.getRequest();
+            return request.getHeader("Authorization");
+        }
+        return null;
     }
 }

@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
+import Avatar from '../../ui/Avatar';
 import styles from './Topbar.module.css';
 
 function IconSearch() {
@@ -50,13 +51,15 @@ export default function Topbar({ bottomRow }: TopbarProps) {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search Verita — papers, people, tags, ideas…"
+            placeholder="Search Verita — papers, people, topics, ideas…"
             aria-label="Search"
           />
         </form>
         <div className={styles.topbarRight}>
           {isLoggedIn && user ? (
-            <Link to={`/profile/${user.username}`} className={styles.avatarBtn} aria-label="Your profile" />
+            <Link to={`/profile/${user.username}`} className={styles.avatarBtn} aria-label="Your profile">
+              <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={44} borderRadius={12} />
+            </Link>
           ) : (
             <button className={styles.signinBtn} onClick={() => openAuth('login')}>
               Sign in
@@ -65,7 +68,7 @@ export default function Topbar({ bottomRow }: TopbarProps) {
         </div>
       </div>
       {bottomRow && (
-        <div className={styles.row2} data-testid="topbar-tag-row">
+        <div className={styles.row2} data-testid="topbar-topic-row">
           {bottomRow}
         </div>
       )}

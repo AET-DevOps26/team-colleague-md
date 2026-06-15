@@ -1,0 +1,28 @@
+apiVersion: v2
+name: verita
+description: Umbrella Helm chart for the Verita platform
+type: application
+version: 0.3.0
+appVersion: "0.1.0"
+
+dependencies:
+  - name: postgresql
+    version: 18.4.0
+    repository: https://charts.bitnami.com/bitnami
+    alias: user-postgresql
+    condition: user-postgresql.enabled
+  - name: postgresql
+    version: 18.4.0
+    repository: https://charts.bitnami.com/bitnami
+    alias: content-postgresql
+    condition: content-postgresql.enabled
+  - name: postgresql
+    version: 18.4.0
+    repository: https://charts.bitnami.com/bitnami
+    alias: recommendation-postgresql
+    condition: recommendation-postgresql.enabled
+  - name: minio
+    version: 5.4.0
+    repository: https://charts.min.io/
+    alias: minio
+    condition: minio.enabled

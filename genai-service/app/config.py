@@ -16,15 +16,23 @@ class Settings(BaseSettings):
     llm_provider: str = "nvidia"  # "openrouter", "nvidia", or "google"
     llm_model: str = "moonshotai/kimi-k2.6"
     llm_temperature: float = 0.3
-    llm_max_tokens: int = 300
 
     google_api_key: str = ""
     openrouter_api_key: str = ""
     nvidia_nim_api_key: str = ""
 
+    # --- External Source Providers ---
+    github_token: str = ""
+    gnews_api_key: str = ""
+
+    # --- Opt-in Live Integration Tests ---
+    run_digest_provider_integration: bool = False
+    run_digest_llm_integration: bool = False
+
     # --- Application ---
     app_name: str = "GenAI Service"
     app_version: str = "1.0.0"
+    log_level: str = "INFO"
 
     # --- CORS ---
     # Comma-separated list of allowed origins (e.g., "http://localhost:3000,http://localhost:8082")
@@ -34,6 +42,7 @@ class Settings(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
+        "extra": "ignore",
     }
 
     @property
