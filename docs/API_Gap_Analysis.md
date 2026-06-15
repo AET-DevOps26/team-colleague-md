@@ -13,9 +13,7 @@ Each entry notes what is missing and the corresponding `Epic X / Px`.
 
 ### P0 / P1 — To implement
 
-| Gap | Epic / Priority | Notes |
-|---|---|---|
-| "Social links" is singular | Epic 1 / P1 | Story says "bio, expertise areas, **social links**" (plural); `UpdateUserRequest`/`User` only have a single `website` field. Either add multiple links or accept reduced scope. |
+_None outstanding._
 
 ### P2 — Optional
 
@@ -26,10 +24,8 @@ Each entry notes what is missing and the corresponding `Epic X / Px`.
 | Digest/notification delivery channel preference | Epic 3 / P2 | "receive digests and alerts via **email or platform inbox**" — no channel field in `UserPreferences`. Owner (user- vs recommendation-service) still open. |
 | Per-activity notification preferences | Epic 3 / P2 | "configure notification preferences for different activities (new posts, comments, replies)" — no fields here or in recommendation-service. Owner still open. |
 
-> **Resolved:** topic subscriptions (Epic 5 P1) and follow-users (Epic 4 P2) are owned by **recommendation-service** (`subscribeToTopic`, `subscribeToUser`), not user-service.
-
 ### Already covered ✓
-Register / login / logout / refresh; admin role & ban management; guest browsing (public endpoints); profile management (bio, expertise areas, website, organisation); `VERIFIED` role for badge display; `digestFrequency` preference; post/follower/like counts on `User`.
+Register / login / logout / refresh; admin role & ban management; guest browsing (public endpoints); profile management (bio, expertise areas, organisation, and a single `website`/social link — **decided: single link is the accepted scope**); `VERIFIED` role for badge display; `digestFrequency` preference; post/follower/like counts on `User`.
 
 ---
 
@@ -43,7 +39,7 @@ Register / login / logout / refresh; admin role & ban management; guest browsing
 | Topic stats + management (issue #94) | Epic 5 / P1 | Schema now has the full topic model (`topic_categories`, expanded `topics` with cached `posts_this_week`/`posts_prev_week`/`activity_score`/`is_hot`/`follower_count`, `topic_weekly_stats` + nightly cron). **OpenAPI gaps remain**: (1) extend `TopicResponse` with `displayName`/`postsThisWeek`/`postsPrevWeek`/`activityScore`/`isHot`/`followerCount`; (2) `GET /api/v1/topics` (grouped by category, with stats); (3) `GET /api/v1/topics/search?q=` (autocomplete); (4) `POST /api/v1/topics/follower-counts` (delta sync, **called by recommendation-service** on subscribe/unsubscribe). |
 | AI summary on post | Epic 3 / P1 | **Decided**: stored on the post (`posts.summary`), populated by genai-service. **OpenAPI gap remains**: `PostResponse` needs a `summary` field. |
 | AI Digest as a post `type` | Epic 3 / P1 | The AI Digest is a genai-generated special post (moved here from recommendation-service). Schema adds `posts.type` (`NORMAL`/`DIGEST`). **OpenAPI gap remains**: expose `type` and a way to list digest posts (e.g. `type` filter on `getAllPosts`). |
-| Image / cover file upload | Epic 2 / P1 | Promoted from P2. Schema stores URLs only (`cover_image_url` + inline Markdown URLs), files in MinIO/object storage. **OpenAPI gap remains**: a file-upload endpoint that stores to object storage and returns the URL. |
+| Image / cover file upload | Epic 2 / P1 | Promoted from P2. Schema stores URLs only (`cover_image_url` + inline Markdown URLs), files in MinIO/object storage. **Decided: multipart proxy upload** — `POST /api/v1/files` accepts `multipart/form-data` (`file: binary`), content-service validates + streams to MinIO and returns `{ url }`; no binary in any JSON body, MinIO stays internal-only. **OpenAPI gap remains**: add that endpoint. |
 
 ### P2 — Optional
 
@@ -71,12 +67,6 @@ Create post (Markdown body, topics, `sourceUrl[]` source section, inline hyperli
 Otherwise the personal/trending feeds, topic subscriptions, and interaction tracking
 cover the P0/P1 stories owned by this service.
 
-> **Resolved — AI Digest (Epic 3 / P1) is owned by content-service, not here.**
-> The AI Digest is a **genai-generated special post** stored in content-service
-> (posts need a `type`/kind field: `NORMAL` / `DIGEST`). Retrieval is just a normal
-> post fetch filtered by type; this service only emits the (P2) `DAILY_DIGEST`
-> notification pointing at that post. No digest endpoint/schema is needed here.
-
 ### P2 — Optional
 
 | Gap | Epic / Priority | Notes |
@@ -89,5 +79,27 @@ cover the P0/P1 stories owned by this service.
 
 ### Already covered ✓
 Trending + personal feeds with topic filter and cursor pagination; topic subscriptions (`subscribeToTopic` / `getSubscribedTopics`); follow/unfollow users; notifications (`NEW_POST_IN_SUBSCRIBED_TOPIC`, `COMMENT`, `LIKE`, `DAILY_DIGEST`, `VERIFICATION_APPROVED`) with read/read-all; behavioral interaction tracking.
+
+---
+
+## genai-service
+
+### P0 / P1 — To implement
+
+| Gap | Epic / Priority | Notes |
+|---|---|---|
+| On-demand post summarization endpoint | Epic 3 / P1 | The "Generate Summary" story (and the decided content-service `posts.summary` field, populated by genai-service) has **no producer endpoint** — the genai `openapi.yaml` only exposes `/health` and the digest job endpoints. **OpenAPI gap remains**: add a summarization endpoint (e.g. `POST /api/v1/genai/summaries`) that takes post content and returns the summary text for content-service to persist on the post. |
+
+### P2 — Optional
+
+| Gap | Epic / Priority | Notes |
+|---|---|---|
+| Auto topic/tag suggestion | Epic 3 / P2 | GenAI strategy + Scenario 1 describe auto-suggesting topics on post creation; no suggestion endpoint in the spec. |
+| Sentiment analysis | Epic 3 / P2 | No endpoint to produce the post sentiment score (see also content-service `PostResponse` sentiment field). |
+| Content verification / fake-news flag | Epic 3 / Epic 6 / P2 | No endpoint for AI fact-checking / misinformation flagging. |
+| Semantic search (RAG) | Epic 5 / P2 | No semantic-search endpoint here or in recommendation-service. |
+
+### Already covered ✓
+AI Daily Digest generation (async job: `createDailyDigestJob` + `getDailyDigestJob`, with per-event source attribution via `DigestEvent.sourceUrls`/`topicIds`).
 
 ---
