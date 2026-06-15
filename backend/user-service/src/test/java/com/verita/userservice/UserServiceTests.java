@@ -137,10 +137,16 @@ public class UserServiceTests {
 
     @Test
     void deleteUser_success() {
+        String avatarUrl = "http://localhost:9000/verita-user-portraits/users/old/avatar-old.png";
+        userEntity.setAvatarUrl(avatarUrl);
+
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
         doNothing().when(userRepository).delete(any(UserEntity.class));
+
         userService.deleteUser("testuser");
-        verify(userRepository, times(1)).delete(any(UserEntity.class));
+
+        verify(userRepository, times(1)).delete(userEntity);
+        verify(avatarStorageService, times(1)).deleteAvatar(avatarUrl);
     }
     @Test
     void searchUsers_success() {
