@@ -13,7 +13,9 @@ Each entry notes what is missing and the corresponding `Epic X / Px`.
 
 ### P0 / P1 — To implement
 
-_None outstanding._
+| Gap | Epic / Priority | Notes |
+|---|---|---|
+| Account deletion cross-service cleanup | Service consistency / P1 | `DELETE /api/v1/users/me` currently deletes the user-service account only. Implementation must orchestrate cleanup with content-service and recommendation-service before/around deleting the local user: remove or anonymize the user's posts and comments, clear content interactions where applicable, and call recommendation-service to remove user/topic subscriptions (including subscribed topics) and follow relationships. Define failure handling explicitly because this spans service boundaries. |
 
 ### P2 — Optional
 
