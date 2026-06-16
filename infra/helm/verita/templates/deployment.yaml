@@ -82,6 +82,10 @@ spec:
               value: "http://{{ $.Release.Name }}-user:{{ (index $.Values.services "user").port }}"
             - name: CONTENT_SERVICE_URL
               value: "http://{{ $.Release.Name }}-content:{{ (index $.Values.services "content").port }}"
+            - name: RECOMMENDATION_SERVICE_URL
+              value: "http://{{ $.Release.Name }}-recommendation:{{ (index $.Values.services "recommendation").port }}"
+            - name: GENAI_SERVICE_URL
+              value: "http://{{ $.Release.Name }}-genai:{{ (index $.Values.services "genai").port }}"
             - name: MINIO_URL
               value: "http://{{ $.Release.Name }}-minio:9000"
             {{- end }}

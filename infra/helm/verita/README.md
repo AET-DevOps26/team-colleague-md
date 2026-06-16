@@ -1,28 +1,30 @@
 # Verita Helm Chart
 
-Umbrella Helm chart for the Verita platform. All five services are defined in `values.yaml` and rendered from a single set of templates — no per-service subcharts.
+Umbrella Helm chart for the Verita platform. The five application services (user, content, recommendation, genai, frontend) are defined in `values.yaml` and rendered from a single set of range-based templates. Stateful dependencies are pulled in as subcharts.
 
-External dependencies: Bitnami `postgresql` (aliased per-service for user, content, and recommendation).
+Subchart dependencies:
+- Bitnami `postgresql` — aliased per service (`user-postgresql`, `content-postgresql`, `recommendation-postgresql`)
+- Official MinIO chart (`https://charts.min.io/`) — object storage for avatars and post photos
 
-Namespace: `team-md`
+Namespaces: `verita-dev` and `verita-prod` (one release per environment).
 
 ## Requirements
 
 - Helm 3.x (install locally)
 - Kubernetes cluster with an Ingress controller — provided by the TUM Rancher cluster
-- `cert-manager` with a `ClusterIssuer` named `letsencrypt-staging` — pre-installed by cluster admins, no action needed
+- `cert-manager` with the `ClusterIssuer` referenced by the environment (`letsencrypt-staging` for dev, `letsencrypt-prod` for prod) — pre-installed by cluster admins
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `Chart.yaml` | Chart metadata and postgresql dependencies |
-| `values.yaml` | Base values — all services, resources, ingress |
-| `values-dev.yaml` | Dev overrides (image tags → `dev`, dev host) |
-| `values-prod.yaml` | Prod overrides (host only; tags default to `latest`) |
+| `Chart.yaml` | Chart metadata; postgresql and minio subchart dependencies |
+| `values.yaml` | Base values — all services, resources, ingress, minio |
+| `values-dev.yaml` | Dev overrides (image tags → `dev`, dev host, staging issuer) |
+| `values-prod.yaml` | Prod overrides (host, `letsencrypt-prod` issuer; tags default to `latest`) |
 | `templates/deployment.yaml` | Single template, loops over all services |
 | `templates/service.yaml` | Single template, loops over all services |
-| `templates/ingress.yaml` | Single Ingress routing all paths |
+| `templates/ingress.yaml` | Single Ingress, routes everything to the frontend |
 
 ## Images and Registry
 
@@ -38,75 +40,88 @@ Each service's resolved image:
 <global.registry>/<services.<name>.image>:<services.<name>.tag>
 ```
 
-Image pull credentials are configured via `global.imagePullSecrets`. The secret must be created in the namespace before deploying (see Install section).
+Image pull credentials are configured via `global.imagePullSecrets`.
 
-## Ingress Routing
+## Routing — frontend nginx as the API gateway
 
-A single Ingress is created for `ingress.host`. Path routing:
+The Ingress is intentionally trivial: a **single rule** routing `/` to the frontend. The frontend container's nginx is the API gateway — it reverse-proxies the API prefixes to the in-cluster services (the same `nginx.conf` used on the Azure VM, so both environments route identically).
 
-| Path | Service |
-|------|---------|
-| `/user` | user-service (8081) |
-| `/content` | content-service (8082) |
-| `/recommendation` | recommendation-service (8083) |
-| `/genai` | genai-service (8000) |
-| `/summarization` | genai-service (8000) |
-| `/` | frontend (80) |
+```
+Browser → Ingress (/) → frontend nginx ─┬─ /user/        → user-service:8081
+                                         ├─ /content/     → content-service:8082
+                                         ├─ /recommendation/ → recommendation-service:8083
+                                         ├─ /genai/       → genai-service:8000
+                                         ├─ /storage/     → minio:9000
+                                         └─ /             → SPA (index.html)
+```
+
+The backend service URLs are injected into the frontend pod via the `proxyBackend` block in `deployment.yaml` (`USER_SERVICE_URL`, `CONTENT_SERVICE_URL`, `RECOMMENDATION_SERVICE_URL`, `GENAI_SERVICE_URL`, `MINIO_URL`).
+
+This keeps the Ingress free of rewrite/regex annotations (which previously broke static-asset serving and conflicted with the nginx admission webhook), and keeps the backends off the public Ingress.
 
 ## Service Ports and Resources
 
 Configured in `values.yaml` under `services.<name>`:
 
-| Service | Port | Memory limit |
-|---------|------|-------------|
-| user | 8081 | 512Mi |
-| content | 8082 | 512Mi |
-| recommendation | 8083 | 512Mi |
-| genai | 8000 | 256Mi |
-| frontend | 80 | 128Mi |
+| Service | Port | Memory limit | Replicas |
+|---------|------|-------------|----------|
+| user | 8081 | 512Mi | 1 |
+| content | 8082 | 512Mi | 1 |
+| recommendation | 8083 | 512Mi | 1 |
+| genai | 8000 | 256Mi | 2 |
+| frontend | 80 | 128Mi | 2 |
 
-## Database Dependencies
+## Stateful Dependencies
 
-Bitnami postgresql is deployed per JVM service (user, content, recommendation). Enable/disable via:
+### PostgreSQL
+
+Bitnami postgresql is deployed per JVM service. Enable/disable via the aliased subchart keys (note the hyphens):
 
 ```yaml
-userPostgresql:
+user-postgresql:
   enabled: true
-contentPostgresql:
+content-postgresql:
   enabled: true
-recommendationPostgresql:
+recommendation-postgresql:
   enabled: true
 ```
 
-DB credentials are injected automatically into each service's pod as environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+DB credentials are injected automatically into each service's pod (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+
+### MinIO
+
+Deployed via the official MinIO chart (standalone, single replica). The chart's post-install job provisions the buckets (`verita-user-portraits`, `verita-post-photos`) with a `download` policy for public asset URLs. Services read the root credentials from the `<release>-minio` Secret (keys `rootUser`/`rootPassword`), injected as `STORAGE_S3_*` env vars.
+
+```yaml
+minio:
+  enabled: true
+  mode: standalone
+  rootUser: verita_minio
+  rootPassword: verita_minio_password   # overridden in CI via --set minio.rootPassword
+```
 
 ## Install / Upgrade
 
 ### 1. Set up kubeconfig
 
 Download the kubeconfig from Rancher UI: top-right menu → **Download KubeConfig**.
-Save it to a separate file to avoid overwriting your existing config:
 
 ```bash
-# Save the downloaded file
 cp ~/Downloads/kubeconfig.yaml ~/.kube/verita-rancher.yaml
 chmod 600 ~/.kube/verita-rancher.yaml
-
-# Point kubectl and helm at it for this session
 export KUBECONFIG=~/.kube/verita-rancher.yaml
-
-# Verify
-kubectl get pods -n team-md
+kubectl get pods -n verita-dev
 ```
 
 ### 2. Update Helm dependencies
 
 ```bash
 helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add minio https://charts.min.io/
 helm dependency update .
 ```
 
-### 4. Deploy
+### 3. Deploy
 
 Dev environment:
 
@@ -114,7 +129,7 @@ Dev environment:
 helm upgrade --install verita . \
   -f values.yaml \
   -f values-dev.yaml \
-  --namespace team-md --create-namespace
+  --namespace verita-dev --create-namespace
 ```
 
 Prod environment:
@@ -123,17 +138,19 @@ Prod environment:
 helm upgrade --install verita . \
   -f values.yaml \
   -f values-prod.yaml \
-  --namespace team-md --create-namespace
+  --namespace verita-prod --create-namespace \
+  --set minio.rootPassword=<strong-password>
 ```
 
-### Override individual values
+### Clean reinstall (wipes data)
+
+If the release ends up in a broken state, a full reinstall resets it (deletes database and MinIO data):
 
 ```bash
-helm upgrade --install verita . \
-  -f values.yaml -f values-dev.yaml \
-  --namespace team-md \
-  --set services.user.tag=abc1234 \
-  --set ingress.host=verita.my-domain.example
+helm uninstall verita -n verita-dev
+kubectl delete pvc --all -n verita-dev
+helm install verita . -f values.yaml -f values-dev.yaml \
+  --namespace verita-dev --create-namespace --timeout 5m
 ```
 
 ### Dry run (render templates without deploying)
@@ -147,8 +164,8 @@ helm template verita . -f values.yaml -f values-dev.yaml
 Assuming `ingress.host` is set:
 
 - `https://<host>/` → frontend UI
-- `https://<host>/user/api/v1/...` → user service
+- `https://<host>/user/api/v1/...` → user service (via frontend nginx)
 - `https://<host>/content/api/v1/...` → content service
 - `https://<host>/recommendation/api/v1/...` → recommendation service
-- `https://<host>/genai/health` → genai service
-- `https://<host>/summarization/health` → genai (summarization path)
+- `https://<host>/genai/api/v1/genai/...` → genai service
+- `https://<host>/storage/...` → MinIO objects
