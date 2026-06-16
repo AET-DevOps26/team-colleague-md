@@ -79,6 +79,8 @@ Verita is an AI-focused community platform where developers, researchers, and en
 * As an administrator, I want to review verification applications in a dashboard and approve or reject requests, so that only legitimate organizations and experts receive verified status
 * As a verified account, I want my posts to be prioritized in trending sections and recommendation algorithms, so that official announcements reach the community more effectively
 * As a verified account, I want special formatting options for posts (e.g., announcement banners, pinned posts), so that important official updates stand out visually
+* As an administrator, I want to create, edit, group (into categories), and retire topics from a Manage-Topics page, so that the platform maintains a curated, consistent topic vocabulary
+* As an administrator, I want to merge a duplicate topic into an existing one, so that the topic vocabulary stays clean
 
 ---
 
@@ -90,7 +92,7 @@ Verita is an AI-focused community platform where developers, researchers, and en
 
 * As a user, I want to create a new post with a title and Markdown-formatted body, so that I can share AI knowledge with the community
 * As a user, I want to use a Markdown editor with syntax highlighting for code blocks, so that I can format technical documentation easily
-* As a user, I want to add topics to my post during creation, so that others can discover my content through relevant areas of interest
+* As a user, I want to select relevant topics from the existing topic list when creating my post, so that others can discover my content through relevant areas of interest
 * As a user, I want to insert inline hyperlinks within my post body, so that I can reference external resources directly where they are relevant
 * As a user, I want to add a dedicated source section at the end of my post, so that I can clearly list and credit the external references behind my content
 
