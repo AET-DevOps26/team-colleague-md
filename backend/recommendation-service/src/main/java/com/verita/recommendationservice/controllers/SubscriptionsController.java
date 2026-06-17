@@ -26,15 +26,15 @@ public class SubscriptionsController implements SubscriptionsApi {
     @Override
     public ResponseEntity<List<Topic>> getSubscribedTopics() {
         UUID userId = securityUtils.getCurrentUserId();
-        List<Topic> topics = subscriptionService.getSubscribedTags(userId).stream()
-                .map(sub -> new Topic().id(sub.getTagId()).name(""))
+        List<Topic> topics = subscriptionService.getSubscribedTopics(userId).stream()
+                .map(sub -> new Topic().id(sub.getTopicId()).name(""))
                 .toList();
         return ResponseEntity.ok(topics);
     }
 
     @Override
     public ResponseEntity<Void> subscribeToTopic(UUID topicId) {
-        subscriptionService.subscribeToTag(securityUtils.getCurrentUserId(), topicId);
+        subscriptionService.subscribeToTopic(securityUtils.getCurrentUserId(), topicId);
         return ResponseEntity.status(201).build();
     }
 
@@ -46,7 +46,7 @@ public class SubscriptionsController implements SubscriptionsApi {
 
     @Override
     public ResponseEntity<Void> unsubscribeFromTopic(UUID topicId) {
-        subscriptionService.unsubscribeFromTag(topicId, securityUtils.getCurrentUserId());
+        subscriptionService.unsubscribeFromTopic(topicId, securityUtils.getCurrentUserId());
         return ResponseEntity.noContent().build();
     }
 

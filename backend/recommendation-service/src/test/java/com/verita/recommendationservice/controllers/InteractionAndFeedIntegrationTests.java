@@ -182,7 +182,7 @@ class InteractionAndFeedIntegrationTests {
         cache.clear();
 
         mockMvc.perform(get("/api/v1/feed/trending")
-                        .param("tag", "LLMs").param("cursor", "c1").param("size", "10"))
+                        .param("topic", "LLMs").param("cursor", "c1").param("size", "10"))
                 .andExpect(status().isOk());
 
         @SuppressWarnings("unchecked")
@@ -192,7 +192,7 @@ class InteractionAndFeedIntegrationTests {
 
         // An identical request is served from the cache — no second entry is created.
         mockMvc.perform(get("/api/v1/feed/trending")
-                        .param("tag", "LLMs").param("cursor", "c1").param("size", "10"))
+                        .param("topic", "LLMs").param("cursor", "c1").param("size", "10"))
                 .andExpect(status().isOk());
         nativeCache.cleanUp();
         assertEquals(1, nativeCache.estimatedSize());

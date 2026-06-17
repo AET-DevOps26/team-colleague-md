@@ -23,7 +23,7 @@ public class FeedController implements DiscoveryApi {
     }
 
     @Override
-    public ResponseEntity<FeedPage> getTrendingFeed(String tag, String cursor, Integer size) {
-        return ResponseEntity.ok(feedService.getTrendingFeed(tag, cursor, size));
+    public ResponseEntity<FeedPage> getTrendingFeed(String topic, String cursor, Integer size) {
+        return ResponseEntity.ok(feedService.getTrendingFeed(topic, cursor, size));
     }
 }

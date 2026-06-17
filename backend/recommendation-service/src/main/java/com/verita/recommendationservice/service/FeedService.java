@@ -11,12 +11,12 @@ import java.util.ArrayList;
 public class FeedService {
 
     /**
-     * Trending content is global — keyed only by tag/cursor/size, never by user —
+     * Trending content is global — keyed only by topic/cursor/size, never by user —
      * so the result is safe to share across callers. Cached with a short TTL
      * (see {@link CacheConfig}) to shield the ranking engine from repeated identical reads.
      */
-    @Cacheable(cacheNames = CacheConfig.TRENDING_FEED_CACHE, key = "{#tag, #cursor, #size}")
-    public FeedPage getTrendingFeed(String tag, String cursor, Integer size) {
+    @Cacheable(cacheNames = CacheConfig.TRENDING_FEED_CACHE, key = "{#topic, #cursor, #size}")
+    public FeedPage getTrendingFeed(String topic, String cursor, Integer size) {
         // TODO: Call Trending Algorithm Service
         return new FeedPage(new ArrayList<>(), null);
     }

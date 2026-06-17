@@ -1,8 +1,8 @@
 package com.verita.recommendationservice.service;
 
-import com.verita.recommendationservice.entities.TagSubscription;
+import com.verita.recommendationservice.entities.TopicSubscription;
 import com.verita.recommendationservice.entities.UserSubscription;
-import com.verita.recommendationservice.repository.TagSubscriptionRepository;
+import com.verita.recommendationservice.repository.TopicSubscriptionRepository;
 import com.verita.recommendationservice.repository.UserSubscriptionRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,32 +14,32 @@ import java.util.UUID;
 @Service
 public class SubscriptionService {
 
-    private final TagSubscriptionRepository tagSubscriptionRepository;
+    private final TopicSubscriptionRepository topicSubscriptionRepository;
     private final UserSubscriptionRepository userSubscriptionRepository;
 
-    public SubscriptionService(TagSubscriptionRepository tagSubscriptionRepository,
+    public SubscriptionService(TopicSubscriptionRepository topicSubscriptionRepository,
                                UserSubscriptionRepository userSubscriptionRepository) {
-        this.tagSubscriptionRepository = tagSubscriptionRepository;
+        this.topicSubscriptionRepository = topicSubscriptionRepository;
         this.userSubscriptionRepository = userSubscriptionRepository;
     }
 
-    public List<TagSubscription> getSubscribedTags(UUID userId) {
-        return tagSubscriptionRepository.findByUserId(userId);
+    public List<TopicSubscription> getSubscribedTopics(UUID userId) {
+        return topicSubscriptionRepository.findByUserId(userId);
     }
 
-    public void subscribeToTag(UUID userId, UUID tagId) {
-        if (!tagSubscriptionRepository.existsByUserIdAndTagId(userId, tagId)) {
-            TagSubscription sub = new TagSubscription();
+    public void subscribeToTopic(UUID userId, UUID topicId) {
+        if (!topicSubscriptionRepository.existsByUserIdAndTopicId(userId, topicId)) {
+            TopicSubscription sub = new TopicSubscription();
             sub.setUserId(userId);
-            sub.setTagId(tagId);
-            tagSubscriptionRepository.save(sub);
+            sub.setTopicId(topicId);
+            topicSubscriptionRepository.save(sub);
         }
     }
 
-    public void unsubscribeFromTag(UUID tagId, UUID userId) {
-        TagSubscription sub = tagSubscriptionRepository.findByUserIdAndTagId(userId, tagId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag subscription not found"));
-        tagSubscriptionRepository.delete(sub);
+    public void unsubscribeFromTopic(UUID topicId, UUID userId) {
+        TopicSubscription sub = topicSubscriptionRepository.findByUserIdAndTopicId(userId, topicId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Topic subscription not found"));
+        topicSubscriptionRepository.delete(sub);
     }
 
     public void subscribeToUser(UUID followerId, UUID followedId) {

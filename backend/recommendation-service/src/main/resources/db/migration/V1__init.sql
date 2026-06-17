@@ -32,17 +32,17 @@ CREATE TABLE interactions (
 CREATE INDEX idx_interactions_user_post  ON interactions (user_id, post_id);
 CREATE INDEX idx_interactions_post_type  ON interactions (post_id, interaction_type);
 
--- ─── Tag subscriptions ────────────────────────────────────────────────────────
+-- ─── Topic subscriptions ──────────────────────────────────────────────────────
 
-CREATE TABLE tag_subscriptions (
+CREATE TABLE topic_subscriptions (
     id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id    UUID        NOT NULL,
-    tag_id     UUID        NOT NULL,
+    topic_id   UUID        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_tag_subscriptions_user_tag UNIQUE (user_id, tag_id)
+    CONSTRAINT uq_topic_subscriptions_user_topic UNIQUE (user_id, topic_id)
 );
 
-CREATE INDEX idx_tag_subscriptions_user_id ON tag_subscriptions (user_id);
+CREATE INDEX idx_topic_subscriptions_user_id ON topic_subscriptions (user_id);
 
 -- ─── User subscriptions (follows) ────────────────────────────────────────────
 
