@@ -11,8 +11,7 @@ import java.util.UUID;
     uniqueConstraints = @UniqueConstraint(
         name = "uq_topic_subscriptions_user_topic",
         columnNames = {"user_id", "topic_id"}
-    ),
-    indexes = @Index(name = "idx_topic_subscriptions_user_id", columnList = "user_id")
+    )
 )
 public class TopicSubscription {
 

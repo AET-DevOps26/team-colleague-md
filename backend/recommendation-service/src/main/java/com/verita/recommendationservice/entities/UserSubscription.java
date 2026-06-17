@@ -12,10 +12,7 @@ import java.util.UUID;
         name = "uq_user_subscriptions_pair",
         columnNames = {"follower_id", "followed_id"}
     ),
-    indexes = {
-        @Index(name = "idx_user_subscriptions_follower", columnList = "follower_id"),
-        @Index(name = "idx_user_subscriptions_followed", columnList = "followed_id")
-    }
+    indexes = @Index(name = "idx_user_subscriptions_followed", columnList = "followed_id")
 )
 public class UserSubscription {
 

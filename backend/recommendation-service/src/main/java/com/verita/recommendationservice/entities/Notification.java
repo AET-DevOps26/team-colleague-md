@@ -9,8 +9,8 @@ import java.util.UUID;
 @Table(
     name = "notifications",
     indexes = {
-        @Index(name = "idx_notifications_user_id", columnList = "user_id"),
-        @Index(name = "idx_notifications_user_unread", columnList = "user_id, is_read")
+        @Index(name = "idx_notifications_user_created", columnList = "user_id, created_at"),
+        @Index(name = "idx_notifications_user_unread", columnList = "user_id, created_at")
     }
 )
 public class Notification {
