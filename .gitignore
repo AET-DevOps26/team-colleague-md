@@ -57,6 +57,9 @@ venv/
 .env
 *.egg
 
+### Node ###
+node_modules/
+
 ### basedpyright ###
 pyrightconfig.json
 # Claude Code instructions (local only)
@@ -81,3 +84,6 @@ frontend/playwright-report/
 *.pem
 *.pub
 verita_key
+
+# CodeGraph data files — local to each machine, not for committing.
+./codegraph/*

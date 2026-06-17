@@ -203,6 +203,44 @@ paths:
           description: Account deleted
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/v1/users/me/avatar:
+    put:
+      operationId: updateCurrentUserAvatar
+      summary: Replace the current user's avatar
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      operationId: deleteCurrentUserAvatar
+      summary: Remove the current user's avatar
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Avatar removed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /api/v1/users/me/preferences:
     get:
       operationId: getUserPreferences
@@ -475,7 +513,6 @@ components:
       properties:
         displayName: { type: string }
         bio: { type: string, maxLength: 250, nullable: true }
-        avatarUrl: { type: string, format: uri, nullable: true }
         website: { type: string, format: uri, nullable: true }
         organisation: { type: string, nullable: true }
         expertiseAreas:

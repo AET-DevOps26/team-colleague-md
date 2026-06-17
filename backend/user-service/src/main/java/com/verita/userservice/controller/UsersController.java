@@ -6,6 +6,7 @@ import com.verita.model.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -64,6 +65,16 @@ public class UsersController implements UsersApi, AdminApi {
     @Override
     public ResponseEntity<User> updateCurrentUser(UpdateUserRequest updateUserRequest) {
         return ResponseEntity.ok(userService.updateCurrentUser(getCurrentUsername(), updateUserRequest));
+    }
+
+    @Override
+    public ResponseEntity<User> updateCurrentUserAvatar(MultipartFile avatar) {
+        return ResponseEntity.ok(userService.updateCurrentUserAvatar(getCurrentUsername(), avatar));
+    }
+
+    @Override
+    public ResponseEntity<User> deleteCurrentUserAvatar() {
+        return ResponseEntity.ok(userService.deleteCurrentUserAvatar(getCurrentUsername()));
     }
 
     // Admin API implementations

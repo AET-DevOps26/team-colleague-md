@@ -1,0 +1,20 @@
+{
+  "name": "team-colleague-md",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed:local": "tsx scripts/seed-local.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "@types/pg": "^8.15.6",
+    "typescript": "~6.0.2",
+    "tsx": "^4.20.6"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "minio": "^8.0.6",
+    "pg": "^8.16.3"
+  }
+}
