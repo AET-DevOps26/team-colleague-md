@@ -45,7 +45,7 @@ export default function PastDigests() {
   }, [isLoggedIn]);
 
   const todayDigest = contentService.getTodayDigest();
-  const allDigests = contentService.getDigestList(isLoggedIn);
+  const allDigests = contentService.getDigestList();
   const visible = allDigests.slice(0, visibleCount);
   const groups = groupByWeek(visible);
   const hasMore = visibleCount < allDigests.length;
@@ -184,7 +184,7 @@ function DigestCard({ item, onClick }: { item: DigestListItem; onClick: () => vo
       <div className={styles.histCardBlock}>
         <div className={styles.histEyebrow}>
           <span className={styles.histDate}>{item.displayDate}</span>
-          <span className={styles.histMetaInline}>{item.eventCount} events · ~{item.readTimeMinutes} min</span>
+          <span className={styles.histMetaInline}>~{item.readTimeMinutes} min read</span>
         </div>
         <blockquote className={styles.histPull}>{item.title}</blockquote>
       </div>

@@ -78,7 +78,6 @@ export interface DigestListItem {
   date: string;
   displayDate: string;
   title: string;
-  eventCount: number;
   readTimeMinutes: number;
 }
 
@@ -87,6 +86,7 @@ export interface TopicItem {
   id: string;
   name: string;
   displayName: string;
+  sortOrder: number;
   totalPostCount: number;
   postsThisWeek: number;
   postsPrevWeek: number;
