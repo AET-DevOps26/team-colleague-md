@@ -78,6 +78,7 @@ export interface DigestListItem {
   date: string;
   displayDate: string;
   title: string;
+  eventCount: number;
   readTimeMinutes: number;
 }
 

@@ -184,7 +184,7 @@ function DigestCard({ item, onClick }: { item: DigestListItem; onClick: () => vo
       <div className={styles.histCardBlock}>
         <div className={styles.histEyebrow}>
           <span className={styles.histDate}>{item.displayDate}</span>
-          <span className={styles.histMetaInline}>~{item.readTimeMinutes} min read</span>
+          <span className={styles.histMetaInline}>{item.eventCount} events · ~{item.readTimeMinutes} min</span>
         </div>
         <blockquote className={styles.histPull}>{item.title}</blockquote>
       </div>
