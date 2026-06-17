@@ -30,7 +30,8 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
         .map(cat => ({
           ...cat,
           topics: cat.topics.filter(t =>
-            t.tag.toLowerCase().includes(searchQuery.toLowerCase())
+            t.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            t.name.toLowerCase().includes(searchQuery.toLowerCase())
           ),
         }))
         .filter(cat => cat.topics.length > 0)
@@ -57,7 +58,7 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
         <p>Choose the AI topics you care about and Verita will build your daily digest from the latest posts in those feeds.</p>
         <div className={styles.topicsGateActions}>
           <button className={styles.btnPrimary} onClick={() => openAuth('login')}>Log in</button>
-          <button className={styles.btnGhostLg} onClick={() => openAuth('register')}>Create account</button>
+          <button className={styles.btnGhostLg} onClick={() => openAuth('signup')}>Create account</button>
         </div>
       </div>
     );
@@ -101,9 +102,9 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
               <div className={styles.topicRow}>
                 {visible.map((topic, i) => (
                   <TopicCard
-                    key={topic.tag}
+                    key={topic.name}
                     topic={topic}
-                    followed={followedTopics.has(topic.tag)}
+                    followed={followedTopics.has(topic.name)}
                     onToggle={onToggle}
                     animateIn={isExpanded && i >= DEFAULT_VISIBLE}
                     animationDelay={isExpanded && i >= DEFAULT_VISIBLE ? (i - DEFAULT_VISIBLE) * 35 : 0}
@@ -147,23 +148,23 @@ function TopicCard({
       style={animateIn ? { animation: `cardAppear 180ms ease-out ${animationDelay}ms both` } : undefined}
     >
       <div className={styles.tagName}>
-        <span className={styles.tagNameHash}>#</span>{topic.tag}
+        <span className={styles.tagNameHash}>#</span>{topic.displayName}
       </div>
-      <div className={styles.postCount}>{topic.postCount} posts this week</div>
-      <div className={`${styles.trendingRow} ${!topic.isTrending ? styles.trendingRowEmpty : ''}`}>
-        {topic.isTrending ? '↑ trending' : null}
+      <div className={styles.postCount}>{topic.postsThisWeek} posts this week</div>
+      <div className={`${styles.trendingRow} ${!topic.isHot ? styles.trendingRowEmpty : ''}`}>
+        {topic.isHot ? '↑ trending' : null}
       </div>
       <div className={styles.activityBarWrap}>
         <div
           className={`${styles.activityBar} ${followed ? styles.activityBarFollowed : ''}`}
-          style={{ width: `${Math.round(topic.activityRatio * 100)}%` }}
+          style={{ width: `${Math.round(topic.activityScore * 100)}%` }}
         />
       </div>
       <div className={styles.topicCardFooter}>
         <button
           className={`${styles.followBtn} ${followed ? styles.followBtnFollowed : ''}`}
-          onClick={() => onToggle(topic.tag)}
-          aria-label={followed ? `Unfollow ${topic.tag}` : `Follow ${topic.tag}`}
+          onClick={() => onToggle(topic.name)}
+          aria-label={followed ? `Unfollow ${topic.displayName}` : `Follow ${topic.displayName}`}
         >
           {followed ? 'Following' : 'Follow'}
         </button>

@@ -64,18 +64,10 @@ export interface Post {
   readTimeMinutes?: number;
 }
 
-export interface DigestSummary {
-  date: string;
-  title: string;
-  topStorySubtitle: string;
-  eventCount: number;
-  readTimeMinutes: number;
-}
-
 export interface TodayDigest {
   date: string;
   title: string;
-  subtitle: string;
+  topStorySubtitle: string;
   eventCount: number;
   readTimeMinutes: number;
   generatedAt: string;
@@ -90,18 +82,24 @@ export interface DigestListItem {
   readTimeMinutes: number;
 }
 
+/** Mirrors content-service OpenAPI TopicResponse */
 export interface TopicItem {
   id: string;
-  tag: string;
-  postCount: number;
-  isTrending: boolean;
-  activityRatio: number;
+  name: string;
+  displayName: string;
+  totalPostCount: number;
+  postsThisWeek: number;
+  postsPrevWeek: number;
+  activityScore: number;
+  isHot: boolean;
   followerCount: number;
 }
 
+/** Mirrors content-service OpenAPI TopicCategoryGroup */
 export interface TopicCategory {
   id: string;
   label: string;
+  sortOrder: number;
   topics: TopicItem[];
 }
 
