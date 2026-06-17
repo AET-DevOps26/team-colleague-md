@@ -64,7 +64,7 @@ class UserEndpointNonAvatarIntegrationTests {
         registry.add("spring.datasource.username", userDb::getUsername);
         registry.add("spring.datasource.password", userDb::getPassword);
         registry.add("spring.datasource.driver-class-name", userDb::getDriverClassName);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
         registry.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
     }
