@@ -20,7 +20,6 @@ import com.verita.model.TopicCategoryGroup;
 import com.verita.model.TopicResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -84,7 +83,7 @@ public class ContentController implements ApiApi {
     }
 
     @Override
-    public ResponseEntity<PostPage> searchPosts(@NotBlank String q, Integer page, Integer size) {
+    public ResponseEntity<PostPage> searchPosts(String q, Integer page, Integer size) {
         int p = page == null ? 0 : page;
         int s = size == null ? 10 : size;
         return ResponseEntity.ok(postService.searchPosts(q, p, s, currentAuth()));
