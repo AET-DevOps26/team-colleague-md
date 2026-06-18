@@ -27,6 +27,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final AvatarStorageService avatarStorageService;
+    private final ContentServiceClient contentServiceClient;
 
     public User getByUsername(String username) {
         return userRepository.findByUsername(username)
@@ -95,10 +96,12 @@ public class UserService {
      * Deletes the user account for the given username. No-op if the user does not exist.
      *
      * @param username the username of the account to delete
+     * @param authorization the caller's authorization header, forwarded to dependent services
      */
-    public void deleteUser(String username) {
+    public void deleteUser(String username, String authorization) {
         userRepository.findByUsername(username).ifPresent(user -> {
             String avatarUrl = user.getAvatarUrl();
+            contentServiceClient.deleteUserContentData(user.getId(), authorization);
             userRepository.delete(user);
             avatarStorageService.deleteAvatar(avatarUrl);
         });
