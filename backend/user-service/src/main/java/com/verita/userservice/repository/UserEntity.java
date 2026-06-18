@@ -4,6 +4,7 @@ import com.verita.model.DigestFrequency;
 import com.verita.model.UserRole;
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.hibernate.annotations.BatchSize;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
@@ -51,7 +52,11 @@ public class UserEntity {
     private String website;
     private String organisation;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    // LAZY + batch fetch: the user-search/list path no longer triggers one expertise
+    // query per row (N+1); single-profile loads pull expertise in batches of 50.
+    // Safe because open-in-view defaults to true, so the session is open during mapping.
+    @BatchSize(size = 50)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "user_expertise", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "expertise")
     private List<String> expertiseAreas = new ArrayList<>();
