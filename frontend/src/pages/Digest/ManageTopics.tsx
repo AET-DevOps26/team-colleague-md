@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { useAuthModal } from '../../contexts/ModalContext';
 import { contentService } from '../../services/content.service';
 import type { TopicCategory, TopicItem } from '../../types';
 import styles from './Digest.module.css';
@@ -19,8 +17,6 @@ interface ManageTopicsProps {
 const DEFAULT_VISIBLE = 5;
 
 export default function ManageTopics({ followedTopics, onToggle, onSave, onReset }: ManageTopicsProps) {
-  const { isLoggedIn } = useAuth();
-  const { open: openAuth } = useAuthModal();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const allCategories = contentService.getTopicCategories();
@@ -44,24 +40,6 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
       else next.add(catId);
       return next;
     });
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <div className={styles.topicsGate}>
-        <div className={styles.topicsGateIcon}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
-          </svg>
-        </div>
-        <h2>Sign in to manage your topics</h2>
-        <p>Choose the AI topics you care about and Verita will build your daily digest from the latest posts in those feeds.</p>
-        <div className={styles.topicsGateActions}>
-          <button className={styles.btnPrimary} onClick={() => openAuth('login')}>Log in</button>
-          <button className={styles.btnGhostLg} onClick={() => openAuth('signup')}>Create account</button>
-        </div>
-      </div>
-    );
   }
 
   return (

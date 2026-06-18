@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { useAuthModal } from '../../contexts/ModalContext';
 import { contentService } from '../../services/content.service';
 import PostDetailTopbar from '../../components/layout/PostDetailTopbar';
 import Toast from '../../components/ui/Toast';
@@ -9,6 +11,8 @@ import styles from './Digest.module.css';
 type Tab = 'past' | 'topics';
 
 export default function Digest() {
+  const { isLoggedIn } = useAuth();
+  const { open: openAuth } = useAuthModal();
   const [activeTab, setActiveTab] = useState<Tab>('past');
   const [followedTopics, setFollowedTopics] = useState<Set<string>>(
     () => new Set(contentService.getFollowedTopics())
@@ -52,6 +56,36 @@ export default function Digest() {
       </button>
     </>
   );
+
+  if (!isLoggedIn) {
+    return (
+      <>
+        <PostDetailTopbar tabs={tabs} />
+        <div className={styles.content}>
+          <div className={styles.signinHero}>
+            <div>
+              <div className={styles.signinHeroEyebrow}>
+                <span className={styles.signinHeroEyebrowDot} />
+                AI Daily Digest
+              </div>
+              <div className={styles.signinHeroTitle}>Your personalised digest awaits</div>
+              <div className={styles.signinHeroSub}>
+                Sign in to get a daily briefing on AI news and research tailored to your topics.
+              </div>
+            </div>
+            <div className={styles.signinHeroActions}>
+              <button className={styles.signinHeroBtnPrimary} onClick={() => openAuth('login')}>
+                Log in
+              </button>
+              <button className={styles.signinHeroBtnGhost} onClick={() => openAuth('signup')}>
+                Create account
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

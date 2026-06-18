@@ -34,12 +34,13 @@ test.describe('Digest Management', () => {
     await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
   });
 
-  test('DIG-2: logged-out user sees sign-in upsell hero', async ({ page }) => {
+  test('DIG-2: logged-out user sees sign-in prompt on /digest', async ({ page }) => {
     await page.goto('/digest');
 
-    await expect(page.getByText('Sign in for your personalised digest')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Log in' }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Create account' }).first()).toBeVisible();
+    await expect(page).toHaveURL('/digest');
+    await expect(page.getByText('Your personalised digest awaits')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();
   });
 
   test('DIG-3: tabs switch between Past Digests and Manage Topics', async ({ page }) => {
@@ -56,12 +57,14 @@ test.describe('Digest Management', () => {
     await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
   });
 
-  test('DIG-4: logged-out user sees gate on Manage Topics tab', async ({ page }) => {
+  test('DIG-4: logged-in user can access Manage Topics tab and see topic grid', async ({ page }) => {
+    await login(page);
     await page.goto('/digest');
     await page.getByRole('button', { name: 'Manage Topics' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Sign in to manage your topics' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
+    await expect(page.getByText('Manage topics')).toBeVisible();
+    await expect(page.locator('[class*="topicCard"]').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save preferences' })).toBeVisible();
   });
 
   test('DIG-5: follow toggle updates following count', async ({ page }) => {
@@ -119,17 +122,17 @@ test.describe('Digest Management', () => {
     expect(newCards).toBeGreaterThan(initialCards);
   });
 
-  test('DIG-9: search filters topic list', async ({ page }) => {
+  test('DIG-9: search filters topic list by displayName', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
     await page.getByRole('button', { name: 'Manage Topics' }).click();
 
     await page.getByPlaceholder('Filter topics…').fill('agents');
 
-    // The tag renders as "#" + "agents" split across spans; the parent div contains both
-    await expect(page.locator('text=agents').first()).toBeVisible();
-    // "alignment" should no longer be in the filtered results
-    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'alignment' })).not.toBeVisible();
+    // Topic displayName "AI Agents" matches the slug "agents"; card renders "#AI Agents"
+    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'AI Agents' })).toBeVisible();
+    // "Alignment" should not appear in the filtered results
+    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'Alignment' })).not.toBeVisible();
   });
 
   test('DIG-10: back button navigates away from digest page', async ({ page }) => {

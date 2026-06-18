@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { useAuthModal } from '../../contexts/ModalContext';
 import { contentService } from '../../services/content.service';
 import type { DigestListItem } from '../../types';
 import styles from './Digest.module.css';
@@ -36,13 +34,7 @@ function groupByWeek(items: DigestListItem[]): Array<{ label: string; items: Dig
 
 export default function PastDigests() {
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
-  const { open: openAuth } = useAuthModal();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [isLoggedIn]);
 
   const todayDigest = contentService.getTodayDigest();
   const allDigests = contentService.getDigestList();
@@ -56,29 +48,6 @@ export default function PastDigests() {
     day: 'numeric',
     year: 'numeric',
   });
-
-  if (!isLoggedIn) {
-    return (
-      <div className={styles.pastDigestsWrap}>
-        <div className={styles.signinHero}>
-          <div>
-            <div className={styles.signinHeroEyebrow}>
-              <span className={styles.signinHeroEyebrowDot} />
-              Personalised Digest
-            </div>
-            <div className={styles.signinHeroTitle}>Sign in for your personalised digest</div>
-            <div className={styles.signinHeroSub}>
-              Get a tailored daily brief based on the topics you follow. New digest every morning at 6 AM.
-            </div>
-          </div>
-          <div className={styles.signinHeroActions}>
-            <button className={styles.signinHeroBtnPrimary} onClick={() => openAuth('login')}>Log in</button>
-            <button className={styles.signinHeroBtnGhost} onClick={() => openAuth('signup')}>Create account</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.pastDigestsWrap}>
