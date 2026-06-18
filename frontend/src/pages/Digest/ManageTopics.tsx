@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 import { contentService } from '../../services/content.service';
 import type { TopicCategory, TopicItem } from '../../types';
 import Toast from '../../components/ui/Toast';
+import { sortTopics } from './topicSort';
 import styles from './Digest.module.css';
 
 function fmtCount(n: number): string {
@@ -50,10 +51,7 @@ export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsP
       for (const cat of rawCategories) {
         if (!cat.topics.some(t => t.name === tag)) continue;
         const order = prev[cat.id] ?? cat.topics.map(t => t.name);
-        const others = order.filter(n => n !== tag);
-        const followedOthers = others.filter(n => followedTopics.has(n));
-        const unfollowedOthers = others.filter(n => !followedTopics.has(n));
-        next[cat.id] = [...followedOthers, tag, ...unfollowedOthers];
+        next[cat.id] = sortTopics(order, tag, followedTopics);
         break;
       }
       return next;

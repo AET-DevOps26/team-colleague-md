@@ -30,7 +30,7 @@ test.describe('Digest Management', () => {
     await page.goto('/digest');
 
     await expect(page.getByText('Today ·', { exact: false })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Read/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
   });
 
@@ -49,55 +49,54 @@ test.describe('Digest Management', () => {
 
     await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Manage Topics' }).click();
-    await expect(page.getByText('Manage topics')).toBeVisible();
+    await page.getByRole('tab', { name: 'Manage Topics' }).click();
+    await expect(page.getByPlaceholder('Filter topics…')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Past digests' })).not.toBeVisible();
 
-    await page.getByRole('button', { name: 'Past Digests' }).click();
+    await page.getByRole('tab', { name: 'Past Digests' }).click();
     await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
   });
 
   test('DIG-4: logged-in user can access Manage Topics tab and see topic grid', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
-    await page.getByRole('button', { name: 'Manage Topics' }).click();
+    await page.getByRole('tab', { name: 'Manage Topics' }).click();
 
-    await expect(page.getByText('Manage topics')).toBeVisible();
+    await expect(page.getByPlaceholder('Filter topics…')).toBeVisible();
     await expect(page.locator('[class*="topicCard"]').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save preferences' })).toBeVisible();
   });
 
-  test('DIG-5: follow toggle updates following count', async ({ page }) => {
+  test('DIG-5: follow toggle updates following count in the pill', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
-    await page.getByRole('button', { name: 'Manage Topics' }).click();
+    await page.getByRole('tab', { name: 'Manage Topics' }).click();
 
-    // The save bar shows "Following <N> topics"; find the <strong> inside it
-    const saveBarInfo = page.locator('strong').filter({ hasText: /^\d+$/ }).first();
-    const initialCount = parseInt(await saveBarInfo.textContent() ?? '0', 10);
+    // The follow pill shows "Following <N>"; find the <strong> with the count
+    const countEl = page.locator('[class*="followPill"] strong');
+    const initialCount = parseInt(await countEl.textContent() ?? '0', 10);
 
-    // Click the first "Following" button to unfollow a topic
-    await page.getByRole('button', { name: 'Following', exact: true }).first().click();
+    // Click the first followed topic's button (aria-label "Unfollow X") to unfollow
+    await page.getByRole('button', { name: /^Unfollow / }).first().click();
 
-    const newCount = parseInt(await saveBarInfo.textContent() ?? '0', 10);
+    const newCount = parseInt(await countEl.textContent() ?? '0', 10);
     expect(newCount).toBe(initialCount - 1);
   });
 
   test('DIG-6: following a topic shows follow toast', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
-    await page.getByRole('button', { name: 'Manage Topics' }).click();
+    await page.getByRole('tab', { name: 'Manage Topics' }).click();
 
-    await page.getByRole('button', { name: 'Follow', exact: true }).first().click();
+    await page.getByRole('button', { name: /^Follow / }).first().click();
     await expect(page.getByText(/Following #/)).toBeVisible({ timeout: 3000 });
   });
 
   test('DIG-7: unfollowing a topic shows unfollow toast', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
-    await page.getByRole('button', { name: 'Manage Topics' }).click();
+    await page.getByRole('tab', { name: 'Manage Topics' }).click();
 
-    await page.getByRole('button', { name: 'Following', exact: true }).first().click();
+    await page.getByRole('button', { name: /^Unfollow / }).first().click();
     await expect(page.getByText(/Unfollowed #/)).toBeVisible({ timeout: 3000 });
   });
 
@@ -117,7 +116,7 @@ test.describe('Digest Management', () => {
   test('DIG-9: search filters topic list by displayName', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
-    await page.getByRole('button', { name: 'Manage Topics' }).click();
+    await page.getByRole('tab', { name: 'Manage Topics' }).click();
 
     await page.getByPlaceholder('Filter topics…').fill('agents');
 

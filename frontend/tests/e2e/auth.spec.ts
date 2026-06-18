@@ -100,6 +100,7 @@ test.describe('AuthModal — screens', () => {
 
 // Helpers shared by API integration tests
 const LOGIN_URL = '**/api/v1/auth/login';
+const REFRESH_URL = '**/api/v1/auth/refresh';
 const REGISTER_URL = '**/api/v1/auth/register';
 
 const MOCK_USER = {
@@ -144,10 +145,27 @@ test.describe('AuthModal — API integration (mocked backend)', () => {
   });
 
   test('AM-12: login success → page reload keeps user logged in', async ({ page }) => {
+    // Refresh returns 401 initially so the user starts logged out (modal can open)
+    await page.route(REFRESH_URL, route =>
+      route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Unauthorized' }),
+      })
+    );
     await mockLoginSuccess(page);
     await fillAndSubmitLogin(page);
     await expect(page.locator('[data-testid="sidebar-signin"]')).not.toBeVisible();
 
+    // Switch refresh mock to return success so restoreSession() works after reload
+    await page.unroute(REFRESH_URL);
+    await page.route(REFRESH_URL, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ accessToken: 'new-fake-jwt', user: MOCK_USER }),
+      })
+    );
     await page.reload();
     await expect(page.locator('[data-testid="sidebar-signin"]')).not.toBeVisible();
     await expect(page.getByText('New post')).toBeVisible();
@@ -159,6 +177,14 @@ test.describe('AuthModal — API integration (mocked backend)', () => {
         status: 401,
         contentType: 'application/json',
         body: JSON.stringify({ status: 401, message: 'Error: User not found with email' }),
+      })
+    );
+    // Mock refresh so the userApi 401-retry interceptor fails quickly instead of timing out
+    await page.route(REFRESH_URL, route =>
+      route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Unauthorized' }),
       })
     );
     await fillAndSubmitLogin(page);

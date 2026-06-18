@@ -11,8 +11,14 @@ const MOCK_USER = {
 async function login(page: Page) {
   await page.addInitScript((user) => {
     localStorage.setItem('verita_user', JSON.stringify(user));
-    localStorage.setItem('verita_token', 'mock-token');
   }, MOCK_USER);
+  await page.route('**/api/v1/auth/refresh', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ accessToken: 'mock-token', user: MOCK_USER }),
+    })
+  );
 }
 
 async function goToOwnProfile(page: Page) {
@@ -99,7 +105,7 @@ test('UP-10: edit profile modal contains expected form fields', async ({ page })
   const dialog = page.locator('[role="dialog"]');
   await expect(dialog.getByTestId('edit-display-name')).toBeVisible();
   await expect(dialog.getByTestId('edit-bio')).toBeVisible();
-  await expect(dialog.getByTestId('edit-organization')).toBeVisible();
+  await expect(dialog.getByTestId('edit-organisation')).toBeVisible();
   await expect(dialog.getByTestId('edit-website')).toBeVisible();
   await expect(dialog.getByTestId('edit-expertise')).toBeVisible();
 });
