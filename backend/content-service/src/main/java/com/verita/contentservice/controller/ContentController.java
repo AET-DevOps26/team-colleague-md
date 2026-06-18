@@ -1,10 +1,12 @@
 package com.verita.contentservice.controller;
 
 import com.verita.api.ApiApi;
+import com.verita.api.InternalApi;
 import com.verita.contentservice.service.CommentService;
 import com.verita.contentservice.service.InteractionService;
 import com.verita.contentservice.service.PostService;
 import com.verita.contentservice.service.TopicService;
+import com.verita.contentservice.service.UserContentCleanupService;
 import com.verita.model.CommentLikeResponse;
 import com.verita.model.CommentRequest;
 import com.verita.model.CommentResponse;
@@ -20,7 +22,6 @@ import com.verita.model.TopicCategoryGroup;
 import com.verita.model.TopicResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -31,18 +32,27 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 @RestController
 @Validated
-public class ContentController implements ApiApi {
+public class ContentController implements ApiApi, InternalApi {
     private final PostService postService;
     private final CommentService commentService;
     private final InteractionService interactionService;
     private final TopicService topicService;
+    private final UserContentCleanupService userContentCleanupService;
 
     public ContentController(PostService postService, CommentService commentService,
-                             InteractionService interactionService, TopicService topicService) {
+                             InteractionService interactionService, TopicService topicService,
+                             UserContentCleanupService userContentCleanupService) {
         this.postService = postService;
         this.commentService = commentService;
         this.interactionService = interactionService;
         this.topicService = topicService;
+        this.userContentCleanupService = userContentCleanupService;
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteUserContentData(UUID userId) {
+        userContentCleanupService.deleteUserData(userId);
+        return ResponseEntity.noContent().build();
     }
 
     @Override
@@ -84,7 +94,7 @@ public class ContentController implements ApiApi {
     }
 
     @Override
-    public ResponseEntity<PostPage> searchPosts(@NotBlank String q, Integer page, Integer size) {
+    public ResponseEntity<PostPage> searchPosts(String q, Integer page, Integer size) {
         int p = page == null ? 0 : page;
         int s = size == null ? 10 : size;
         return ResponseEntity.ok(postService.searchPosts(q, p, s, currentAuth()));
