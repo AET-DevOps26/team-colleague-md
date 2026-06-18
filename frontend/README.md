@@ -27,9 +27,10 @@ App runs at `http://localhost:3000`.
 | `npm run dev:bob` | Start dev server and auto-login as **Bob Nakamura** (USER, `bob@verita.demo`) |
 | `npm run build` | Type-check and build for production |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run all end-to-end tests |
+| `npm run test:unit` | Run unit + component tests (Vitest, ~5s) |
+| `npm run test:unit:watch` | Vitest watch mode |
+| `npm test` | Run all E2E + API contract tests (Playwright, requires browser) |
 | `npm run test:ui` | Open Playwright's interactive debug UI |
-| `npm run test:update` | Regenerate visual regression baselines after UI changes |
 
 Demo accounts use password `demo1234` at the login form, or are injected automatically via `VITE_DEMO_USER` when using `dev:alice` / `dev:bob`.
 
@@ -126,33 +127,44 @@ npm run dev:bob     # auto-login as Bob Nakamura (USER)
 
 ---
 
-## End-to-End Tests
+## Tests
 
-Tests live in `frontend/tests/`. Playwright starts the dev server automatically.
+The suite has three layers. See [docs/Frontend_Testing.md](../docs/Frontend_Testing.md) for the full test case register.
 
-### Test ID prefixes
+| Layer | Tool | Command | Speed |
+|---|---|---|---|
+| Unit / Component | Vitest + RTL | `npm run test:unit` | ~5 s |
+| E2E | Playwright | `npm test` | ~5 min |
+| API Contract | Playwright + page.route() | `npm test` | included above |
 
-| Prefix | Meaning | File |
+**What goes where:**
+- Pure functions and component logic → `tests/unit/`
+- Critical user flows in a real browser → `tests/e2e/`
+- Frontend renders correctly given OpenAPI-shaped responses → `tests/api/`
+
+**Test ID prefixes**
+
+| Prefix | Scope | File |
 |---|---|---|
-| `VR-` | Visual Regression — pixel snapshot comparisons | `home.spec.ts` |
-| `LT-` | Layout — dimension and structural assertions | `home.spec.ts` |
-| `I-` | Interaction — clicks, navigation, dynamic behaviour | `home.spec.ts` |
-| `S-` | State — logged-in vs logged-out conditional rendering | `home.spec.ts` |
-| `AM-` | AuthModal — sign-in, register, error handling, 401 flow | `auth.spec.ts` |
-| `SM-` | SettingsModal — settings panel UI and interactions | `settings.spec.ts` |
+| `LT-` | Layout dimensions and structure | `e2e/home.spec.ts` |
+| `I-` | Interactions — clicks, navigation, dynamic behaviour | `e2e/home.spec.ts` |
+| `S-` | Auth state — logged-in vs logged-out rendering | `e2e/home.spec.ts` |
+| `AM-` | Auth modal — sign-in, register, error handling | `e2e/auth.spec.ts` |
+| `DIG-` | Digest page flows | `e2e/digest.spec.ts` |
+| `UP-` | User profile page | `e2e/profile.spec.ts` |
+| `SM-` | Settings modal | `e2e/settings.spec.ts` |
+| `API-` | API contract (OpenAPI response shape) | `api/profile.api.spec.ts` |
 
 ```bash
-# Run all tests
-npx playwright test
+# Unit + component tests — no browser needed
+npm run test:unit
 
-# Run only layout / interaction tests (fast, no snapshots)
-npx playwright test --grep-invert "VR-"
-
-# Regenerate visual regression baselines after UI changes
-npx playwright test --grep "VR-" --update-snapshots
+# E2E + API contract — requires Playwright browser installed once
+npx playwright install chromium
+npm test
 ```
 
-Auth modal tests (`AM-`) mock the User Service HTTP routes — no backend required. Visual snapshots are stored in `tests/snapshots/`. Commit them alongside any intentional visual change.
+No backend required — E2E tests mock the auth refresh endpoint via `page.route()` and use the in-memory mock service for all other data.
 
 ---
 

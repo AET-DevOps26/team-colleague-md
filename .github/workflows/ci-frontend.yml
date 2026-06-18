@@ -36,3 +36,9 @@ jobs:
       - name: Build
         run: npm run build
         working-directory: frontend
+
+      # Unit and component tests — fast, no browser needed
+      # E2E tests (Playwright) are run manually: npm test (requires npx playwright install + dev server)
+      - name: Unit & component tests
+        run: npm run test:unit
+        working-directory: frontend
