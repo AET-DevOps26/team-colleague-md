@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @ActiveProfiles("integration-test")
 @Testcontainers
-class UserEndpointIntegrationTests {
+class UserEndpointNonAvatarIntegrationTests {
 
     @Container
     static final PostgreSQLContainer<?> userDb = new PostgreSQLContainer<>("postgres:16-alpine")
@@ -64,7 +64,7 @@ class UserEndpointIntegrationTests {
         registry.add("spring.datasource.username", userDb::getUsername);
         registry.add("spring.datasource.password", userDb::getPassword);
         registry.add("spring.datasource.driver-class-name", userDb::getDriverClassName);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
         registry.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
     }
@@ -102,7 +102,7 @@ class UserEndpointIntegrationTests {
 
     @Test
     void updateCurrentUserEndpointPersistsProfileChanges() throws Exception {
-        UserEntity user = saveUser("profileuser", "profile@example.com", UserRole.USER);
+        UserEntity user = saveBasicUser("profileuser", "profile@example.com", UserRole.USER);
 
         String request = """
                 {
@@ -124,7 +124,7 @@ class UserEndpointIntegrationTests {
 
     @Test
     void updatePreferencesEndpointPersistsPreferenceChanges() throws Exception {
-        UserEntity user = saveUser("prefsuser", "prefs@example.com", UserRole.USER);
+        UserEntity user = saveBasicUser("prefsuser", "prefs@example.com", UserRole.USER);
 
         String request = """
                 {
@@ -151,7 +151,7 @@ class UserEndpointIntegrationTests {
 
     @Test
     void deleteCurrentUserEndpointRemovesUserRecord() throws Exception {
-        UserEntity user = saveUser("deleteuser", "delete@example.com", UserRole.USER);
+        UserEntity user = saveBasicUser("deleteuser", "delete@example.com", UserRole.USER);
 
         mockMvc.perform(delete("/api/v1/users/me")
                         .with(user(UserDetailsImpl.build(user))))
@@ -162,8 +162,8 @@ class UserEndpointIntegrationTests {
 
     @Test
     void adminEndpointsPersistRoleAndBanChanges() throws Exception {
-        UserEntity admin = saveUser("admin", "admin@example.com", UserRole.ADMIN);
-        UserEntity target = saveUser("target", "target@example.com", UserRole.USER);
+        UserEntity admin = saveBasicUser("admin", "admin@example.com", UserRole.ADMIN);
+        UserEntity target = saveBasicUser("target", "target@example.com", UserRole.USER);
 
         mockMvc.perform(patch("/api/v1/users/{userId}/role", target.getId())
                         .with(user(UserDetailsImpl.build(admin)))
@@ -196,7 +196,7 @@ class UserEndpointIntegrationTests {
 
     @Test
     void getByUsernameEndpointReturnsCorrectProfile() throws Exception {
-        saveUser("alexchen", "alexchen@example.com", UserRole.USER);
+        saveBasicUser("alexchen", "alexchen@example.com", UserRole.USER);
 
         mockMvc.perform(get("/api/v1/users/by-username/{username}", "alexchen")
                         .accept(MediaType.APPLICATION_JSON))
@@ -211,7 +211,7 @@ class UserEndpointIntegrationTests {
                 .andExpect(status().isNotFound());
     }
 
-    private UserEntity saveUser(String username, String email, UserRole role) {
+    private UserEntity saveBasicUser(String username, String email, UserRole role) {
         UserEntity user = new UserEntity();
         user.setUsername(username);
         user.setDisplayName(username);

@@ -1,19 +1,20 @@
 # Recommendation Service — Database Schema
 
-> [!NOTE]
-> Tables marked with 🔗 are **external references** from another service's database.
-> Cross-service IDs are stored as `UUID` but have **no database-level FK constraint**.
-> Data is resolved via inter-service API calls.
+> This service owns discovery (personal + trending feeds), topic subscriptions, and
+> behavioral interaction tracking. Cross-service references (users, posts, topics)
+> are stored as `UUID` with **no** database-level foreign keys — they are resolved
+> via inter-service API calls.
+>
 
 ---
 
 ## Enumerations
 
-| Enum Name           | Values                                                                             |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| `interaction_type`  | `VIEW`, `CLICK`, `UPVOTE`, `COMMENT`, `BOOKMARK`                                  |
-| `time_window`       | `HOUR`, `DAY`, `WEEK`                                                              |
-| `notification_type` | `COMMENT`, `UPVOTE`, `VERIFICATION_APPROVED`, `DAILY_DIGEST`, `NEW_POST_IN_SUBSCRIBED_TAG` |
+| Enum Name          | Values                                     | Notes                                       |
+| ------------------ | ------------------------------------------ | ------------------------------------------- |
+| `interaction_type` | `CLICK`, `VIEW`, `DWELL`, `SCROLL`, `SHARE` | Matches `InteractionRequest.interactionType` |
+
+> Stored as strings (`@Enumerated(EnumType.STRING)`), not native PostgreSQL enum types.
 
 ---
 
@@ -21,81 +22,43 @@
 
 ### `user_interactions`
 
-Tracks user behavior for analytics and the recommendation engine.
+Implicit behavioral signals feeding the personalized feed (`POST /api/v1/interactions/track`).
 
 | Column             | Type               | Nullable | Default             | Description                                       |
 | ------------------ | ------------------ | -------- | ------------------- | ------------------------------------------------- |
 | `id`               | `UUID`             | NO       | `gen_random_uuid()` | Primary key                                       |
-| `user_id`          | `UUID`             | NO       |                     | 🔗 Cross-service ref → User Service `users.id`    |
-| `post_id`          | `UUID`             | NO       |                     | 🔗 Cross-service ref → Content Service `posts.id` |
-| `interaction_type` | `interaction_type` | NO       |                     | Type of interaction                               |
-| `duration_seconds` | `INTEGER`          | YES      |                     | Time spent (for VIEW events)                      |
-| `created_at`       | `TIMESTAMP`        | NO       | `CURRENT_TIMESTAMP` | Interaction timestamp                             |
+| `user_id`          | `UUID`             | NO       |                     | Cross-service ref → user-service `users.id`       |
+| `post_id`          | `UUID`             | NO       |                     | Cross-service ref → content-service `posts.id`    |
+| `interaction_type` | `interaction_type` | NO       |                     | Type of behavioral signal                         |
+| `duration_seconds` | `INTEGER`          | YES      |                     | Seconds in viewport; relevant for `DWELL`         |
+| `scroll_depth`     | `INTEGER`          | YES      |                     | Scroll percentage (0–100); relevant for `SCROLL`  |
+| `metadata`         | `JSONB`            | YES      |                     | Optional free-form event context                  |
+| `created_at`       | `TIMESTAMP`        | NO       | `CURRENT_TIMESTAMP` | Event timestamp                                   |
 
 **Constraints:**
 
 - `PK` on `id`
-- ⚠️ `user_id` has **no FK constraint** — resolved via User Service API
-- ⚠️ `post_id` has **no FK constraint** — resolved via Content Service API
+- `user_id`, `post_id` — no FK (cross-service UUIDs)
 
 ---
 
-### `tag_subscriptions`
+### `topic_subscriptions`
 
-Tracks which tags a user has subscribed to for notifications.
+Topics a user follows. Drives the personalized feed.
 
-| Column          | Type        | Nullable | Default             | Description                                       |
-| --------------- | ----------- | -------- | ------------------- | ------------------------------------------------- |
-| `user_id`       | `UUID`      | NO       |                     | 🔗 Cross-service ref → User Service `users.id`    |
-| `tag_id`        | `UUID`      | NO       |                     | 🔗 Cross-service ref → Content Service `tags.id`  |
-| `subscribed_at` | `TIMESTAMP` | NO       | `CURRENT_TIMESTAMP` | Subscription timestamp                            |
-
-**Constraints:**
-
-- `PK` on `(user_id, tag_id)` — composite primary key
-- ⚠️ `user_id` has **no FK constraint** — resolved via User Service API
-- ⚠️ `tag_id` has **no FK constraint** — resolved via Content Service API
-
----
-
-### `trending_posts`
-
-Pre-computed trending post rankings per time window.
-
-| Column           | Type          | Nullable | Default             | Description                                       |
-| ---------------- | ------------- | -------- | ------------------- | ------------------------------------------------- |
-| `post_id`        | `UUID`        | NO       |                     | 🔗 Cross-service ref → Content Service `posts.id` |
-| `trending_score` | `NUMERIC`     | NO       |                     | Calculated trending score                         |
-| `rank`           | `INTEGER`     | NO       |                     | Position in trending list                         |
-| `time_window`    | `time_window` | NO       |                     | `HOUR`, `DAY`, or `WEEK`                          |
-| `calculated_at`  | `TIMESTAMP`   | NO       | `CURRENT_TIMESTAMP` | When the score was last computed                  |
+| Column       | Type        | Nullable | Default             | Description                                     |
+| ------------ | ----------- | -------- | ------------------- | ----------------------------------------------- |
+| `user_id`    | `UUID`      | NO       |                     | Cross-service ref → user-service `users.id`     |
+| `topic_id`   | `UUID`      | NO       |                     | Cross-service ref → content-service `topics.id` |
+| `created_at` | `TIMESTAMP` | NO       | `CURRENT_TIMESTAMP` | Subscription timestamp                          |
 
 **Constraints:**
 
-- `PK` on `(post_id, time_window)` — composite primary key
-- ⚠️ `post_id` has **no FK constraint** — resolved via Content Service API
+- `PK` on `(user_id, topic_id)` — composite, prevents duplicate subscriptions
+- `user_id`, `topic_id` — no FK (cross-service UUIDs)
 
----
-
-### `notifications`
-
-In-app notifications delivered to users.
-
-| Column            | Type                | Nullable | Default             | Description                                       |
-| ----------------- | ------------------- | -------- | ------------------- | ------------------------------------------------- |
-| `id`              | `UUID`              | NO       | `gen_random_uuid()` | Primary key                                       |
-| `user_id`         | `UUID`              | NO       |                     | 🔗 Cross-service ref → User Service `users.id`    |
-| `type`            | `notification_type` | NO       |                     | Notification category                             |
-| `content`         | `TEXT`              | NO       |                     | Notification message                              |
-| `related_post_id` | `UUID`              | YES      |                     | 🔗 Cross-service ref → Content Service `posts.id` |
-| `is_read`         | `BOOLEAN`           | NO       | `FALSE`             | Read status                                       |
-| `created_at`      | `TIMESTAMP`         | NO       | `CURRENT_TIMESTAMP` | Notification timestamp                            |
-
-**Constraints:**
-
-- `PK` on `id`
-- ⚠️ `user_id` has **no FK constraint** — resolved via User Service API
-- ⚠️ `related_post_id` has **no FK constraint** — resolved via Content Service API
+> Topic `name` (returned by `getSubscribedTopics`) is resolved from content-service;
+> only the `topic_id` is stored here.
 
 ---
 
@@ -103,15 +66,13 @@ In-app notifications delivered to users.
 
 ```mermaid
 erDiagram
-    USERS_EXT["🔗 users (User Service)"] {
+    users_ext["users (user-service)"] {
         UUID id PK
     }
-
-    POSTS_EXT["🔗 posts (Content Service)"] {
+    posts_ext["posts (content-service)"] {
         UUID id PK
     }
-
-    TAGS_EXT["🔗 tags (Content Service)"] {
+    topics_ext["topics (content-service)"] {
         UUID id PK
     }
 
@@ -121,52 +82,33 @@ erDiagram
         UUID post_id
         interaction_type interaction_type
         INTEGER duration_seconds
+        INTEGER scroll_depth
+        JSONB metadata
         TIMESTAMP created_at
     }
 
-    tag_subscriptions {
+    topic_subscriptions {
         UUID user_id PK
-        UUID tag_id PK
-        TIMESTAMP subscribed_at
-    }
-
-    trending_posts {
-        UUID post_id PK
-        NUMERIC trending_score
-        INTEGER rank
-        time_window time_window
-        TIMESTAMP calculated_at
-    }
-
-    notifications {
-        UUID id PK
-        UUID user_id
-        notification_type type
-        TEXT content
-        UUID related_post_id
-        BOOLEAN is_read
+        UUID topic_id PK
         TIMESTAMP created_at
     }
 
-    USERS_EXT ||--o{ user_interactions : "performs"
-    USERS_EXT ||--o{ tag_subscriptions : "subscribes"
-    USERS_EXT ||--o{ notifications : "receives"
-    POSTS_EXT ||--o{ user_interactions : "tracked in"
-    POSTS_EXT ||--o{ trending_posts : "ranked in"
-    POSTS_EXT ||--o{ notifications : "referenced by"
-    TAGS_EXT ||--o{ tag_subscriptions : "subscribed via"
+    users_ext ||--o{ user_interactions : "performs"
+    users_ext ||--o{ topic_subscriptions : "subscribes"
+    posts_ext ||--o{ user_interactions : "tracked in"
+    topics_ext ||--o{ topic_subscriptions : "subscribed via"
 ```
 
 ---
 
 ## Indexes
 
-| Table                | Index                                            | Type   | Purpose                |
-| -------------------- | ------------------------------------------------ | ------ | ---------------------- |
-| `user_interactions`  | `idx_interactions_user_id`                       | B-TREE | Interactions per user  |
-| `user_interactions`  | `idx_interactions_post_id`                       | B-TREE | Interactions per post  |
-| `user_interactions`  | `idx_interactions_created_at`                    | B-TREE | Time-range analytics   |
-| `tag_subscriptions`  | `idx_tag_subs_user_id`                           | B-TREE | User's subscriptions   |
-| `trending_posts`     | `idx_trending_window_rank` (`time_window, rank`) | B-TREE | Trending feed queries  |
-| `notifications`      | `idx_notif_user_read` (`user_id, is_read`)       | B-TREE | Unread notifications   |
-| `notifications`      | `idx_notif_created_at`                           | B-TREE | Chronological feed     |
+| Table                 | Index                         | Type   | Purpose                         |
+| --------------------- | ----------------------------- | ------ | ------------------------------- |
+| `user_interactions`   | `idx_interactions_user_id`    | B-TREE | Per-user signal lookup          |
+| `user_interactions`   | `idx_interactions_post_id`    | B-TREE | Per-post engagement aggregation |
+| `user_interactions`   | `idx_interactions_created_at` | B-TREE | Time-range / recency analytics  |
+| `topic_subscriptions` | `idx_topic_subs_topic_id`     | B-TREE | Fan-out by topic                |
+
+> `topic_subscriptions` already indexes `user_id` from its composite PK's leading
+> column; the extra index covers the reverse-direction (by topic) lookup.
