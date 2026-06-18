@@ -22,12 +22,16 @@ App runs at `http://localhost:3000`.
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start Vite dev server on port 3000 |
+| `npm run dev` | Start Vite dev server on port 3000 (unauthenticated by default) |
+| `npm run dev:alice` | Start dev server and auto-login as **Alice Morgan** (VERIFIED, `alice@verita.demo`) |
+| `npm run dev:bob` | Start dev server and auto-login as **Bob Nakamura** (USER, `bob@verita.demo`) |
 | `npm run build` | Type-check and build for production |
 | `npm run lint` | Run ESLint |
 | `npm test` | Run all end-to-end tests |
 | `npm run test:ui` | Open Playwright's interactive debug UI |
 | `npm run test:update` | Regenerate visual regression baselines after UI changes |
+
+Demo accounts use password `demo1234` at the login form, or are injected automatically via `VITE_DEMO_USER` when using `dev:alice` / `dev:bob`.
 
 ---
 
@@ -111,13 +115,13 @@ npx serve .
 
 The app works without a running backend for content browsing. `src/services/content.service.ts` returns in-memory mock posts, comments, and digests.
 
-Auth (`src/services/auth.service.ts`) now calls the real User Service at `http://localhost:8081`. Start the User Service (or run `docker compose up`) before using sign-in or registration. Auth session is stored in `localStorage` under the keys `verita_user` and `verita_token`.
+Auth (`src/services/auth.service.ts`) now calls the real User Service at `http://localhost:8081`. Start the User Service (or run `docker compose up`) before using sign-in or registration. Auth session is stored in `localStorage` under the key `verita_user`.
 
-To simulate a logged-in session in the browser console without a backend:
-```js
-localStorage.setItem('verita_user', JSON.stringify({ id: '1', username: 'you', displayName: 'Your Name', role: 'USER', email: 'you@example.com' }))
-localStorage.setItem('verita_token', 'dev-token')
-// then hard-refresh the page
+Two built-in demo accounts work without a backend — use them at the login form (`demo1234`) or start the dev server pre-logged-in:
+
+```bash
+npm run dev:alice   # auto-login as Alice Morgan (VERIFIED)
+npm run dev:bob     # auto-login as Bob Nakamura (USER)
 ```
 
 ---

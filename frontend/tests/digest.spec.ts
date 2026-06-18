@@ -83,30 +83,22 @@ test.describe('Digest Management', () => {
     expect(newCount).toBe(initialCount - 1);
   });
 
-  test('DIG-6: save preferences shows toast', async ({ page }) => {
+  test('DIG-6: following a topic shows follow toast', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
     await page.getByRole('button', { name: 'Manage Topics' }).click();
 
-    await page.getByRole('button', { name: 'Save preferences' }).click();
-    await expect(page.getByText('Preferences saved')).toBeVisible({ timeout: 3000 });
+    await page.getByRole('button', { name: 'Follow', exact: true }).first().click();
+    await expect(page.getByText(/Following #/)).toBeVisible({ timeout: 3000 });
   });
 
-  test('DIG-7: reset reverts unsaved follow changes', async ({ page }) => {
+  test('DIG-7: unfollowing a topic shows unfollow toast', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
     await page.getByRole('button', { name: 'Manage Topics' }).click();
 
-    const saveBarInfo = page.locator('strong').filter({ hasText: /^\d+$/ }).first();
-    const initialCount = parseInt(await saveBarInfo.textContent() ?? '0', 10);
-
-    // Unfollow the first followed topic
     await page.getByRole('button', { name: 'Following', exact: true }).first().click();
-    expect(parseInt(await saveBarInfo.textContent() ?? '0', 10)).toBe(initialCount - 1);
-
-    // Reset should revert back to initial count
-    await page.getByRole('button', { name: 'Reset' }).click();
-    expect(parseInt(await saveBarInfo.textContent() ?? '0', 10)).toBe(initialCount);
+    await expect(page.getByText(/Unfollowed #/)).toBeVisible({ timeout: 3000 });
   });
 
   test('DIG-8: load more adds more digest cards', async ({ page }) => {

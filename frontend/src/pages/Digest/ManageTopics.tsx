@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { contentService } from '../../services/content.service';
 import type { TopicCategory, TopicItem } from '../../types';
+import Toast from '../../components/ui/Toast';
 import styles from './Digest.module.css';
 
 function fmtCount(n: number): string {
@@ -10,19 +11,88 @@ function fmtCount(n: number): string {
 interface ManageTopicsProps {
   followedTopics: Set<string>;
   onToggle: (tag: string) => void;
-  onSave: () => void;
-  onReset: () => void;
 }
 
 const DEFAULT_VISIBLE = 5;
 
-export default function ManageTopics({ followedTopics, onToggle, onSave, onReset }: ManageTopicsProps) {
+export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
-  const allCategories = contentService.getTopicCategories();
+
+  const rawCategories = useMemo(() => contentService.getTopicCategories(), []);
+
+  // Per-category topic order: followed first, preserving relative order within each group
+  const [catOrder, setCatOrder] = useState<Record<string, string[]>>(() => {
+    const order: Record<string, string[]> = {};
+    for (const cat of rawCategories) {
+      const followed = cat.topics.filter(t => followedTopics.has(t.name)).map(t => t.name);
+      const unfollowed = cat.topics.filter(t => !followedTopics.has(t.name)).map(t => t.name);
+      order[cat.id] = [...followed, ...unfollowed];
+    }
+    return order;
+  });
+
+  const [justFollowedTag, setJustFollowedTag] = useState<string | null>(null);
+  const [toastShow, setToastShow] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastPositive, setToastPositive] = useState(true);
+  const pillRef = useRef<HTMLSpanElement>(null);
+
+  const handleToggle = useCallback((tag: string) => {
+    const willFollow = !followedTopics.has(tag);
+    onToggle(tag);
+
+    // Re-sort: [followedOthers, tag, unfollowedOthers]
+    // follow  → tag lands at end of followed group
+    // unfollow → tag lands at start of unfollowed group
+    setCatOrder(prev => {
+      const next = { ...prev };
+      for (const cat of rawCategories) {
+        if (!cat.topics.some(t => t.name === tag)) continue;
+        const order = prev[cat.id] ?? cat.topics.map(t => t.name);
+        const others = order.filter(n => n !== tag);
+        const followedOthers = others.filter(n => followedTopics.has(n));
+        const unfollowedOthers = others.filter(n => !followedTopics.has(n));
+        next[cat.id] = [...followedOthers, tag, ...unfollowedOthers];
+        break;
+      }
+      return next;
+    });
+
+    if (willFollow) {
+      setJustFollowedTag(tag);
+      setTimeout(() => setJustFollowedTag(cur => (cur === tag ? null : cur)), 620);
+    }
+
+    // Bump pill animation (force-restart via reflow)
+    const pill = pillRef.current;
+    if (pill) {
+      pill.classList.remove(styles.followPillBump);
+      void pill.offsetWidth;
+      pill.classList.add(styles.followPillBump);
+    }
+
+    const topic = rawCategories.flatMap(c => c.topics).find(t => t.name === tag);
+    const dn = topic?.displayName ?? tag;
+    setToastMsg(willFollow ? `Following #${dn}` : `Unfollowed #${dn}`);
+    setToastPositive(willFollow);
+    setToastShow(true);
+  }, [followedTopics, onToggle, rawCategories]);
+
+  const hideToast = useCallback(() => setToastShow(false), []);
+
+  // Apply order, then filter by search
+  const sortedCategories = rawCategories.map(cat => {
+    const order = catOrder[cat.id] ?? cat.topics.map(t => t.name);
+    const topicMap = new Map(cat.topics.map(t => [t.name, t]));
+    return {
+      ...cat,
+      topics: order.map(n => topicMap.get(n)).filter((t): t is TopicItem => t !== undefined),
+    };
+  });
 
   const filteredCategories: TopicCategory[] = searchQuery
-    ? allCategories
+    ? sortedCategories
         .map(cat => ({
           ...cat,
           topics: cat.topics.filter(t =>
@@ -31,7 +101,7 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
           ),
         }))
         .filter(cat => cat.topics.length > 0)
-    : allCategories;
+    : sortedCategories;
 
   function toggleCat(catId: string) {
     setExpandedCats(prev => {
@@ -46,7 +116,16 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
     <>
       <div className={styles.topicsWrap}>
         <div className={styles.topicsHeader}>
-          <span className={styles.topicsTitle}>Manage topics</span>
+          <div className={styles.topicsTitleWrap}>
+            <span className={styles.topicsTitle}>Manage topics</span>
+            <span
+              ref={pillRef}
+              className={`${styles.followPill} ${followedTopics.size > 0 ? styles.followPillActive : ''}`}
+            >
+              <span className={styles.followPillDot} />
+              Following <strong>{followedTopics.size}</strong>
+            </span>
+          </div>
           <div className={styles.topicsSearchWrap}>
             <svg className={styles.topicsSearchIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7" />
@@ -83,9 +162,10 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
                     key={topic.name}
                     topic={topic}
                     followed={followedTopics.has(topic.name)}
-                    onToggle={onToggle}
+                    onToggle={handleToggle}
                     animateIn={isExpanded && i >= DEFAULT_VISIBLE}
                     animationDelay={isExpanded && i >= DEFAULT_VISIBLE ? (i - DEFAULT_VISIBLE) * 35 : 0}
+                    justFollowed={justFollowedTag === topic.name}
                   />
                 ))}
               </div>
@@ -94,15 +174,7 @@ export default function ManageTopics({ followedTopics, onToggle, onSave, onReset
         })}
       </div>
 
-      <div className={styles.saveBar}>
-        <div className={styles.saveBarInfo}>
-          Following <strong>{followedTopics.size}</strong> topics
-        </div>
-        <div className={styles.saveBarActions}>
-          <button className={styles.saveBtnGhost} onClick={onReset}>Reset</button>
-          <button className={styles.saveBtn} onClick={onSave}>Save preferences</button>
-        </div>
-      </div>
+      <Toast message={toastMsg} show={toastShow} onHide={hideToast} neutral={!toastPositive} />
     </>
   );
 }
@@ -113,16 +185,24 @@ function TopicCard({
   onToggle,
   animateIn,
   animationDelay,
+  justFollowed,
 }: {
   topic: TopicItem;
   followed: boolean;
   onToggle: (tag: string) => void;
   animateIn: boolean;
   animationDelay: number;
+  justFollowed: boolean;
 }) {
+  const cardClass = [
+    styles.topicCard,
+    followed ? styles.topicCardFollowed : '',
+    justFollowed ? styles.topicCardJustFollowed : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className={`${styles.topicCard} ${followed ? styles.topicCardFollowed : ''}`}
+      className={cardClass}
       style={animateIn ? { animation: `cardAppear 180ms ease-out ${animationDelay}ms both` } : undefined}
     >
       <div className={styles.tagName}>
