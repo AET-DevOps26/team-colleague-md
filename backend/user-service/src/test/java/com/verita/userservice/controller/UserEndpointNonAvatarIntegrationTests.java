@@ -5,6 +5,7 @@ import com.verita.model.UserRole;
 import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.security.UserDetailsImpl;
+import com.verita.userservice.service.ContentServiceClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -57,6 +59,9 @@ class UserEndpointNonAvatarIntegrationTests {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @MockitoBean
+    private ContentServiceClient contentServiceClient;
 
     @DynamicPropertySource
     static void configurePostgres(DynamicPropertyRegistry registry) {
