@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ManageTopics from '../../../../src/pages/Digest/ManageTopics';
 
@@ -36,7 +36,6 @@ describe('ManageTopics', () => {
     // gamma is followed — its button text is "Following"
     // alpha and beta are unfollowed — their buttons are "Follow"
     // gamma should appear before alpha and beta in the DOM
-    const allText = screen.getByText('Gamma').closest('div')?.parentElement;
     const allTexts = buttons.map(b => b.textContent);
     // First button should be "Following" (gamma) then "Follow" twice
     expect(allTexts[0]).toBe('Following');
