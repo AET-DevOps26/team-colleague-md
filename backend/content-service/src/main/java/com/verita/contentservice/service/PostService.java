@@ -162,8 +162,12 @@ public class PostService {
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
             throw new ResponseStatusException(NOT_FOUND);
         }
+        // Build the response while the entity is still attached: incrementViewCount runs a
+        // clearAutomatically update that detaches `post`, after which its lazy topics/sourceUrls
+        // collections could no longer be initialised (open-in-view is disabled).
+        PostResponse response = toPostResponse(post, currentUser);
         postRepository.incrementViewCount(post.getId());
-        return toPostResponse(post, currentUser);
+        return response;
     }
 
     @Transactional(readOnly = true)
