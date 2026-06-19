@@ -46,13 +46,13 @@ public class SubscriptionsController implements SubscriptionsApi {
 
     @Override
     public ResponseEntity<Void> unsubscribeFromTopic(UUID topicId) {
-        subscriptionService.unsubscribeFromTopic(topicId, securityUtils.getCurrentUserId());
+        subscriptionService.unsubscribeFromTopic(securityUtils.getCurrentUserId(), topicId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
     public ResponseEntity<Void> unsubscribeFromUser(UUID userId) {
-        subscriptionService.unsubscribeFromUser(userId, securityUtils.getCurrentUserId());
+        subscriptionService.unsubscribeFromUser(securityUtils.getCurrentUserId(), userId);
         return ResponseEntity.noContent().build();
     }
 }
