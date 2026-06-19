@@ -1,12 +1,15 @@
 package com.verita.userservice;
 import com.verita.model.*;
+import com.verita.userservice.exception.DeleteUserContentException;
 import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.service.AvatarStorageService;
+import com.verita.userservice.service.ContentServiceClient;
 import com.verita.userservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.Page;
@@ -24,6 +27,8 @@ public class UserServiceTests {
     private UserRepository userRepository;
     @Mock
     private AvatarStorageService avatarStorageService;
+    @Mock
+    private ContentServiceClient contentServiceClient;
     @InjectMocks
     private UserService userService;
     private UserEntity userEntity;
@@ -143,11 +148,35 @@ public class UserServiceTests {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
         doNothing().when(userRepository).delete(any(UserEntity.class));
 
-        userService.deleteUser("testuser");
+        userService.deleteUser("testuser", "Bearer token");
 
-        verify(userRepository, times(1)).delete(userEntity);
-        verify(avatarStorageService, times(1)).deleteAvatar(avatarUrl);
+        InOrder inOrder = inOrder(contentServiceClient, userRepository, avatarStorageService);
+        inOrder.verify(contentServiceClient).deleteUserContentData(userEntity.getId(), "Bearer token");
+        inOrder.verify(userRepository).delete(userEntity);
+        inOrder.verify(avatarStorageService).deleteAvatar(avatarUrl);
     }
+
+    @Test
+    void deleteUser_whenContentCleanupFails_doesNotDeleteLocalUserOrAvatar() {
+        String avatarUrl = "http://localhost:9000/verita-user-portraits/users/old/avatar-old.png";
+        userEntity.setAvatarUrl(avatarUrl);
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
+        doThrow(new DeleteUserContentException(
+                userEntity.getId(),
+                "content-service",
+                "/internal/v1/users/{userId}/data",
+                503,
+                "cleanup unavailable",
+                new RuntimeException("content cleanup unavailable")))
+                .when(contentServiceClient).deleteUserContentData(userEntity.getId(), "Bearer token");
+
+        assertThrows(DeleteUserContentException.class, () -> userService.deleteUser("testuser", "Bearer token"));
+
+        verify(userRepository, never()).delete(any(UserEntity.class));
+        verify(avatarStorageService, never()).deleteAvatar(any());
+    }
+
     @Test
     void searchUsers_success() {
         Page<UserEntity> page = new PageImpl<>(List.of(userEntity));
