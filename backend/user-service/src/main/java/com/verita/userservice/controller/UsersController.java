@@ -3,6 +3,7 @@ package com.verita.userservice.controller;
 import com.verita.api.UsersApi;
 import com.verita.api.AdminApi;
 import com.verita.model.*;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,6 +13,8 @@ import java.util.UUID;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.verita.userservice.service.UserService;
 import com.verita.userservice.security.UserDetailsImpl;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @RestController
 @RequiredArgsConstructor
@@ -27,6 +30,15 @@ public class UsersController implements UsersApi, AdminApi {
         }
     }
 
+    private String getCurrentAuthorization() {
+        var attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof ServletRequestAttributes servletRequestAttributes) {
+            HttpServletRequest request = servletRequestAttributes.getRequest();
+            return request.getHeader("Authorization");
+        }
+        return null;
+    }
+
     @Override
     public ResponseEntity<User> getUserByUsername(String username) {
         User user = userService.getByUsername(username);
@@ -38,7 +50,7 @@ public class UsersController implements UsersApi, AdminApi {
 
     @Override
     public ResponseEntity<Void> deleteCurrentUser() {
-        userService.deleteUser(getCurrentUsername());
+        userService.deleteUser(getCurrentUsername(), getCurrentAuthorization());
         return ResponseEntity.noContent().build();
     }
 
