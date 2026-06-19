@@ -22,10 +22,10 @@ vi.mock('../../../../src/services/content.service', () => ({
 }));
 
 describe('ManageTopics', () => {
-  let onToggle: ReturnType<typeof vi.fn>;
+  let onToggle: (tag: string) => void;
 
   beforeEach(() => {
-    onToggle = vi.fn();
+    onToggle = vi.fn<(tag: string) => void>();
   });
 
   it('(MT-1) renders followed topics before unfollowed on initial load', () => {
