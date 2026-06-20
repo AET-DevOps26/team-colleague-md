@@ -16,6 +16,7 @@ import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
+import com.verita.model.Topic;
 import com.verita.model.TopicCategoryGroup;
 import com.verita.model.TopicResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -158,6 +159,11 @@ public class ContentController implements ApiApi {
     @Override
     public ResponseEntity<List<TopicCategoryGroup>> getTopics() {
         return ResponseEntity.ok(topicService.getAllGrouped());
+    }
+
+    @Override
+    public ResponseEntity<List<Topic>> getTopicsByIds(List<UUID> ids) {
+        return ResponseEntity.ok(topicService.getByIds(ids));
     }
 
     @Override

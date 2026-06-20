@@ -1,7 +1,8 @@
 package com.verita.recommendationservice.repository;
 
-import com.verita.recommendationservice.entities.UserSubscription;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.verita.recommendationservice.entity.UserSubscription;
 
 import java.util.List;
 import java.util.Optional;

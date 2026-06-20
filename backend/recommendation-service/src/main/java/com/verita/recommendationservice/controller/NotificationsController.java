@@ -1,11 +1,12 @@
-package com.verita.recommendationservice.controllers;
+package com.verita.recommendationservice.controller;
 
 import com.verita.api.NotificationsApi;
 import com.verita.model.GetUserNotifications200Response;
 import com.verita.model.NotificationResponse;
-import com.verita.recommendationservice.entities.Notification;
+import com.verita.recommendationservice.entity.Notification;
 import com.verita.recommendationservice.security.SecurityUtils;
 import com.verita.recommendationservice.service.NotificationService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,15 +16,11 @@ import java.util.UUID;
 
 @Validated
 @RestController
+@RequiredArgsConstructor
 public class NotificationsController implements NotificationsApi {
 
     private final SecurityUtils securityUtils;
     private final NotificationService notificationService;
-
-    public NotificationsController(SecurityUtils securityUtils, NotificationService notificationService) {
-        this.securityUtils = securityUtils;
-        this.notificationService = notificationService;
-    }
 
     @Override
     public ResponseEntity<GetUserNotifications200Response> getUserNotifications(

@@ -1,11 +1,17 @@
-package com.verita.recommendationservice.entities;
+package com.verita.recommendationservice.entity;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
 @Table(
     name = "topic_subscriptions",
     uniqueConstraints = @UniqueConstraint(
@@ -28,14 +34,4 @@ public class TopicSubscription {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ DEFAULT NOW()")
     private OffsetDateTime createdAt;
-
-    public UUID getId() { return id; }
-
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-
-    public UUID getTopicId() { return topicId; }
-    public void setTopicId(UUID topicId) { this.topicId = topicId; }
-
-    public OffsetDateTime getCreatedAt() { return createdAt; }
 }

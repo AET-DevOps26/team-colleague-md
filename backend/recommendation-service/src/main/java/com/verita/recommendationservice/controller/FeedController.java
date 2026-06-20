@@ -1,25 +1,25 @@
-package com.verita.recommendationservice.controllers;
+package com.verita.recommendationservice.controller;
 
 import com.verita.api.DiscoveryApi;
 import com.verita.model.FeedPage;
+import com.verita.recommendationservice.security.SecurityUtils;
 import com.verita.recommendationservice.service.FeedService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 
 @Validated
 @RestController
+@RequiredArgsConstructor
 public class FeedController implements DiscoveryApi {
 
     private final FeedService feedService;
-
-    public FeedController(FeedService feedService) {
-        this.feedService = feedService;
-    }
+    private final SecurityUtils securityUtils;
 
     @Override
     public ResponseEntity<FeedPage> getPersonalFeed(String cursor, Integer size) {
-        return ResponseEntity.ok(feedService.getPersonalFeed(cursor, size));
+        return ResponseEntity.ok(feedService.getPersonalFeed(securityUtils.getCurrentUserId(), cursor, size));
     }
 
     @Override

@@ -1,11 +1,17 @@
-package com.verita.recommendationservice.entities;
+package com.verita.recommendationservice.entity;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
 @Table(
     name = "notifications",
     indexes = {
@@ -37,23 +43,4 @@ public class Notification {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ DEFAULT NOW()")
     private OffsetDateTime createdAt;
-
-    public UUID getId() { return id; }
-
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
-
-    public UUID getRelatedPostId() { return relatedPostId; }
-    public void setRelatedPostId(UUID relatedPostId) { this.relatedPostId = relatedPostId; }
-
-    public boolean isRead() { return isRead; }
-    public void setRead(boolean read) { isRead = read; }
-
-    public OffsetDateTime getCreatedAt() { return createdAt; }
 }

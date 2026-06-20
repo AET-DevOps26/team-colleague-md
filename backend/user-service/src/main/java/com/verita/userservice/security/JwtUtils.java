@@ -31,7 +31,9 @@ public class JwtUtils {
 
     /**
      * Generates a signed JWT for an authenticated principal.
-     * The token subject is the username; expiry is set from {@code app.jwtExpirationMs}.
+     * The token subject is the username; the user's UUID is carried in a {@code userId}
+     * claim so consumer services can identify the caller without a lookup. Expiry is set
+     * from {@code app.jwtExpirationMs}.
      *
      * @param authentication the authenticated principal returned by the AuthenticationManager
      * @return a compact, URL-safe JWT string
@@ -41,6 +43,7 @@ public class JwtUtils {
 
         return Jwts.builder()
                 .setSubject(userPrincipal.getUsername())
+                .claim("userId", userPrincipal.getId().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -56,6 +59,18 @@ public class JwtUtils {
     public String getUserNameFromJwtToken(String token) {
         return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
                 .parseClaimsJws(token).getBody().getSubject();
+    }
+
+    /**
+     * Extracts the user's UUID from the {@code userId} claim of a validated JWT string.
+     * This is the canonical caller identity consumer services rely on.
+     *
+     * @param token a valid, non-expired JWT
+     * @return the user UUID stored in the {@code userId} claim
+     */
+    public String getUserIdFromJwtToken(String token) {
+        return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
+                .parseClaimsJws(token).getBody().get("userId", String.class);
     }
 
     /**

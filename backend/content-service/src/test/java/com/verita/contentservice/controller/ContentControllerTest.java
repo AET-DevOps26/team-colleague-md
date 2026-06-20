@@ -12,6 +12,7 @@ import com.verita.model.LikeRequest;
 import com.verita.model.PostLikeResponse;
 import com.verita.model.PostPage;
 import com.verita.model.PostResponse;
+import com.verita.model.Topic;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -172,5 +173,19 @@ class ContentControllerTest {
 
         mockMvc.perform(get("/api/v1/topics"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void getTopicsByIds_returns200AndDelegates() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(topicService.getByIds(List.of(id)))
+                .thenReturn(List.of(new Topic().id(id).name("java")));
+
+        mockMvc.perform(get("/api/v1/topics/by-ids").param("ids", id.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(id.toString()))
+                .andExpect(jsonPath("$[0].name").value("java"));
+
+        verify(topicService).getByIds(List.of(id));
     }
 }

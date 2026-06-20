@@ -16,14 +16,15 @@ public class SecurityUtils {
             throw new IllegalStateException("Expected JWT authentication but got: " +
                     (auth == null ? "null" : auth.getClass().getSimpleName()));
         }
-        String subject = jwtAuth.getToken().getSubject();
-        if (subject == null) {
-            throw new IllegalStateException("JWT is missing required 'sub' claim");
+        // Identity travels in the 'userId' claim (a UUID); 'sub' is the username (ADR-0001).
+        String userId = jwtAuth.getToken().getClaimAsString("userId");
+        if (userId == null) {
+            throw new IllegalStateException("JWT is missing required 'userId' claim");
         }
         try {
-            return UUID.fromString(subject);
+            return UUID.fromString(userId);
         } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("JWT 'sub' claim is not a valid UUID: " + subject, e);
+            throw new IllegalStateException("JWT 'userId' claim is not a valid UUID: " + userId, e);
         }
     }
 }

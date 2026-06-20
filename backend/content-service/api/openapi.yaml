@@ -499,6 +499,40 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/TopicCategoryGroup' } }
 
+  /api/v1/topics/by-ids:
+    get:
+      operationId: getTopicsByIds
+      summary: Batch-resolve topic names by ID
+      description: |
+        Returns minimal `{ id, name }` objects for the given topic IDs — for callers that only
+        need to resolve names (e.g. recommendation-service populating subscribed-topic names).
+        Unknown IDs are silently omitted; the caller tolerates gaps.
+
+        This is a dedicated sibling of `GET /api/v1/topics` (which returns the full
+        category-grouped catalog with stats), mirroring the `GET /api/v1/posts/cards?ids=`
+        pattern: one operation, one response shape.
+      tags: [Topics]
+      security: []
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          description: Comma-separated list of topic UUIDs, e.g. `ids=id1,id2,id3`. Max 100.
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+            minItems: 1
+            maxItems: 100
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: Matching topics retrieved. Unknown IDs are silently omitted.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Topic' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
   /api/v1/topics/search:
     get:
       operationId: searchTopics

@@ -1,13 +1,19 @@
-package com.verita.recommendationservice.entities;
+package com.verita.recommendationservice.entity;
 
 import jakarta.persistence.*;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
 @Table(
     name = "interactions",
     indexes = {
@@ -45,26 +51,4 @@ public class Interaction {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ DEFAULT NOW()")
     private OffsetDateTime createdAt;
-
-    public UUID getId() { return id; }
-
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-
-    public UUID getPostId() { return postId; }
-    public void setPostId(UUID postId) { this.postId = postId; }
-
-    public String getInteractionType() { return interactionType; }
-    public void setInteractionType(String interactionType) { this.interactionType = interactionType; }
-
-    public Integer getDurationSeconds() { return durationSeconds; }
-    public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
-
-    public Integer getScrollDepth() { return scrollDepth; }
-    public void setScrollDepth(Integer scrollDepth) { this.scrollDepth = scrollDepth; }
-
-    public String getMetadata() { return metadata; }
-    public void setMetadata(String metadata) { this.metadata = metadata; }
-
-    public OffsetDateTime getCreatedAt() { return createdAt; }
 }

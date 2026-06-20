@@ -2,25 +2,20 @@ package com.verita.recommendationservice.service;
 
 import com.verita.model.InteractionRequest;
 import com.verita.recommendationservice.mapper.InteractionMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class InteractionService {
-
-    private static final Logger log = LoggerFactory.getLogger(InteractionService.class);
 
     private final InteractionMapper interactionMapper;
     private final InteractionBuffer interactionBuffer;
-
-    public InteractionService(InteractionMapper interactionMapper, InteractionBuffer interactionBuffer) {
-        this.interactionMapper = interactionMapper;
-        this.interactionBuffer = interactionBuffer;
-    }
 
     @Async("interactionExecutor")
     public void process(InteractionRequest request, UUID userId) {
