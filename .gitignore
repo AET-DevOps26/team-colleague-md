@@ -87,3 +87,8 @@ verita_key
 
 # CodeGraph data files — local to each machine, not for committing.
 ./codegraph/*
+
+# Agent skills scaffolding — local domain docs, not for committing.
+CONTEXT.md
+docs/agents/
+docs/adr/
