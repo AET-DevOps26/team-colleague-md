@@ -138,6 +138,8 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required — set to http://<VM_IP>}
+      # Shared HS256 secret — all backend services must receive the SAME value (token interop).
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required — must be identical across all services}
       - DB_HOST=user-db
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-verita_users}
@@ -167,6 +169,11 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/content-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      # Shared HS256 secret — must match user-service / recommendation-service.
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required — must be identical across all services}
+      # Cross-service calls (Clients.java): reach peers by compose service name, not localhost.
+      - USER_SERVICE_BASE_URL=http://user-service:8081
+      - GENAI_SERVICE_BASE_URL=http://genai-service:8000
       - DB_URL=jdbc:postgresql://content-db:5432/${CONTENT_DB_NAME:-verita_content}
       - DB_USERNAME=${CONTENT_DB_USER:-verita_content_user}
       - DB_PASSWORD=${CONTENT_DB_PASSWORD}
@@ -194,6 +201,10 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/recommendation-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      # Shared HS256 secret — must match user-service / content-service.
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required — must be identical across all services}
+      # Cross-service calls (ContentClient): reach content-service by compose service name.
+      - CONTENT_SERVICE_BASE_URL=http://content-service:8082
       - DB_HOST=recommendation-db
       - DB_PORT=5432
       - DB_NAME=${RECOMMENDATION_DB_NAME:-verita_recommendations}

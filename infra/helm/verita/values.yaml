@@ -1,6 +1,9 @@
 global:
   registry: ghcr.io/aet-devops26/team-colleague-md
   imagePullSecrets: []
+  # Shared HS256 secret for user-/content-/recommendation-service. DEV DEFAULT ONLY —
+  # override in values-prod.yaml or via --set global.jwtSecret=... for real deployments.
+  jwtSecret: "dev-only-insecure-secret-replace-in-production!!"
 
 services:
   user:
@@ -28,6 +31,10 @@ services:
     tag: latest
     port: 8082
     springProfile: dev
+    # Cross-service calls (Clients.java) reach peers by their in-cluster Service name.
+    extraEnv:
+      USER_SERVICE_BASE_URL: "http://{{ .Release.Name }}-user:8081"
+      GENAI_SERVICE_BASE_URL: "http://{{ .Release.Name }}-genai:8000"
     health:
       path: /actuator/health
       initialDelaySeconds: 45
@@ -48,6 +55,9 @@ services:
     tag: latest
     port: 8083
     springProfile: dev
+    # ContentClient reaches content-service by its in-cluster Service name.
+    extraEnv:
+      CONTENT_SERVICE_BASE_URL: "http://{{ .Release.Name }}-content:8082"
     health:
       path: /actuator/health
       initialDelaySeconds: 45
