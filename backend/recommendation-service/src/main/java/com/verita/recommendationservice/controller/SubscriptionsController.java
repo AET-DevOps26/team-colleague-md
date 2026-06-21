@@ -6,7 +6,7 @@ import com.verita.recommendationservice.entity.TopicSubscription;
 import com.verita.recommendationservice.security.SecurityUtils;
 import com.verita.recommendationservice.service.FollowerCountSyncService;
 import com.verita.recommendationservice.service.SubscriptionService;
-import com.verita.recommendationservice.service.TopicNameResolver;
+import com.verita.recommendationservice.service.feed.TopicNameResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;

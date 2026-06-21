@@ -1,4 +1,4 @@
-package com.verita.recommendationservice.service;
+package com.verita.recommendationservice.service.feed;
 
 import com.verita.recommendationservice.client.ContentClient;
 import com.verita.recommendationservice.client.dto.PostRankDto;

@@ -1,4 +1,4 @@
-package com.verita.recommendationservice.service;
+package com.verita.recommendationservice.service.feed;
 
 import com.verita.model.FeedPage;
 import java.nio.charset.StandardCharsets;

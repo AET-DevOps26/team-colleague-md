@@ -1,4 +1,4 @@
-package com.verita.recommendationservice.service;
+package com.verita.recommendationservice.service.feed;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

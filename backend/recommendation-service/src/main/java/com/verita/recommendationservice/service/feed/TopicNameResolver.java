@@ -1,4 +1,4 @@
-package com.verita.recommendationservice.service;
+package com.verita.recommendationservice.service.feed;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;

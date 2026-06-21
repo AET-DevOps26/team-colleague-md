@@ -1,5 +1,7 @@
 package com.verita.recommendationservice.service;
 
+import com.verita.recommendationservice.service.feed.TopicNameResolver;
+
 import com.verita.recommendationservice.client.ContentClient;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;

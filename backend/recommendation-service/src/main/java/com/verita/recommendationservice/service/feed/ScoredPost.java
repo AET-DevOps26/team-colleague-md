@@ -1,4 +1,4 @@
-package com.verita.recommendationservice.service;
+package com.verita.recommendationservice.service.feed;
 
 import java.util.UUID;
 

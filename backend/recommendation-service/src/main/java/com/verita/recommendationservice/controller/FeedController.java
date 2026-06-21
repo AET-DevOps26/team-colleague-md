@@ -3,7 +3,7 @@ package com.verita.recommendationservice.controller;
 import com.verita.api.DiscoveryApi;
 import com.verita.model.FeedPage;
 import com.verita.recommendationservice.security.SecurityUtils;
-import com.verita.recommendationservice.service.FeedService;
+import com.verita.recommendationservice.service.feed.FeedService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
