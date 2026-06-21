@@ -40,7 +40,13 @@ public class SecurityConfig {
                 // everything else requires a valid JWT
                 .anyRequest().authenticated()
             )
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+            // Route bearer-token failures (bad signature, expired, or our missing-userId
+            // validator) through SecurityErrorHandler too — otherwise the resource server's
+            // default BearerTokenAuthenticationEntryPoint returns an empty-body 401 instead
+            // of the JSON ErrorResponse the rest of the API uses.
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .authenticationEntryPoint(securityErrorHandler)
+                .jwt(Customizer.withDefaults()));
 
         return http.build();
     }
