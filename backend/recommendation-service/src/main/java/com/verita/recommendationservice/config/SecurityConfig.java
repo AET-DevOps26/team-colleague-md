@@ -1,5 +1,6 @@
 package com.verita.recommendationservice.config;
 
+import com.verita.recommendationservice.filter.JwtAuthenticationFilter;
 import com.verita.recommendationservice.security.SecurityErrorHandler;
 import java.nio.charset.StandardCharsets;
 import javax.crypto.spec.SecretKeySpec;
@@ -7,11 +8,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
@@ -26,7 +27,8 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, SecurityErrorHandler securityErrorHandler) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, SecurityErrorHandler securityErrorHandler,
+                                           JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -40,13 +42,10 @@ public class SecurityConfig {
                 // everything else requires a valid JWT
                 .anyRequest().authenticated()
             )
-            // Route bearer-token failures (bad signature, expired, or our missing-userId
-            // validator) through SecurityErrorHandler too — otherwise the resource server's
-            // default BearerTokenAuthenticationEntryPoint returns an empty-body 401 instead
-            // of the JSON ErrorResponse the rest of the API uses.
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .authenticationEntryPoint(securityErrorHandler)
-                .jwt(Customizer.withDefaults()));
+            // Optional authentication (ADR-0006): the fail-open filter authenticates a valid
+            // token and ignores an absent/invalid one; the authorization rules above do the
+            // enforcing, and protected-endpoint 401s flow through SecurityErrorHandler (JSON).
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
