@@ -1,0 +1,21 @@
+meta {
+  name: 2 Personal feed
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{recBaseUrl}}/api/v1/feed/personal
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Step 2 of the cross-service flow: the token minted by user-service (step 1)
+  authenticates a recommendation-service call. This is the path Swagger UI
+  cannot exercise — verifying the ADR-0001 userId-claim identity end to end.
+}

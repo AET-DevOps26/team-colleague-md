@@ -1,0 +1,15 @@
+meta {
+  name: Personal feed
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{recBaseUrl}}/api/v1/feed/personal
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
