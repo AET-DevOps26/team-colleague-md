@@ -70,10 +70,17 @@ const API_USER_SARAH = {
 };
 
 async function loginAndInterceptProfileApi(page: Page) {
+  const mockUser = { id: 'user-1', username: 'alexchen', displayName: 'Alex Chen', role: 'USER', email: 'alex@example.com' };
   await page.addInitScript((user) => {
     localStorage.setItem('verita_user', JSON.stringify(user));
-    localStorage.setItem('verita_token', 'mock-token');
-  }, { id: 'user-1', username: 'alexchen', displayName: 'Alex Chen', role: 'USER', email: 'alex@example.com' });
+  }, mockUser);
+  await page.route('**/api/v1/auth/refresh', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ accessToken: 'mock-token', user: mockUser }),
+    })
+  );
 }
 
 // ── API-1: own profile — GET /api/v1/users/me ──────────────────────────────

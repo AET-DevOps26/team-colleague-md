@@ -51,8 +51,6 @@
 
   /* Topbar */
   .topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,0.88);backdrop-filter:saturate(160%) blur(10px);-webkit-backdrop-filter:saturate(160%) blur(10px);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;flex-shrink:0}
-  .back-btn{display:inline-flex;align-items:center;gap:5px;color:var(--text-secondary);font-size:12.5px;font-weight:500;padding:6px 8px 6px 4px;border-radius:7px;transition:background 120ms,color 120ms;flex-shrink:0}
-  .back-btn:hover{background:var(--bg-elevated);color:var(--text-primary)}
   .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto}
   .signin-btn{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:8px;background:var(--accent);color:#fff;font-size:12.5px;font-weight:600;transition:background 120ms}
   .signin-btn:hover{background:var(--accent-hover)}
@@ -61,11 +59,22 @@
   .avatar-btn::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 35%,#fff 0 5px,transparent 6px),radial-gradient(circle at 65% 32%,#fff 0 5px,transparent 6px),radial-gradient(ellipse at 50% 70%,#0a0a0a 0 7px,transparent 8px),linear-gradient(135deg,#c0a4ff 0%,#ff8a8a 45%,#ffc28a 100%)}
   .avatar-btn::after{content:"";position:absolute;left:30%;top:35%;width:2.5px;height:2.5px;background:#0a0a0a;border-radius:50%;box-shadow:18px 0 0 #0a0a0a}
 
-  /* Tab bar */
-  .tab-bar{display:flex;align-items:center;border-bottom:1px solid var(--border-subtle);padding:0 32px;background:var(--bg-base);flex-shrink:0}
-  .tab-btn{display:flex;align-items:center;gap:7px;padding:15px 2px;margin-right:28px;font-size:13.5px;font-weight:500;color:var(--text-tertiary);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 120ms,border-color 120ms}
+  /* Topbar back button — same as sister pages (Post Detail, Search, Profile) */
+  .back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);padding:6px 10px 6px 6px;border-radius:8px;font-size:12.5px;font-weight:500;flex-shrink:0;transition:background 120ms ease-out,color 120ms ease-out}
+  .back-btn:hover{background:var(--bg-elevated);color:var(--text-primary)}
+
+  /* Divider between the back-button and the tab group, so they read as
+     two separate units rather than one long row of links */
+  .topbar-divider{width:1px;height:20px;background:var(--border-default);flex-shrink:0;margin:0 4px}
+
+  /* Tabs living in the topbar — bottom-anchored underline so the active
+     tab visually "owns" the content below by meeting the topbar's bottom edge */
+  .topbar-tabs{display:flex;align-items:stretch;height:100%;flex-shrink:0;gap:0}
+  .tab-btn{position:relative;display:inline-flex;align-items:center;height:100%;padding:0 4px;margin-right:24px;font-size:13px;font-weight:500;color:var(--text-tertiary);transition:color 120ms ease-out;white-space:nowrap}
+  .tab-btn::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:transparent;transition:background 120ms ease-out}
   .tab-btn:hover{color:var(--text-primary)}
-  .tab-btn.active{color:var(--text-primary);border-bottom-color:var(--accent)}
+  .tab-btn.active{color:var(--text-primary);font-weight:600}
+  .tab-btn.active::after{background:var(--accent)}
 
   /* Content */
   .content{flex:1;position:relative}
@@ -73,11 +82,12 @@
   .tab-panel.active{display:block}
 
   /* Past Digests */
-  .past-digests-wrap{padding:28px 32px 120px;max-width:1400px}
+  .past-digests-wrap{padding:28px 32px 120px;max-width:1400px;margin:0 auto;width:100%}
 
   /* Today hero */
   .today-hero{background:#0A0A0A;color:#fff;border-radius:14px;padding:22px 24px 20px;margin-bottom:32px;position:relative;overflow:hidden}
   .today-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 80% 50%,rgba(255,255,255,0.04) 0%,transparent 60%);pointer-events:none}
+  .today-hero::after{content:"";position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:0.05;mix-blend-mode:overlay;pointer-events:none}
   .today-hero-inner{display:flex;align-items:flex-start;gap:20px;position:relative}
   .today-hero-text{flex:1;min-width:0}
   .today-label{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#ABABAB;margin-bottom:10px}
@@ -112,6 +122,8 @@
   .history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .history-header h2{font-size:13.5px;font-weight:600;color:var(--text-primary)}
   .history-header .count{font-size:12px;color:var(--text-tertiary);font-variant-numeric:tabular-nums}
+  .digest-group{margin-bottom:28px}
+  .digest-group-label{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border-subtle)}
   .digest-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
   @media(max-width:1200px){.digest-grid{grid-template-columns:repeat(3,1fr)}}
   @media(max-width:900px){.digest-grid{grid-template-columns:repeat(2,1fr)}}
@@ -120,15 +132,15 @@
   .hist-card:hover{transform:translateY(-1px)}
   .hist-card-block{background:oklch(97% 0.012 80);border-radius:12px;padding:18px 18px 16px;transition:box-shadow 220ms ease-out}
   .hist-card:hover .hist-card-block{box-shadow:0 8px 24px -14px rgba(0,0,0,0.12)}
-  .hist-date{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:14px;font-family:var(--font-sans)}
+  .hist-eyebrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .hist-date{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);font-family:var(--font-sans)}
+  .hist-meta-inline{font-size:10px;color:var(--text-tertiary);font-variant-numeric:tabular-nums;letter-spacing:0.02em}
   .hist-pull{font-family:var(--font-serif);font-style:italic;font-weight:500;font-size:16px;line-height:1.5;color:var(--text-primary);border-left:2px solid var(--border-default);padding-left:12px;margin:0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}
   .hist-body{padding:12px 2px 4px}
-  .hist-title{font-family:var(--font-sans);font-style:normal;font-weight:700;font-size:17px;line-height:1.3;letter-spacing:-0.015em;color:var(--text-primary);margin:0 0 10px;text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-  .hist-pills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+  .hist-title{font-family:var(--font-sans);font-style:normal;font-weight:700;font-size:19px;line-height:1.3;letter-spacing:-0.015em;color:var(--text-primary);margin:0 0 10px;text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .hist-pills{display:none}
   .hist-pill{font-size:10.5px;font-weight:500;color:var(--text-secondary);background:var(--bg-elevated);padding:3px 7px;border-radius:4px}
-  .hist-footer{display:flex;align-items:center;justify-content:space-between;padding-top:4px;margin-top:4px}
-  .hist-footer-meta{font-size:12px;color:var(--text-tertiary);display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
-  .hist-footer-meta .dot-sep{opacity:0.5}
+  .hist-footer{display:flex;align-items:center;justify-content:flex-end;padding-top:4px;margin-top:4px}
   .hist-read-link{font-size:12px;font-weight:500;color:var(--text-secondary);display:flex;align-items:center;gap:3px;transition:color 120ms}
   .hist-card:hover .hist-read-link{color:var(--text-primary)}
 
@@ -138,7 +150,7 @@
   .load-more-btn:hover{background:var(--bg-elevated);color:var(--text-primary)}
 
   /* Manage Topics */
-  .topics-wrap{padding:24px 32px 100px;max-width:1400px}
+  .topics-wrap{padding:24px 32px 100px;max-width:1400px;margin:0 auto;width:100%}
   .topics-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
   .topics-title{font-size:13.5px;font-weight:600;color:var(--text-secondary)}
   .topics-search{height:36px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-surface);padding:0 12px 0 34px;font:400 13px var(--font-sans);color:var(--text-primary);width:260px;outline:none;transition:border-color 120ms,box-shadow 120ms,background 120ms}
@@ -160,13 +172,14 @@
   .topic-card.overflow-hidden{display:none}
   .topic-row.expanded .topic-card.overflow-hidden{display:block;animation:card-appear 180ms ease-out both}
   @keyframes card-appear{from{opacity:0;transform:translateY(6px) scale(0.97)}to{opacity:1;transform:none}}
-  .topic-card{background:var(--bg-base);border:1px solid var(--border-default);border-radius:10px;padding:14px 16px 12px;transition:border-color 120ms,background 120ms;min-width:0}
+  .topic-card{background:var(--bg-base);border:1px solid var(--border-default);border-radius:10px;padding:14px 16px 12px;transition:border-color 120ms,background 120ms;min-width:0;display:flex;flex-direction:column}
   .topic-card.followed{background:var(--bg-surface);border-color:var(--text-primary)}
   .topic-card .tag-name{font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:4px;line-height:1.2}
   .topic-card .tag-name .hash{color:var(--text-tertiary);font-weight:600}
-  .topic-card .post-count{font-size:11.5px;color:var(--text-secondary);margin-bottom:10px;display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
-  .post-count .hot{color:var(--success);font-weight:600}
-  .activity-bar-wrap{height:3px;background:var(--bg-elevated);border-radius:2px;margin-bottom:12px;overflow:hidden}
+  .topic-card .post-count{font-size:11.5px;color:var(--text-secondary);margin-bottom:2px;font-variant-numeric:tabular-nums}
+  .trending-row{font-size:11px;font-weight:600;color:var(--success);height:1.4em;margin-bottom:8px}
+  .trending-row.empty{visibility:hidden}
+  .activity-bar-wrap{height:3px;background:var(--bg-elevated);border-radius:2px;margin-bottom:12px;overflow:hidden;margin-top:auto}
   .activity-bar{height:100%;background:var(--text-tertiary);border-radius:2px;transition:background 200ms}
   .topic-card.followed .activity-bar{background:var(--accent)}
   .topic-card-footer{display:flex;align-items:center;justify-content:space-between;gap:6px}
@@ -187,20 +200,30 @@
   .btn-ghost-lg{display:inline-flex;align-items:center;height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--border-default);color:var(--text-secondary);font-size:13px;font-weight:500;transition:background 120ms,color 120ms}
   .btn-ghost-lg:hover{background:var(--bg-elevated);color:var(--text-primary)}
 
-  /* Save bar */
-  .save-bar{position:fixed;bottom:0;left:var(--sidebar-rail);right:0;z-index:30;background:rgba(255,255,255,0.92);backdrop-filter:saturate(160%) blur(12px);-webkit-backdrop-filter:saturate(160%) blur(12px);border-top:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;padding:12px 32px;transition:left 200ms ease}
-  body:has(.sidebar:hover) .save-bar{left:148px}
-  .save-bar-info{font-size:13px;color:var(--text-secondary)}
-  .save-bar-info strong{color:var(--text-primary);font-weight:600;font-variant-numeric:tabular-nums}
-  .save-bar-actions{display:flex;align-items:center;gap:10px}
-  .save-btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 20px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;transition:background 120ms}
-  .save-btn:hover{background:var(--accent-hover)}
-  .save-btn-ghost{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--border-default);color:var(--text-secondary);font-size:13px;font-weight:500;transition:background 120ms,color 120ms}
-  .save-btn-ghost:hover{background:var(--bg-elevated);color:var(--text-primary)}
+  /* Following pill — sits next to "Manage topics" title in lieu of the old save bar */
+  .topics-title-wrap{display:flex;align-items:center;gap:12px}
+  .follow-pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;background:var(--bg-elevated);border:1px solid var(--border-subtle);font-size:11.5px;font-weight:500;color:var(--text-secondary);font-variant-numeric:tabular-nums;transition:background 200ms,color 200ms,border-color 200ms}
+  .follow-pill strong{color:var(--text-primary);font-weight:600;margin:0 1px}
+  .follow-pill-dot{width:6px;height:6px;border-radius:50%;background:var(--text-tertiary);transition:background 200ms,box-shadow 200ms}
+  .follow-pill.active{background:rgba(217,119,87,0.08);border-color:rgba(217,119,87,0.25);color:var(--text-primary)}
+  .follow-pill.active .follow-pill-dot{background:var(--accent);box-shadow:0 0 0 3px rgba(217,119,87,0.15)}
+  .follow-pill.bump{animation:follow-pill-bump 320ms ease-out}
+  @keyframes follow-pill-bump{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
 
   /* Toast */
-  .toast{position:fixed;bottom:70px;right:24px;z-index:60;background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,0.2);opacity:0;transform:translateY(6px);transition:opacity 200ms,transform 200ms;pointer-events:none}
+  .toast{position:fixed;bottom:24px;right:24px;z-index:60;background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,0.2);opacity:0;transform:translateY(6px);transition:opacity 200ms,transform 200ms,background 160ms;pointer-events:none}
   .toast.show{opacity:1;transform:translateY(0)}
+  .toast.toast-neutral{background:#0A0A0A}
+  .toast.toast-neutral .toast-icon-check{display:none}
+  .toast:not(.toast-neutral) .toast-icon-undo{display:none}
+  /* Just-followed card — brief settling pulse so the eye can track it
+     after it's promoted to the front of the row */
+  .topic-card.just-followed{animation:just-followed-pulse 600ms ease-out}
+  @keyframes just-followed-pulse{
+    0%   { transform:scale(1);    box-shadow:0 0 0 0   rgba(217,119,87,0.0); }
+    30%  { transform:scale(1.025);box-shadow:0 0 0 6px rgba(217,119,87,0.18); }
+    100% { transform:scale(1);    box-shadow:0 0 0 0   rgba(217,119,87,0.0); }
+  }
   .hidden{display:none !important}
 </style>
 </head>
@@ -231,10 +254,15 @@
 
 <main class="main">
   <header class="topbar">
-    <a class="back-btn" href="#">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Explore
+    <a class="back-btn" id="backBtn" href="#" aria-label="Back to Explore">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <span>Explore</span>
     </a>
+    <span class="topbar-divider" aria-hidden="true"></span>
+    <div class="topbar-tabs" role="tablist" aria-label="Digest views">
+      <button class="tab-btn active" id="tab-past" type="button" role="tab" aria-selected="true" onclick="switchTab('past')">Past Digests</button>
+      <button class="tab-btn" id="tab-topics" type="button" role="tab" aria-selected="false" onclick="switchTab('topics')">Manage Topics</button>
+    </div>
     <div class="topbar-auth-toggle">
       <span class="topbar-auth-toggle-label">Preview state</span>
       <div class="topbar-auth-toggle-row" role="group">
@@ -244,11 +272,6 @@
     </div>
 <div class="topbar-right" id="topbar-right"></div>
   </header>
-
-  <div class="tab-bar">
-    <button class="tab-btn active" id="tab-past" type="button" onclick="switchTab('past')">Past Digests</button>
-    <button class="tab-btn" id="tab-topics" type="button" onclick="switchTab('topics')">Manage Topics</button>
-  </div>
 
   <div class="tab-panel active" id="panel-past">
     <div class="past-digests-wrap">
@@ -291,7 +314,7 @@
         <h2>Past digests</h2>
         <span class="count" id="history-count"></span>
       </div>
-      <div class="digest-grid" id="digest-grid"></div>
+      <div id="digest-grid"></div>
       <div class="load-more-wrap" id="load-more-wrap" style="display:none">
         <button class="load-more-btn" type="button" onclick="loadMoreDigests()">Load more <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button>
       </div>
@@ -302,20 +325,16 @@
     <div id="topics-loggedin">
       <div class="topics-wrap">
         <div class="topics-header">
-          <div class="topics-title">Manage topics</div>
+          <div class="topics-title-wrap">
+            <div class="topics-title">Manage topics</div>
+            <span class="follow-pill" id="follow-pill"><span class="follow-pill-dot"></span>Following <strong id="follow-count">0</strong></span>
+          </div>
           <div class="topics-search-wrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
             <input class="topics-search" id="topic-search" type="text" placeholder="Filter topics…" oninput="filterTopics(this.value)" />
           </div>
         </div>
         <div id="cats-container"></div>
-      </div>
-      <div class="save-bar" id="save-bar">
-        <div class="save-bar-info">Following <strong id="follow-count">0</strong> topics</div>
-        <div class="save-bar-actions">
-          <button class="save-btn-ghost" type="button">Reset</button>
-          <button class="save-btn" type="button" onclick="savePreferences()">Save preferences</button>
-        </div>
       </div>
     </div>
     <div class="topics-gate hidden" id="topics-loggedout">
@@ -333,7 +352,8 @@
 </main>
 
 <div class="toast" id="toast">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+  <svg class="toast-icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+  <svg class="toast-icon-undo" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg>
   <span id="toast-msg">Preferences saved</span>
 </div>
 
@@ -426,7 +446,8 @@ function renderTopicCard(t, catId, isOverflow){
   var barW = Math.round(t.activity*100);
   return '<div class="topic-card'+(t.followed?' followed':'')+(isOverflow?' overflow-hidden':'')+'" id="tc-'+t.tag+'" data-tag="'+t.tag+'">'
     +'<div class="tag-name"><span class="hash">#</span>'+t.tag+'</div>'
-    +'<div class="post-count">'+t.posts+' posts this week'+(t.hot?'<span class="hot"> ↑ trending</span>':'')+'</div>'
+    +'<div class="post-count">'+t.posts+' posts this week</div>'
+    +'<div class="trending-row'+(t.hot?'':' empty')+'">'+(t.hot?'↑ trending':'↑ trending')+'</div>'
     +'<div class="activity-bar-wrap"><div class="activity-bar" style="width:'+barW+'%"></div></div>'
     +'<div class="topic-card-footer">'
     +'<button class="follow-btn" onclick="toggleFollow(\''+t.tag+'\')" type="button">'+(t.followed?'Following':'Follow')+'</button>'
@@ -434,15 +455,15 @@ function renderTopicCard(t, catId, isOverflow){
     +'</div></div>';
 }
 
+var DEFAULT_VISIBLE = 5;
 function renderCategoryGroup(cat){
   var isExpanded = !!expandedCats[cat.id];
-  var DEFAULT_VISIBLE = 5;
   var hasMore = cat.topics.length > DEFAULT_VISIBLE;
   var moreLabel = isExpanded ? 'Show less ↑' : 'More ('+(cat.topics.length-DEFAULT_VISIBLE)+') →';
-  return '<div class="cat-group" id="cat-'+cat.id+'">'
+  return '<div class="cat-group" id="cat-'+cat.id+'" data-cat="'+cat.id+'">'
     +'<div class="cat-header">'
     +'<span class="cat-label">'+cat.label+'</span>'
-    +(hasMore?'<button class="cat-more-btn" onclick="toggleCat(\''+cat.id+'\')" type="button">'+moreLabel+'</button>':'')
+    +(hasMore?'<button class="cat-more-btn" id="more-'+cat.id+'" onclick="toggleCat(\''+cat.id+'\')" type="button">'+moreLabel+'</button>':'')
     +'</div>'
     +'<div class="topic-row'+(isExpanded?' expanded':'')+'" id="row-'+cat.id+'">'
     +cat.topics.map(function(t,i){ return renderTopicCard(t, cat.id, i>=DEFAULT_VISIBLE); }).join('')
@@ -462,16 +483,41 @@ function renderAllCategories(filter){
 function renderDigestCard(d){
   return '<a class="hist-card" href="#">'
     +'<div class="hist-card-block">'
+    +'<div class="hist-eyebrow">'
     +'<div class="hist-date">'+d.date+'</div>'
+    +'<div class="hist-meta-inline">'+d.events+' events · ~'+d.mins+' min</div>'
+    +'</div>'
     +'<blockquote class="hist-pull">'+d.title+'</blockquote>'
     +'</div>'
     +'<div class="hist-body">'
     +'<div class="hist-pills">'+d.pills.slice(0,3).map(function(p){ return '<span class="hist-pill">#'+p+'</span>'; }).join('')+'</div>'
     +'<div class="hist-footer">'
-    +'<div class="hist-footer-meta"><span>'+d.events+' events</span><span class="dot-sep"> · </span><span>~'+d.mins+' min</span></div>'
     +'<span class="hist-read-link">Read <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>'
     +'</div>'
     +'</div></a>';
+}
+
+function getWeekLabel(dateStr){
+  var months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  var parts = dateStr.trim().split(' ');
+  var mon = months[parts[1]]; var day = parseInt(parts[2],10);
+  var today = new Date(2026,4,13);
+  var d = new Date(2026, mon !== undefined ? mon : 4, day);
+  var diffDays = Math.round((today - d) / 86400000);
+  if(diffDays < 7) return 'This week';
+  if(diffDays < 14) return 'Last week';
+  return parts[1]+' '+parts[2].replace(/\d+/,function(m){ return parseInt(m); }).replace(/^(\w+ )(\d+).*$/,'$1')+parts[2];
+}
+
+function groupDigestsByWeek(data){
+  var groups = [];
+  var seen = {};
+  data.forEach(function(d){
+    var label = getWeekLabel(d.date);
+    if(!seen[label]){ seen[label]=true; groups.push({label:label, items:[]}); }
+    groups[groups.length-1].items.push(d);
+  });
+  return groups;
 }
 
 function renderDigestGrid(){
@@ -479,7 +525,14 @@ function renderDigestGrid(){
   var data = isLoggedIn ? DIGESTS : DIGESTS_LOGGEDOUT;
   var visible = data.slice(0, PAGE_SIZE);
   document.getElementById('history-count').textContent = data.length+' digests';
-  document.getElementById('digest-grid').innerHTML = visible.map(renderDigestCard).join('');
+  var groups = groupDigestsByWeek(visible);
+  var html = groups.map(function(g){
+    return '<div class="digest-group">'
+      +'<div class="digest-group-label">'+g.label+'</div>'
+      +'<div class="digest-grid">'+g.items.map(renderDigestCard).join('')+'</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('digest-grid').innerHTML = html;
   var wrap = document.getElementById('load-more-wrap');
   wrap.style.display = data.length > PAGE_SIZE ? 'block' : 'none';
 }
@@ -488,13 +541,28 @@ function loadMoreDigests(){
   digestPage++;
   var data = isLoggedIn ? DIGESTS : DIGESTS_LOGGEDOUT;
   var newCards = data.slice((digestPage-1)*PAGE_SIZE, digestPage*PAGE_SIZE);
-  var grid = document.getElementById('digest-grid');
-  newCards.forEach(function(d){
-    var tmp = document.createElement('div');
-    tmp.innerHTML = renderDigestCard(d).trim();
-    var card = tmp.firstChild;
-    card.style.animation = 'card-appear 200ms ease-out both';
-    grid.appendChild(card);
+  var container = document.getElementById('digest-grid');
+  var groups = groupDigestsByWeek(newCards);
+  groups.forEach(function(g){
+    var existingGroups = container.querySelectorAll('.digest-group-label');
+    var matchGroup = null;
+    existingGroups.forEach(function(el){ if(el.textContent===g.label) matchGroup=el.parentNode; });
+    if(matchGroup){
+      var grid = matchGroup.querySelector('.digest-grid');
+      g.items.forEach(function(d){
+        var tmp = document.createElement('div');
+        tmp.innerHTML = renderDigestCard(d).trim();
+        var card = tmp.firstChild;
+        card.style.animation = 'card-appear 200ms ease-out both';
+        grid.appendChild(card);
+      });
+    } else {
+      var groupDiv = document.createElement('div');
+      groupDiv.className = 'digest-group';
+      groupDiv.innerHTML = '<div class="digest-group-label">'+g.label+'</div>'
+        +'<div class="digest-grid">'+g.items.map(renderDigestCard).join('')+'</div>';
+      container.appendChild(groupDiv);
+    }
   });
   var shown = digestPage * PAGE_SIZE;
   document.getElementById('load-more-wrap').style.display = shown >= data.length ? 'none' : 'block';
@@ -512,7 +580,6 @@ function setAuthState(loggedIn){
   document.getElementById('today-hero-loggedout').classList.toggle('hidden', loggedIn);
   document.getElementById('topics-loggedin').classList.toggle('hidden', !loggedIn);
   document.getElementById('topics-loggedout').classList.toggle('hidden', loggedIn);
-  document.getElementById('save-bar').classList.toggle('hidden', !loggedIn);
   renderDigestGrid();
   updateFollowCount();
 }
@@ -528,51 +595,132 @@ function setHeroState(state){
 function switchTab(tab){
   document.getElementById('tab-past').classList.toggle('active', tab==='past');
   document.getElementById('tab-topics').classList.toggle('active', tab==='topics');
+  document.getElementById('tab-past').setAttribute('aria-selected', tab==='past' ? 'true' : 'false');
+  document.getElementById('tab-topics').setAttribute('aria-selected', tab==='topics' ? 'true' : 'false');
   document.getElementById('panel-past').classList.toggle('active', tab==='past');
   document.getElementById('panel-topics').classList.toggle('active', tab==='topics');
+
 }
 
 function toggleFollow(tag){
+  var cat = null, t = null;
   for(var i=0;i<CATEGORIES.length;i++){
-    var t = CATEGORIES[i].topics.find(function(x){ return x.tag===tag; });
-    if(t){ t.followed=!t.followed; break; }
+    var found = CATEGORIES[i].topics.find(function(x){ return x.tag===tag; });
+    if(found){ cat = CATEGORIES[i]; t = found; break; }
   }
-  var card = document.getElementById('tc-'+tag);
-  if(card){
-    var allTopics = CATEGORIES.reduce(function(a,c){ return a.concat(c.topics); },[]);
-    var t = allTopics.find(function(x){ return x.tag===tag; });
-    card.classList.toggle('followed', t.followed);
-    card.querySelector('.follow-btn').textContent = t.followed ? 'Following' : 'Follow';
+  if(!cat || !t) return;
+
+  var willFollow = !t.followed;
+  t.followed = willFollow;
+
+  // Re-sort this category: followed first, then unfollowed.
+  // On follow:   place the newly-followed at the END of the followed group
+  //              (i.e. right after existing followed topics, before any unfollowed ones).
+  // On unfollow: place the newly-unfollowed at the HEAD of the unfollowed group
+  //              (right after the existing followed topics).
+  var others = cat.topics.filter(function(x){ return x !== t; });
+  var followed = others.filter(function(x){ return x.followed; });
+  var unfollowed = others.filter(function(x){ return !x.followed; });
+  if(willFollow){
+    cat.topics = followed.concat([t]).concat(unfollowed);
+  } else {
+    cat.topics = followed.concat([t]).concat(unfollowed);
   }
-  updateFollowCount();
+
+  // Re-render only this category's row (don't touch other rows — they keep
+  // their expanded state, focus, in-flight animations, etc.)
+  rerenderCategoryRow(cat.id, willFollow ? tag : null);
+
+  updateFollowCount(true);
+  showToast(willFollow ? 'Following #'+tag : 'Unfollowed #'+tag, willFollow);
 }
 
-function updateFollowCount(){
+function rerenderCategoryRow(catId, justFollowedTag){
+  var cat = CATEGORIES.find(function(c){ return c.id===catId; });
+  if(!cat) return;
+  var lf = (document.getElementById('topic-search')?.value||'').toLowerCase();
+  var topics = lf ? cat.topics.filter(function(t){ return t.tag.indexOf(lf)>=0; }) : cat.topics;
+  var row = document.getElementById('row-'+catId);
+  if(!row) return;
+  var isExpanded = !!expandedCats[catId];
+  row.innerHTML = topics.map(function(t,i){ return renderTopicCard(t, catId, i>=DEFAULT_VISIBLE); }).join('');
+  // If a topic was just followed, find its card (now sitting at the end of the
+  // followed group) and run a brief "settling" animation so the user sees where
+  // it landed.
+  if(justFollowedTag){
+    var card = row.querySelector('.topic-card[data-tag="'+justFollowedTag+'"]');
+    if(card){
+      card.classList.add('just-followed');
+      setTimeout(function(){ card.classList.remove('just-followed'); }, 600);
+    }
+  }
+  // Update the more-button label too (count of hidden may have changed if filtered)
+  var btn = document.getElementById('more-'+catId);
+  if(btn){
+    var hidden = Math.max(0, topics.length - DEFAULT_VISIBLE);
+    btn.textContent = isExpanded ? 'Show less ↑' : 'More ('+hidden+') →';
+    btn.style.display = topics.length > DEFAULT_VISIBLE ? '' : 'none';
+  }
+}
+
+var toastTimer = null;
+function showToast(message, isPositive){
+  var toast = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = message;
+  toast.classList.toggle('toast-neutral', !isPositive);
+  toast.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 1800);
+}
+
+function updateFollowCount(animate){
   var n = CATEGORIES.reduce(function(a,c){ return a+c.topics.filter(function(t){ return t.followed; }).length; },0);
   var el = document.getElementById('follow-count');
   if(el) el.textContent = n;
+  var pill = document.getElementById('follow-pill');
+  if(pill){
+    pill.classList.toggle('active', n>0);
+    if(animate){
+      pill.classList.remove('bump');
+      // force reflow so the animation re-fires when the class is re-added
+      void pill.offsetWidth;
+      pill.classList.add('bump');
+    }
+  }
 }
 
 function toggleCat(catId){
   expandedCats[catId] = !expandedCats[catId];
-  renderAllCategories(document.getElementById('topic-search').value);
+  var row = document.getElementById('row-'+catId);
+  var btn = document.getElementById('more-'+catId);
+  if(!row || !btn) return;
+  var cat = CATEGORIES.find(function(c){ return c.id===catId; });
+  var hidden = cat ? Math.max(0, cat.topics.length - DEFAULT_VISIBLE) : 0;
   if(expandedCats[catId]){
-    var cards = document.querySelectorAll('#row-'+catId+' .overflow-hidden');
+    row.classList.add('expanded');
+    btn.textContent = 'Show less ↑';
+    var cards = row.querySelectorAll('.overflow-hidden');
     cards.forEach(function(el,i){ el.style.animationDelay=(i*35)+'ms'; });
+  } else {
+    row.classList.remove('expanded');
+    btn.textContent = 'More ('+hidden+') →';
   }
 }
 
 function filterTopics(val){ renderAllCategories(val); }
 
-function savePreferences(){
-  var toast = document.getElementById('toast');
-  document.getElementById('toast-msg').textContent = 'Preferences saved';
-  toast.classList.add('show');
-  setTimeout(function(){ toast.classList.remove('show'); }, 2400);
-}
+function savePreferences(){ /* deprecated: follow is now save-on-click; toast fires from toggleFollow */ }
 
 document.getElementById('btn-loggedin').addEventListener('click', function(){ setAuthState(true); });
 document.getElementById('btn-loggedout').addEventListener('click', function(){ setAuthState(false); });
+
+// One-time: put already-followed topics at the front of each category so
+// the page loads consistent with the post-interaction sort.
+CATEGORIES.forEach(function(cat){
+  var followed = cat.topics.filter(function(t){ return t.followed; });
+  var unfollowed = cat.topics.filter(function(t){ return !t.followed; });
+  cat.topics = followed.concat(unfollowed);
+});
 
 renderAllCategories();
 setAuthState(true);
@@ -601,7 +749,7 @@ setAuthState(true);
       if (label.startsWith('settings')) { e.preventDefault(); nav('Verita Settings.html'); return; }
     }
 
-    if (el.closest('.back-btn') || el.closest('.topbar-back')) { e.preventDefault(); nav('Verita Home.html'); return; }
+    if (el.closest('.back-btn') || el.closest('.topbar-back') || el.closest('.crumb-link')) { e.preventDefault(); nav('Verita Home.html'); return; }
     if (el.closest('.nav-cta')) { e.preventDefault(); nav('Verita Post Editor.html'); return; }
   }, true);
 })();

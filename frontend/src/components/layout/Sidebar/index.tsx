@@ -85,9 +85,6 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
         >
           <IconDigest />
           <span className={styles.label}>Digest</span>
-          {isLoggedIn && (
-            <span className={styles.badge} data-testid="digest-badge">3</span>
-          )}
         </Link>
       </nav>
 

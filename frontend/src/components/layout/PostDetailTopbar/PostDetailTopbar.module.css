@@ -2,14 +2,32 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: saturate(160%) blur(10px);
   -webkit-backdrop-filter: saturate(160%) blur(10px);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 24px;
+  padding: 0 24px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.topbarDivider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-default);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+.topbarTabs {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  flex-shrink: 0;
+  gap: 0;
 }
 
 .backBtn {

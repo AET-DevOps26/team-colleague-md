@@ -11,8 +11,14 @@ const MOCK_USER = {
 async function login(page: Page) {
   await page.addInitScript((user) => {
     localStorage.setItem('verita_user', JSON.stringify(user));
-    localStorage.setItem('verita_token', 'mock-token');
   }, MOCK_USER);
+  await page.route('**/api/v1/auth/refresh', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ accessToken: 'mock-token', user: MOCK_USER }),
+    })
+  );
 }
 
 async function openSettingsModal(page: Page) {
@@ -44,6 +50,10 @@ test.describe('Settings Modal', () => {
 
   test('SM-4: sign out link-row has description text and signs out on click', async ({ page }) => {
     await openSettingsModal(page);
+    // Mock logout so it returns immediately without waiting for a real backend
+    await page.route('**/api/v1/auth/logout', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    );
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog.getByTestId('settings-signout')).toContainText('Sign out');
     await expect(dialog.getByTestId('settings-signout')).toContainText('End your session on this device');
