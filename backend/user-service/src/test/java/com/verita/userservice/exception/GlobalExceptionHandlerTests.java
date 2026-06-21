@@ -1,4 +1,4 @@
-package com.verita.userservice.controller;
+package com.verita.userservice.exception;
 
 import com.verita.model.ErrorResponse;
 import com.verita.userservice.exception.DuplicateEmailException;

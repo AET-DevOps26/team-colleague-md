@@ -30,7 +30,7 @@ import java.util.List;
  */
 @Configuration
 @EnableMethodSecurity
-public class WebSecurityConfig {
+public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthEntryPointJwt unauthorizedHandler;
@@ -39,7 +39,7 @@ public class WebSecurityConfig {
     @Value("${app.corsAllowedOrigins}")
     private String corsAllowedOrigins;
 
-    public WebSecurityConfig(UserDetailsServiceImpl userDetailsService,
+    public SecurityConfig(UserDetailsServiceImpl userDetailsService,
                              AuthEntryPointJwt unauthorizedHandler,
                              JwtUtils jwtUtils) {
         this.userDetailsService = userDetailsService;

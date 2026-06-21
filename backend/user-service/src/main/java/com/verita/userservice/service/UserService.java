@@ -1,7 +1,7 @@
 package com.verita.userservice.service;
 
 import com.verita.model.*;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.entity.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.openapitools.jackson.nullable.JsonNullable;

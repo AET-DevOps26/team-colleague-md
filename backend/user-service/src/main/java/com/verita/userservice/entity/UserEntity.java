@@ -1,4 +1,4 @@
-package com.verita.userservice.repository;
+package com.verita.userservice.entity;
 
 import com.verita.model.DigestFrequency;
 import com.verita.model.UserRole;

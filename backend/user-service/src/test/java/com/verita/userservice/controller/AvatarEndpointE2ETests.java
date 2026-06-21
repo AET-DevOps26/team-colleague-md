@@ -1,7 +1,7 @@
 package com.verita.userservice.controller;
 
 import com.verita.model.UserRole;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.entity.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.security.UserDetailsImpl;
 import org.junit.jupiter.api.BeforeEach;

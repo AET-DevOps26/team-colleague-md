@@ -1,6 +1,6 @@
 package com.verita.userservice;
 import com.verita.model.*;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.entity.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.service.AvatarStorageService;
 import com.verita.userservice.service.UserService;
