@@ -10,7 +10,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
-class ContenServiceApplicationTests {
+class ContentServiceApplicationTests {
 
     @Test
     void contextLoads() {
