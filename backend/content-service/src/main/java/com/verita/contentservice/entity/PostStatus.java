@@ -1,4 +1,4 @@
-package com.verita.contentservice.domain;
+package com.verita.contentservice.entity;
 public enum PostStatus {
     DRAFT,
     PUBLISHED

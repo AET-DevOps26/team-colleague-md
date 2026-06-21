@@ -1,4 +1,4 @@
-package com.verita.contentservice.domain;
+package com.verita.contentservice.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;

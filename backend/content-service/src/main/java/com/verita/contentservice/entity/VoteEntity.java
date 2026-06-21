@@ -1,4 +1,4 @@
-package com.verita.contentservice.domain;
+package com.verita.contentservice.entity;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;

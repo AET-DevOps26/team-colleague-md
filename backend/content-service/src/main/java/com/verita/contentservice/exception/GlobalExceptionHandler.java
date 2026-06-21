@@ -1,4 +1,4 @@
-package com.verita.contentservice.support;
+package com.verita.contentservice.exception;
 
 import com.verita.model.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
-public class ErrorHandling {
-    private static final Logger log = LoggerFactory.getLogger(ErrorHandling.class);
+public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handle(ResponseStatusException ex) {

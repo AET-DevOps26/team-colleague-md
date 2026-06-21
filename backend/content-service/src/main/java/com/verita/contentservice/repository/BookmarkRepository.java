@@ -1,5 +1,5 @@
 package com.verita.contentservice.repository;
-import com.verita.contentservice.domain.BookmarkEntity;
+import com.verita.contentservice.entity.BookmarkEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Collection;
 import java.util.List;

@@ -1,15 +1,16 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.CommentEntity;
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
-import com.verita.contentservice.domain.VoteEntity;
-import com.verita.contentservice.domain.VoteTargetType;
+import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.dto.UserProfileDto;
+import com.verita.contentservice.entity.CommentEntity;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.VoteEntity;
+import com.verita.contentservice.entity.VoteTargetType;
 import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.VoteRepository;
-import com.verita.contentservice.support.Clients;
+import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.AuthorSummary;
 import com.verita.model.CommentRequest;
 import com.verita.model.CommentResponse;
@@ -24,8 +25,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -34,28 +35,21 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 @Validated
 @Transactional
+@Slf4j
+@RequiredArgsConstructor
 public class CommentService {
-    private static final Logger log = LoggerFactory.getLogger(CommentService.class);
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final VoteRepository voteRepository;
-    private final Clients clients;
+    private final UserClient userClient;
+    private final SecurityUtils securityUtils;
 
-    public CommentService(CommentRepository commentRepository, PostRepository postRepository,
-                          VoteRepository voteRepository, Clients clients) {
-        this.commentRepository = commentRepository;
-        this.postRepository = postRepository;
-        this.voteRepository = voteRepository;
-        this.clients = clients;
-    }
-
-    public CommentResponse addComment(UUID postId, @Valid CommentRequest request, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public CommentResponse addComment(UUID postId, @Valid CommentRequest request) {
+        UUID userId = securityUtils.getCurrentUserId();
         PostEntity post = postRepository.findByIdAndDeletedFalse(postId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId))
@@ -76,8 +70,8 @@ public class CommentService {
         return toCommentResponse(comment, userId, List.of());
     }
 
-    public List<CommentResponse> getComments(UUID postId, String authorization) {
-        UUID userId = optionalUserId(authorization);
+    public List<CommentResponse> getComments(UUID postId) {
+        UUID userId = securityUtils.getCurrentUserIdOptional().orElse(null);
         PostEntity post = postRepository.findByIdAndDeletedFalse(postId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId))
@@ -85,8 +79,8 @@ public class CommentService {
         return buildCommentTree(postId, userId);
     }
 
-    public void deleteComment(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public void deleteComment(UUID id) {
+        UUID userId = securityUtils.getCurrentUserId();
         CommentEntity comment = commentRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (!Objects.equals(comment.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN);
@@ -144,7 +138,7 @@ public class CommentService {
 
     private AuthorSummary authorSummary(UUID userId) {
         UserProfileDto u = null;
-        try { u = clients.getUserById(userId); } catch (Exception e) {
+        try { u = userClient.getUserById(userId); } catch (Exception e) {
             log.warn("Failed to fetch user {} for author summary: {}", userId, e.getMessage());
         }
         AuthorSummary summary = new AuthorSummary().id(userId)
@@ -159,19 +153,5 @@ public class CommentService {
             if (u.organisation() != null && !u.organisation().isBlank()) summary.organisation(u.organisation());
         }
         return summary;
-    }
-
-    private UUID currentUserId(String authorization) {
-        if (authorization == null || authorization.isBlank()) throw new ResponseStatusException(UNAUTHORIZED);
-        return clients.getCurrentUser(authorization).id();
-    }
-
-    private UUID optionalUserId(String authorization) {
-        try {
-            if (authorization == null || authorization.isBlank()) return null;
-            return clients.getCurrentUser(authorization).id();
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

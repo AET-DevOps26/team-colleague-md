@@ -1,4 +1,4 @@
-package com.verita.contentservice.support;
+package com.verita.contentservice.exception;
 
 import com.verita.model.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
@@ -19,13 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class ErrorHandlingTest {
+public class GlobalExceptionHandlerTest {
 
-    private ErrorHandling errorHandling;
+    private GlobalExceptionHandler errorHandling;
 
     @BeforeEach
     void setUp() {
-        errorHandling = new ErrorHandling();
+        errorHandling = new GlobalExceptionHandler();
     }
 
     @Test

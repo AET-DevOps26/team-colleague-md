@@ -1,6 +1,6 @@
 package com.verita.contentservice.repository;
-import com.verita.contentservice.domain.TopicWeeklyStatsEntity;
-import com.verita.contentservice.domain.TopicWeeklyStatsId;
+import com.verita.contentservice.entity.TopicWeeklyStatsEntity;
+import com.verita.contentservice.entity.TopicWeeklyStatsId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

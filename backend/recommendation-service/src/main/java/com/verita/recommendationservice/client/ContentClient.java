@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -25,13 +24,18 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 public class ContentClient {
 
-    private final RestClient client;
+    private static final String INTERNAL_SERVICE_HEADER = "X-Internal-Service-Token";
 
-    public ContentClient(@Value("${app.content-service-base-url}") String baseUrl) {
+    private final RestClient client;
+    private final String internalServiceToken;
+
+    public ContentClient(@Value("${app.content-service-base-url}") String baseUrl,
+                         @Value("${app.internal-service-token}") String internalServiceToken) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
         factory.setReadTimeout(Duration.ofSeconds(10));
         this.client = RestClient.builder().requestFactory(factory).baseUrl(baseUrl).build();
+        this.internalServiceToken = internalServiceToken;
     }
 
     /**
@@ -81,14 +85,15 @@ public class ContentClient {
 
     /**
      * Applies a single follower-count delta for a topic via {@code POST /api/v1/topics/follower-counts},
-     * forwarding the caller's bearer token. content keys this endpoint by topic <em>name</em>, so the
-     * caller must resolve the name first. Best-effort: exceptions propagate to the async caller, which
-     * logs and swallows them (ADR-0002).
+     * authenticated as a service with the shared internal token (ADR-0007). content keys this endpoint
+     * by topic <em>name</em>, so the caller must resolve the name first. Best-effort: exceptions
+     * propagate to the async caller, which logs and swallows them (ADR-0002).
      */
-    public void applyFollowerCountDelta(String topicName, int delta, String authorization) {
+    public void applyFollowerCountDelta(String topicName, int delta) {
         client.post()
                 .uri("/api/v1/topics/follower-counts")
-                .header(HttpHeaders.AUTHORIZATION, authorization)
+                // Service-to-service auth (ADR-0007); the user token is no longer required here.
+                .header(INTERNAL_SERVICE_HEADER, internalServiceToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("deltas", Map.of(topicName, delta)))
                 .retrieve()

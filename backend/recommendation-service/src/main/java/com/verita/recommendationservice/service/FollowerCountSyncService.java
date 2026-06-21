@@ -32,7 +32,7 @@ public class FollowerCountSyncService {
                 log.warn("Skipping follower-count sync for topic {} (delta {}): name unresolved", topicId, delta);
                 return;
             }
-            contentClient.applyFollowerCountDelta(name, delta, authorization);
+            contentClient.applyFollowerCountDelta(name, delta);
         } catch (Exception e) {
             log.warn("Best-effort follower-count sync failed for topic {} (delta {}): {}",
                     topicId, delta, e.getMessage());

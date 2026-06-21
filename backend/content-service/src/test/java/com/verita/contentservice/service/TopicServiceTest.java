@@ -1,7 +1,7 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.TopicCategoryEntity;
-import com.verita.contentservice.domain.TopicEntity;
+import com.verita.contentservice.entity.TopicCategoryEntity;
+import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.repository.TopicCategoryRepository;
 import com.verita.contentservice.repository.TopicRepository;
 import com.verita.model.FollowerCountDeltaRequest;

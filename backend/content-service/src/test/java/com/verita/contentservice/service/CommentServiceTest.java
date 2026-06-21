@@ -1,13 +1,14 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.CommentEntity;
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
+import com.verita.contentservice.entity.CommentEntity;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.VoteRepository;
-import com.verita.contentservice.support.Clients;
+import com.verita.contentservice.client.UserClient;
+import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.CommentRequest;
 import com.verita.model.CommentResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,18 +38,18 @@ public class CommentServiceTest {
     @Mock private CommentRepository commentRepository;
     @Mock private PostRepository postRepository;
     @Mock private VoteRepository voteRepository;
-    @Mock private Clients clients;
+    @Mock private UserClient userClient;
+    @Mock private SecurityUtils securityUtils;
     @InjectMocks private CommentService commentService;
 
-    private static final String AUTH = "Bearer token";
     private UUID userId;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         userId = UUID.randomUUID();
-        when(clients.getCurrentUser(AUTH))
-                .thenReturn(new UserProfileDto(userId, "alice", "Alice", null, "USER", null));
+        lenient().when(securityUtils.getCurrentUserId()).thenReturn(userId);
+        lenient().when(securityUtils.getCurrentUserIdOptional()).thenReturn(Optional.of(userId));
         when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> {
             CommentEntity c = inv.getArgument(0);
             if (c.getId() == null) c.setId(UUID.randomUUID());
@@ -79,7 +81,7 @@ public class CommentServiceTest {
         PostEntity post = publishedPost();
         when(postRepository.findByIdAndDeletedFalse(post.getId())).thenReturn(Optional.of(post));
 
-        CommentResponse response = commentService.addComment(post.getId(), new CommentRequest("Nice post"), AUTH);
+        CommentResponse response = commentService.addComment(post.getId(), new CommentRequest("Nice post"));
 
         assertNotNull(response.getId());
         assertEquals("Nice post", response.getText());
@@ -94,7 +96,7 @@ public class CommentServiceTest {
         when(postRepository.findByIdAndDeletedFalse(post.getId())).thenReturn(Optional.of(post));
         when(commentRepository.findByIdAndDeletedFalse(parent.getId())).thenReturn(Optional.of(parent));
 
-        commentService.addComment(post.getId(), new CommentRequest("A reply").parentId(parent.getId()), AUTH);
+        commentService.addComment(post.getId(), new CommentRequest("A reply").parentId(parent.getId()));
 
         ArgumentCaptor<CommentEntity> saved = ArgumentCaptor.forClass(CommentEntity.class);
         verify(commentRepository).save(saved.capture());
@@ -111,7 +113,7 @@ public class CommentServiceTest {
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> commentService.addComment(post.getId(),
-                        new CommentRequest("A reply").parentId(parent.getId()), AUTH));
+                        new CommentRequest("A reply").parentId(parent.getId())));
 
         assertEquals(400, ex.getStatusCode().value());
     }
@@ -123,17 +125,9 @@ public class CommentServiceTest {
         when(postRepository.findByIdAndDeletedFalse(draft.getId())).thenReturn(Optional.of(draft));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> commentService.addComment(draft.getId(), new CommentRequest("hi"), AUTH));
+                () -> commentService.addComment(draft.getId(), new CommentRequest("hi")));
 
         assertEquals(404, ex.getStatusCode().value());
-    }
-
-    @Test
-    void addComment_blankAuthorization_throwsUnauthorized() {
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> commentService.addComment(UUID.randomUUID(), new CommentRequest("hi"), ""));
-
-        assertEquals(401, ex.getStatusCode().value());
     }
 
     // ---- deleteComment ------------------------------------------------------
@@ -144,7 +138,7 @@ public class CommentServiceTest {
         CommentEntity own = comment(UUID.randomUUID(), userId, post);
         when(commentRepository.findByIdAndDeletedFalse(own.getId())).thenReturn(Optional.of(own));
 
-        commentService.deleteComment(own.getId(), AUTH);
+        commentService.deleteComment(own.getId());
 
         assertTrue(own.isDeleted());
         assertEquals("[deleted]", own.getText());
@@ -159,7 +153,7 @@ public class CommentServiceTest {
         when(commentRepository.findByIdAndDeletedFalse(other.getId())).thenReturn(Optional.of(other));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> commentService.deleteComment(other.getId(), AUTH));
+                () -> commentService.deleteComment(other.getId()));
 
         assertEquals(403, ex.getStatusCode().value());
         verify(postRepository, never()).decrementCommentCount(any());
@@ -171,7 +165,7 @@ public class CommentServiceTest {
         when(commentRepository.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> commentService.deleteComment(id, AUTH));
+                () -> commentService.deleteComment(id));
 
         assertEquals(404, ex.getStatusCode().value());
     }
@@ -188,7 +182,7 @@ public class CommentServiceTest {
         when(commentRepository.findByPost_IdOrderByCreatedAtAsc(post.getId()))
                 .thenReturn(List.of(root, reply));
 
-        List<CommentResponse> tree = commentService.getComments(post.getId(), AUTH);
+        List<CommentResponse> tree = commentService.getComments(post.getId());
 
         assertEquals(1, tree.size());
         assertEquals(root.getId(), tree.get(0).getId());
@@ -203,7 +197,7 @@ public class CommentServiceTest {
         when(postRepository.findByIdAndDeletedFalse(draft.getId())).thenReturn(Optional.of(draft));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> commentService.getComments(draft.getId(), AUTH));
+                () -> commentService.getComments(draft.getId()));
 
         assertEquals(404, ex.getStatusCode().value());
     }

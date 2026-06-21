@@ -1,4 +1,4 @@
-package com.verita.contentservice.support;
+package com.verita.contentservice.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;

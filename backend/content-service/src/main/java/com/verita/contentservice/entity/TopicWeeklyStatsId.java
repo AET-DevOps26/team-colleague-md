@@ -1,4 +1,4 @@
-package com.verita.contentservice.domain;
+package com.verita.contentservice.entity;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Objects;
