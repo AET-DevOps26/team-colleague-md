@@ -1,12 +1,10 @@
 package com.verita.contentservice.controller;
 
 import com.verita.api.ApiApi;
-import com.verita.api.InternalApi;
 import com.verita.contentservice.service.CommentService;
 import com.verita.contentservice.service.InteractionService;
 import com.verita.contentservice.service.PostService;
 import com.verita.contentservice.service.TopicService;
-import com.verita.contentservice.service.UserContentCleanupService;
 import com.verita.model.CommentLikeResponse;
 import com.verita.model.CommentRequest;
 import com.verita.model.CommentResponse;
@@ -32,27 +30,18 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 @RestController
 @Validated
-public class ContentController implements ApiApi, InternalApi {
+public class ContentController implements ApiApi {
     private final PostService postService;
     private final CommentService commentService;
     private final InteractionService interactionService;
     private final TopicService topicService;
-    private final UserContentCleanupService userContentCleanupService;
 
     public ContentController(PostService postService, CommentService commentService,
-                             InteractionService interactionService, TopicService topicService,
-                             UserContentCleanupService userContentCleanupService) {
+                             InteractionService interactionService, TopicService topicService) {
         this.postService = postService;
         this.commentService = commentService;
         this.interactionService = interactionService;
         this.topicService = topicService;
-        this.userContentCleanupService = userContentCleanupService;
-    }
-
-    @Override
-    public ResponseEntity<Void> deleteUserContentData(UUID userId) {
-        userContentCleanupService.deleteUserData(userId);
-        return ResponseEntity.noContent().build();
     }
 
     @Override
