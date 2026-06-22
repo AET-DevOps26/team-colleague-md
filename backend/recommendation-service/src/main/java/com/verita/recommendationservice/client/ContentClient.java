@@ -84,6 +84,25 @@ public class ContentClient {
     }
 
     /**
+     * Fetches a page of a single author's published posts via the public
+     * {@code GET /api/v1/users/{id}/posts}. Used to source followed-users' posts for the personal
+     * feed (#163). Returns an empty list on failure so one bad author never breaks the feed.
+     */
+    public List<PostRankDto> getUserPosts(UUID authorId, int page, int size) {
+        try {
+            PostPageDto body = client.get()
+                    .uri(uri -> uri.path("/api/v1/users/{id}/posts")
+                            .queryParam("page", page).queryParam("size", size).build(authorId))
+                    .retrieve()
+                    .body(PostPageDto.class);
+            return body == null || body.content() == null ? List.of() : body.content();
+        } catch (Exception e) {
+            log.warn("Failed to fetch posts for followed user {}: {}", authorId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
      * Applies a single follower-count delta for a topic via {@code POST /api/v1/topics/follower-counts},
      * authenticated as a service with the shared internal token (ADR-0007). content keys this endpoint
      * by topic <em>name</em>, so the caller must resolve the name first. Best-effort: exceptions

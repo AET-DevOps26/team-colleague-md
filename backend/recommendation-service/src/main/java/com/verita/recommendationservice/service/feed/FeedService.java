@@ -4,8 +4,10 @@ import com.verita.model.FeedPage;
 import com.verita.recommendationservice.client.ContentClient;
 import com.verita.recommendationservice.client.dto.PostRankDto;
 import com.verita.recommendationservice.entity.TopicSubscription;
+import com.verita.recommendationservice.entity.UserSubscription;
 import com.verita.recommendationservice.repository.InteractionRepository;
 import com.verita.recommendationservice.repository.TopicSubscriptionRepository;
+import com.verita.recommendationservice.repository.UserSubscriptionRepository;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,11 +29,14 @@ public class FeedService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final int PERSONAL_PER_TOPIC_FETCH = 100;
+    private static final int MAX_FOLLOWED_USERS_FETCHED = 25;
+    private static final int PERSONAL_PER_USER_FETCH = 20;
 
     private final TrendingRanker trendingRanker;
     private final FeedScoring scoring;
     private final ContentClient contentClient;
     private final TopicSubscriptionRepository topicSubscriptionRepository;
+    private final UserSubscriptionRepository userSubscriptionRepository;
     private final InteractionRepository interactionRepository;
     private final TopicNameResolver topicNameResolver;
 
@@ -48,21 +53,22 @@ public class FeedService {
     }
 
     /**
-     * Personal feed: posts from the user's subscribed topics, seen-filtered against their interaction
-     * history, ranked by the same engagement+recency score. Scoped to the user and never cached. New
-     * users with no subscriptions fall back to global trending (cold-start).
+     * Personal feed: posts from the user's subscribed topics and followed users (#163), seen-filtered
+     * against their interaction history, ranked by the same engagement+recency score. Scoped to the
+     * user and never cached. Users with no subscriptions and no follows fall back to trending (cold-start).
      */
     public FeedPage getPersonalFeed(UUID userId, String cursor, Integer size) {
         List<TopicSubscription> subscriptions = topicSubscriptionRepository.findByUserId(userId);
-        if (subscriptions.isEmpty()) {
+        List<UserSubscription> follows = userSubscriptionRepository.findByFollowerId(userId);
+        if (subscriptions.isEmpty() && follows.isEmpty()) {
             return getTrendingFeed(null, cursor, size);
         }
 
+        // Union candidates from subscribed topics and followed users, de-duplicated by post id (#163).
+        Map<UUID, PostRankDto> candidatesById = new LinkedHashMap<>();
+
         Map<UUID, String> topicNames = topicNameResolver.resolve(
                 subscriptions.stream().map(TopicSubscription::getTopicId).toList());
-
-        // Union recent posts across subscribed topics, de-duplicated by post id.
-        Map<UUID, PostRankDto> candidatesById = new LinkedHashMap<>();
         for (String topicName : topicNames.values()) {
             for (PostRankDto post : contentClient.getRecentPosts(topicName, 0, PERSONAL_PER_TOPIC_FETCH)) {
                 if (post.id() != null) {
@@ -70,6 +76,15 @@ public class FeedService {
                 }
             }
         }
+
+        // Posts from followed users (capped to bound the per-user fan-out).
+        follows.stream().limit(MAX_FOLLOWED_USERS_FETCHED).forEach(follow -> {
+            for (PostRankDto post : contentClient.getUserPosts(follow.getFollowedId(), 0, PERSONAL_PER_USER_FETCH)) {
+                if (post.id() != null) {
+                    candidatesById.putIfAbsent(post.id(), post);
+                }
+            }
+        });
 
         Set<UUID> seen = interactionRepository.findDistinctPostIdsByUserId(userId);
         List<PostRankDto> candidates = candidatesById.values().stream()
