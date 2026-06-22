@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -45,10 +47,19 @@ public class FeedScoring {
 
     /** Scores and sorts posts by score desc, then id asc (stable ordering for the cursor). */
     public List<ScoredPost> rank(Collection<PostRankDto> posts) {
+        return rank(posts, Map.of());
+    }
+
+    /**
+     * As {@link #rank(Collection)}, but multiplies each post's base score by a caller-supplied
+     * weight (default 1.0), used by the personal feed to apply interaction-driven topic affinity
+     * (#164). Ordering remains score desc, id asc.
+     */
+    public List<ScoredPost> rank(Collection<PostRankDto> posts, Map<UUID, Double> weightByPostId) {
         Instant now = Instant.now();
         return posts.stream()
                 .filter(p -> p.id() != null && p.createdAt() != null)
-                .map(p -> new ScoredPost(p.id(), score(p, now)))
+                .map(p -> new ScoredPost(p.id(), score(p, now) * weightByPostId.getOrDefault(p.id(), 1.0)))
                 .sorted(Comparator.comparingDouble(ScoredPost::score).reversed()
                         .thenComparing(ScoredPost::id))
                 .toList();
