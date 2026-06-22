@@ -2,6 +2,7 @@ package com.verita.contentservice.service;
 
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.PostType;
 import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
@@ -114,6 +115,23 @@ public class PostServiceTest {
         PostResponse response = postService.createPost(request);
 
         assertEquals(240, response.getExcerpt().length());
+    }
+
+    @Test
+    void createDigest_savesPublishedDigestTypePostBySystemAuthor() {
+        UUID systemAuthor = UUID.randomUUID();
+        org.springframework.test.util.ReflectionTestUtils.setField(postService, "digestSystemAuthorId", systemAuthor);
+        com.verita.model.DigestPostRequest req =
+                new com.verita.model.DigestPostRequest("Daily AI Digest", "## Top stories\nbody");
+
+        PostResponse resp = postService.createDigest(req);
+
+        assertEquals(PostResponse.TypeEnum.DIGEST, resp.getType());
+        ArgumentCaptor<PostEntity> captor = ArgumentCaptor.forClass(PostEntity.class);
+        verify(postRepository).save(captor.capture());
+        assertEquals(PostType.DIGEST, captor.getValue().getType());
+        assertEquals(PostStatus.PUBLISHED, captor.getValue().getStatus());
+        assertEquals(systemAuthor, captor.getValue().getAuthorId());
     }
 
     // ---- update / patch ownership ------------------------------------------
@@ -336,24 +354,25 @@ public class PostServiceTest {
     // ---- listing routes the right query ------------------------------------
 
     @Test
-    void getAllPosts_noTopic_usesUnfilteredQuery() {
-        when(postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(eq(PostStatus.PUBLISHED), any()))
-                .thenReturn(Page.empty());
+    void getAllPosts_noTopic_defaultsToNormalTypeQuery() {
+        when(postRepository.findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, null);
+        postService.getAllPosts(0, 10, null, null);
 
-        verify(postRepository).findByDeletedFalseAndStatusOrderByCreatedAtDesc(eq(PostStatus.PUBLISHED), any());
+        verify(postRepository).findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), any());
     }
 
     @Test
-    void getAllPosts_withTopic_usesTopicFilteredQuery() {
-        when(postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq("java"), any())).thenReturn(Page.empty());
+    void getAllPosts_withTopicAndType_usesTopicAndTypeFilteredQuery() {
+        when(postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq(PostType.DIGEST), eq("java"), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, "java");
+        postService.getAllPosts(0, 10, "java", "DIGEST");
 
-        verify(postRepository).findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq("java"), any());
+        verify(postRepository).findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq(PostType.DIGEST), eq("java"), any());
     }
 
     // ---- pure helpers / author summary -------------------------------------

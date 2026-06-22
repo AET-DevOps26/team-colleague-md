@@ -42,6 +42,10 @@ paths:
         - name: topic
           in: query
           schema: { type: string }
+        - name: type
+          in: query
+          description: "Post type filter; defaults to NORMAL (digests are excluded from the main list unless requested)"
+          schema: { type: string, enum: [NORMAL, DIGEST] }
       responses:
         '200':
           description: A paginated list of posts retrieved successfully
@@ -611,6 +615,30 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/v1/posts/digest:
+    post:
+      operationId: createDigestPost
+      summary: Create an AI Daily Digest post (internal, service-authenticated)
+      description: >
+        Service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Stores an
+        already-generated digest payload as a published DIGEST-type post. The digest generation
+        (genai) and daily scheduling are performed by the caller.
+      tags: [Posts]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DigestPostRequest' }
+      responses:
+        '201':
+          description: Digest post created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -647,6 +675,17 @@ components:
       required: [url]
       properties:
         url: { type: string, format: uri, description: "Public URL of the stored file" }
+
+    DigestPostRequest:
+      type: object
+      required: [title, content]
+      properties:
+        title: { type: string }
+        content: { type: string, description: "Markdown body of the digest" }
+        summary: { type: string, nullable: true, description: "Short AI summary / top-story subtitle" }
+        coverImageUrl: { type: string, format: uri, nullable: true }
+        sourceUrl: { type: array, items: { type: string, format: uri } }
+        topics: { type: array, items: { type: string } }
 
     AuthorSummary:
       type: object
@@ -715,6 +754,7 @@ components:
         id: { type: string, format: uuid }
         author: { $ref: '#/components/schemas/AuthorSummary' }
         status: { type: string, enum: [DRAFT, PUBLISHED] }
+        type: { type: string, enum: [NORMAL, DIGEST], description: "NORMAL user post or system-generated DIGEST" }
         title: { type: string }
         excerpt: { type: string, description: "Short preview text for feed cards" }
         summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets); null until generated" }

@@ -5,6 +5,7 @@ import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.PostType;
 import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.entity.VoteEntity;
 import com.verita.contentservice.entity.VoteTargetType;
@@ -15,6 +16,7 @@ import com.verita.contentservice.repository.TopicRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.AuthorSummary;
+import com.verita.model.DigestPostRequest;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
@@ -35,6 +37,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -61,6 +64,9 @@ public class PostService {
     private final UserClient userClient;
     private final SecurityUtils securityUtils;
     private final ApplicationEventPublisher eventPublisher;
+
+    @Value("${app.digest.system-author-id}")
+    private UUID digestSystemAuthorId;
 
     public PostResponse createPost(@Valid PostRequest request) {
         UUID userId = currentUserId();
@@ -129,13 +135,23 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostPage getAllPosts(int page, int size, String topic) {
+    public PostPage getAllPosts(int page, int size, String topic, String typeStr) {
         PageRequest pageable = PageRequest.of(page, clampPageSize(size));
+        PostType type = parsePostType(typeStr);
         UUID currentUser = optionalUserId();
         Page<PostEntity> result = (topic == null || topic.isBlank())
-                ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
-                : postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, topic, pageable);
+                ? postRepository.findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus.PUBLISHED, type, pageable)
+                : postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, type, topic, pageable);
         return mapPage(result, currentUser);
+    }
+
+    private PostType parsePostType(String typeStr) {
+        if (typeStr == null || typeStr.isBlank()) return PostType.NORMAL;
+        try {
+            return PostType.valueOf(typeStr);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(BAD_REQUEST, "Invalid post type: " + typeStr);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -215,6 +231,29 @@ public class PostService {
         return ordered.stream()
                 .map(p -> toCard(p, userId, votesByPostId.get(p.getId()), authors.get(p.getAuthorId())))
                 .toList();
+    }
+
+    /** Stores an externally-generated digest payload as a published DIGEST post (ADR-0007 internal). */
+    public PostResponse createDigest(DigestPostRequest request) {
+        PostEntity post = new PostEntity();
+        post.setAuthorId(digestSystemAuthorId);
+        post.setType(PostType.DIGEST);
+        post.setStatus(PostStatus.PUBLISHED);
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        String summary = request.getSummary() != null && request.getSummary().isPresent()
+                ? request.getSummary().get() : null;
+        post.setContentSummary(summary);
+        post.setExcerpt(summary != null ? summary : summarizeLocally(request.getContent()));
+        if (request.getCoverImageUrl() != null && request.getCoverImageUrl().isPresent()
+                && request.getCoverImageUrl().get() != null) {
+            post.setCoverImageUrl(request.getCoverImageUrl().get().toString());
+        }
+        post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>()
+                : request.getSourceUrl().stream().map(URI::toString).toList());
+        applyTopics(post, request.getTopics() == null ? List.of() : request.getTopics());
+        post = postRepository.save(post);
+        return toPostResponse(post, null);
     }
 
     private void publishSummaryRequest(PostEntity post) {
@@ -309,6 +348,7 @@ public class PostService {
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId()))
                 .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
+                .type(post.getType() == null ? null : PostResponse.TypeEnum.fromValue(post.getType().name()))
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .summary(post.getContentSummary())
@@ -340,6 +380,7 @@ public class PostService {
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId(), author))
                 .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
+                .type(post.getType() == null ? null : PostResponse.TypeEnum.fromValue(post.getType().name()))
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .summary(post.getContentSummary())

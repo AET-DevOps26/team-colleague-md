@@ -2,6 +2,7 @@ package com.verita.contentservice.controller;
 
 import com.verita.api.PostsApi;
 import com.verita.contentservice.service.PostService;
+import com.verita.model.DigestPostRequest;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
@@ -43,10 +44,15 @@ public class PostController implements PostsApi {
     }
 
     @Override
-    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String topic) {
+    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String topic, String type) {
         int p = page == null ? 0 : page;
         int s = size == null ? 10 : size;
-        return ResponseEntity.ok(postService.getAllPosts(p, s, topic));
+        return ResponseEntity.ok(postService.getAllPosts(p, s, topic, type));
+    }
+
+    @Override
+    public ResponseEntity<PostResponse> createDigestPost(@Valid DigestPostRequest digestPostRequest) {
+        return ResponseEntity.status(201).body(postService.createDigest(digestPostRequest));
     }
 
     @Override

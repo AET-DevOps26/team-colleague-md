@@ -5,6 +5,7 @@ import com.verita.contentservice.entity.BookmarkEntity;
 import com.verita.contentservice.entity.CommentEntity;
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.PostType;
 import com.verita.contentservice.entity.VoteEntity;
 import com.verita.contentservice.entity.VoteTargetType;
 import com.verita.contentservice.entity.VoteType;
@@ -85,7 +86,7 @@ class PostRepositoryIT {
         newPost("Removed", "gone content", PostStatus.PUBLISHED, true);
 
         List<PostEntity> published = postRepository
-                .findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, PageRequest.of(0, 10))
+                .findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus.PUBLISHED, PostType.NORMAL, PageRequest.of(0, 10))
                 .getContent();
 
         assertEquals(1, published.size());
