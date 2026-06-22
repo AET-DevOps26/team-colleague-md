@@ -684,6 +684,7 @@ components:
         status: { type: string, enum: [DRAFT, PUBLISHED] }
         title: { type: string }
         excerpt: { type: string, description: "Short preview text for feed cards" }
+        summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets); null until generated" }
         content: { type: string, description: "Full post body (Markdown)" }
         coverImageUrl: { type: string, format: uri, nullable: true }
         topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
