@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface InteractionRepository extends JpaRepository<Interaction, UUID> {
 
     List<Interaction> findByUserId(UUID userId);
+
+    void deleteByUserId(UUID userId);
 }
