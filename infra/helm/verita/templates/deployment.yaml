@@ -59,6 +59,8 @@ spec:
             {{- if $svc.springProfile }}
             - name: SPRING_PROFILES_ACTIVE
               value: {{ $svc.springProfile | quote }}
+            - name: CORS_ALLOWED_ORIGINS
+              value: "https://{{ $.Values.ingress.host }}"
             {{- end }}
             {{- if $svc.db }}
             - name: DB_HOST
@@ -80,6 +82,10 @@ spec:
               value: "http://{{ $.Release.Name }}-user:{{ (index $.Values.services "user").port }}"
             - name: CONTENT_SERVICE_URL
               value: "http://{{ $.Release.Name }}-content:{{ (index $.Values.services "content").port }}"
+            - name: RECOMMENDATION_SERVICE_URL
+              value: "http://{{ $.Release.Name }}-recommendation:{{ (index $.Values.services "recommendation").port }}"
+            - name: GENAI_SERVICE_URL
+              value: "http://{{ $.Release.Name }}-genai:{{ (index $.Values.services "genai").port }}"
             - name: MINIO_URL
               value: "http://{{ $.Release.Name }}-minio:9000"
             {{- end }}
@@ -96,11 +102,11 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: "{{ $.Release.Name }}-minio"
-                  key: root-user
+                  key: rootUser
             - name: STORAGE_S3_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: "{{ $.Release.Name }}-minio"
-                  key: root-password
+                  key: rootPassword
             {{- end }}
 {{- end }}

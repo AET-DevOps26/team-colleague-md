@@ -30,9 +30,9 @@ The system follows a microservices architecture consisting of:
 
 **Service Layer:**
 - **User Service:** Authentication, profile management, account verification
-- **Content Service:** Posts, comments, tags, voting, bookmarks
-- **Recommendation Service:** Personalized feed, trending calculation, notifications
-- **GenAI Service:** AI-powered summarization, tag suggestion, daily digest
+- **Content Service:** Posts, comments, topics, likes/dislikes, bookmarks
+- **Recommendation Service:** Personalized feed, trending calculation, topic subscriptions
+- **GenAI Service:** AI-powered summarization, daily digest generation
 
 **Infrastructure Layer:**
 - **API Gateway:** JWT authentication, request routing, rate limiting
@@ -199,19 +199,19 @@ The system is divided into four independent services following Domain-Driven Des
 | Service                    | Port | Responsibility                   | Core Features                                                                                                                               |
 | -------------------------- | ---- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **User Service**           | 8081 | User management & authentication | - User registration/login<br>- JWT token generation<br>- Profile management<br>- Account verification system<br>- Role-based access control |
-| **Content Service**        | 8082 | Content & community interaction  | - Post CRUD (Markdown support)<br>- Threaded comments<br>- Tag system<br>- Voting (upvote/downvote)<br>- Bookmarks                          |
-| **Recommendation Service** | 8083 | Discovery & analytics            | - Personalized feed algorithm<br>- Trending calculation<br>- Tag subscriptions<br>- User interaction tracking<br>- Notification system      |
-| **GenAI Service**          | 8000 | AI-powered features              | - Post summarization<br>- Tag suggestions<br>- Daily digest generation<br>- Sentiment analysis (P2)<br>- Semantic search (P2)               |
+| **Content Service**        | 8082 | Content & community interaction  | - Post CRUD (Markdown support)<br>- Threaded comments<br>- Topic system<br>- Likes/dislikes<br>- Bookmarks                                  |
+| **Recommendation Service** | 8083 | Discovery & analytics            | - Personalized feed algorithm<br>- Trending calculation<br>- Topic subscriptions<br>- User interaction tracking<br>- Notification system (P2) |
+| **GenAI Service**          | 8000 | AI-powered features              | - Post summarization<br>- Topic suggestions (P2)<br>- Daily digest generation<br>- Sentiment analysis (P2)<br>- Semantic search (P2)        |
 
 **Service Communication Pattern:**
 - **Synchronous:** REST API calls (e.g., Content Service → GenAI Service for summarization)
 - **Asynchronous (P2):** Message queue (RabbitMQ) for non-blocking operations like digest generation
 
-**Daily Digest Boundary:**
-- **Recommendation Service** owns tag subscriptions and chooses the user's subscribed topics.
-- **GenAI Service** exposes `POST /api/v1/genai/digests/generate` to create an asynchronous in-memory digest job, then `GET /api/v1/genai/digests/jobs/{jobId}` for polling status and results.
-- **GenAI Service** fetches relevant external sources for the supplied topics from the MVP provider set: GitHub, NewsAPI, arXiv, and Hugging Face models/datasets.
-- **Caller/Persistence layer** stores generated digest history and triggers notifications; GenAI keeps only temporary job state.
+**Daily Digest Boundary:** (the AI Digest is a special post, not a separate store)
+- A scheduled job (daily) selects the top posts by engagement within trending/subscribed topics.
+- **GenAI Service** aggregates and summarizes those posts into digest content — it is stateless, generating text only and holding no digest data.
+- **Content Service** persists the result as a special post (`type = DIGEST`, authored by a system account). The "AI Digest" page is a normal post query filtered by `type`; each item's source attribution lives in the post's Markdown body / `source_urls`.
+- **Recommendation Service** (P2) emits a `DAILY_DIGEST` notification pointing at that post.
 
 ---
 
@@ -223,9 +223,9 @@ PostgreSQL instance with three logical schemas:
 
 | Schema | Owner Service | Tables |
 |--------|--------------|--------|
-| **user_schema** | User Service | users, verification_requests |
-| **content_schema** | Content Service | posts, comments, tags, post_tags, votes, bookmarks |
-| **recommendation_schema** | Recommendation Service | user_interactions, tag_subscriptions, trending_posts, notifications |
+| **user_schema** | User Service | users |
+| **content_schema** | Content Service | posts, comments, topics, post_topics, post_reactions, comment_likes, bookmarks |
+| **recommendation_schema** | Recommendation Service | user_interactions, topic_subscriptions <br>(P2: user_follows, notifications) |
 
 ---
 
@@ -241,9 +241,9 @@ This diagram illustrates the core domain entities, their attributes, relationshi
 
 1. **User-Post Relationship:** One-to-many - users create multiple posts, referenced by `userId`
 2. **Threaded Comments:** Self-referencing hierarchy via `parentCommentId` (NULL = top-level comment)
-3. **Post-Tag Many-to-Many:** Implicit join table `post_tags` for flexible categorization
-4. **Polymorphic Voting:** Single `Vote` entity handles both posts and comments using `targetType` discriminator
-5. **Denormalized Counts:** Performance optimization - `viewCount`, `upvoteCount`, `commentCount` stored directly in Post
+3. **Post-Topic Many-to-Many:** Join table `post_topics` for flexible categorization
+4. **Separate reaction tables:** `post_reactions` (LIKE/DISLIKE) for posts and `comment_likes` (LIKE only) for comments — posts support dislikes, comments do not
+5. **Denormalized Counts:** Performance optimization - `viewCount`, `likeCount`, `dislikeCount`, `commentCount` stored directly in Post
 6. **Cross-Service References:** `userId` in Post references User Service (soft reference, no FK constraint)
 
 ---
@@ -262,79 +262,75 @@ This diagram shows the high-level components (services) and their interactions, 
 
 ## 5. Initial Product Backlog
 
-The backlog is organized into 7 Epics corresponding to major feature areas. Each Epic lists core functionalities at a high level. Detailed User Stories with acceptance criteria are available in `Technical_Details/Product_Backlog.md`.
+The backlog is organized into 6 Epics matching the [Problem Statement](Problem_Statement.md). Each Epic lists core functionalities at a high level, tagged by priority (P0 must-have, P1 should-have, P2 nice-to-have). Detailed User Stories with acceptance criteria live in the Problem Statement.
 
-### Epic 1: User Management & Authentication (P0 - Must-have)
+### Epic 1: User Management & Authentication
 
 **Core Features:**
-- User registration and login with email/password authentication
-- JWT token-based session management
-- User profile management (bio, expertise areas, social links)
-- Account verification system for organizations and recognized experts
-- Role-based access control (USER, ADMIN, VERIFIED)
+- Guest browsing of public content (P0)
+- Email/password registration and login with JWT sessions (P0)
+- Role-based access control — USER, VERIFIED, ADMIN (P0)
+- Admin user management: role changes and bans (P0)
+- Profile management — bio, expertise areas, website (P1)
+- Verification badge on verified accounts and their posts (P1)
+- Verification application + admin review flow; verified-account perks (P2)
 
 ---
 
-### Epic 2: Content Creation & Posting (P0 - Must-have)
+### Epic 2: Content Creation & Posting
 
 **Core Features:**
-- Create posts with Markdown formatting and syntax highlighting
-- Edit and delete own posts
-- Tag system for content categorization
-- Source attribution for curated content
-- Admin moderation capabilities (delete any post)
+- Create posts with Markdown body and syntax-highlighted code (P0)
+- Add topics, a dedicated source section, and inline hyperlinks (P0)
+- Draft lifecycle: explicit + auto-saved drafts, publish/unpublish, manage from profile (P1)
+- Edit and delete own posts (P1)
+- Markdown live preview (P1)
+- Insert images (URL or file upload) and a cover image, stored in MinIO (P1)
 
 ---
 
-### Epic 3: AI-Powered Content Intelligence (P1 - Should-have)
+### Epic 3: AI-Powered Content Intelligence
 
 **Core Features:**
-- On-demand AI summarization of long posts (via GenAI Service)
-- Automatic tag suggestions based on post content
-- Daily digest generation for subscribed topics
-- Sentiment analysis on posts about new AI developments (P2)
+- On-demand AI summary on posts, stored on the post (P1)
+- AI Daily Digest of subscribed topics — generated by GenAI, published as a `type = DIGEST` post (P1)
+- Source attribution on each digest item (P1)
+- Automatic topic suggestions (P2)
+- Sentiment score on posts; automatic fake-news flagging (P2)
+- Digest frequency preference; in-app notifications + per-activity preferences; email/inbox delivery (P2)
 
 ---
 
-### Epic 4: Community Engagement & Interaction (P0 - Must-have)
+### Epic 4: Community Engagement & Interaction
 
 **Core Features:**
-- Threaded comment system with nested replies
-- Upvote/downvote mechanism for posts and comments
-- Bookmark posts for later reference
-- Edit and delete own comments
-- Post authors can moderate comments on their posts
+- Threaded comments with nested replies (P0)
+- Share button to copy a post's link (P0)
+- Like/dislike posts (P1)
+- Bookmark/save posts to a personal library (P1)
+- Delete own comments; post authors moderate comments on their posts (P1)
+- Like comments; @mention users; follow other users; sort comments (P2)
 
 ---
 
-### Epic 5: Personalized Discovery & Feed (P0/P1)
+### Epic 5: Personalized Discovery & Feed
 
 **Core Features:**
-- Homepage feed with recent posts (P0 - basic chronological)
-- Filter feed by tags (P0)
-- Subscribe to specific tags (P1)
-- Trending/popular section with time windows (P1 - day/week)
-- Personalized recommendation algorithm (P1)
+- Homepage feed of recent posts (P0)
+- Filter feed by topic (P0)
+- Subscribe to topics (P1)
+- Topic total post count + past-week growth (P1)
+- Personalized recommendation feed from subscriptions + behavior; trending by engagement (P1)
 - RAG-based semantic search (P2)
 
 ---
 
-### Epic 6: AI Daily Digest & Notifications (P1 - Should-have)
+### Epic 6: Quality Control & Moderation
 
 **Core Features:**
-- Daily LLM-generated summary of subscribed topics
-- In-app notifications for comments, upvotes, and new posts in subscribed tags
-- Notification preferences configuration
-- Email delivery option for digest (P2)
-
----
-
-### Epic 7: Quality Control & Moderation (P0 - Must-have)
-
-**Core Features:**
-- Admin dashboard for content moderation
-- Flag/report posts and comments (P1)
-- Delete posts, comments, and ban users (admin only)
-- Transparent moderation logs (P2)
+- Moderation dashboard for flagged content (P2)
+- Admin delete posts/comments and ban repeat violators (P2)
+- User flag/report posts and comments (P2)
+- Transparent moderation labels, e.g. "[deleted by moderator]" (P2)
 
 ---

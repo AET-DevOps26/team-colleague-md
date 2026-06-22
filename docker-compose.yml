@@ -15,6 +15,38 @@ services:
       timeout: 5s
       retries: 5
 
+  content-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: verita_content
+      POSTGRES_USER: verita_content_user
+      POSTGRES_PASSWORD: verita_content_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - content-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verita_content_user -d verita_content"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  recommendation-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: verita_recommendations
+      POSTGRES_USER: verita_user
+      POSTGRES_PASSWORD: verita_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - recommendation-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verita_user -d verita_recommendations"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
     command: server /data --console-address ":9001"
@@ -83,8 +115,13 @@ services:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - DB_URL=jdbc:postgresql://content-db:5432/verita_content
+      - DB_USERNAME=verita_content_user
+      - DB_PASSWORD=verita_content_password
       - STORAGE_S3_ENDPOINT=http://minio:9000
     depends_on:
+      content-db:
+        condition: service_healthy
       minio-init:
         condition: service_completed_successfully
     healthcheck:
@@ -102,6 +139,14 @@ services:
       - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - DB_HOST=recommendation-db
+      - DB_PORT=5432
+      - DB_NAME=verita_recommendations
+      - DB_USER=verita_user
+      - DB_PASSWORD=verita_password
+    depends_on:
+      recommendation-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
       interval: 30s
@@ -141,4 +186,6 @@ services:
 
 volumes:
   user-db-data:
+  content-db-data:
+  recommendation-db-data:
   minio-data:

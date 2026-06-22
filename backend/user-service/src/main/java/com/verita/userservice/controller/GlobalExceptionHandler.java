@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.time.OffsetDateTime;
 
@@ -36,6 +37,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
         return errorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidAvatarException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidAvatar(InvalidAvatarException ex) {
+        return errorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRequestPart(MissingServletRequestPartException ex) {
+        if ("avatar".equals(ex.getRequestPartName())) {
+            return errorResponse(HttpStatus.BAD_REQUEST, "Avatar file is required.");
+        }
+        return errorResponse(HttpStatus.BAD_REQUEST, "Required request part is missing.");
     }
 
     private ResponseEntity<ErrorResponse> errorResponse(HttpStatus status, String message) {

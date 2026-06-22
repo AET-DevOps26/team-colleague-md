@@ -16,6 +16,36 @@ services:
       timeout: 5s
       retries: 5
 
+  content-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${CONTENT_DB_NAME:-verita_content}
+      POSTGRES_USER: ${CONTENT_DB_USER:-verita_content_user}
+      POSTGRES_PASSWORD: ${CONTENT_DB_PASSWORD}
+    volumes:
+      - content-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONTENT_DB_USER:-verita_content_user} -d ${CONTENT_DB_NAME:-verita_content}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  recommendation-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${RECOMMENDATION_DB_NAME:-verita_recommendations}
+      POSTGRES_USER: ${RECOMMENDATION_DB_USER:-verita_recommendations_user}
+      POSTGRES_PASSWORD: ${RECOMMENDATION_DB_PASSWORD}
+    volumes:
+      - recommendation-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${RECOMMENDATION_DB_USER:-verita_recommendations_user} -d ${RECOMMENDATION_DB_NAME:-verita_recommendations}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
     command: server /data --console-address ":9001"
@@ -107,6 +137,7 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/user-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required — set to http://<VM_IP>}
       - DB_HOST=user-db
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-verita_users}
@@ -136,6 +167,9 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/content-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://content-db:5432/${CONTENT_DB_NAME:-verita_content}
+      - DB_USERNAME=${CONTENT_DB_USER:-verita_content_user}
+      - DB_PASSWORD=${CONTENT_DB_PASSWORD}
       - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-http://minio:9000}
       - STORAGE_S3_PUBLIC_ENDPOINT=${STORAGE_S3_PUBLIC_ENDPOINT:?STORAGE_S3_PUBLIC_ENDPOINT is required — set to http://<VM_IP>/storage}
       - STORAGE_S3_REGION=${STORAGE_S3_REGION:-us-east-1}
@@ -144,11 +178,13 @@ services:
       - STORAGE_S3_PATH_STYLE_ACCESS=true
       - STORAGE_POST_PHOTOS_BUCKET=${STORAGE_POST_PHOTOS_BUCKET:-verita-post-photos}
     depends_on:
+      content-db:
+        condition: service_healthy
       minio-init:
         condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -158,9 +194,17 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/recommendation-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=recommendation-db
+      - DB_PORT=5432
+      - DB_NAME=${RECOMMENDATION_DB_NAME:-verita_recommendations}
+      - DB_USER=${RECOMMENDATION_DB_USER:-verita_user}
+      - DB_PASSWORD=${RECOMMENDATION_DB_PASSWORD}
+    depends_on:
+      recommendation-db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -170,7 +214,7 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -196,4 +240,6 @@ services:
 
 volumes:
   user-db-data:
+  content-db-data:
+  recommendation-db-data:
   minio-data:
