@@ -584,6 +584,33 @@ paths:
               schema: { type: array, items: { $ref: '#/components/schemas/TopicResponse' } }
         '400': { $ref: '#/components/responses/BadRequest' }
 
+  /api/v1/files:
+    post:
+      operationId: uploadFile
+      summary: Upload an image, returning its public URL
+      description: >
+        Accepts a single image as multipart/form-data, validates type and size, stores it in
+        object storage, and returns its public URL for use as a cover image or inline post image.
+      tags: [Files]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: File uploaded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FileUploadResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -615,6 +642,12 @@ components:
 
   schemas:
     # --- SHARED ---
+    FileUploadResponse:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, format: uri, description: "Public URL of the stored file" }
+
     AuthorSummary:
       type: object
       description: Lightweight author info embedded in posts and comments to avoid extra lookups
