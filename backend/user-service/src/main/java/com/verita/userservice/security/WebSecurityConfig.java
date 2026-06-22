@@ -3,6 +3,7 @@ package com.verita.userservice.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -99,6 +100,21 @@ public class WebSecurityConfig {
      *   <li>All other requests require authentication</li>
      * </ul>
      */
+    /**
+     * Dedicated chain for the actuator endpoints (health, info, prometheus). Ordered ahead of
+     * the application chain so Prometheus can scrape {@code /actuator/prometheus} without a JWT.
+     * The endpoints are not publicly reachable: the nginx gateway denies {@code /user/actuator}
+     * and the backend Service is ClusterIP-only.
+     */
+    @Bean
+    @Order(0)
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/actuator/**")
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .csrf(csrf -> csrf.disable());
+        return http.build();
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))

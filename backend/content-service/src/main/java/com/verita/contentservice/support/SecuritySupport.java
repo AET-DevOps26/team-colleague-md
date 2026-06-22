@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -27,6 +28,21 @@ import java.util.Collections;
 import java.util.List;
 @Configuration
 public class SecuritySupport {
+    /**
+     * Dedicated chain for the actuator endpoints (health, info, prometheus). Ordered ahead of
+     * the application chain so Prometheus can scrape {@code /actuator/prometheus} without a JWT.
+     * The endpoints are not publicly reachable: the nginx gateway denies {@code /content/actuator}
+     * and the backend Service is ClusterIP-only.
+     */
+    @Bean
+    @Order(0)
+    SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/actuator/**")
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .csrf(csrf -> csrf.disable());
+        return http.build();
+    }
+
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtFilter jwtFilter, CorsConfigurationSource corsConfigurationSource) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource))

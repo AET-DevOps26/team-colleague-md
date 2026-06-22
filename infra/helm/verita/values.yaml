@@ -7,6 +7,8 @@ services:
     image: user-service
     tag: latest
     port: 8081
+    metrics:
+      path: /actuator/prometheus
     springProfile: dev
     health:
       path: /actuator/health
@@ -27,6 +29,8 @@ services:
     image: content-service
     tag: latest
     port: 8082
+    metrics:
+      path: /actuator/prometheus
     springProfile: dev
     health:
       path: /actuator/health
@@ -47,6 +51,8 @@ services:
     image: recommendation-service
     tag: latest
     port: 8083
+    metrics:
+      path: /actuator/prometheus
     springProfile: dev
     health:
       path: /actuator/health
@@ -66,6 +72,8 @@ services:
     image: genai-service
     tag: latest
     port: 8000
+    metrics:
+      path: /metrics
     replicaCount: 2
     health:
       path: /health
@@ -104,6 +112,18 @@ ingress:
 
 user-postgresql:
   enabled: true
+  # postgres_exporter sidecar (port 9187, service port named "metrics"). The Prometheus
+  # job discovers it by that port name. resources.limits are mandatory — the namespace
+  # ResourceQuota rejects any pod whose containers do not declare limits.
+  metrics:
+    enabled: true
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
   auth:
     username: verita_user
     password: verita_password
@@ -119,6 +139,15 @@ user-postgresql:
 
 content-postgresql:
   enabled: true
+  metrics:
+    enabled: true
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
   auth:
     username: verita_user
     password: verita_password
@@ -134,6 +163,15 @@ content-postgresql:
 
 recommendation-postgresql:
   enabled: true
+  metrics:
+    enabled: true
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
   auth:
     username: verita_user
     password: verita_password
@@ -211,3 +249,35 @@ minio:
       limits:
         cpu: "50m"
         memory: "64Mi"
+
+# ---------------------------------------------------------------------------
+# Self-hosted, namespace-scoped monitoring (Prometheus + Grafana) — "Model B".
+# No Prometheus Operator / CRDs and no cluster-scoped RBAC, so it runs inside a
+# shared student namespace. Service discovery is annotation-based (see service.yaml,
+# kept namespace-restricted in the Prometheus config) and RBAC is a namespaced Role.
+# Set enabled: false to instead rely on a cluster-provided Prometheus.
+# ---------------------------------------------------------------------------
+monitoring:
+  enabled: true
+  # "" uses the cluster default StorageClass; set explicitly (e.g. csi-rbd) if the
+  # namespace has no default, matching what the postgresql/minio subcharts use.
+  storageClass: ""
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    retention: 7d
+    scrapeInterval: 30s
+    persistence:
+      size: 5Gi
+    resources:
+      requests: { cpu: "100m", memory: "256Mi" }
+      limits: { cpu: "250m", memory: "512Mi" }
+  grafana:
+    image: grafana/grafana:11.4.0
+    adminUser: admin
+    # Override per environment and rotate; consider sourcing from a Secret instead.
+    adminPassword: verita_grafana_admin
+    persistence:
+      size: 1Gi
+    resources:
+      requests: { cpu: "50m", memory: "128Mi" }
+      limits: { cpu: "150m", memory: "256Mi" }
