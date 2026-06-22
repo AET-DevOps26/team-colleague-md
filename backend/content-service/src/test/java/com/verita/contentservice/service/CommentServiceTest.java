@@ -147,6 +147,19 @@ public class CommentServiceTest {
     }
 
     @Test
+    void deleteComment_postAuthor_canDeleteAnotherUsersComment() {
+        PostEntity post = publishedPost();
+        post.setAuthorId(userId); // the current user owns the post
+        CommentEntity other = comment(UUID.randomUUID(), UUID.randomUUID(), post); // comment by someone else
+        when(commentRepository.findByIdAndDeletedFalse(other.getId())).thenReturn(Optional.of(other));
+
+        commentService.deleteComment(other.getId());
+
+        assertTrue(other.isDeleted());
+        verify(postRepository).decrementCommentCount(post.getId());
+    }
+
+    @Test
     void deleteComment_nonAuthor_throwsForbidden() {
         PostEntity post = publishedPost();
         CommentEntity other = comment(UUID.randomUUID(), UUID.randomUUID(), post);

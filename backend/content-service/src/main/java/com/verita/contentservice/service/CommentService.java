@@ -83,7 +83,10 @@ public class CommentService {
         UUID userId = securityUtils.getCurrentUserId();
         CommentEntity comment = commentRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (!Objects.equals(comment.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN);
+        // The comment author or the author of the post it belongs to may delete it (Epic 4 / P1).
+        boolean isCommentAuthor = Objects.equals(comment.getAuthorId(), userId);
+        boolean isPostAuthor = Objects.equals(comment.getPost().getAuthorId(), userId);
+        if (!isCommentAuthor && !isPostAuthor) throw new ResponseStatusException(FORBIDDEN);
         comment.setDeleted(true);
         comment.setDeletedAt(OffsetDateTime.now());
         comment.setText("[deleted]");
