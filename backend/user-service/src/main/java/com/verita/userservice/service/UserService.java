@@ -28,6 +28,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final AvatarStorageService avatarStorageService;
     private final ContentServiceClient contentServiceClient;
+    private final RecommendationServiceClient recommendationServiceClient;
 
     public User getByUsername(String username) {
         return userRepository.findByUsername(username)
@@ -102,6 +103,7 @@ public class UserService {
         userRepository.findByUsername(username).ifPresent(user -> {
             String avatarUrl = user.getAvatarUrl();
             contentServiceClient.deleteUserContentData(user.getId(), authorization);
+            recommendationServiceClient.deleteUserRecommendationData(user.getId(), authorization);
             userRepository.delete(user);
             avatarStorageService.deleteAvatar(avatarUrl);
         });
