@@ -1,10 +1,12 @@
 package com.verita.userservice;
 import com.verita.model.*;
 import com.verita.userservice.exception.DeleteUserContentException;
+import com.verita.userservice.exception.DeleteUserRecommendationException;
 import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.service.AvatarStorageService;
 import com.verita.userservice.service.ContentServiceClient;
+import com.verita.userservice.service.RecommendationServiceClient;
 import com.verita.userservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,8 @@ public class UserServiceTests {
     private AvatarStorageService avatarStorageService;
     @Mock
     private ContentServiceClient contentServiceClient;
+    @Mock
+    private RecommendationServiceClient recommendationServiceClient;
     @InjectMocks
     private UserService userService;
     private UserEntity userEntity;
@@ -150,8 +154,9 @@ public class UserServiceTests {
 
         userService.deleteUser("testuser", "Bearer token");
 
-        InOrder inOrder = inOrder(contentServiceClient, userRepository, avatarStorageService);
+        InOrder inOrder = inOrder(contentServiceClient, recommendationServiceClient, userRepository, avatarStorageService);
         inOrder.verify(contentServiceClient).deleteUserContentData(userEntity.getId(), "Bearer token");
+        inOrder.verify(recommendationServiceClient).deleteUserRecommendationData(userEntity.getId(), "Bearer token");
         inOrder.verify(userRepository).delete(userEntity);
         inOrder.verify(avatarStorageService).deleteAvatar(avatarUrl);
     }
@@ -173,6 +178,29 @@ public class UserServiceTests {
 
         assertThrows(DeleteUserContentException.class, () -> userService.deleteUser("testuser", "Bearer token"));
 
+        verify(recommendationServiceClient, never()).deleteUserRecommendationData(any(), any());
+        verify(userRepository, never()).delete(any(UserEntity.class));
+        verify(avatarStorageService, never()).deleteAvatar(any());
+    }
+
+    @Test
+    void deleteUser_whenRecommendationCleanupFails_doesNotDeleteLocalUserOrAvatar() {
+        String avatarUrl = "http://localhost:9000/verita-user-portraits/users/old/avatar-old.png";
+        userEntity.setAvatarUrl(avatarUrl);
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(userEntity));
+        doThrow(new DeleteUserRecommendationException(
+                userEntity.getId(),
+                "recommendation-service",
+                "/internal/v1/users/{userId}/data",
+                503,
+                "cleanup unavailable",
+                new RuntimeException("recommendation cleanup unavailable")))
+                .when(recommendationServiceClient).deleteUserRecommendationData(userEntity.getId(), "Bearer token");
+
+        assertThrows(DeleteUserRecommendationException.class, () -> userService.deleteUser("testuser", "Bearer token"));
+
+        verify(contentServiceClient).deleteUserContentData(userEntity.getId(), "Bearer token");
         verify(userRepository, never()).delete(any(UserEntity.class));
         verify(avatarStorageService, never()).deleteAvatar(any());
     }

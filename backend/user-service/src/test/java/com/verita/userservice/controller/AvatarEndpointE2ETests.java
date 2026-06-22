@@ -5,6 +5,7 @@ import com.verita.userservice.repository.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.security.UserDetailsImpl;
 import com.verita.userservice.service.ContentServiceClient;
+import com.verita.userservice.service.RecommendationServiceClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,6 +90,9 @@ class AvatarEndpointE2ETests {
 
     @MockitoBean
     private ContentServiceClient contentServiceClient;
+
+    @MockitoBean
+    private RecommendationServiceClient recommendationServiceClient;
 
     @DynamicPropertySource
     static void configureContainers(DynamicPropertyRegistry registry) {

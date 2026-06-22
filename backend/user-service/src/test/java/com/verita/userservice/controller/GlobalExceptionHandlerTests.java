@@ -3,12 +3,15 @@ package com.verita.userservice.controller;
 import com.verita.model.ErrorResponse;
 import com.verita.userservice.exception.DuplicateEmailException;
 import com.verita.userservice.exception.DuplicateUsernameException;
+import com.verita.userservice.exception.DeleteUserRecommendationException;
 import com.verita.userservice.exception.InvalidAvatarException;
 import com.verita.userservice.exception.InvalidRefreshTokenException;
 import com.verita.userservice.exception.UserNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -62,6 +65,23 @@ public class GlobalExceptionHandlerTests {
 
         assertEquals(400, response.getStatusCode().value());
         assertEquals("Avatar file must be JPEG or PNG.", response.getBody().getMessage());
+    }
+
+    @Test
+    void deleteUserRecommendation_mapsTo503() {
+        DeleteUserRecommendationException exception = new DeleteUserRecommendationException(
+                UUID.randomUUID(),
+                "recommendation-service",
+                "/internal/v1/users/{userId}/data",
+                503,
+                "cleanup unavailable",
+                new RuntimeException("cleanup unavailable"));
+
+        ResponseEntity<ErrorResponse> response = handler.handleDeleteUserRecommendation(exception);
+
+        assertEquals(503, response.getStatusCode().value());
+        assertEquals(503, response.getBody().getStatus());
+        assertEquals(exception.getMessage(), response.getBody().getMessage());
     }
 
     @Test
