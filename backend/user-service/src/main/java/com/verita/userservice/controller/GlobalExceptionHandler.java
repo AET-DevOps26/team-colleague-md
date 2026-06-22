@@ -61,6 +61,20 @@ public class GlobalExceptionHandler {
         return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
     }
 
+    @ExceptionHandler(DeleteUserRecommendationException.class)
+    public ResponseEntity<ErrorResponse> handleDeleteUserRecommendation(DeleteUserRecommendationException ex) {
+        log.warn(
+                "Failed to clean up user recommendation data: userId={}, service={}, endpoint={}, downstreamStatus={}, downstreamBody={}",
+                ex.getUserId(),
+                ex.getDownstreamService(),
+                ex.getEndpoint(),
+                ex.getDownstreamStatus(),
+                ex.getDownstreamResponseBody(),
+                ex
+        );
+        return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+    }
+
     @ExceptionHandler(MissingServletRequestPartException.class)
     public ResponseEntity<ErrorResponse> handleMissingRequestPart(MissingServletRequestPartException ex) {
         if ("avatar".equals(ex.getRequestPartName())) {
