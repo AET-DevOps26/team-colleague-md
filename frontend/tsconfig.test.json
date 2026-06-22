@@ -2,7 +2,8 @@
   "extends": "./tsconfig.node.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM"],
-    "types": ["node", "@playwright/test"]
+    "jsx": "react-jsx",
+    "types": ["node", "vite/client", "@playwright/test", "@testing-library/jest-dom"]
   },
   "include": ["tests", "playwright.config.ts"]
 }

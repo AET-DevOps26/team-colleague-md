@@ -31,6 +31,21 @@ services:
       timeout: 5s
       retries: 5
 
+  recommendation-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${RECOMMENDATION_DB_NAME:-verita_recommendations}
+      POSTGRES_USER: ${RECOMMENDATION_DB_USER:-verita_recommendations_user}
+      POSTGRES_PASSWORD: ${RECOMMENDATION_DB_PASSWORD}
+    volumes:
+      - recommendation-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${RECOMMENDATION_DB_USER:-verita_recommendations_user} -d ${RECOMMENDATION_DB_NAME:-verita_recommendations}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
     command: server /data --console-address ":9001"
@@ -180,6 +195,14 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/recommendation-service:latest
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=recommendation-db
+      - DB_PORT=5432
+      - DB_NAME=${RECOMMENDATION_DB_NAME:-verita_recommendations}
+      - DB_USER=${RECOMMENDATION_DB_USER:-verita_user}
+      - DB_PASSWORD=${RECOMMENDATION_DB_PASSWORD}
+    depends_on:
+      recommendation-db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
@@ -219,4 +242,5 @@ services:
 volumes:
   user-db-data:
   content-db-data:
+  recommendation-db-data:
   minio-data:

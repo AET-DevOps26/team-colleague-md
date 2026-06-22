@@ -98,7 +98,22 @@ export const authService = {
 
   // Attempts to restore a session using the httpOnly refresh-token cookie.
   // Called on app mount. Returns the user if the cookie is still valid, null otherwise.
+  // In demo mode (VITE_DEMO_USER=alice|bob), auto-logs in without backend.
   async restoreSession(): Promise<AuthUser | null> {
+    const demoUser = import.meta.env.VITE_DEMO_USER;
+    if (demoUser) {
+      const emailMap: Record<string, string> = {
+        alice: 'alice@verita.demo',
+        bob: 'bob@verita.demo',
+      };
+      const mock = MOCK_CREDENTIALS[emailMap[demoUser] ?? ''];
+      if (mock) {
+        setAccessToken('mock-token');
+        setUser(mock.user);
+        return mock.user;
+      }
+    }
+
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await userApi.post<BackendAuthResponse>('/api/v1/auth/refresh', undefined, { _retried: true } as any);

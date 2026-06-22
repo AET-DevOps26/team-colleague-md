@@ -186,4 +186,14 @@ public class UserServiceTests {
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
     }
+
+    @Test
+    void getUsers_success() {
+        Page<UserEntity> page = new PageImpl<>(List.of(userEntity));
+        when(userRepository.findAll(any(PageRequest.class))).thenReturn(page);
+        PaginatedUsers result = userService.getUsers(0, 10);
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
+    }
 }

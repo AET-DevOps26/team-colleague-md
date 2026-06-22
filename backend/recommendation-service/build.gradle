@@ -7,7 +7,7 @@ plugins {
 
 group = 'com.verita'
 version = '0.0.1-SNAPSHOT'
-description = 'user-service'
+description = 'recommendation-service'
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
@@ -21,11 +21,24 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+    implementation 'org.springframework.boot:spring-boot-flyway'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    runtimeOnly 'org.postgresql:postgresql'
 
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
-    implementation 'jakarta.validation:jakarta.validation-api'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.testcontainers:junit-jupiter:1.21.3'
+    testImplementation 'org.testcontainers:postgresql:1.21.3'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -49,7 +62,11 @@ openApiGenerate {
             interfaceOnly: "true",
             useSpringBoot3: "true",
             useJakartaEe: "true",
-            skipDefaultInterface: "true"
+            skipDefaultInterface: "true",
+            useTags: "true",
+            // Boot 4 uses Jackson 3 for MVC; the Jackson-2-only JsonNullable wrapper
+            // can't be deserialized by it. Emit plain nullable types instead.
+            openApiNullable: "false"
     ]
 }
 

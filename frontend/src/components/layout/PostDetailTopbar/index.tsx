@@ -1,10 +1,15 @@
+import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
 import Avatar from '../../ui/Avatar';
 import styles from './PostDetailTopbar.module.css';
 
-export default function PostDetailTopbar() {
+interface PostDetailTopbarProps {
+  tabs?: ReactNode;
+}
+
+export default function PostDetailTopbar({ tabs }: PostDetailTopbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoggedIn } = useAuth();
@@ -20,6 +25,15 @@ export default function PostDetailTopbar() {
         </svg>
         <span>{from}</span>
       </button>
+
+      {tabs && (
+        <>
+          <span className={styles.topbarDivider} aria-hidden="true" />
+          <div className={styles.topbarTabs} role="tablist" aria-label="Digest views">
+            {tabs}
+          </div>
+        </>
+      )}
 
       <div className={styles.right}>
         {isLoggedIn ? (

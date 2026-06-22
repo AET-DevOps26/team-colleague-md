@@ -2,7 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../Sidebar';
 import styles from './AppLayout.module.css';
 
-const MODE_B_PREFIXES = ['/post/', '/digest/', '/profile/', '/admin'];
+const MODE_B_PREFIXES = ['/post/', '/digest', '/profile/', '/admin'];
 
 export default function AppLayout() {
   const { pathname } = useLocation();

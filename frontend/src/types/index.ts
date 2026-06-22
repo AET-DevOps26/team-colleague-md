@@ -64,12 +64,44 @@ export interface Post {
   readTimeMinutes?: number;
 }
 
-export interface DigestSummary {
+export interface TodayDigest {
   date: string;
   title: string;
   topStorySubtitle: string;
   eventCount: number;
   readTimeMinutes: number;
+  generatedAt: string;
+  status: 'generated' | 'generating';
+}
+
+export interface DigestListItem {
+  date: string;
+  displayDate: string;
+  title: string;
+  eventCount: number;
+  readTimeMinutes: number;
+}
+
+/** Mirrors content-service OpenAPI TopicResponse */
+export interface TopicItem {
+  id: string;
+  name: string;
+  displayName: string;
+  sortOrder: number;
+  totalPostCount: number;
+  postsThisWeek: number;
+  postsPrevWeek: number;
+  activityScore: number;
+  isHot: boolean;
+  followerCount: number;
+}
+
+/** Mirrors content-service OpenAPI TopicCategoryGroup */
+export interface TopicCategory {
+  id: string;
+  label: string;
+  sortOrder: number;
+  topics: TopicItem[];
 }
 
 export interface FeedPage {
