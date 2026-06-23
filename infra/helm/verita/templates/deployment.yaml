@@ -108,15 +108,15 @@ spec:
               value: "us-east-1"
             - name: STORAGE_S3_PATH_STYLE_ACCESS
               value: "true"
+            # Scoped least-privilege S3 user (not the MinIO root) — restricted to this
+            # service's own bucket via its policy. accessKey is non-secret; the secretKey
+            # comes from the per-user Secret minted by secret-s3.yaml.
             - name: STORAGE_S3_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ $.Release.Name }}-minio"
-                  key: rootUser
+              value: {{ $svc.storage.s3User | quote }}
             - name: STORAGE_S3_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: "{{ $.Release.Name }}-minio"
-                  key: rootPassword
+                  name: "{{ $.Release.Name }}-s3-{{ $svc.storage.s3User }}"
+                  key: secretKey
             {{- end }}
 {{- end }}

@@ -17,7 +17,11 @@ services:
     db:
       name: verita_users
       user: svc_user
-    storage: true
+    # Scoped S3 identity: s3User must match a minio.users[].accessKey below. The
+    # service reads STORAGE_S3_ACCESS_KEY (this literal) + STORAGE_S3_SECRET_KEY
+    # (from the per-user Secret minted by secret-s3.yaml).
+    storage:
+      s3User: user-service
     resources:
       requests:
         cpu: "100m"
@@ -41,7 +45,8 @@ services:
     db:
       name: verita_contents
       user: svc_content
-    storage: true
+    storage:
+      s3User: content-service
     resources:
       requests:
         cpu: "100m"
@@ -160,9 +165,10 @@ recommendation-postgresql:
 # MinIO via the official chart (https://charts.min.io/). The Bitnami subchart
 # was dropped because Bitnami removed all free images. Single standalone
 # instance is plenty for our lightweight usage (user-service avatars and
-# content-service post photos). The chart provisions buckets via the
-# post-install job and exposes a Secret named "<release>-minio" with keys
-# rootUser/rootPassword, consumed by the storage env in deployment.yaml.
+# content-service post photos). The chart provisions buckets and scoped IAM
+# users via the post-install job. Services authenticate as their scoped user
+# (not root); rootPassword stays dev-default here and is overridden via --set
+# for prod only.
 minio:
   enabled: true
   mode: standalone
@@ -190,8 +196,10 @@ minio:
       cpu: "150m"
       memory: "256Mi"
   # Per-service scoped S3 users (least-privilege, mirrors dev/prod compose). Each user is
-  # restricted to its own bucket via a custom policy. Dev defaults below; real deployments
-  # override the secretKeys via --set (M4b wires the services onto these keys).
+  # restricted to its own bucket via a custom policy. secret-s3.yaml mints one k8s Secret
+  # per user from the same entries, and each service's storage.s3User (see services.*)
+  # selects which user it authenticates as. Dev defaults below; prod overrides the
+  # secretKeys via --set, which propagates to both the IAM user and the k8s Secret.
   policies:
     - name: user-service-portraits-rw
       statements:
