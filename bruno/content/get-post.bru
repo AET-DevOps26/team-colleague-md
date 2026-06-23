@@ -1,0 +1,11 @@
+meta {
+  name: Get post by id
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}
+  body: none
+  auth: none
+}

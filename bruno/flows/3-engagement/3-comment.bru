@@ -1,0 +1,30 @@
+meta {
+  name: Create comment
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}/comments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "text": "Top-level comment from Bruno"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+}
+
+script:post-response {
+  bru.setEnvVar("commentId", res.getBody().id);
+}

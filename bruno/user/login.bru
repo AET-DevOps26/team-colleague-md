@@ -21,5 +21,6 @@ script:post-response {
   // Carry the access token across services (ADR-0001: identity travels in the token).
   if (res.getStatus() === 200) {
     bru.setEnvVar("token", res.getBody().accessToken);
+    bru.setEnvVar("ownUserId", res.getBody().user.id);
   }
 }

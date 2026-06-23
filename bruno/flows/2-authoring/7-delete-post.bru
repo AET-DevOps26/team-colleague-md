@@ -1,0 +1,19 @@
+meta {
+  name: Delete post (cleanup)
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+assert {
+  res.status: lt 300
+}

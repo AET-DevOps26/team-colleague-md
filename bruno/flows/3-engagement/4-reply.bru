@@ -1,0 +1,26 @@
+meta {
+  name: Reply to comment
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}/comments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "text": "A reply from Bruno",
+    "parentId": "{{commentId}}"
+  }
+}
+
+assert {
+  res.status: eq 201
+}

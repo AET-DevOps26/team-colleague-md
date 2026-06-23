@@ -1,0 +1,16 @@
+meta {
+  name: Get post
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{postId}}
+}

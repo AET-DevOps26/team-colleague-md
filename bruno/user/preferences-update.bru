@@ -1,0 +1,23 @@
+meta {
+  name: Update preferences
+  type: http
+  seq: 11
+}
+
+put {
+  url: {{userBaseUrl}}/api/v1/users/me/preferences
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "digestFrequency": "DAILY",
+    "showBookmarks": true,
+    "showLikes": true
+  }
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Unban user (cleanup)
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{userBaseUrl}}/api/v1/users/{{otherUserId}}/ban
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "banned": false
+  }
+}
+
+assert {
+  res.status: eq 200
+}

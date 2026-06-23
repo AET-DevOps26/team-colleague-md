@@ -1,0 +1,37 @@
+meta {
+  name: Generate daily digest
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{genaiBaseUrl}}/api/v1/genai/digests/generate
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "digestDate": "2026-06-23",
+    "periodStart": "2026-06-22T00:00:00Z",
+    "periodEnd": "2026-06-23T00:00:00Z",
+    "timezone": "Europe/Berlin",
+    "topics": [
+      { "id": "11111111-1111-1111-8111-111111111111", "name": "ai" }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 202) {
+    bru.setEnvVar("jobId", res.getBody().jobId);
+  }
+}
+
+docs {
+  Async: returns 202 + jobId immediately (no LLM needed to queue). The job itself needs LLM creds to complete.
+}

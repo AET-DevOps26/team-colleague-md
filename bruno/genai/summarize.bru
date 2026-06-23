@@ -1,0 +1,26 @@
+meta {
+  name: Summarize post
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{genaiBaseUrl}}/api/v1/genai/summarize
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "postId": "00000000-0000-0000-0000-000000000000",
+    "content": "This is a sufficiently long post body that the summarizer can turn into three concise bullet points for testing purposes."
+  }
+}
+
+docs {
+  Synchronous LLM call: requires live LLM credentials on the genai-service. Never assert generated text.
+}

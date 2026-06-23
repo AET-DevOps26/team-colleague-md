@@ -1,0 +1,19 @@
+meta {
+  name: Posts by topic (guest)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/posts?topic=ai
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Public endpoint fails open to anonymous (ADR-0006): no token, still 200.
+}

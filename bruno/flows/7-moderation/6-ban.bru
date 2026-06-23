@@ -1,0 +1,25 @@
+meta {
+  name: Ban user
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{userBaseUrl}}/api/v1/users/{{otherUserId}}/ban
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "banned": true
+  }
+}
+
+assert {
+  res.status: eq 200
+}

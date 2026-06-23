@@ -1,0 +1,34 @@
+meta {
+  name: Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{userBaseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{userEmail}}",
+    "password": "{{userPassword}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.accessToken: isDefined
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setEnvVar("token", res.getBody().accessToken);
+    bru.setEnvVar("ownUserId", res.getBody().user.id);
+  }
+}
+
+docs {
+  Step 1: mint the token at user-service and stash it; later steps carry it across services (ADR-0001).
+}

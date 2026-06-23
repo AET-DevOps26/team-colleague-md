@@ -1,0 +1,21 @@
+meta {
+  name: Get topics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/topics
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+script:post-response {
+  const b = res.getBody();
+  const arr = Array.isArray(b) ? b : (b.topics || b.content || []);
+  if (arr.length) bru.setEnvVar("topicId", arr[0].id);
+}

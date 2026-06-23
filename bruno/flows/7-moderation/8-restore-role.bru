@@ -1,0 +1,26 @@
+meta {
+  name: Restore role to USER (cleanup)
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{userBaseUrl}}/api/v1/users/{{otherUserId}}/role
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "role": "USER"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.role: eq USER
+}
