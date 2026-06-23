@@ -20,20 +20,20 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class JwtUtils {
 
-    @Value("${app.jwtSecret}")
+    @Value("${app.jwt-secret}")
     private String jwtSecret;
 
-    @Value("${app.jwtExpirationMs}")
+    @Value("${app.jwt-expiration-ms}")
     private int jwtExpirationMs;
 
-    @Value("${app.jwtRefreshExpirationMs}")
+    @Value("${app.jwt-refresh-expiration-ms}")
     private long jwtRefreshExpirationMs;
 
     /**
      * Generates a signed JWT for an authenticated principal.
      * The token subject is the username; the user's UUID is carried in a {@code userId}
      * claim so consumer services can identify the caller without a lookup. Expiry is set
-     * from {@code app.jwtExpirationMs}.
+     * from {@code app.jwt-expiration-ms}.
      *
      * @param authentication the authenticated principal returned by the AuthenticationManager
      * @return a compact, URL-safe JWT string

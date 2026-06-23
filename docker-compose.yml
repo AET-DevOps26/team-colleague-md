@@ -1,16 +1,20 @@
+# NOTE: Postgres only applies POSTGRES_USER/DB/PASSWORD on the FIRST init of an empty data
+# volume. If you change a DB name/role/password below against an existing volume, the running
+# container keeps the old credentials and services fail to connect. Wipe volumes to re-init:
+#   docker compose down -v && docker compose up --build
 services:
   user-db:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: verita_users
-      POSTGRES_USER: verita_user
-      POSTGRES_PASSWORD: verita_password
+      POSTGRES_USER: svc_user
+      POSTGRES_PASSWORD: svc_user_password
     ports:
       - "5432:5432"
     volumes:
       - user-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U verita_user -d verita_users"]
+      test: ["CMD-SHELL", "pg_isready -U svc_user -d verita_users"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -18,15 +22,15 @@ services:
   content-db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: verita_content
-      POSTGRES_USER: verita_content_user
-      POSTGRES_PASSWORD: verita_content_password
+      POSTGRES_DB: verita_contents
+      POSTGRES_USER: svc_content
+      POSTGRES_PASSWORD: svc_content_password
     ports:
       - "5433:5432"
     volumes:
       - content-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U verita_content_user -d verita_content"]
+      test: ["CMD-SHELL", "pg_isready -U svc_content -d verita_contents"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,14 +39,14 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: verita_recommendations
-      POSTGRES_USER: verita_user
-      POSTGRES_PASSWORD: verita_password
+      POSTGRES_USER: svc_recommendation
+      POSTGRES_PASSWORD: svc_recommendation_password
     ports:
       - "5434:5432"
     volumes:
       - recommendation-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U verita_user -d verita_recommendations"]
+      test: ["CMD-SHELL", "pg_isready -U svc_recommendation -d verita_recommendations"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,16 +73,72 @@ services:
       MINIO_ROOT_PASSWORD: verita_minio_password
       MINIO_USER_PORTRAITS_BUCKET: verita-user-portraits
       MINIO_POST_PHOTOS_BUCKET: verita-post-photos
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do
-        sleep 2;
-      done;
-      mc mb --ignore-existing local/$${MINIO_USER_PORTRAITS_BUCKET};
-      mc mb --ignore-existing local/$${MINIO_POST_PHOTOS_BUCKET};
-      mc anonymous set download local/$${MINIO_USER_PORTRAITS_BUCKET};
-      mc anonymous set download local/$${MINIO_POST_PHOTOS_BUCKET};
-      "
+      # Per-service scoped S3 users (least-privilege; mirrors prod). Dev plaintext keys match the
+      # STORAGE_S3_ACCESS_KEY/SECRET_KEY defaults in each service's application-dev.properties.
+      USER_SERVICE_S3_ACCESS_KEY: user-service
+      USER_SERVICE_S3_SECRET_KEY: user-service-s3-secret
+      CONTENT_SERVICE_S3_ACCESS_KEY: content-service
+      CONTENT_SERVICE_S3_SECRET_KEY: content-service-s3-secret
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
+          sleep 2
+        done
+
+        mc mb --ignore-existing "local/$${MINIO_USER_PORTRAITS_BUCKET}"
+        mc mb --ignore-existing "local/$${MINIO_POST_PHOTOS_BUCKET}"
+
+        cat > /tmp/user-service-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+              "Resource": ["arn:aws:s3:::$${MINIO_USER_PORTRAITS_BUCKET}"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+              "Resource": ["arn:aws:s3:::$${MINIO_USER_PORTRAITS_BUCKET}/*"]
+            }
+          ]
+        }
+        EOF
+
+        cat > /tmp/content-service-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+              "Resource": ["arn:aws:s3:::$${MINIO_POST_PHOTOS_BUCKET}"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+              "Resource": ["arn:aws:s3:::$${MINIO_POST_PHOTOS_BUCKET}/*"]
+            }
+          ]
+        }
+        EOF
+
+        mc admin policy create local user-service-portraits-rw /tmp/user-service-policy.json || true
+        mc admin policy create local content-service-posts-rw /tmp/content-service-policy.json || true
+
+        mc admin user info local "$${USER_SERVICE_S3_ACCESS_KEY}" >/dev/null 2>&1 ||
+          mc admin user add local "$${USER_SERVICE_S3_ACCESS_KEY}" "$${USER_SERVICE_S3_SECRET_KEY}"
+        mc admin user info local "$${CONTENT_SERVICE_S3_ACCESS_KEY}" >/dev/null 2>&1 ||
+          mc admin user add local "$${CONTENT_SERVICE_S3_ACCESS_KEY}" "$${CONTENT_SERVICE_S3_SECRET_KEY}"
+
+        mc admin policy attach local user-service-portraits-rw --user "$${USER_SERVICE_S3_ACCESS_KEY}" || true
+        mc admin policy attach local content-service-posts-rw --user "$${CONTENT_SERVICE_S3_ACCESS_KEY}" || true
+
+        mc anonymous set download "local/$${MINIO_USER_PORTRAITS_BUCKET}"
+        mc anonymous set download "local/$${MINIO_POST_PHOTOS_BUCKET}"
 
   user-service:
     build:
@@ -93,9 +153,11 @@ services:
       - DB_HOST=user-db
       - DB_PORT=5432
       - DB_NAME=verita_users
-      - DB_USER=verita_user
-      - DB_PASSWORD=verita_password
+      - DB_USER=svc_user
+      - DB_PASSWORD=svc_user_password
       - STORAGE_S3_ENDPOINT=http://minio:9000
+      - STORAGE_S3_ACCESS_KEY=user-service
+      - STORAGE_S3_SECRET_KEY=user-service-s3-secret
     depends_on:
       user-db:
         condition: service_healthy
@@ -119,10 +181,14 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       # Shared HS256 secret — must match the value used by user-service / recommendation-service.
       - JWT_SECRET=dev-only-insecure-secret-replace-in-production!!
-      - DB_URL=jdbc:postgresql://content-db:5432/verita_content
-      - DB_USERNAME=verita_content_user
-      - DB_PASSWORD=verita_content_password
+      - DB_HOST=content-db
+      - DB_PORT=5432
+      - DB_NAME=verita_contents
+      - DB_USER=svc_content
+      - DB_PASSWORD=svc_content_password
       - STORAGE_S3_ENDPOINT=http://minio:9000
+      - STORAGE_S3_ACCESS_KEY=content-service
+      - STORAGE_S3_SECRET_KEY=content-service-s3-secret
       # Cross-service calls (Clients.java): reach peers by compose service name, not localhost.
       - USER_SERVICE_BASE_URL=http://user-service:8081
       - GENAI_SERVICE_BASE_URL=http://genai-service:8000
@@ -151,8 +217,8 @@ services:
       - DB_HOST=recommendation-db
       - DB_PORT=5432
       - DB_NAME=verita_recommendations
-      - DB_USER=verita_user
-      - DB_PASSWORD=verita_password
+      - DB_USER=svc_recommendation
+      - DB_PASSWORD=svc_recommendation_password
       - CONTENT_SERVICE_BASE_URL=http://content-service:8082
     depends_on:
       recommendation-db:

@@ -1,6 +1,7 @@
 ﻿---
 # Deploys all Verita services to the Azure VM.
-# Requires: github_actor, github_token, db_password, jwt_secret, minio_root_password,
+# Requires: github_actor, github_token, user_db_password, content_db_password,
+# recommendation_db_password, jwt_secret, minio_root_password,
 # user_service_s3_access_key, user_service_s3_secret_key,
 # content_service_s3_access_key, content_service_s3_secret_key passed as --extra-vars by the caller.
 - name: Deploy Verita services
@@ -70,26 +71,25 @@
         group: azureuser
         mode: "0644"
 
-    - name: Write .env file with database and object storage credentials
+    # Emits only secrets and VM-specific values. Non-secret DB names/users (USER_DB_NAME,
+    # USER_DB_USER, …) and other non-secrets (MINIO_ROOT_USER, STORAGE_S3_ENDPOINT/REGION,
+    # buckets) carry committed defaults in docker-compose.prod.yml — keeping them out of .env
+    # preserves reviewability. S3 access keys stay here as they pair with their secret keys.
+    - name: Write .env file with secrets and VM-specific credentials
       copy:
         dest: "{{ deploy_dir }}/.env"
         content: |
-          DB_NAME=verita_users
-          DB_USER=verita_user
-          DB_PASSWORD={{ db_password }}
+          USER_DB_PASSWORD={{ user_db_password }}
+          CONTENT_DB_PASSWORD={{ content_db_password }}
+          RECOMMENDATION_DB_PASSWORD={{ recommendation_db_password }}
           JWT_SECRET={{ jwt_secret }}
           CORS_ALLOWED_ORIGINS={{ cors_allowed_origins | default('http://' ~ ansible_host) }}
-          MINIO_ROOT_USER={{ minio_root_user | default('verita_minio') }}
           MINIO_ROOT_PASSWORD={{ minio_root_password }}
           USER_SERVICE_S3_ACCESS_KEY={{ user_service_s3_access_key }}
           USER_SERVICE_S3_SECRET_KEY={{ user_service_s3_secret_key }}
           CONTENT_SERVICE_S3_ACCESS_KEY={{ content_service_s3_access_key }}
           CONTENT_SERVICE_S3_SECRET_KEY={{ content_service_s3_secret_key }}
-          STORAGE_S3_ENDPOINT=http://minio:9000
           STORAGE_S3_PUBLIC_ENDPOINT={{ storage_s3_public_endpoint | default('http://' ~ ansible_host ~ '/storage') }}
-          STORAGE_S3_REGION={{ storage_s3_region | default('us-east-1') }}
-          STORAGE_USER_PORTRAITS_BUCKET={{ storage_user_portraits_bucket | default('verita-user-portraits') }}
-          STORAGE_POST_PHOTOS_BUCKET={{ storage_post_photos_bucket | default('verita-post-photos') }}
         owner: azureuser
         group: azureuser
         mode: "0600"
