@@ -8,6 +8,7 @@ import com.verita.contentservice.domain.PostStatus;
 import com.verita.contentservice.domain.VoteEntity;
 import com.verita.contentservice.domain.VoteTargetType;
 import com.verita.contentservice.domain.VoteType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +41,14 @@ class PostRepositoryIT {
     @Autowired private VoteRepository voteRepository;
     @Autowired private BookmarkRepository bookmarkRepository;
     @Autowired private CommentRepository commentRepository;
+
+    @BeforeEach
+    void cleanDatabase() {
+        commentRepository.deleteAll();
+        bookmarkRepository.deleteAll();
+        voteRepository.deleteAll();
+        postRepository.deleteAll();
+    }
 
     private PostEntity newPost(String title, String content, PostStatus status, boolean deleted) {
         PostEntity p = new PostEntity();

@@ -94,6 +94,7 @@ services:
       - DB_USER=verita_user
       - DB_PASSWORD=verita_password
       - STORAGE_S3_ENDPOINT=http://minio:9000
+      - CONTENT_SERVICE_BASE_URL=http://content-service:8082
     depends_on:
       user-db:
         condition: service_healthy

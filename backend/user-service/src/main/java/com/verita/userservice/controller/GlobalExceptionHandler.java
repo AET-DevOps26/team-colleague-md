@@ -2,6 +2,8 @@ package com.verita.userservice.controller;
 
 import com.verita.model.ErrorResponse;
 import com.verita.userservice.exception.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -17,6 +19,7 @@ import java.time.OffsetDateTime;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(DuplicateUsernameException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateUsername(DuplicateUsernameException ex) {
@@ -42,6 +45,34 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidAvatarException.class)
     public ResponseEntity<ErrorResponse> handleInvalidAvatar(InvalidAvatarException ex) {
         return errorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(DeleteUserContentException.class)
+    public ResponseEntity<ErrorResponse> handleDeleteUserContent(DeleteUserContentException ex) {
+        log.warn(
+                "Failed to clean up user content data: userId={}, service={}, endpoint={}, downstreamStatus={}, downstreamBody={}",
+                ex.getUserId(),
+                ex.getDownstreamService(),
+                ex.getEndpoint(),
+                ex.getDownstreamStatus(),
+                ex.getDownstreamResponseBody(),
+                ex
+        );
+        return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+    }
+
+    @ExceptionHandler(DeleteUserRecommendationException.class)
+    public ResponseEntity<ErrorResponse> handleDeleteUserRecommendation(DeleteUserRecommendationException ex) {
+        log.warn(
+                "Failed to clean up user recommendation data: userId={}, service={}, endpoint={}, downstreamStatus={}, downstreamBody={}",
+                ex.getUserId(),
+                ex.getDownstreamService(),
+                ex.getEndpoint(),
+                ex.getDownstreamStatus(),
+                ex.getDownstreamResponseBody(),
+                ex
+        );
+        return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
     }
 
     @ExceptionHandler(MissingServletRequestPartException.class)

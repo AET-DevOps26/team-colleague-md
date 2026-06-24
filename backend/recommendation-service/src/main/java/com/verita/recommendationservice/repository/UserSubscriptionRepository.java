@@ -11,7 +11,13 @@ public interface UserSubscriptionRepository extends JpaRepository<UserSubscripti
 
     List<UserSubscription> findByFollowerId(UUID followerId);
 
+    List<UserSubscription> findByFollowedId(UUID followedId);
+
     Optional<UserSubscription> findByFollowerIdAndFollowedId(UUID followerId, UUID followedId);
 
     boolean existsByFollowerIdAndFollowedId(UUID followerId, UUID followedId);
+
+    void deleteByFollowerId(UUID followerId);
+
+    void deleteByFollowedId(UUID followedId);
 }
