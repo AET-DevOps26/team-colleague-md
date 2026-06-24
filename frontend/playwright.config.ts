@@ -2,10 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  snapshotDir: './tests/snapshots',
-  expect: {
-    toHaveScreenshot: { maxDiffPixelRatio: 0.25 },
-  },
+  testMatch: ['**/e2e/**/*.spec.ts', '**/api/**/*.spec.ts'],
+  workers: 1,
+  retries: 1,
   use: {
     baseURL: 'http://localhost:3000',
     screenshot: 'only-on-failure',

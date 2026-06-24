@@ -16,4 +16,6 @@ public interface InteractionRepository extends JpaRepository<Interaction, UUID> 
     /** Distinct posts a user has interacted with — used to seen-filter the personal feed (#159). */
     @Query("SELECT DISTINCT i.postId FROM Interaction i WHERE i.userId = :userId")
     Set<UUID> findDistinctPostIdsByUserId(UUID userId);
+
+    void deleteByUserId(UUID userId);
 }

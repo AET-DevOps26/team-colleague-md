@@ -4,6 +4,8 @@ import com.verita.model.UserRole;
 import com.verita.userservice.entity.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.security.UserDetailsImpl;
+import com.verita.userservice.client.ContentServiceClient;
+import com.verita.userservice.client.RecommendationServiceClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -84,6 +87,12 @@ class AvatarEndpointE2ETests {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @MockitoBean
+    private ContentServiceClient contentServiceClient;
+
+    @MockitoBean
+    private RecommendationServiceClient recommendationServiceClient;
 
     @DynamicPropertySource
     static void configureContainers(DynamicPropertyRegistry registry) {

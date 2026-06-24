@@ -14,6 +14,13 @@ services:
     tag: latest
     port: 8081
     springProfile: dev
+    # Sends the ADR-0007 X-Internal-Service-Token header to content-/recommendation-service
+    # when cleaning up a deleted user's cross-service data (Content/RecommendationServiceClient).
+    internalToken: true
+    # Downstream services reached by their in-cluster Service names for the deletion cleanup.
+    extraEnv:
+      CONTENT_SERVICE_BASE_URL: "http://{{ .Release.Name }}-content:8082"
+      RECOMMENDATION_SERVICE_BASE_URL: "http://{{ .Release.Name }}-recommendation:8083"
     health:
       path: /actuator/health
       initialDelaySeconds: 45

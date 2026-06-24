@@ -152,6 +152,7 @@ services:
       - STORAGE_S3_SECRET_KEY=${USER_SERVICE_S3_SECRET_KEY:?USER_SERVICE_S3_SECRET_KEY is required}
       - STORAGE_S3_PATH_STYLE_ACCESS=true
       - STORAGE_USER_PORTRAITS_BUCKET=${STORAGE_USER_PORTRAITS_BUCKET:-verita-user-portraits}
+      - CONTENT_SERVICE_BASE_URL=http://content-service:8082
     depends_on:
       user-db:
         condition: service_healthy

@@ -42,6 +42,9 @@ public class SecurityConfig {
                         "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 // spec: security: [] — unauthenticated access permitted
                 .requestMatchers(HttpMethod.GET, "/api/v1/feed/trending").permitAll()
+                // Service-only endpoints: permitAll at the user-auth layer; authenticated as a
+                // service by INTERNAL_SERVICE_TOKEN in InternalAuthFilter, not a user token (ADR-0007).
+                .requestMatchers("/internal/**").permitAll()
                 // everything else requires a valid JWT
                 .anyRequest().authenticated()
             )

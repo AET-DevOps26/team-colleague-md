@@ -103,14 +103,14 @@ public class ContentClient {
     }
 
     /**
-     * Applies a single follower-count delta for a topic via {@code POST /api/v1/topics/follower-counts},
+     * Applies a single follower-count delta for a topic via {@code POST /internal/v1/topics/follower-counts},
      * authenticated as a service with the shared internal token (ADR-0007). content keys this endpoint
      * by topic <em>name</em>, so the caller must resolve the name first. Best-effort: exceptions
      * propagate to the async caller, which logs and swallows them (ADR-0002).
      */
     public void applyFollowerCountDelta(String topicName, int delta) {
         client.post()
-                .uri("/api/v1/topics/follower-counts")
+                .uri("/internal/v1/topics/follower-counts")
                 // Service-to-service auth (ADR-0007); the user token is no longer required here.
                 .header(INTERNAL_SERVICE_HEADER, internalServiceToken)
                 .contentType(MediaType.APPLICATION_JSON)

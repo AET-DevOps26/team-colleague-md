@@ -1,4 +1,4 @@
-package com.verita.userservice;
+package com.verita.userservice.service;
 
 import com.verita.model.AuthResponse;
 import com.verita.model.LoginRequest;

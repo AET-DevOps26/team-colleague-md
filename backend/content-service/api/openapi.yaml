@@ -13,6 +13,27 @@ servers:
     description: Production-style internal URL
 
 paths:
+  # --- INTERNAL USER CLEANUP ---
+  /internal/v1/users/{userId}/data:
+    delete:
+      operationId: deleteUserContentData
+      summary: Delete all content-service data owned by a user
+      description: |
+        Internal endpoint called by user-service during account deletion.
+        Soft-deletes authored posts and comments, removes user-owned bookmarks and votes,
+        and refreshes affected counters. The operation is idempotent.
+      tags: [Internal]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: User content data cleaned up successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   # --- POSTS MANAGEMENT ---
   /api/v1/posts:
     get:
@@ -556,13 +577,15 @@ paths:
               schema: { type: array, items: { $ref: '#/components/schemas/TopicResponse' } }
         '400': { $ref: '#/components/responses/BadRequest' }
 
-  /api/v1/topics/follower-counts:
+  /internal/v1/topics/follower-counts:
     post:
       operationId: updateTopicFollowerCounts
-      summary: Apply batch follower-count deltas
-      description: Increments or decrements follower_count for each named topic. +1 = follow, -1 = unfollow.
+      summary: Apply batch follower-count deltas (internal, service-authenticated)
+      description: >
+        Service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Increments or
+        decrements follower_count for each named topic. +1 = follow, -1 = unfollow.
       tags: [Topics]
-      security: [{ bearerAuth: [] }]
+      security: []
       requestBody:
         required: true
         content:
@@ -615,7 +638,7 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /api/v1/posts/digest:
+  /internal/v1/posts/digest:
     post:
       operationId: createDigestPost
       summary: Create an AI Daily Digest post (internal, service-authenticated)

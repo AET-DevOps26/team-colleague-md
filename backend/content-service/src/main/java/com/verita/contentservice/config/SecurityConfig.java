@@ -57,9 +57,9 @@ public class SecurityConfig {
                         "/api/v1/topics",
                         "/api/v1/topics/search",
                         "/api/v1/topics/trending").permitAll()
-                // Service-only endpoint: authenticated by INTERNAL_SERVICE_TOKEN, not a user token (ADR-0007).
-                .requestMatchers(HttpMethod.POST, "/api/v1/topics/follower-counts").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/v1/posts/digest").permitAll()
+                // Service-only endpoints: permitAll at the user-auth layer; authenticated as a
+                // service by INTERNAL_SERVICE_TOKEN in InternalAuthFilter, not a user token (ADR-0007).
+                .requestMatchers("/internal/**").permitAll()
                 .anyRequest().authenticated())
             // Optional authentication (ADR-0006): fail-open filter; authorization rules enforce.
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

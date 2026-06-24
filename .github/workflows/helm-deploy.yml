@@ -30,7 +30,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.environment == 'prod' && 'main' || 'dev') || '' }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.environment == 'prod' && 'main' || 'dev') || github.event.workflow_run.head_sha }}
 
       - name: Set up Kubeconfig
         run: |

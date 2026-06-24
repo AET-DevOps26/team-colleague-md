@@ -9,7 +9,9 @@ import java.util.Optional;
 import java.util.UUID;
 public interface VoteRepository extends JpaRepository<VoteEntity, UUID> {
     Optional<VoteEntity> findByUserIdAndTargetTypeAndTargetId(UUID userId, VoteTargetType targetType, UUID targetId);
+    List<VoteEntity> findByUserId(UUID userId);
     List<VoteEntity> findByUserIdAndTargetTypeAndTargetIdIn(UUID userId, VoteTargetType targetType, Collection<UUID> targetIds);
+    void deleteByUserId(UUID userId);
     long countByTargetTypeAndTargetIdAndVoteType(VoteTargetType targetType, UUID targetId, VoteType voteType);
     List<VoteEntity> findByUserIdAndTargetTypeAndVoteType(UUID userId, VoteTargetType targetType, VoteType voteType);
 }

@@ -16,6 +16,7 @@ public interface PostRepository extends JpaRepository<PostEntity, UUID> {
     Page<PostEntity> findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus status, PostType type, Pageable pageable);
     Page<PostEntity> findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, PostType type, String topicName, Pageable pageable);
     Page<PostEntity> findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(UUID authorId, PostStatus status, Pageable pageable);
+    List<PostEntity> findByAuthorIdAndDeletedFalse(UUID authorId);
     Optional<PostEntity> findByIdAndDeletedFalse(UUID id);
     @Query(value = "SELECT * FROM posts WHERE deleted = false AND status = 'PUBLISHED'" +
                    " AND search_vector @@ plainto_tsquery('english', :query)" +
