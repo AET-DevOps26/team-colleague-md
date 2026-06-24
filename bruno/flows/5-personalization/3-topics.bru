@@ -15,7 +15,13 @@ assert {
 }
 
 script:post-response {
+  // /api/v1/topics returns an array of CATEGORIES; the topic UUID lives in category.topics[].id,
+  // not at the top level (a category's id is a slug like "research", not a UUID).
   const b = res.getBody();
-  const arr = Array.isArray(b) ? b : (b.topics || b.content || []);
-  if (arr.length) bru.setEnvVar("topicId", arr[0].id);
+  const cats = Array.isArray(b) ? b : (b.categories || b.content || []);
+  let topicId = null;
+  for (const c of cats) {
+    if (Array.isArray(c.topics) && c.topics.length) { topicId = c.topics[0].id; break; }
+  }
+  if (topicId) bru.setEnvVar("topicId", topicId);
 }

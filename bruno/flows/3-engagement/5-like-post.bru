@@ -6,12 +6,18 @@ meta {
 
 post {
   url: {{contentBaseUrl}}/api/v1/posts/{{postId}}/like
-  body: none
+  body: json
   auth: bearer
 }
 
 auth:bearer {
   token: {{token}}
+}
+
+body:json {
+  {
+    "type": "LIKE"
+  }
 }
 
 assert {
