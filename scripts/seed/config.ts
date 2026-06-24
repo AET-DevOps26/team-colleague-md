@@ -21,8 +21,8 @@ export function getSeedConfig(env: NodeJS.ProcessEnv): SeedConfig {
       host: env.USER_DB_HOST ?? "localhost",
       port: parsePort(env.USER_DB_PORT ?? "5432", "USER_DB_PORT"),
       database: env.USER_DB_NAME ?? "verita_users",
-      user: env.USER_DB_USER ?? "verita_user",
-      password: env.USER_DB_PASSWORD ?? "verita_password",
+      user: env.USER_DB_USER ?? "svc_user",
+      password: env.USER_DB_PASSWORD ?? "svc_user_password",
     },
     minio: {
       endpoint: env.MINIO_ENDPOINT ?? "http://localhost:9000",

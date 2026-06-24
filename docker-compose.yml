@@ -239,8 +239,8 @@ services:
     env_file:
       - ./genai-service/.env
     healthcheck:
-      # Poll FastAPI health endpoint; non-200 response marks container unhealthy
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      # Poll FastAPI health endpoint via the bundled Python runtime — the slim base ships no curl/wget.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3

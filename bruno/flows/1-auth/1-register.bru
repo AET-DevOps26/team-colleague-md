@@ -24,9 +24,13 @@ assert {
 
 script:pre-request {
   // unique account per run so register never collides on a re-run
-  const stamp = Date.now();
+  // base36 keeps username <= 20 chars (flowuser + 8 = 16); plain ms timestamp overflows the 20-char cap
+  const stamp = Date.now().toString(36);
   bru.setEnvVar("flowUsername", "flowuser" + stamp);
   bru.setEnvVar("flowEmail", "flowuser" + stamp + "@example.com");
+  // LOCAL ONLY — do not commit. seed default password (scripts/seed/data/users.ts).
+  // setVar (runtime store) — the secret-declared {{userPassword}} reads this, not setEnvVar.
+  if (!bru.getVar("userPassword")) bru.setVar("userPassword", "Password123!");
 }
 
 docs {

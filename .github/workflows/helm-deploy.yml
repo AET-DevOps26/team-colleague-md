@@ -69,6 +69,7 @@ jobs:
           if [ "$DEPLOY_ENV" = "prod" ]; then
             PROD_SECRETS=(
               --set global.jwtSecret="${{ secrets.JWT_SECRET }}"
+              --set global.internalServiceToken="${{ secrets.INTERNAL_SERVICE_TOKEN }}"
               --set minio.rootPassword="${{ secrets.MINIO_ROOT_PASSWORD }}"
               --set user-postgresql.auth.password="${{ secrets.USER_DB_PASSWORD }}"
               --set content-postgresql.auth.password="${{ secrets.CONTENT_DB_PASSWORD }}"

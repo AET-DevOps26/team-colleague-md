@@ -68,6 +68,15 @@ spec:
                   name: "{{ $.Release.Name }}-jwt"
                   key: secret
             {{- end }}
+            {{- if $svc.internalToken }}
+            # ADR-0007 shared service-to-service secret: recommendation-service sends it,
+            # content-service validates it. Same value for both via the shared Secret.
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $.Release.Name }}-internal-token"
+                  key: token
+            {{- end }}
             {{- range $k, $v := $svc.extraEnv }}
             - name: {{ $k }}
               value: {{ tpl $v $ | quote }}
