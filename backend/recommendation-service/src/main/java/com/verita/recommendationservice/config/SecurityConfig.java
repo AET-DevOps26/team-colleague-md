@@ -37,6 +37,9 @@ public class SecurityConfig {
                 .accessDeniedHandler(securityErrorHandler)
             )
             .authorizeHttpRequests(auth -> auth
+                // Infra endpoints: health probe (docker/k8s), error dispatch, API docs.
+                .requestMatchers("/actuator/health", "/error",
+                        "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 // spec: security: [] — unauthenticated access permitted
                 .requestMatchers(HttpMethod.GET, "/api/v1/feed/trending").permitAll()
                 // everything else requires a valid JWT
