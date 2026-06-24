@@ -1,0 +1,20 @@
+meta {
+  name: Resolve other user
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{userBaseUrl}}/api/v1/users/by-username/{{otherUsername}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isDefined
+}
+
+script:post-response {
+  bru.setEnvVar("otherUserId", res.getBody().id);
+}

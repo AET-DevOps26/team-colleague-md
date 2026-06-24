@@ -4,7 +4,7 @@ import com.verita.model.AuthResponse;
 import com.verita.model.LoginRequest;
 import com.verita.model.RegisterRequest;
 import com.verita.userservice.exception.*;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.entity.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.security.JwtUtils;
 import com.verita.userservice.security.UserDetailsImpl;

@@ -13,7 +13,7 @@ import java.io.IOException;
 /**
  * Handles unauthenticated access by returning HTTP 401 instead of redirecting
  * to a login page (which would be meaningless for a stateless REST API).
- * Registered in {@link WebSecurityConfig} as the default authentication entry point.
+ * Registered in {@link SecurityConfig} as the default authentication entry point.
  */
 @Slf4j
 @Component

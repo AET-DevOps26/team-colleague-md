@@ -24,8 +24,8 @@ class RecommendationServiceApplicationTests {
         registry.add("spring.datasource.username", db::getUsername);
         registry.add("spring.datasource.password", db::getPassword);
         registry.add("spring.datasource.driver-class-name", db::getDriverClassName);
-        // Resource-server config needs a concrete issuer value to bind; no token is decoded here.
-        registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> "https://issuer.test.local");
+        // Shared HS256 secret for the NimbusJwtDecoder bean to bind; no token is decoded here.
+        registry.add("app.jwt-secret", () -> "0123456789012345678901234567890123456789012345678901234567890123");
     }
 
     @Test

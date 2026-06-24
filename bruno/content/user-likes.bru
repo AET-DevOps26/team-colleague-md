@@ -1,0 +1,15 @@
+meta {
+  name: User likes
+  type: http
+  seq: 19
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/users/{{ownUserId}}/likes
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

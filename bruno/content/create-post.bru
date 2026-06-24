@@ -1,0 +1,24 @@
+meta {
+  name: Create post
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/posts
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "title": "Hello from Bruno",
+    "content": "A post body long enough to be valid.",
+    "topics": ["ai"],
+    "status": "PUBLISHED"
+  }
+}

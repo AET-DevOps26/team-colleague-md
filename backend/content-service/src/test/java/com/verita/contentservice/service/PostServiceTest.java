@@ -1,15 +1,17 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
-import com.verita.contentservice.domain.TopicEntity;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.PostType;
+import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.TopicRepository;
 import com.verita.contentservice.repository.VoteRepository;
-import com.verita.contentservice.support.Clients;
+import com.verita.contentservice.client.UserClient;
+import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.AuthorSummary;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
@@ -38,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,7 +51,8 @@ public class PostServiceTest {
     @Mock private TopicRepository topicRepository;
     @Mock private VoteRepository voteRepository;
     @Mock private BookmarkRepository bookmarkRepository;
-    @Mock private Clients clients;
+    @Mock private UserClient userClient;
+    @Mock private SecurityUtils securityUtils;
     @Mock private ApplicationEventPublisher eventPublisher;
     @InjectMocks private PostService postService;
 
@@ -59,8 +63,9 @@ public class PostServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         userId = UUID.randomUUID();
-        // currentUserId / optionalUserId resolve through the user service
-        when(clients.getCurrentUser(AUTH)).thenReturn(profile(userId, "alice"));
+        // Identity now comes from the verified token via SecurityUtils (ADR-0006).
+        lenient().when(securityUtils.getCurrentUserId()).thenReturn(userId);
+        lenient().when(securityUtils.getCurrentUserIdOptional()).thenReturn(Optional.of(userId));
         // save() echoes the entity back, assigning an id like the DB would
         when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> {
             PostEntity p = inv.getArgument(0);
@@ -91,7 +96,7 @@ public class PostServiceTest {
                 .status(PostRequest.StatusEnum.PUBLISHED)
                 .topics(List.of());
 
-        PostResponse response = postService.createPost(request, AUTH);
+        PostResponse response = postService.createPost(request);
 
         assertNotNull(response);
         assertNotNull(response.getId());
@@ -107,19 +112,26 @@ public class PostServiceTest {
                 .status(PostRequest.StatusEnum.PUBLISHED)
                 .topics(List.of());
 
-        PostResponse response = postService.createPost(request, AUTH);
+        PostResponse response = postService.createPost(request);
 
         assertEquals(240, response.getExcerpt().length());
     }
 
     @Test
-    void createPost_blankAuthorization_throwsUnauthorized() {
-        PostRequest request = new PostRequest("A valid title", "content").topics(List.of());
+    void createDigest_savesPublishedDigestTypePostBySystemAuthor() {
+        UUID systemAuthor = UUID.randomUUID();
+        org.springframework.test.util.ReflectionTestUtils.setField(postService, "digestSystemAuthorId", systemAuthor);
+        com.verita.model.DigestPostRequest req =
+                new com.verita.model.DigestPostRequest("Daily AI Digest", "## Top stories\nbody");
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.createPost(request, "  "));
+        PostResponse resp = postService.createDigest(req);
 
-        assertEquals(401, ex.getStatusCode().value());
+        assertEquals(PostResponse.TypeEnum.DIGEST, resp.getType());
+        ArgumentCaptor<PostEntity> captor = ArgumentCaptor.forClass(PostEntity.class);
+        verify(postRepository).save(captor.capture());
+        assertEquals(PostType.DIGEST, captor.getValue().getType());
+        assertEquals(PostStatus.PUBLISHED, captor.getValue().getStatus());
+        assertEquals(systemAuthor, captor.getValue().getAuthorId());
     }
 
     // ---- update / patch ownership ------------------------------------------
@@ -131,7 +143,7 @@ public class PostServiceTest {
 
         PostRequest request = new PostRequest("A valid title", "content").topics(List.of());
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.updatePost(owned.getId(), request, AUTH));
+                () -> postService.updatePost(owned.getId(), request));
 
         assertEquals(403, ex.getStatusCode().value());
         verify(eventPublisher, never()).publishEvent(any());
@@ -144,7 +156,7 @@ public class PostServiceTest {
 
         PostRequest request = new PostRequest("A valid title", "content").topics(List.of());
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.updatePost(id, request, AUTH));
+                () -> postService.updatePost(id, request));
 
         assertEquals(404, ex.getStatusCode().value());
     }
@@ -155,7 +167,7 @@ public class PostServiceTest {
         when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
 
         PostPatchRequest patch = new PostPatchRequest().title("A brand new title");
-        postService.patchPost(owned.getId(), patch, AUTH);
+        postService.patchPost(owned.getId(), patch);
 
         assertEquals("A brand new title", owned.getTitle());
         verify(eventPublisher).publishEvent(any(PostSummaryRequestedEvent.class));
@@ -168,7 +180,7 @@ public class PostServiceTest {
 
         // status only: not a summary input, so no GenAI re-summarization
         PostPatchRequest patch = new PostPatchRequest().status(PostPatchRequest.StatusEnum.DRAFT);
-        postService.patchPost(owned.getId(), patch, AUTH);
+        postService.patchPost(owned.getId(), patch);
 
         verify(eventPublisher, never()).publishEvent(any());
     }
@@ -180,7 +192,7 @@ public class PostServiceTest {
         when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
 
         PostPatchRequest patch = new PostPatchRequest().excerpt(null); // JsonNullable.of(null) -> clear
-        postService.patchPost(owned.getId(), patch, AUTH);
+        postService.patchPost(owned.getId(), patch);
 
         assertNull(owned.getExcerpt());
     }
@@ -192,7 +204,7 @@ public class PostServiceTest {
         PostEntity p = post(UUID.randomUUID(), PostStatus.PUBLISHED);
         when(postRepository.findByIdAndDeletedFalse(p.getId())).thenReturn(Optional.of(p));
 
-        PostResponse response = postService.getPost(p.getId(), AUTH);
+        PostResponse response = postService.getPost(p.getId());
 
         assertNotNull(response);
         verify(postRepository).incrementViewCount(p.getId());
@@ -204,7 +216,7 @@ public class PostServiceTest {
         when(postRepository.findByIdAndDeletedFalse(draft.getId())).thenReturn(Optional.of(draft));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getPost(draft.getId(), AUTH));
+                () -> postService.getPost(draft.getId()));
 
         assertEquals(404, ex.getStatusCode().value());
         verify(postRepository, never()).incrementViewCount(any());
@@ -215,7 +227,7 @@ public class PostServiceTest {
         PostEntity draft = post(userId, PostStatus.DRAFT); // my own draft
         when(postRepository.findByIdAndDeletedFalse(draft.getId())).thenReturn(Optional.of(draft));
 
-        PostResponse response = postService.getPost(draft.getId(), AUTH);
+        PostResponse response = postService.getPost(draft.getId());
 
         assertNotNull(response);
         verify(postRepository).incrementViewCount(draft.getId());
@@ -232,7 +244,7 @@ public class PostServiceTest {
         owned.getTopics().add(topic);
         when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
 
-        postService.deletePost(owned.getId(), AUTH);
+        postService.deletePost(owned.getId());
 
         assertTrue(owned.isDeleted());
         assertNotNull(owned.getDeletedAt());
@@ -247,7 +259,7 @@ public class PostServiceTest {
         owned.getTopics().add(topic);
         when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
 
-        postService.deletePost(owned.getId(), AUTH);
+        postService.deletePost(owned.getId());
 
         assertTrue(owned.isDeleted());
         verify(topicRepository, never()).decrementTotalPostCount(any());
@@ -258,10 +270,10 @@ public class PostServiceTest {
     @Test
     void getUserBookmarks_otherUserWithBookmarksHidden_throwsForbidden() {
         UUID target = UUID.randomUUID();
-        when(clients.getUserPreferences(target)).thenReturn(new UserPreferencesDto(false, true));
+        when(userClient.getUserPreferences(target)).thenReturn(new UserPreferencesDto(false, true));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getUserBookmarks(target, 0, 10, AUTH));
+                () -> postService.getUserBookmarks(target, 0, 10));
 
         assertEquals(403, ex.getStatusCode().value());
     }
@@ -269,10 +281,10 @@ public class PostServiceTest {
     @Test
     void getUserBookmarks_prefsLookupThrows_failsClosedForbidden() {
         UUID target = UUID.randomUUID();
-        when(clients.getUserPreferences(target)).thenThrow(new RuntimeException("user service down"));
+        when(userClient.getUserPreferences(target)).thenThrow(new RuntimeException("user service down"));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getUserBookmarks(target, 0, 10, AUTH));
+                () -> postService.getUserBookmarks(target, 0, 10));
 
         assertEquals(403, ex.getStatusCode().value());
     }
@@ -280,11 +292,11 @@ public class PostServiceTest {
     @Test
     void getUserBookmarks_otherUserWithBookmarksShown_returnsPage() {
         UUID target = UUID.randomUUID();
-        when(clients.getUserPreferences(target)).thenReturn(new UserPreferencesDto(true, false));
+        when(userClient.getUserPreferences(target)).thenReturn(new UserPreferencesDto(true, false));
         when(postRepository.findBookmarkedPublishedPostsByUserId(eq(target), any()))
                 .thenReturn(Page.empty());
 
-        PostPage page = postService.getUserBookmarks(target, 0, 10, AUTH);
+        PostPage page = postService.getUserBookmarks(target, 0, 10);
 
         assertNotNull(page);
         assertEquals(0, page.getTotalElements());
@@ -295,18 +307,18 @@ public class PostServiceTest {
         when(postRepository.findBookmarkedPublishedPostsByUserId(eq(userId), any()))
                 .thenReturn(Page.empty());
 
-        postService.getUserBookmarks(userId, 0, 10, AUTH);
+        postService.getUserBookmarks(userId, 0, 10);
 
-        verify(clients, never()).getUserPreferences(any());
+        verify(userClient, never()).getUserPreferences(any());
     }
 
     @Test
     void getUserLikes_otherUserWithLikesHidden_throwsForbidden() {
         UUID target = UUID.randomUUID();
-        when(clients.getUserPreferences(target)).thenReturn(new UserPreferencesDto(true, false));
+        when(userClient.getUserPreferences(target)).thenReturn(new UserPreferencesDto(true, false));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getUserLikes(target, 0, 10, AUTH));
+                () -> postService.getUserLikes(target, 0, 10));
 
         assertEquals(403, ex.getStatusCode().value());
     }
@@ -318,7 +330,7 @@ public class PostServiceTest {
         List<UUID> ids = java.util.stream.Stream.generate(UUID::randomUUID).limit(51).toList();
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getCards(ids, AUTH));
+                () -> postService.getCards(ids));
 
         assertEquals(400, ex.getStatusCode().value());
     }
@@ -332,7 +344,7 @@ public class PostServiceTest {
         // repository returns them in arbitrary order; service must reorder to match ids and drop the draft
         when(postRepository.findByIdInAndDeletedFalse(any())).thenReturn(List.of(p2, draft, p1));
 
-        List<PostCard> cards = postService.getCards(ids, AUTH);
+        List<PostCard> cards = postService.getCards(ids);
 
         assertEquals(2, cards.size());
         assertEquals(p1.getId(), cards.get(0).getId());
@@ -342,24 +354,25 @@ public class PostServiceTest {
     // ---- listing routes the right query ------------------------------------
 
     @Test
-    void getAllPosts_noTopic_usesUnfilteredQuery() {
-        when(postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(eq(PostStatus.PUBLISHED), any()))
-                .thenReturn(Page.empty());
+    void getAllPosts_noTopic_defaultsToNormalTypeQuery() {
+        when(postRepository.findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, null, AUTH);
+        postService.getAllPosts(0, 10, null, null);
 
-        verify(postRepository).findByDeletedFalseAndStatusOrderByCreatedAtDesc(eq(PostStatus.PUBLISHED), any());
+        verify(postRepository).findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), any());
     }
 
     @Test
-    void getAllPosts_withTopic_usesTopicFilteredQuery() {
-        when(postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq("java"), any())).thenReturn(Page.empty());
+    void getAllPosts_withTopicAndType_usesTopicAndTypeFilteredQuery() {
+        when(postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq(PostType.DIGEST), eq("java"), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, "java", AUTH);
+        postService.getAllPosts(0, 10, "java", "DIGEST");
 
-        verify(postRepository).findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq("java"), any());
+        verify(postRepository).findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq(PostType.DIGEST), eq("java"), any());
     }
 
     // ---- pure helpers / author summary -------------------------------------
@@ -373,7 +386,7 @@ public class PostServiceTest {
     @Test
     void authorSummary_userServiceFailure_degradesToUnknown() {
         UUID author = UUID.randomUUID();
-        when(clients.getUserById(author)).thenThrow(new RuntimeException("unavailable"));
+        when(userClient.getUserById(author)).thenThrow(new RuntimeException("unavailable"));
 
         AuthorSummary summary = postService.authorSummary(author);
 
@@ -385,7 +398,7 @@ public class PostServiceTest {
     @Test
     void authorSummary_populatesFieldsFromProfile() {
         UUID author = UUID.randomUUID();
-        when(clients.getUserById(author))
+        when(userClient.getUserById(author))
                 .thenReturn(new UserProfileDto(author, "bob", "Bob Builder", null, "VERIFIED", "ACME"));
 
         AuthorSummary summary = postService.authorSummary(author);
@@ -400,7 +413,7 @@ public class PostServiceTest {
         when(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
                 eq(userId), eq(PostStatus.DRAFT), any())).thenReturn(Page.empty());
 
-        postService.getMyDrafts(0, 10, AUTH);
+        postService.getMyDrafts(0, 10);
 
         verify(postRepository).findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
                 eq(userId), eq(PostStatus.DRAFT), any());

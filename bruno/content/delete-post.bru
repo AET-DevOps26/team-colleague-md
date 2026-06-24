@@ -1,0 +1,15 @@
+meta {
+  name: Delete post
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

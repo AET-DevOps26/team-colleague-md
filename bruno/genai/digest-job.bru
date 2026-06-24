@@ -1,0 +1,15 @@
+meta {
+  name: Get digest job
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{genaiBaseUrl}}/api/v1/genai/digests/jobs/{{jobId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

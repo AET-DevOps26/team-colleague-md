@@ -1,6 +1,12 @@
 global:
   registry: ghcr.io/aet-devops26/team-colleague-md
   imagePullSecrets: []
+  # Shared HS256 secret for user-/content-/recommendation-service. DEV DEFAULT ONLY —
+  # override in values-prod.yaml or via --set global.jwtSecret=... for real deployments.
+  jwtSecret: "dev-only-insecure-secret-replace-in-production!!"
+  # Shared service-to-service secret (ADR-0007) consumed by content- and recommendation-service.
+  # DEV DEFAULT ONLY — override via --set global.internalServiceToken=... for real deployments.
+  internalServiceToken: "dev-only-internal-service-token"
 
 services:
   user:
@@ -10,13 +16,24 @@ services:
     metrics:
       path: /actuator/prometheus
     springProfile: dev
+    # Sends the ADR-0007 X-Internal-Service-Token header to content-/recommendation-service
+    # when cleaning up a deleted user's cross-service data (Content/RecommendationServiceClient).
+    internalToken: true
+    # Downstream services reached by their in-cluster Service names for the deletion cleanup.
+    extraEnv:
+      CONTENT_SERVICE_BASE_URL: "http://{{ .Release.Name }}-content:8082"
+      RECOMMENDATION_SERVICE_BASE_URL: "http://{{ .Release.Name }}-recommendation:8083"
     health:
       path: /actuator/health
       initialDelaySeconds: 45
     db:
       name: verita_users
-      user: verita_user
-    storage: true
+      user: svc_user
+    # Scoped S3 identity: s3User must match a minio.users[].accessKey below. The
+    # service reads STORAGE_S3_ACCESS_KEY (this literal) + STORAGE_S3_SECRET_KEY
+    # (from the per-user Secret minted by secret-s3.yaml).
+    storage:
+      s3User: user-service
     resources:
       requests:
         cpu: "100m"
@@ -32,13 +49,20 @@ services:
     metrics:
       path: /actuator/prometheus
     springProfile: dev
+    # Validates the ADR-0007 X-Internal-Service-Token header (InternalAuthFilter).
+    internalToken: true
+    # Cross-service calls (Clients.java) reach peers by their in-cluster Service name.
+    extraEnv:
+      USER_SERVICE_BASE_URL: "http://{{ .Release.Name }}-user:8081"
+      GENAI_SERVICE_BASE_URL: "http://{{ .Release.Name }}-genai:8000"
     health:
       path: /actuator/health
       initialDelaySeconds: 45
     db:
-      name: verita_content
-      user: verita_user
-    storage: true
+      name: verita_contents
+      user: svc_content
+    storage:
+      s3User: content-service
     resources:
       requests:
         cpu: "100m"
@@ -54,12 +78,17 @@ services:
     metrics:
       path: /actuator/prometheus
     springProfile: dev
+    # Sends the ADR-0007 X-Internal-Service-Token header to content-service (ContentClient).
+    internalToken: true
+    # ContentClient reaches content-service by its in-cluster Service name.
+    extraEnv:
+      CONTENT_SERVICE_BASE_URL: "http://{{ .Release.Name }}-content:8082"
     health:
       path: /actuator/health
       initialDelaySeconds: 45
     db:
       name: verita_recommendations
-      user: verita_user
+      user: svc_recommendation
     resources:
       requests:
         cpu: "100m"
@@ -125,7 +154,7 @@ user-postgresql:
         cpu: "50m"
         memory: "64Mi"
   auth:
-    username: verita_user
+    username: svc_user
     password: verita_password
     database: verita_users
   primary:
@@ -149,9 +178,9 @@ content-postgresql:
         cpu: "50m"
         memory: "64Mi"
   auth:
-    username: verita_user
+    username: svc_content
     password: verita_password
-    database: verita_content
+    database: verita_contents
   primary:
     resources:
       requests:
@@ -173,7 +202,7 @@ recommendation-postgresql:
         cpu: "50m"
         memory: "64Mi"
   auth:
-    username: verita_user
+    username: svc_recommendation
     password: verita_password
     database: verita_recommendations
   primary:
@@ -188,9 +217,10 @@ recommendation-postgresql:
 # MinIO via the official chart (https://charts.min.io/). The Bitnami subchart
 # was dropped because Bitnami removed all free images. Single standalone
 # instance is plenty for our lightweight usage (user-service avatars and
-# content-service post photos). The chart provisions buckets via the
-# post-install job and exposes a Secret named "<release>-minio" with keys
-# rootUser/rootPassword, consumed by the storage env in deployment.yaml.
+# content-service post photos). The chart provisions buckets and scoped IAM
+# users via the post-install job. Services authenticate as their scoped user
+# (not root); rootPassword stays dev-default here and is overridden via --set
+# for prod only.
 minio:
   enabled: true
   mode: standalone
@@ -217,10 +247,51 @@ minio:
     limits:
       cpu: "150m"
       memory: "256Mi"
-  # We use the root credentials directly (services read them from the
-  # <release>-minio Secret), so clear the chart's default "console" user —
-  # it ships with a known default password and we do not need it.
-  users: []
+  # Per-service scoped S3 users (least-privilege, mirrors dev/prod compose). Each user is
+  # restricted to its own bucket via a custom policy. secret-s3.yaml mints one k8s Secret
+  # per user from the same entries, and each service's storage.s3User (see services.*)
+  # selects which user it authenticates as. Dev defaults below; prod overrides the
+  # secretKeys via --set, which propagates to both the IAM user and the k8s Secret.
+  policies:
+    - name: user-service-portraits-rw
+      statements:
+        - resources:
+            - "arn:aws:s3:::verita-user-portraits"
+          actions:
+            - "s3:GetBucketLocation"
+            - "s3:ListBucket"
+            - "s3:ListBucketMultipartUploads"
+        - resources:
+            - "arn:aws:s3:::verita-user-portraits/*"
+          actions:
+            - "s3:GetObject"
+            - "s3:PutObject"
+            - "s3:DeleteObject"
+            - "s3:AbortMultipartUpload"
+            - "s3:ListMultipartUploadParts"
+    - name: content-service-posts-rw
+      statements:
+        - resources:
+            - "arn:aws:s3:::verita-post-photos"
+          actions:
+            - "s3:GetBucketLocation"
+            - "s3:ListBucket"
+            - "s3:ListBucketMultipartUploads"
+        - resources:
+            - "arn:aws:s3:::verita-post-photos/*"
+          actions:
+            - "s3:GetObject"
+            - "s3:PutObject"
+            - "s3:DeleteObject"
+            - "s3:AbortMultipartUpload"
+            - "s3:ListMultipartUploadParts"
+  users:
+    - accessKey: user-service
+      secretKey: user-service-s3-secret
+      policy: user-service-portraits-rw
+    - accessKey: content-service
+      secretKey: content-service-s3-secret
+      policy: content-service-posts-rw
   # Buckets created by the post-install job; "download" allows anonymous
   # GET so public asset URLs (/storage/...) resolve.
   buckets:
@@ -231,24 +302,39 @@ minio:
       policy: download
       purge: false
   # The namespace ResourceQuota requires every pod to declare limits. The
-  # post-install job runs two containers (make-bucket and make-user), so both
-  # need an explicit resources block with limits.
+  # post-install job runs three containers (make-policy, make-bucket, make-user)
+  # — defining policies[] adds the make-policy container — so all three need an
+  # explicit resources block with limits, or the Job pod is rejected by the quota
+  # (FailedCreate) and the post-install hook times out.
+  #
+  # The memory limit must be 256Mi, not 64Mi: the mc client running `admin user
+  # add` is OOMKilled (exit 137) at 64Mi, which fails the make-user step and
+  # exhausts the Job backoff limit. make-policy/make-bucket happen to fit in 64Mi
+  # but are kept uniform for headroom.
+  makePolicyJob:
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "64Mi"
+      limits:
+        cpu: "50m"
+        memory: "256Mi"
   makeBucketJob:
     resources:
       requests:
         cpu: "25m"
-        memory: "32Mi"
+        memory: "64Mi"
       limits:
         cpu: "50m"
-        memory: "64Mi"
+        memory: "256Mi"
   makeUserJob:
     resources:
       requests:
         cpu: "25m"
-        memory: "32Mi"
+        memory: "64Mi"
       limits:
         cpu: "50m"
-        memory: "64Mi"
+        memory: "256Mi"
 
 # ---------------------------------------------------------------------------
 # Self-hosted, namespace-scoped monitoring (Prometheus + Grafana) — "Model B".

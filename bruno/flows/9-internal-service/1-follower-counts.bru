@@ -1,0 +1,31 @@
+meta {
+  name: Topic follower counts
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/topics/follower-counts
+  body: json
+  auth: none
+}
+
+headers {
+  X-Internal-Service-Token: {{internalServiceToken}}
+}
+
+body:json {
+  {
+    "deltas": {
+      "ai": 1
+    }
+  }
+}
+
+assert {
+  res.status: lt 300
+}
+
+docs {
+  Internal-service auth (ADR-0007): gated by X-Internal-Service-Token, not user JWT. 403 on missing/wrong token.
+}

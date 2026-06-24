@@ -1,0 +1,15 @@
+meta {
+  name: Subscribe to user
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{recBaseUrl}}/api/v1/subscriptions/users/{{otherUserId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

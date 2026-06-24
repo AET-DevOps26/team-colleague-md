@@ -1,0 +1,28 @@
+meta {
+  name: Refresh token
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{userBaseUrl}}/api/v1/auth/refresh
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 200
+  res.body.accessToken: isDefined
+}
+
+script:post-response {
+  if (res.getStatus() === 200) { bru.setEnvVar("token", res.getBody().accessToken); }
+}
+
+docs {
+  Refresh token rides the httpOnly cookie set at login (Bruno persists cookies across the run).
+}

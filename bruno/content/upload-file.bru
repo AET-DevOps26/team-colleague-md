@@ -1,0 +1,19 @@
+meta {
+  name: Upload file
+  type: http
+  seq: 23
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/files
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:multipart-form {
+  file: @file(../fixtures/onepx.png)
+}

@@ -17,6 +17,27 @@ servers:
     description: Production-style internal URL
 
 paths:
+  # --- INTERNAL USER CLEANUP ---
+  /internal/v1/users/{userId}/data:
+    delete:
+      operationId: deleteUserRecommendationData
+      summary: Delete all recommendation-service data owned by a user
+      description: |
+        Internal endpoint called by user-service during account deletion.
+        Removes user-owned recommendation, subscription, notification, and interaction data.
+        The operation is idempotent.
+      tags: [Internal]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: User recommendation data cleaned up successfully
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   # --- FEEDS & DISCOVERY ---
   /api/v1/feed/personal:
     get:

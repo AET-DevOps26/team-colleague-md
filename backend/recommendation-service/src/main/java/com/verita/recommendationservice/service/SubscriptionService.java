@@ -1,9 +1,10 @@
 package com.verita.recommendationservice.service;
 
-import com.verita.recommendationservice.entities.TopicSubscription;
-import com.verita.recommendationservice.entities.UserSubscription;
+import com.verita.recommendationservice.entity.TopicSubscription;
+import com.verita.recommendationservice.entity.UserSubscription;
 import com.verita.recommendationservice.repository.TopicSubscriptionRepository;
 import com.verita.recommendationservice.repository.UserSubscriptionRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -13,34 +14,38 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class SubscriptionService {
 
     private final TopicSubscriptionRepository topicSubscriptionRepository;
     private final UserSubscriptionRepository userSubscriptionRepository;
 
-    public SubscriptionService(TopicSubscriptionRepository topicSubscriptionRepository,
-                               UserSubscriptionRepository userSubscriptionRepository) {
-        this.topicSubscriptionRepository = topicSubscriptionRepository;
-        this.userSubscriptionRepository = userSubscriptionRepository;
-    }
-
     public List<TopicSubscription> getSubscribedTopics(UUID userId) {
         return topicSubscriptionRepository.findByUserId(userId);
     }
 
-    public void subscribeToTopic(UUID userId, UUID topicId) {
+    /**
+     * Subscribes the user to the topic, idempotently.
+     *
+     * @return {@code true} if a new subscription was created, {@code false} if it already existed
+     *         — the caller uses this to fire the follower-count delta only on a real change.
+     */
+    public boolean subscribeToTopic(UUID userId, UUID topicId) {
         if (topicSubscriptionRepository.existsByUserIdAndTopicId(userId, topicId)) {
-            return;
+            return false;
         }
         TopicSubscription sub = new TopicSubscription();
         sub.setUserId(userId);
         sub.setTopicId(topicId);
         try {
             topicSubscriptionRepository.save(sub);
+            return true;
         } catch (DataIntegrityViolationException ex) {
             // A concurrent request inserted the same (user_id, topic_id) between the
             // exists-check and this save. The unique constraint is the source of truth,
-            // so a duplicate just means "already subscribed" — treat it as success (idempotent).
+            // so a duplicate just means "already subscribed" — treat it as success (idempotent),
+            // but report no new row so we don't double-count the follower delta.
+            return false;
         }
     }
 

@@ -1,0 +1,15 @@
+meta {
+  name: Search posts (guest)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/posts/search?q=ai
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

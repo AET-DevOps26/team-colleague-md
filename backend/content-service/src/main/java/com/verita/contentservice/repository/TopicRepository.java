@@ -1,5 +1,5 @@
 package com.verita.contentservice.repository;
-import com.verita.contentservice.domain.TopicEntity;
+import com.verita.contentservice.entity.TopicEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

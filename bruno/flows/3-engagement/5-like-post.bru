@@ -1,0 +1,25 @@
+meta {
+  name: Like post
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}/like
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "type": "LIKE"
+  }
+}
+
+assert {
+  res.status: lt 300
+}

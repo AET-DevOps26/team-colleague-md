@@ -1,7 +1,8 @@
 package com.verita.recommendationservice.repository;
 
-import com.verita.recommendationservice.entities.TopicSubscription;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.verita.recommendationservice.entity.TopicSubscription;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,4 +15,6 @@ public interface TopicSubscriptionRepository extends JpaRepository<TopicSubscrip
     Optional<TopicSubscription> findByUserIdAndTopicId(UUID userId, UUID topicId);
 
     boolean existsByUserIdAndTopicId(UUID userId, UUID topicId);
+
+    void deleteByUserId(UUID userId);
 }

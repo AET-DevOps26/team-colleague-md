@@ -1,49 +1,40 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.BookmarkEntity;
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
-import com.verita.contentservice.domain.VoteEntity;
-import com.verita.contentservice.domain.VoteTargetType;
-import com.verita.contentservice.domain.VoteType;
+import com.verita.contentservice.entity.BookmarkEntity;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.VoteEntity;
+import com.verita.contentservice.entity.VoteTargetType;
+import com.verita.contentservice.entity.VoteType;
 import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.VoteRepository;
-import com.verita.contentservice.support.Clients;
+import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.CommentLikeResponse;
 import com.verita.model.LikeRequest;
 import com.verita.model.PostLikeResponse;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class InteractionService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final VoteRepository voteRepository;
     private final BookmarkRepository bookmarkRepository;
-    private final Clients clients;
+    private final SecurityUtils securityUtils;
 
-    public InteractionService(PostRepository postRepository, CommentRepository commentRepository,
-                              VoteRepository voteRepository, BookmarkRepository bookmarkRepository,
-                              Clients clients) {
-        this.postRepository = postRepository;
-        this.commentRepository = commentRepository;
-        this.voteRepository = voteRepository;
-        this.bookmarkRepository = bookmarkRepository;
-        this.clients = clients;
-    }
-
-    public PostLikeResponse likePost(UUID id, LikeRequest.TypeEnum type, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public PostLikeResponse likePost(UUID id, LikeRequest.TypeEnum type) {
+        UUID userId = securityUtils.getCurrentUserId();
         PostEntity post = postRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId))
@@ -63,8 +54,8 @@ public class InteractionService {
                 .isDislikedByMe(newType == VoteType.DOWNVOTE);
     }
 
-    public CommentLikeResponse likeComment(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public CommentLikeResponse likeComment(UUID id) {
+        UUID userId = securityUtils.getCurrentUserId();
         commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         applyVote(userId, VoteTargetType.COMMENT, id, VoteType.UPVOTE);
         commentRepository.refreshLikeCount(id);
@@ -72,8 +63,8 @@ public class InteractionService {
         return new CommentLikeResponse().likeCount((int) updated.getLikeCount()).isLikedByMe(true);
     }
 
-    public void bookmarkPost(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public void bookmarkPost(UUID id) {
+        UUID userId = securityUtils.getCurrentUserId();
         PostEntity post = postRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), userId))
@@ -87,8 +78,8 @@ public class InteractionService {
         postRepository.refreshSaveCount(id);
     }
 
-    public void unbookmarkPost(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public void unbookmarkPost(UUID id) {
+        UUID userId = securityUtils.getCurrentUserId();
         postRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         bookmarkRepository.findByUserIdAndPost_Id(userId, id).ifPresent(bookmarkRepository::delete);
         postRepository.refreshSaveCount(id);
@@ -111,10 +102,5 @@ public class InteractionService {
             vote.setVoteType(newType);
             voteRepository.save(vote);
         }
-    }
-
-    private UUID currentUserId(String authorization) {
-        if (authorization == null || authorization.isBlank()) throw new ResponseStatusException(UNAUTHORIZED);
-        return clients.getCurrentUser(authorization).id();
     }
 }

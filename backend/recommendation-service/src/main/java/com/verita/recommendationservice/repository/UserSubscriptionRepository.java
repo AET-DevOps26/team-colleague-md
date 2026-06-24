@@ -1,7 +1,8 @@
 package com.verita.recommendationservice.repository;
 
-import com.verita.recommendationservice.entities.UserSubscription;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.verita.recommendationservice.entity.UserSubscription;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,7 +12,13 @@ public interface UserSubscriptionRepository extends JpaRepository<UserSubscripti
 
     List<UserSubscription> findByFollowerId(UUID followerId);
 
+    List<UserSubscription> findByFollowedId(UUID followedId);
+
     Optional<UserSubscription> findByFollowerIdAndFollowedId(UUID followerId, UUID followedId);
 
     boolean existsByFollowerIdAndFollowedId(UUID followerId, UUID followedId);
+
+    void deleteByFollowerId(UUID followerId);
+
+    void deleteByFollowedId(UUID followedId);
 }
