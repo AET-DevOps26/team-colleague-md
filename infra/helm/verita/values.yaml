@@ -264,21 +264,36 @@ minio:
       policy: download
       purge: false
   # The namespace ResourceQuota requires every pod to declare limits. The
-  # post-install job runs two containers (make-bucket and make-user), so both
-  # need an explicit resources block with limits.
+  # post-install job runs three containers (make-policy, make-bucket, make-user)
+  # — defining policies[] adds the make-policy container — so all three need an
+  # explicit resources block with limits, or the Job pod is rejected by the quota
+  # (FailedCreate) and the post-install hook times out.
+  #
+  # The memory limit must be 256Mi, not 64Mi: the mc client running `admin user
+  # add` is OOMKilled (exit 137) at 64Mi, which fails the make-user step and
+  # exhausts the Job backoff limit. make-policy/make-bucket happen to fit in 64Mi
+  # but are kept uniform for headroom.
+  makePolicyJob:
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "64Mi"
+      limits:
+        cpu: "50m"
+        memory: "256Mi"
   makeBucketJob:
     resources:
       requests:
         cpu: "25m"
-        memory: "32Mi"
+        memory: "64Mi"
       limits:
         cpu: "50m"
-        memory: "64Mi"
+        memory: "256Mi"
   makeUserJob:
     resources:
       requests:
         cpu: "25m"
-        memory: "32Mi"
+        memory: "64Mi"
       limits:
         cpu: "50m"
-        memory: "64Mi"
+        memory: "256Mi"
