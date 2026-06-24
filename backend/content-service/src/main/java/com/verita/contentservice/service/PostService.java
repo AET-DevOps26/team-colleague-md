@@ -1,19 +1,22 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
-import com.verita.contentservice.domain.TopicEntity;
-import com.verita.contentservice.domain.VoteEntity;
-import com.verita.contentservice.domain.VoteTargetType;
-import com.verita.contentservice.domain.VoteType;
+import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.PostType;
+import com.verita.contentservice.entity.TopicEntity;
+import com.verita.contentservice.entity.VoteEntity;
+import com.verita.contentservice.entity.VoteTargetType;
+import com.verita.contentservice.entity.VoteType;
 import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.TopicRepository;
 import com.verita.contentservice.repository.VoteRepository;
-import com.verita.contentservice.support.Clients;
+import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.AuthorSummary;
+import com.verita.model.DigestPostRequest;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
@@ -32,8 +35,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,55 +49,46 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 @Validated
 @Transactional
+@Slf4j
+@RequiredArgsConstructor
 public class PostService {
     private static final int MAX_PAGE_SIZE = 100;
-    private static final Logger log = LoggerFactory.getLogger(PostService.class);
     private final PostRepository postRepository;
     private final TopicRepository topicRepository;
     private final VoteRepository voteRepository;
     private final BookmarkRepository bookmarkRepository;
-    private final Clients clients;
+    private final UserClient userClient;
+    private final SecurityUtils securityUtils;
     private final ApplicationEventPublisher eventPublisher;
 
-    public PostService(PostRepository postRepository, TopicRepository topicRepository,
-                       VoteRepository voteRepository, BookmarkRepository bookmarkRepository,
-                       Clients clients, ApplicationEventPublisher eventPublisher) {
-        this.postRepository = postRepository;
-        this.topicRepository = topicRepository;
-        this.voteRepository = voteRepository;
-        this.bookmarkRepository = bookmarkRepository;
-        this.clients = clients;
-        this.eventPublisher = eventPublisher;
-    }
+    @Value("${app.digest.system-author-id}")
+    private UUID digestSystemAuthorId;
 
-    public PostResponse createPost(@Valid PostRequest request, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public PostResponse createPost(@Valid PostRequest request) {
+        UUID userId = currentUserId();
         PostEntity post = new PostEntity();
         post.setAuthorId(userId);
         applyPostRequest(post, request);
         post = postRepository.save(post);
-        eventPublisher.publishEvent(
-                new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent(), authorization));
+        publishSummaryRequest(post);
         return toPostResponse(post, userId);
     }
 
-    public PostResponse updatePost(UUID id, @Valid PostRequest request, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public PostResponse updatePost(UUID id, @Valid PostRequest request) {
+        UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
         applyPostRequest(post, request);
         post = postRepository.save(post);
-        eventPublisher.publishEvent(
-                new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent(), authorization));
+        publishSummaryRequest(post);
         return toPostResponse(post, userId);
     }
 
-    public PostResponse patchPost(UUID id, @Valid PostPatchRequest request, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public PostResponse patchPost(UUID id, @Valid PostPatchRequest request) {
+        UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
         boolean summaryInputChanged = false;
         if (request.getTitle() != null) {
@@ -123,14 +118,13 @@ public class PostService {
         }
         post = postRepository.save(post);
         if (summaryInputChanged) {
-            eventPublisher.publishEvent(
-                    new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent(), authorization));
+            publishSummaryRequest(post);
         }
         return toPostResponse(post, userId);
     }
 
-    public void deletePost(UUID id, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public void deletePost(UUID id) {
+        UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
         post.setDeleted(true);
         post.setDeletedAt(OffsetDateTime.now());
@@ -141,22 +135,32 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostPage getAllPosts(int page, int size, String topic, String authorization) {
+    public PostPage getAllPosts(int page, int size, String topic, String typeStr) {
         PageRequest pageable = PageRequest.of(page, clampPageSize(size));
-        UUID currentUser = optionalUserId(authorization);
+        PostType type = parsePostType(typeStr);
+        UUID currentUser = optionalUserId();
         Page<PostEntity> result = (topic == null || topic.isBlank())
-                ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
-                : postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, topic, pageable);
+                ? postRepository.findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus.PUBLISHED, type, pageable)
+                : postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, type, topic, pageable);
         return mapPage(result, currentUser);
     }
 
-    @Transactional(readOnly = true)
-    public PostPage searchPosts(String q, int page, int size, String authorization) {
-        return mapPage(postRepository.searchPublished(q, PageRequest.of(page, clampPageSize(size))), optionalUserId(authorization));
+    private PostType parsePostType(String typeStr) {
+        if (typeStr == null || typeStr.isBlank()) return PostType.NORMAL;
+        try {
+            return PostType.valueOf(typeStr);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(BAD_REQUEST, "Invalid post type: " + typeStr);
+        }
     }
 
-    public PostResponse getPost(UUID id, String authorization) {
-        UUID currentUser = optionalUserId(authorization);
+    @Transactional(readOnly = true)
+    public PostPage searchPosts(String q, int page, int size) {
+        return mapPage(postRepository.searchPublished(q, PageRequest.of(page, clampPageSize(size))), optionalUserId());
+    }
+
+    public PostResponse getPost(UUID id) {
+        UUID currentUser = optionalUserId();
         PostEntity post = postRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
@@ -171,11 +175,11 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostPage getUserBookmarks(UUID userId, int page, int size, String authorization) {
-        UUID current = optionalUserId(authorization);
+    public PostPage getUserBookmarks(UUID userId, int page, int size) {
+        UUID current = optionalUserId();
         if (!Objects.equals(current, userId)) {
             UserPreferencesDto prefs = null;
-            try { prefs = clients.getUserPreferences(userId); } catch (Exception ignored) {}
+            try { prefs = userClient.getUserPreferences(userId); } catch (Exception ignored) {}
             if (prefs == null || !Boolean.TRUE.equals(prefs.showBookmarks())) {
                 throw new ResponseStatusException(FORBIDDEN);
             }
@@ -184,11 +188,11 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostPage getUserLikes(UUID userId, int page, int size, String authorization) {
-        UUID current = optionalUserId(authorization);
+    public PostPage getUserLikes(UUID userId, int page, int size) {
+        UUID current = optionalUserId();
         if (!Objects.equals(current, userId)) {
             UserPreferencesDto prefs = null;
-            try { prefs = clients.getUserPreferences(userId); } catch (Exception ignored) {}
+            try { prefs = userClient.getUserPreferences(userId); } catch (Exception ignored) {}
             if (prefs == null || !Boolean.TRUE.equals(prefs.showLikes())) {
                 throw new ResponseStatusException(FORBIDDEN);
             }
@@ -197,36 +201,65 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostPage getUserPosts(UUID userId, int page, int size, String authorization) {
+    public PostPage getUserPosts(UUID userId, int page, int size) {
         return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
-                userId, PostStatus.PUBLISHED, PageRequest.of(page, clampPageSize(size))), optionalUserId(authorization));
+                userId, PostStatus.PUBLISHED, PageRequest.of(page, clampPageSize(size))), optionalUserId());
     }
 
     @Transactional(readOnly = true)
-    public PostPage getMyDrafts(int page, int size, String authorization) {
-        UUID userId = currentUserId(authorization);
+    public PostPage getMyDrafts(int page, int size) {
+        UUID userId = currentUserId();
         return mapPage(postRepository.findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
                 userId, PostStatus.DRAFT, PageRequest.of(page, clampPageSize(size))), userId);
     }
 
     @Transactional(readOnly = true)
-    public List<PostCard> getCards(List<UUID> ids, String authorization) {
+    public List<PostCard> getCards(List<UUID> ids) {
         if (ids.size() > 50) throw new ResponseStatusException(BAD_REQUEST, "max 50 ids");
         Map<UUID, PostEntity> postsMap = postRepository.findByIdInAndDeletedFalse(new LinkedHashSet<>(ids)).stream()
                 .filter(p -> p.getStatus() == PostStatus.PUBLISHED)
                 .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
-        UUID userId = optionalUserId(authorization);
+        UUID userId = optionalUserId();
         List<PostEntity> ordered = ids.stream().map(postsMap::get).filter(Objects::nonNull).toList();
         if (ordered.isEmpty()) return List.of();
         List<UUID> postIds = ordered.stream().map(PostEntity::getId).toList();
         Map<UUID, VoteEntity> votesByPostId = userId == null ? Map.of() :
                 voteRepository.findByUserIdAndTargetTypeAndTargetIdIn(userId, VoteTargetType.POST, postIds)
                         .stream().collect(Collectors.toMap(VoteEntity::getTargetId, Function.identity()));
-        Map<UUID, UserProfileDto> authors = clients.getUsersByIds(
+        Map<UUID, UserProfileDto> authors = userClient.getUsersByIds(
                 ordered.stream().map(PostEntity::getAuthorId).collect(Collectors.toSet()));
         return ordered.stream()
                 .map(p -> toCard(p, userId, votesByPostId.get(p.getId()), authors.get(p.getAuthorId())))
                 .toList();
+    }
+
+    /** Stores an externally-generated digest payload as a published DIGEST post (ADR-0007 internal). */
+    public PostResponse createDigest(DigestPostRequest request) {
+        PostEntity post = new PostEntity();
+        post.setAuthorId(digestSystemAuthorId);
+        post.setType(PostType.DIGEST);
+        post.setStatus(PostStatus.PUBLISHED);
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        String summary = request.getSummary() != null && request.getSummary().isPresent()
+                ? request.getSummary().get() : null;
+        post.setContentSummary(summary);
+        post.setExcerpt(summary != null ? summary : summarizeLocally(request.getContent()));
+        if (request.getCoverImageUrl() != null && request.getCoverImageUrl().isPresent()
+                && request.getCoverImageUrl().get() != null) {
+            post.setCoverImageUrl(request.getCoverImageUrl().get().toString());
+        }
+        post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>()
+                : request.getSourceUrl().stream().map(URI::toString).toList());
+        applyTopics(post, request.getTopics() == null ? List.of() : request.getTopics());
+        post = postRepository.save(post);
+        return toPostResponse(post, null);
+    }
+
+    private void publishSummaryRequest(PostEntity post) {
+        // Capture the raw token in the request thread; the async listener forwards it to genai (ADR-0002).
+        eventPublisher.publishEvent(new PostSummaryRequestedEvent(
+                post.getId(), post.getTitle(), post.getContent(), securityUtils.getCurrentTokenValue().orElse(null)));
     }
 
     private void applyPostRequest(PostEntity post, PostRequest request) {
@@ -270,21 +303,12 @@ public class PostService {
         return content == null ? "" : (content.length() <= 240 ? content : content.substring(0, 240));
     }
 
-    private UUID currentUserId(String authorization) {
-        return requireCurrentUser(authorization).id();
+    private UUID currentUserId() {
+        return securityUtils.getCurrentUserId();
     }
 
-    private UUID optionalUserId(String authorization) {
-        try {
-            return requireCurrentUser(authorization).id();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private UserProfileDto requireCurrentUser(String authorization) {
-        if (authorization == null || authorization.isBlank()) throw new ResponseStatusException(UNAUTHORIZED);
-        return clients.getCurrentUser(authorization);
+    private UUID optionalUserId() {
+        return securityUtils.getCurrentUserIdOptional().orElse(null);
     }
 
     private PostEntity mustOwnEditablePost(UUID id, UUID userId) {
@@ -307,7 +331,7 @@ public class PostService {
         Set<UUID> bookmarkedIds = currentUser == null ? Set.of() :
                 bookmarkRepository.findByUserIdAndPost_IdIn(currentUser, postIds)
                         .stream().map(b -> b.getPost().getId()).collect(Collectors.toSet());
-        Map<UUID, UserProfileDto> authors = clients.getUsersByIds(
+        Map<UUID, UserProfileDto> authors = userClient.getUsersByIds(
                 posts.stream().map(PostEntity::getAuthorId).collect(Collectors.toSet()));
         return new PostPage()
                 .content(posts.stream().map(p -> toPostResponse(p, currentUser,
@@ -324,8 +348,10 @@ public class PostService {
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId()))
                 .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
+                .type(post.getType() == null ? null : PostResponse.TypeEnum.fromValue(post.getType().name()))
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
+                .summary(post.getContentSummary())
                 .content(post.getContent())
                 .topics(post.getTopics().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
@@ -354,8 +380,10 @@ public class PostService {
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId(), author))
                 .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
+                .type(post.getType() == null ? null : PostResponse.TypeEnum.fromValue(post.getType().name()))
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
+                .summary(post.getContentSummary())
                 .content(post.getContent())
                 .topics(post.getTopics().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
@@ -378,7 +406,7 @@ public class PostService {
 
     AuthorSummary authorSummary(UUID userId) {
         UserProfileDto u = null;
-        try { u = clients.getUserById(userId); } catch (Exception e) {
+        try { u = userClient.getUserById(userId); } catch (Exception e) {
             log.warn("Failed to fetch user {} for author summary: {}", userId, e.getMessage());
         }
         return authorSummary(userId, u);

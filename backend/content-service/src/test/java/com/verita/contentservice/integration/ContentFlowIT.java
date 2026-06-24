@@ -1,12 +1,22 @@
 package com.verita.contentservice.integration;
 
 import com.jayway.jsonpath.JsonPath;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.verita.contentservice.TestcontainersConfiguration;
+import com.verita.contentservice.client.GenAiClient;
+import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.dto.GenAiSummarizeResponse;
 import com.verita.contentservice.dto.UserProfileDto;
-import com.verita.contentservice.support.Clients;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,14 +31,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -36,10 +39,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * End-to-end test through the real security chain, controller, services and a PostgreSQL
- * database. The external user/genai service ({@link Clients}) is mocked so the test is
- * hermetic; authentication uses a JWT signed with the test {@code app.jwt-secret}, so the
- * real {@code SecuritySupport.JwtFilter} accepts it. Runs only when Docker is available.
+ * End-to-end test through the real security chain, controllers, services and a PostgreSQL database.
+ * The upstream user/genai clients are mocked so the test is hermetic; authentication uses a JWT
+ * signed with the test {@code app.jwt-secret} and carrying the {@code userId} claim, so the real
+ * {@code JwtAuthenticationFilter} accepts it (ADR-0006). Runs only when Docker is available.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -49,7 +52,8 @@ class ContentFlowIT {
 
     @Autowired private WebApplicationContext context;
 
-    @MockitoBean private Clients clients;
+    @MockitoBean private UserClient userClient;
+    @MockitoBean private GenAiClient genAiClient;
 
     @Value("${app.jwt-secret}")
     private String jwtSecret;
@@ -59,18 +63,28 @@ class ContentFlowIT {
     private final UUID userId = UUID.randomUUID();
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-        bearer = "Bearer " + Jwts.builder().subject("alice").signWith(key).compact();
+        bearer = "Bearer " + mintToken(userId, "alice");
 
         UserProfileDto profile = new UserProfileDto(userId, "alice", "Alice", null, "USER", null);
-        when(clients.getCurrentUser(anyString())).thenReturn(profile);
-        when(clients.getUserById(any())).thenReturn(profile);
-        when(clients.getUsersByIds(any())).thenReturn(Map.of(userId, profile));
-        when(clients.summarize(any(), any(), any(), any()))
+        when(userClient.getUserById(any())).thenReturn(profile);
+        when(userClient.getUsersByIds(any())).thenReturn(Map.of(userId, profile));
+        when(genAiClient.summarize(any(), any(), any(), any()))
                 .thenReturn(new GenAiSummarizeResponse(UUID.randomUUID().toString(), List.of("summary"), "model", null));
+    }
+
+    private String mintToken(UUID userId, String username) throws Exception {
+        JWSSigner signer = new MACSigner(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .subject(username)
+                .claim("userId", userId.toString())
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + 3_600_000))
+                .build();
+        SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
+        jwt.sign(signer);
+        return jwt.serialize();
     }
 
     @Test

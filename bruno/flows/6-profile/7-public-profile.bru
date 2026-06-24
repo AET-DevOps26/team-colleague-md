@@ -1,0 +1,16 @@
+meta {
+  name: Public profile by username
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{userBaseUrl}}/api/v1/users/by-username/{{otherUsername}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.username: eq {{otherUsername}}
+}

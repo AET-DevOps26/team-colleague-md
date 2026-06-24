@@ -1,0 +1,21 @@
+meta {
+  name: Patch post
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "title": "Patched title from Bruno"
+  }
+}

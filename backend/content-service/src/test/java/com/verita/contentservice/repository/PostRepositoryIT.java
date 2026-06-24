@@ -1,13 +1,14 @@
 package com.verita.contentservice.repository;
 
 import com.verita.contentservice.TestcontainersConfiguration;
-import com.verita.contentservice.domain.BookmarkEntity;
-import com.verita.contentservice.domain.CommentEntity;
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
-import com.verita.contentservice.domain.VoteEntity;
-import com.verita.contentservice.domain.VoteTargetType;
-import com.verita.contentservice.domain.VoteType;
+import com.verita.contentservice.entity.BookmarkEntity;
+import com.verita.contentservice.entity.CommentEntity;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.PostType;
+import com.verita.contentservice.entity.VoteEntity;
+import com.verita.contentservice.entity.VoteTargetType;
+import com.verita.contentservice.entity.VoteType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,7 +95,7 @@ class PostRepositoryIT {
         newPost("Removed", "gone content", PostStatus.PUBLISHED, true);
 
         List<PostEntity> published = postRepository
-                .findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, PageRequest.of(0, 10))
+                .findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus.PUBLISHED, PostType.NORMAL, PageRequest.of(0, 10))
                 .getContent();
 
         assertEquals(1, published.size());

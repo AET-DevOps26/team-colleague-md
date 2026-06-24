@@ -17,7 +17,7 @@ import java.io.IOException;
  * Servlet filter that extracts a JWT from the {@code Authorization: Bearer ...} header,
  * validates it, and populates the {@link SecurityContextHolder} with the authenticated
  * principal. Registered before {@code UsernamePasswordAuthenticationFilter} in
- * {@link WebSecurityConfig}.
+ * {@link SecurityConfig}.
  *
  * <p>Any validation failure is caught and logged; the filter chain continues regardless
  * so that Spring Security's access-control rules decide the final response.

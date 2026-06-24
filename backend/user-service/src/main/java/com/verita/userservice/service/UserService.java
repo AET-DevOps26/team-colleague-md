@@ -1,7 +1,9 @@
 package com.verita.userservice.service;
 
 import com.verita.model.*;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.client.ContentServiceClient;
+import com.verita.userservice.client.RecommendationServiceClient;
+import com.verita.userservice.entity.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.openapitools.jackson.nullable.JsonNullable;
@@ -95,15 +97,17 @@ public class UserService {
 
     /**
      * Deletes the user account for the given username. No-op if the user does not exist.
+     * Downstream content/recommendation cleanup runs first (fail-closed: a downstream failure
+     * aborts the local delete) and authenticates service-to-service via the internal token —
+     * the caller's user JWT is never threaded through (ADR-0006/0007).
      *
      * @param username the username of the account to delete
-     * @param authorization the caller's authorization header, forwarded to dependent services
      */
-    public void deleteUser(String username, String authorization) {
+    public void deleteUser(String username) {
         userRepository.findByUsername(username).ifPresent(user -> {
             String avatarUrl = user.getAvatarUrl();
-            contentServiceClient.deleteUserContentData(user.getId(), authorization);
-            recommendationServiceClient.deleteUserRecommendationData(user.getId(), authorization);
+            contentServiceClient.deleteUserContentData(user.getId());
+            recommendationServiceClient.deleteUserRecommendationData(user.getId());
             userRepository.delete(user);
             avatarStorageService.deleteAvatar(avatarUrl);
         });

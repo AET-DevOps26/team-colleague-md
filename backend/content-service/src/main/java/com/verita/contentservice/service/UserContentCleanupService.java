@@ -1,11 +1,11 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.BookmarkEntity;
-import com.verita.contentservice.domain.CommentEntity;
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
-import com.verita.contentservice.domain.VoteEntity;
-import com.verita.contentservice.domain.VoteTargetType;
+import com.verita.contentservice.entity.BookmarkEntity;
+import com.verita.contentservice.entity.CommentEntity;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.VoteEntity;
+import com.verita.contentservice.entity.VoteTargetType;
 import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;

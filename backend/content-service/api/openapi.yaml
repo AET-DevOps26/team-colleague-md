@@ -63,6 +63,10 @@ paths:
         - name: topic
           in: query
           schema: { type: string }
+        - name: type
+          in: query
+          description: "Post type filter; defaults to NORMAL (digests are excluded from the main list unless requested)"
+          schema: { type: string, enum: [NORMAL, DIGEST] }
       responses:
         '200':
           description: A paginated list of posts retrieved successfully
@@ -362,7 +366,7 @@ paths:
   /api/v1/comments/{id}:
     delete:
       operationId: deleteComment
-      summary: Delete a comment owned by the current user
+      summary: Delete a comment owned by the current user, or any comment on a post they authored
       tags: [Comments]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -520,6 +524,40 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/TopicCategoryGroup' } }
 
+  /api/v1/topics/by-ids:
+    get:
+      operationId: getTopicsByIds
+      summary: Batch-resolve topic names by ID
+      description: |
+        Returns minimal `{ id, name }` objects for the given topic IDs — for callers that only
+        need to resolve names (e.g. recommendation-service populating subscribed-topic names).
+        Unknown IDs are silently omitted; the caller tolerates gaps.
+
+        This is a dedicated sibling of `GET /api/v1/topics` (which returns the full
+        category-grouped catalog with stats), mirroring the `GET /api/v1/posts/cards?ids=`
+        pattern: one operation, one response shape.
+      tags: [Topics]
+      security: []
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          description: Comma-separated list of topic UUIDs, e.g. `ids=id1,id2,id3`. Max 100.
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+            minItems: 1
+            maxItems: 100
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: Matching topics retrieved. Unknown IDs are silently omitted.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Topic' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
   /api/v1/topics/search:
     get:
       operationId: searchTopics
@@ -539,13 +577,15 @@ paths:
               schema: { type: array, items: { $ref: '#/components/schemas/TopicResponse' } }
         '400': { $ref: '#/components/responses/BadRequest' }
 
-  /api/v1/topics/follower-counts:
+  /internal/v1/topics/follower-counts:
     post:
       operationId: updateTopicFollowerCounts
-      summary: Apply batch follower-count deltas
-      description: Increments or decrements follower_count for each named topic. +1 = follow, -1 = unfollow.
+      summary: Apply batch follower-count deltas (internal, service-authenticated)
+      description: >
+        Service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Increments or
+        decrements follower_count for each named topic. +1 = follow, -1 = unfollow.
       tags: [Topics]
-      security: [{ bearerAuth: [] }]
+      security: []
       requestBody:
         required: true
         content:
@@ -570,6 +610,57 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/TopicResponse' } }
         '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/files:
+    post:
+      operationId: uploadFile
+      summary: Upload an image, returning its public URL
+      description: >
+        Accepts a single image as multipart/form-data, validates type and size, stores it in
+        object storage, and returns its public URL for use as a cover image or inline post image.
+      tags: [Files]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: File uploaded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FileUploadResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /internal/v1/posts/digest:
+    post:
+      operationId: createDigestPost
+      summary: Create an AI Daily Digest post (internal, service-authenticated)
+      description: >
+        Service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Stores an
+        already-generated digest payload as a published DIGEST-type post. The digest generation
+        (genai) and daily scheduling are performed by the caller.
+      tags: [Posts]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DigestPostRequest' }
+      responses:
+        '201':
+          description: Digest post created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
 components:
   securitySchemes:
@@ -602,6 +693,23 @@ components:
 
   schemas:
     # --- SHARED ---
+    FileUploadResponse:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, format: uri, description: "Public URL of the stored file" }
+
+    DigestPostRequest:
+      type: object
+      required: [title, content]
+      properties:
+        title: { type: string }
+        content: { type: string, description: "Markdown body of the digest" }
+        summary: { type: string, nullable: true, description: "Short AI summary / top-story subtitle" }
+        coverImageUrl: { type: string, format: uri, nullable: true }
+        sourceUrl: { type: array, items: { type: string, format: uri } }
+        topics: { type: array, items: { type: string } }
+
     AuthorSummary:
       type: object
       description: Lightweight author info embedded in posts and comments to avoid extra lookups
@@ -669,8 +777,10 @@ components:
         id: { type: string, format: uuid }
         author: { $ref: '#/components/schemas/AuthorSummary' }
         status: { type: string, enum: [DRAFT, PUBLISHED] }
+        type: { type: string, enum: [NORMAL, DIGEST], description: "NORMAL user post or system-generated DIGEST" }
         title: { type: string }
         excerpt: { type: string, description: "Short preview text for feed cards" }
+        summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets); null until generated" }
         content: { type: string, description: "Full post body (Markdown)" }
         coverImageUrl: { type: string, format: uri, nullable: true }
         topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }

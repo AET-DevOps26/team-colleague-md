@@ -1,0 +1,4 @@
+# Bruno stores secret-var *values* locally, never in the committed .bru files.
+# Belt-and-suspenders: never commit local secret/runtime artefacts.
+.env
+*.local.bru

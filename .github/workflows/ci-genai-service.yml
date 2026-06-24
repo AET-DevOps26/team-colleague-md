@@ -32,6 +32,8 @@ jobs:
         run: python -c "from app.main import app"
         working-directory: genai-service
 
-      - name: Run tests
+      # Coverage gate (--cov-fail-under=70) is configured in pyproject.toml, mirroring the
+      # Java services' JaCoCo 0.70 LINE minimum (ADR-0009); a plain pytest enforces it.
+      - name: Run tests with coverage gate
         run: pytest -q
         working-directory: genai-service

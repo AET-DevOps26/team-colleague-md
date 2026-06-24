@@ -61,13 +61,31 @@ jobs:
 
           echo "Deploying to environment: $DEPLOY_ENV"
 
+          # Real secrets are injected for prod only. Dev keeps the committed insecure
+          # defaults (values.yaml) so verita-dev stays reproducible without secret access.
+          # A prod deploy against an existing postgres PVC will CrashLoop on auth — the
+          # Bitnami password is only honoured on first init of an empty data dir.
+          PROD_SECRETS=()
+          if [ "$DEPLOY_ENV" = "prod" ]; then
+            PROD_SECRETS=(
+              --set global.jwtSecret="${{ secrets.JWT_SECRET }}"
+              --set global.internalServiceToken="${{ secrets.INTERNAL_SERVICE_TOKEN }}"
+              --set minio.rootPassword="${{ secrets.MINIO_ROOT_PASSWORD }}"
+              --set user-postgresql.auth.password="${{ secrets.USER_DB_PASSWORD }}"
+              --set content-postgresql.auth.password="${{ secrets.CONTENT_DB_PASSWORD }}"
+              --set recommendation-postgresql.auth.password="${{ secrets.RECOMMENDATION_DB_PASSWORD }}"
+              --set minio.users[0].secretKey="${{ secrets.USER_SERVICE_S3_SECRET_KEY }}"
+              --set minio.users[1].secretKey="${{ secrets.CONTENT_SERVICE_S3_SECRET_KEY }}"
+            )
+          fi
+
           helm upgrade --install verita \
             ./infra/helm/verita \
             -f ./infra/helm/verita/values.yaml \
             -f ./infra/helm/verita/values-$DEPLOY_ENV.yaml \
             --namespace verita-$DEPLOY_ENV \
             --create-namespace \
-            --set minio.rootPassword=${{ secrets.MINIO_ROOT_PASSWORD }} \
+            "${PROD_SECRETS[@]}" \
             --set services.frontend.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
             --set services.content.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
             --set services.user.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \

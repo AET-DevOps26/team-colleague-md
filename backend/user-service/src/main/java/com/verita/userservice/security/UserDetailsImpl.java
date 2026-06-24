@@ -1,7 +1,7 @@
 package com.verita.userservice.security;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.entity.UserEntity;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

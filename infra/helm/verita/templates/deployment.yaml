@@ -61,6 +61,25 @@ spec:
               value: {{ $svc.springProfile | quote }}
             - name: CORS_ALLOWED_ORIGINS
               value: "https://{{ $.Values.ingress.host }}"
+            # Shared HS256 secret — every backend service reads the same value so JWTs interoperate.
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $.Release.Name }}-jwt"
+                  key: secret
+            {{- end }}
+            {{- if $svc.internalToken }}
+            # ADR-0007 shared service-to-service secret: recommendation-service sends it,
+            # content-service validates it. Same value for both via the shared Secret.
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $.Release.Name }}-internal-token"
+                  key: token
+            {{- end }}
+            {{- range $k, $v := $svc.extraEnv }}
+            - name: {{ $k }}
+              value: {{ tpl $v $ | quote }}
             {{- end }}
             {{- if $svc.db }}
             - name: DB_HOST
@@ -98,15 +117,15 @@ spec:
               value: "us-east-1"
             - name: STORAGE_S3_PATH_STYLE_ACCESS
               value: "true"
+            # Scoped least-privilege S3 user (not the MinIO root) — restricted to this
+            # service's own bucket via its policy. accessKey is non-secret; the secretKey
+            # comes from the per-user Secret minted by secret-s3.yaml.
             - name: STORAGE_S3_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ $.Release.Name }}-minio"
-                  key: rootUser
+              value: {{ $svc.storage.s3User | quote }}
             - name: STORAGE_S3_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: "{{ $.Release.Name }}-minio"
-                  key: rootPassword
+                  name: "{{ $.Release.Name }}-s3-{{ $svc.storage.s3User }}"
+                  key: secretKey
             {{- end }}
 {{- end }}

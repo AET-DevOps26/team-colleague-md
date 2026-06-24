@@ -1,0 +1,19 @@
+meta {
+  name: Refresh token
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{userBaseUrl}}/api/v1/auth/refresh
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+docs {
+  Refresh token is read from the httpOnly cookie set at login; Bruno persists cookies across requests.
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Track interaction
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{recBaseUrl}}/api/v1/interactions/track
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "postId": "{{postId}}",
+    "interactionType": "CLICK"
+  }
+}

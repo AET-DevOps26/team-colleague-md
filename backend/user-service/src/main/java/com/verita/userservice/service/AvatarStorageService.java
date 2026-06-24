@@ -2,8 +2,7 @@ package com.verita.userservice.service;
 
 import com.verita.userservice.exception.InvalidAvatarException;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,9 +18,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AvatarStorageService {
-    private static final Logger log = LoggerFactory.getLogger(AvatarStorageService.class);
     private static final long MAX_AVATAR_BYTES = 2L * 1024 * 1024;
     private static final Map<String, String> EXTENSIONS = Map.of(
             "image/jpeg", ".jpg",

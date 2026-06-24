@@ -1,0 +1,27 @@
+meta {
+  name: Update profile
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{userBaseUrl}}/api/v1/users/me
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "displayName": "Bruno Profile",
+    "bio": "Updated by the profile flow"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.displayName: eq Bruno Profile
+}

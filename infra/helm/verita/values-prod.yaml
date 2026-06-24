@@ -1,3 +1,9 @@
+global:
+  # Production JWT secret — DO NOT commit a real value. Override at deploy time, e.g.
+  #   helm upgrade ... -f values-prod.yaml --set global.jwtSecret="$JWT_SECRET"
+  # The value below mirrors the dev default and is insecure; replace it for real deployments.
+  jwtSecret: "dev-only-insecure-secret-replace-in-production!!"
+
 services:
   user:
     springProfile: prod

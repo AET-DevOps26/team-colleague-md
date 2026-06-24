@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'jacoco'
     id 'org.springframework.boot' version '4.0.6'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'org.openapi.generator' version '7.15.0'
@@ -32,9 +33,11 @@ dependencies {
 
     runtimeOnly 'org.postgresql:postgresql'
 
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.testcontainers:junit-jupiter:1.21.3'
@@ -44,7 +47,41 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
 }
+
+// Generated OpenAPI sources are excluded so coverage reflects hand-written logic (ADR-0009).
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: ['**/model/**', '**/api/**', '**/invoker/**'])
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn test
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: ['**/model/**', '**/api/**', '**/invoker/**'])
+        }))
+    }
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                minimum = 0.70
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
 
 openApiGenerate {
     generatorName = "spring"

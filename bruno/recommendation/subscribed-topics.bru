@@ -1,0 +1,15 @@
+meta {
+  name: Subscribed topics
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{recBaseUrl}}/api/v1/subscriptions/topics
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

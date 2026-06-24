@@ -27,15 +27,20 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+    implementation platform('software.amazon.awssdk:bom:2.25.70')
+    implementation 'software.amazon.awssdk:s3'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
 
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
     implementation 'jakarta.validation:jakarta.validation-api'
-    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+    // 0.2.10 ships a Jackson 3 module (tools.jackson SPI) that Spring Boot 4 auto-registers,
+    // so generated JsonNullable fields (de)serialize correctly on the MVC layer. The older
+    // 0.2.6 was Jackson-2-only and silently ignored by Boot 4's Jackson 3 web mapper.
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.10'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation platform('org.testcontainers:testcontainers-bom:1.20.4')
@@ -108,6 +113,7 @@ openApiGenerate {
             interfaceOnly: "true",
             useSpringBoot3: "true",
             useJakartaEe: "true",
+            useTags: "true",
             skipDefaultInterface: "true",
             // Omitted array fields deserialize as null instead of an empty list,
             // so PATCH can distinguish "field not provided" from "set to []".

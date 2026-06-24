@@ -1,18 +1,17 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.BookmarkEntity;
-import com.verita.contentservice.domain.CommentEntity;
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
-import com.verita.contentservice.domain.VoteEntity;
-import com.verita.contentservice.domain.VoteTargetType;
-import com.verita.contentservice.domain.VoteType;
-import com.verita.contentservice.dto.UserProfileDto;
+import com.verita.contentservice.entity.BookmarkEntity;
+import com.verita.contentservice.entity.CommentEntity;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.VoteEntity;
+import com.verita.contentservice.entity.VoteTargetType;
+import com.verita.contentservice.entity.VoteType;
 import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.VoteRepository;
-import com.verita.contentservice.support.Clients;
+import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.LikeRequest;
 import com.verita.model.PostLikeResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,18 +39,16 @@ public class InteractionServiceTest {
     @Mock private CommentRepository commentRepository;
     @Mock private VoteRepository voteRepository;
     @Mock private BookmarkRepository bookmarkRepository;
-    @Mock private Clients clients;
+    @Mock private SecurityUtils securityUtils;
     @InjectMocks private InteractionService interactionService;
 
-    private static final String AUTH = "Bearer token";
     private UUID userId;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         userId = UUID.randomUUID();
-        when(clients.getCurrentUser(AUTH))
-                .thenReturn(new UserProfileDto(userId, "alice", "Alice", null, "USER", null));
+        when(securityUtils.getCurrentUserId()).thenReturn(userId);
     }
 
     private PostEntity publishedPost() {
@@ -71,7 +68,7 @@ public class InteractionServiceTest {
         when(voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, VoteTargetType.POST, post.getId()))
                 .thenReturn(Optional.empty());
 
-        PostLikeResponse response = interactionService.likePost(post.getId(), LikeRequest.TypeEnum.LIKE, AUTH);
+        PostLikeResponse response = interactionService.likePost(post.getId(), LikeRequest.TypeEnum.LIKE);
 
         assertTrue(response.getIsLikedByMe());
         assertFalse(response.getIsDislikedByMe());
@@ -88,7 +85,7 @@ public class InteractionServiceTest {
         when(voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, VoteTargetType.POST, post.getId()))
                 .thenReturn(Optional.of(existing));
 
-        PostLikeResponse response = interactionService.likePost(post.getId(), LikeRequest.TypeEnum.DISLIKE, AUTH);
+        PostLikeResponse response = interactionService.likePost(post.getId(), LikeRequest.TypeEnum.DISLIKE);
 
         assertEquals(VoteType.DOWNVOTE, existing.getVoteType());
         assertTrue(response.getIsDislikedByMe());
@@ -104,7 +101,7 @@ public class InteractionServiceTest {
         when(voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, VoteTargetType.POST, post.getId()))
                 .thenReturn(Optional.of(existing));
 
-        PostLikeResponse response = interactionService.likePost(post.getId(), LikeRequest.TypeEnum.NONE, AUTH);
+        PostLikeResponse response = interactionService.likePost(post.getId(), LikeRequest.TypeEnum.NONE);
 
         assertFalse(response.getIsLikedByMe());
         assertFalse(response.getIsDislikedByMe());
@@ -118,7 +115,7 @@ public class InteractionServiceTest {
         when(postRepository.findByIdAndDeletedFalse(draft.getId())).thenReturn(Optional.of(draft));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> interactionService.likePost(draft.getId(), LikeRequest.TypeEnum.LIKE, AUTH));
+                () -> interactionService.likePost(draft.getId(), LikeRequest.TypeEnum.LIKE));
 
         assertEquals(404, ex.getStatusCode().value());
     }
@@ -129,17 +126,9 @@ public class InteractionServiceTest {
         when(postRepository.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> interactionService.likePost(id, LikeRequest.TypeEnum.LIKE, AUTH));
+                () -> interactionService.likePost(id, LikeRequest.TypeEnum.LIKE));
 
         assertEquals(404, ex.getStatusCode().value());
-    }
-
-    @Test
-    void likePost_blankAuthorization_throwsUnauthorized() {
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> interactionService.likePost(UUID.randomUUID(), LikeRequest.TypeEnum.LIKE, " "));
-
-        assertEquals(401, ex.getStatusCode().value());
     }
 
     // ---- likeComment --------------------------------------------------------
@@ -150,7 +139,7 @@ public class InteractionServiceTest {
         comment.setId(UUID.randomUUID());
         when(commentRepository.findByIdAndDeletedFalse(comment.getId())).thenReturn(Optional.of(comment));
 
-        var response = interactionService.likeComment(comment.getId(), AUTH);
+        var response = interactionService.likeComment(comment.getId());
 
         assertTrue(response.getIsLikedByMe());
         verify(voteRepository).save(any(VoteEntity.class));
@@ -163,7 +152,7 @@ public class InteractionServiceTest {
         when(commentRepository.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> interactionService.likeComment(id, AUTH));
+                () -> interactionService.likeComment(id));
 
         assertEquals(404, ex.getStatusCode().value());
     }
@@ -176,7 +165,7 @@ public class InteractionServiceTest {
         when(postRepository.findByIdAndDeletedFalse(post.getId())).thenReturn(Optional.of(post));
         when(bookmarkRepository.findByUserIdAndPost_Id(userId, post.getId())).thenReturn(Optional.empty());
 
-        interactionService.bookmarkPost(post.getId(), AUTH);
+        interactionService.bookmarkPost(post.getId());
 
         verify(bookmarkRepository).save(any(BookmarkEntity.class));
         verify(postRepository).refreshSaveCount(post.getId());
@@ -189,7 +178,7 @@ public class InteractionServiceTest {
         when(bookmarkRepository.findByUserIdAndPost_Id(userId, post.getId()))
                 .thenReturn(Optional.of(new BookmarkEntity()));
 
-        interactionService.bookmarkPost(post.getId(), AUTH);
+        interactionService.bookmarkPost(post.getId());
 
         verify(bookmarkRepository, never()).save(any());
         verify(postRepository).refreshSaveCount(post.getId());
@@ -202,7 +191,7 @@ public class InteractionServiceTest {
         when(postRepository.findByIdAndDeletedFalse(post.getId())).thenReturn(Optional.of(post));
         when(bookmarkRepository.findByUserIdAndPost_Id(userId, post.getId())).thenReturn(Optional.of(bookmark));
 
-        interactionService.unbookmarkPost(post.getId(), AUTH);
+        interactionService.unbookmarkPost(post.getId());
 
         verify(bookmarkRepository).delete(bookmark);
         verify(postRepository).refreshSaveCount(post.getId());
@@ -214,7 +203,7 @@ public class InteractionServiceTest {
         when(postRepository.findByIdAndDeletedFalse(post.getId())).thenReturn(Optional.of(post));
         when(bookmarkRepository.findByUserIdAndPost_Id(userId, post.getId())).thenReturn(Optional.empty());
 
-        interactionService.unbookmarkPost(post.getId(), AUTH);
+        interactionService.unbookmarkPost(post.getId());
 
         verify(bookmarkRepository, never()).delete(any());
         verify(postRepository).refreshSaveCount(post.getId());

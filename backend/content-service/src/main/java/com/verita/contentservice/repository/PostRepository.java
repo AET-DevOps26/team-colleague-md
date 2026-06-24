@@ -1,6 +1,7 @@
 package com.verita.contentservice.repository;
-import com.verita.contentservice.domain.PostEntity;
-import com.verita.contentservice.domain.PostStatus;
+import com.verita.contentservice.entity.PostEntity;
+import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.PostType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,8 +13,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 public interface PostRepository extends JpaRepository<PostEntity, UUID> {
-    Page<PostEntity> findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus status, Pageable pageable);
-    Page<PostEntity> findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, String topicName, Pageable pageable);
+    Page<PostEntity> findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus status, PostType type, Pageable pageable);
+    Page<PostEntity> findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, PostType type, String topicName, Pageable pageable);
     Page<PostEntity> findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(UUID authorId, PostStatus status, Pageable pageable);
     List<PostEntity> findByAuthorIdAndDeletedFalse(UUID authorId);
     Optional<PostEntity> findByIdAndDeletedFalse(UUID id);

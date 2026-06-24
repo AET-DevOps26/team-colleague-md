@@ -2,11 +2,11 @@ package com.verita.userservice.controller;
 
 import com.verita.model.DigestFrequency;
 import com.verita.model.UserRole;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.entity.UserEntity;
 import com.verita.userservice.repository.UserRepository;
 import com.verita.userservice.security.UserDetailsImpl;
-import com.verita.userservice.service.ContentServiceClient;
-import com.verita.userservice.service.RecommendationServiceClient;
+import com.verita.userservice.client.ContentServiceClient;
+import com.verita.userservice.client.RecommendationServiceClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
