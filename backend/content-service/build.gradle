@@ -37,7 +37,10 @@ dependencies {
 
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
     implementation 'jakarta.validation:jakarta.validation-api'
-    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+    // 0.2.10 ships a Jackson 3 module (tools.jackson SPI) that Spring Boot 4 auto-registers,
+    // so generated JsonNullable fields (de)serialize correctly on the MVC layer. The older
+    // 0.2.6 was Jackson-2-only and silently ignored by Boot 4's Jackson 3 web mapper.
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.10'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation platform('org.testcontainers:testcontainers-bom:1.20.4')

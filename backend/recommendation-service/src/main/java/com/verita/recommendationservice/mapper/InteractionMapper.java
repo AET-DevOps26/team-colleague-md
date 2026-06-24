@@ -1,11 +1,11 @@
 package com.verita.recommendationservice.mapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.verita.model.InteractionRequest;
 import com.verita.recommendationservice.entity.Interaction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 import java.util.UUID;
@@ -28,7 +28,7 @@ public class InteractionMapper {
         if (meta != null && !meta.isEmpty()) {
             try {
                 entity.setMetadata(objectMapper.writeValueAsString(meta));
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 throw new IllegalArgumentException("Failed to serialize interaction metadata", e);
             }
         }

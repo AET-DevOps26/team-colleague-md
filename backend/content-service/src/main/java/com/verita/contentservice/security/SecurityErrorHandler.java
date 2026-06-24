@@ -1,6 +1,5 @@
 package com.verita.contentservice.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.verita.model.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +13,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 /** Renders 401/403 as the platform's JSON {@link ErrorResponse} (ADR-0006). */
 @Component
