@@ -68,6 +68,20 @@ ssh -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 <vm>
 ```
 Set `GRAFANA_ADMIN_PASSWORD` (and DB credential vars, shared with the app stack) in the env.
 
+### Local development (Docker Desktop)
+
+Swap the prod app stack for the dev one and add the local override:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
+# Grafana  http://localhost:3001   Prometheus  http://localhost:9090   (admin / verita_grafana_admin)
+```
+The override is required locally for two reasons: it remaps Grafana to `3001` (the dev
+frontend already publishes `3000`), and it parks node-exporter in an unused profile — its
+`rslave` host-root mount is rejected by Docker Desktop's WSL2 backend and would otherwise
+abort the whole `up`. The Prometheus `node` target therefore reads DOWN locally by design.
+Set the DB credential vars first (`DB_PASSWORD`, `CONTENT_DB_PASSWORD`,
+`RECOMMENDATION_DB_PASSWORD`), the same ones the app stack uses.
+
 ## Shared files (single source of truth)
 
 Helm's `.Files.Get` cannot read outside the chart, so the chart owns the shared assets and
