@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:alice": "vite --mode demo-alice",
-    "dev:bob": "vite --mode demo-bob",
+    "dev:demo": "vite --mode demo",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -23,7 +22,9 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-easy-crop": "^5.5.7",
-    "react-router-dom": "^7.15.1"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.15.1",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@emnapi/core": "^1.10.0",

@@ -6,9 +6,10 @@ interface ToastProps {
   show: boolean;
   onHide: () => void;
   neutral?: boolean;
+  error?: boolean;
 }
 
-export default function Toast({ message, show, onHide, neutral = false }: ToastProps) {
+export default function Toast({ message, show, onHide, neutral = false, error = false }: ToastProps) {
   useEffect(() => {
     if (!show) return;
     const timer = setTimeout(onHide, 2500);
@@ -17,11 +18,15 @@ export default function Toast({ message, show, onHide, neutral = false }: ToastP
 
   return (
     <div
-      className={`${styles.toast} ${show ? styles.show : ''} ${neutral ? styles.neutral : ''}`}
-      role="status"
-      aria-live="polite"
+      className={`${styles.toast} ${show ? styles.show : ''} ${error ? styles.error : neutral ? styles.neutral : ''}`}
+      role={error ? 'alert' : 'status'}
+      aria-live={error ? 'assertive' : 'polite'}
     >
-      {neutral ? (
+      {error ? (
+        <svg className={styles.iconWarn} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" /><path d="M12 8v5" /><path d="M12 16h.01" />
+        </svg>
+      ) : neutral ? (
         <svg className={styles.iconMinus} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="9" /><path d="M8 12h8" />
         </svg>
