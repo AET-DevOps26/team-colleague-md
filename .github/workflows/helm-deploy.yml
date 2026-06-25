@@ -61,6 +61,17 @@ jobs:
 
           echo "Deploying to environment: $DEPLOY_ENV"
 
+          # workflow_run runs always carry main's ref/SHA in the run header (GitHub
+          # runs the workflow file from the default branch for trust reasons), so the
+          # UI's branch label is NOT the deployed branch. Surface the real source
+          # branch + target in the run summary so it's visible without digging logs.
+          SRC_BRANCH="${{ github.event.workflow_run.head_branch || github.ref_name }}"
+          {
+            echo "### Helm deploy"
+            echo "- Source branch: \`$SRC_BRANCH\`"
+            echo "- Target environment: \`$DEPLOY_ENV\` (namespace \`verita-$DEPLOY_ENV\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
           # Real secrets are injected for prod only. Dev keeps the committed insecure
           # defaults (values.yaml) so verita-dev stays reproducible without secret access.
           # A prod deploy against an existing postgres PVC will CrashLoop on auth — the

@@ -42,11 +42,18 @@ No Prometheus Operator / CRDs and no cluster-scoped RBAC.
   Prometheus discovers them by the `metrics` port name.
 - Grafana is provisioned with the Prometheus datasource and the shared dashboard.
 
-Access Grafana (no public exposure):
-```bash
-kubectl -n <namespace> port-forward svc/<release>-grafana 3000:3000
-# http://localhost:3000  (admin / monitoring.grafana.adminPassword)
-```
+Access Grafana — two options:
+
+1. Via the shared Ingress (default, `monitoring.grafana.ingress.enabled: true`):
+   `https://<ingress.host>/grafana` — e.g. `https://dev.verita.stud.k8s.aet.cit.tum.de/grafana`.
+2. Port-forward (no Ingress / quick local check):
+   ```bash
+   kubectl -n <namespace> port-forward svc/<release>-grafana 3000:3000
+   # http://localhost:3000
+   ```
+
+Login: `admin` / `monitoring.grafana.adminPassword` (dev default `verita_grafana_admin`;
+override per environment). Stored in the `<release>-grafana-admin` Secret.
 
 Pre-flight (confirm the namespace allows it):
 ```bash

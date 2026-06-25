@@ -1,7 +1,8 @@
 # Local override for docker-compose.monitoring.yml.
 # Remaps Grafana to port 3001 to avoid colliding with the dev frontend on 3000.
+# The postgres-exporters default to the base docker-compose.yml DB credentials, so no env
+# vars are needed locally.
 # Usage:
-#   $env:DB_PASSWORD="verita_password"; $env:CONTENT_DB_PASSWORD="verita_content_password"; $env:RECOMMENDATION_DB_PASSWORD="verita_password"
 #   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
 # Then open: http://localhost:3001  (admin / verita_grafana_admin)
 #            http://localhost:9090  (Prometheus)

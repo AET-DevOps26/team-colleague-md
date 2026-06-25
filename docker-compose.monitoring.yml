@@ -70,9 +70,9 @@ services:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
     restart: unless-stopped
     environment:
-      DATA_SOURCE_URI: "user-db:5432/${DB_NAME:-verita_users}?sslmode=disable"
-      DATA_SOURCE_USER: ${DB_USER:-verita_user}
-      DATA_SOURCE_PASS: ${DB_PASSWORD}
+      DATA_SOURCE_URI: "user-db:5432/${USER_DB_NAME:-verita_users}?sslmode=disable"
+      DATA_SOURCE_USER: ${USER_DB_USER:-svc_user}
+      DATA_SOURCE_PASS: ${USER_DB_PASSWORD:-svc_user_password}
     depends_on:
       user-db:
         condition: service_healthy
@@ -81,9 +81,9 @@ services:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
     restart: unless-stopped
     environment:
-      DATA_SOURCE_URI: "content-db:5432/${CONTENT_DB_NAME:-verita_content}?sslmode=disable"
-      DATA_SOURCE_USER: ${CONTENT_DB_USER:-verita_content_user}
-      DATA_SOURCE_PASS: ${CONTENT_DB_PASSWORD}
+      DATA_SOURCE_URI: "content-db:5432/${CONTENT_DB_NAME:-verita_contents}?sslmode=disable"
+      DATA_SOURCE_USER: ${CONTENT_DB_USER:-svc_content}
+      DATA_SOURCE_PASS: ${CONTENT_DB_PASSWORD:-svc_content_password}
     depends_on:
       content-db:
         condition: service_healthy
@@ -93,8 +93,8 @@ services:
     restart: unless-stopped
     environment:
       DATA_SOURCE_URI: "recommendation-db:5432/${RECOMMENDATION_DB_NAME:-verita_recommendations}?sslmode=disable"
-      DATA_SOURCE_USER: ${RECOMMENDATION_DB_USER:-verita_user}
-      DATA_SOURCE_PASS: ${RECOMMENDATION_DB_PASSWORD}
+      DATA_SOURCE_USER: ${RECOMMENDATION_DB_USER:-svc_recommendation}
+      DATA_SOURCE_PASS: ${RECOMMENDATION_DB_PASSWORD:-svc_recommendation_password}
     depends_on:
       recommendation-db:
         condition: service_healthy

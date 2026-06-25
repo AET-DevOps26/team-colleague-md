@@ -127,6 +127,14 @@ spec:
               value: "false"
             - name: GF_ANALYTICS_REPORTING_ENABLED
               value: "false"
+            {{- if $m.grafana.ingress.enabled }}
+            # Served behind the shared Ingress at $m.grafana.ingress.path, so
+            # Grafana must know its external root URL and rewrite its own links.
+            - name: GF_SERVER_ROOT_URL
+              value: "https://{{ .Values.ingress.host }}{{ $m.grafana.ingress.path }}"
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "true"
+            {{- end }}
           readinessProbe:
             httpGet: { path: /api/health, port: http }
             initialDelaySeconds: 10
