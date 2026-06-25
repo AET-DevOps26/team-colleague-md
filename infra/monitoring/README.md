@@ -42,11 +42,18 @@ No Prometheus Operator / CRDs and no cluster-scoped RBAC.
   Prometheus discovers them by the `metrics` port name.
 - Grafana is provisioned with the Prometheus datasource and the shared dashboard.
 
-Access Grafana (no public exposure):
-```bash
-kubectl -n <namespace> port-forward svc/<release>-grafana 3000:3000
-# http://localhost:3000  (admin / monitoring.grafana.adminPassword)
-```
+Access Grafana — two options:
+
+1. Via the shared Ingress (default, `monitoring.grafana.ingress.enabled: true`):
+   `https://<ingress.host>/grafana` — e.g. `https://dev.verita.stud.k8s.aet.cit.tum.de/grafana`.
+2. Port-forward (no Ingress / quick local check):
+   ```bash
+   kubectl -n <namespace> port-forward svc/<release>-grafana 3000:3000
+   # http://localhost:3000
+   ```
+
+Login: `admin` / `monitoring.grafana.adminPassword` (dev default `verita_grafana_admin`;
+override per environment). Stored in the `<release>-grafana-admin` Secret.
 
 Pre-flight (confirm the namespace allows it):
 ```bash
@@ -67,6 +74,19 @@ Prometheus and Grafana bind to `127.0.0.1` only — reach them over an SSH tunne
 ssh -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 <vm>
 ```
 Set `GRAFANA_ADMIN_PASSWORD` (and DB credential vars, shared with the app stack) in the env.
+
+## Local (Docker Compose)
+
+Add `docker-compose.monitoring.local.yml` on top of the local app stack:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
+```
+- Grafana: **http://localhost:3001** — login `admin` / `verita_grafana_admin`.
+- Prometheus: **http://localhost:9090**.
+- The postgres_exporters default to the base compose DB credentials, so **no env vars are
+  needed** locally.
+- The `node` target reads **DOWN by design** — node-exporter is disabled locally because its
+  host-root mount fails on Docker Desktop's WSL2 backend.
 
 ## Shared files (single source of truth)
 
