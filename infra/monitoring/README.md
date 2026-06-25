@@ -79,8 +79,8 @@ The override is required locally for two reasons: it remaps Grafana to `3001` (t
 frontend already publishes `3000`), and it parks node-exporter in an unused profile — its
 `rslave` host-root mount is rejected by Docker Desktop's WSL2 backend and would otherwise
 abort the whole `up`. The Prometheus `node` target therefore reads DOWN locally by design.
-Set the DB credential vars first (`DB_PASSWORD`, `CONTENT_DB_PASSWORD`,
-`RECOMMENDATION_DB_PASSWORD`), the same ones the app stack uses.
+The postgres-exporters default to the base `docker-compose.yml` DB credentials (the `svc_*`
+users), so no env vars are needed locally.
 
 ## Shared files (single source of truth)
 
