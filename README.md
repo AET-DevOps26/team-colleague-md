@@ -52,9 +52,22 @@ docker compose down -v                    # stop and delete all data (DBs + obje
 docker compose up --build user-service    # start a single service only
 ```
 
-> **Note:** Postgres applies its credentials only on the *first* startup of an empty data
-> volume — see the note at the top of [`docker-compose.yml`](docker-compose.yml) if you change
-> DB credentials against an existing volume.
+### Seed Demo Data
+
+A fresh stack starts empty. Once the services are healthy, seed the local databases with
+demo users, posts, topics, comments, bookmarks, votes, follows, and notifications:
+
+```bash
+npm install
+npm run seed:local
+```
+
+The seed is idempotent and non-destructive. See [Local Seed Data](#local-seed-data) for the
+full breakdown and options (`--dry-run`, `--only`).
+
+### Log In and Explore Checklist (for 2.Review)
+
+Open `http://localhost:3000` and sign in as **`alexchen`** (email `alex@example.com`, password `Password123!`). This admin account is seeded with content across every area, so you can walk through all of the features in the feature [check list](docs/Check_List.md).
 
 ### Health Checks
 
@@ -91,14 +104,10 @@ Live environments:
 | Development | https://dev.verita.stud.k8s.aet.cit.tum.de/ | Kubernetes (Rancher) |
 | Azure VM | http://20.91.194.13/ | Docker Compose on a single VM |
 
+> Note: Dont forget to type `thisisunsafe` when the browser warns about the self-signed TLS certificate on the verita-dev environments.
+
 See [Infrastructure Design](docs/Infrastructure_Design.md) and the
 [Helm Chart](infra/helm/verita/README.md) for how these are provisioned and deployed.
-
----
-
-## Check List (2.Review)
-- Sign up and login
-
 
 ---
 
