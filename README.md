@@ -5,14 +5,15 @@ Technical documentation for all Verita microservices.
 
 ## Demo Accounts
 
-Two pre-configured accounts are available for exploring the platform. No registration required — log in at the deployed frontend or at `http://localhost:3000` after running `docker compose up --build`.
+Authentication is always against the real backend. Seed the database (`scripts/seed`) to create the demo users, then log in at `http://localhost:3000` after `docker compose up --build`. All seed users share the password `Password123!`.
 
-| Display Name | Email | Password | Role |
-|---|---|---|---|
-| Alice Morgan | `alice@verita.demo` | `demo1234` | Verified |
-| Bob Nakamura | `bob@verita.demo` | `demo1234` | User |
+| Display Name | Username | Role |
+|---|---|---|
+| Alex Chen | `alexchen` | Admin |
+| Sarah Kim | `sarahjkim` | Verified |
+| Marcello Rossi | `marcello_r` | User |
 
-Both accounts have complete profiles (bio, organisation, expertise areas) and populated posts, bookmarks, and liked-posts tabs in the User Profile page.
+Profiles (bio, organisation, expertise areas) come from the seed. Posts, bookmarks, and liked-posts tabs are populated only once content-service is seeded — to preview a populated UI before then, start the frontend in **demo mode** (`npm run dev:demo`), which keeps auth real but fills those data-sparse tabs from a mock display layer (see ADR-0011).
 
 ## Docker Compose (Recommended)
 
