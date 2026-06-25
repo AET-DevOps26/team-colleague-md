@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
@@ -77,6 +78,16 @@ public class GlobalExceptionHandlerTest {
 
         assertEquals(400, response.getStatusCode().value());
         assertEquals("delta must be +1 or -1", response.getBody().getMessage());
+    }
+
+    @Test
+    void maxUploadSizeExceeded_returnsBadRequestNotServerError() {
+        ResponseEntity<ErrorResponse> response =
+                errorHandling.handleMaxUploadSize(new MaxUploadSizeExceededException(5_242_880L));
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("BAD_REQUEST", response.getBody().getError());
+        assertEquals("File exceeds the maximum allowed size.", response.getBody().getMessage());
     }
 
     @Test

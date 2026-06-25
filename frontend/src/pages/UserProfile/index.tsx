@@ -4,6 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../../hooks/useAuth';
 import { userService } from '../../services/user.service';
+import { postEditorService } from '../../services/postEditor.service';
 import { timeAgo } from '../../utils/timeAgo';
 import { getInitials } from '../../utils/getInitials';
 import PostDetailTopbar from '../../components/layout/PostDetailTopbar';
@@ -118,7 +119,7 @@ function SavedBadge() {
 export default function UserProfile() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const { user: authUser, updateUser } = useAuth();
+  const { user: authUser, updateUser, isRestoring } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -140,15 +141,24 @@ export default function UserProfile() {
 
   useEffect(() => {
     if (!username) { navigate('/'); return; }
+    // Wait for session restore to settle before fetching: firing protected requests (drafts)
+    // with the not-yet-restored access token would 401 and bounce the user to the login modal.
+    if (isRestoring) return;
     setLoading(true);
     setLoadError(false);
     setActiveTab('posts');
+
+    // Drafts live behind /me and are only ever shown on your own profile, so don't fetch them
+    // when viewing someone else's (or while logged out) — that protected call would 401.
+    const draftsPromise = isOwnProfile
+      ? userService.getUserDrafts(username)
+      : Promise.resolve([] as DraftPost[]);
 
     Promise.all([
       userService.getProfile(username),
       userService.getUserPosts(username),
       userService.getUserBookmarks(username),
-      userService.getUserDrafts(username),
+      draftsPromise,
       userService.getUserLikedPosts(username),
     ]).then(([p, userPosts, userBookmarks, userDrafts, liked]) => {
       setProfile(p);
@@ -161,7 +171,7 @@ export default function UserProfile() {
     }).finally(() => {
       setLoading(false);
     });
-  }, [username, navigate]);
+  }, [username, navigate, isRestoring, isOwnProfile]);
 
   const showToast = useCallback((message: string) => {
     setToast({ show: true, message });
@@ -200,33 +210,61 @@ export default function UserProfile() {
     setConfirm({ action: 'delete-draft', id: draftId, title: draft?.title ?? 'this draft' });
   }, [drafts]);
 
-  const executeConfirm = useCallback(() => {
+  const handleDraftPublish = useCallback(async (draftId: string) => {
+    try {
+      await postEditorService.updatePost(draftId, { status: 'PUBLISHED' });
+    } catch {
+      showToast('Could not publish — please try again');
+      return;
+    }
+    setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+    // Refetch published posts so the new card renders an accurate preview (excerpt/cover)
+    // rather than a stale draft snapshot.
+    if (username) {
+      try {
+        setPosts(await userService.getUserPosts(username));
+      } catch {
+        /* posts grid refresh is best-effort; the draft already moved */
+      }
+    }
+    setActiveTab('posts');
+    showToast('Draft published');
+  }, [username, showToast]);
+
+  const executeConfirm = useCallback(async () => {
     if (!confirm) return;
-    if (confirm.action === 'delete-post') {
-      setPosts((prev) => prev.filter((p) => p.id !== confirm.id));
+    const current = confirm;
+    setConfirm(null);
+    if (current.action === 'delete-post') {
+      setPosts((prev) => prev.filter((p) => p.id !== current.id));
       showToast('Post deleted');
-    } else if (confirm.action === 'unpublish') {
-      setPosts((prev) => {
-        const post = prev.find((p) => p.id === confirm.id);
-        if (post) {
-          const draft: DraftPost = {
-            id: post.id,
-            title: post.title,
-            excerpt: post.excerpt ?? '',
-            topics: post.topics,
-            updatedAt: new Date().toISOString(),
-          };
-          setDrafts((prevDrafts) => [draft, ...prevDrafts]);
-        }
-        return prev.filter((p) => p.id !== confirm.id);
-      });
+    } else if (current.action === 'unpublish') {
+      const post = posts.find((p) => p.id === current.id);
+      try {
+        // Persist the status change before mutating local state, otherwise a refetch
+        // (e.g. navigating back to the profile) resurrects the still-published post.
+        await postEditorService.updatePost(current.id, { status: 'DRAFT' });
+      } catch {
+        showToast('Could not unpublish — please try again');
+        return;
+      }
+      if (post) {
+        const draft: DraftPost = {
+          id: post.id,
+          title: post.title,
+          excerpt: post.excerpt ?? '',
+          topics: post.topics,
+          updatedAt: new Date().toISOString(),
+        };
+        setDrafts((prevDrafts) => [draft, ...prevDrafts]);
+      }
+      setPosts((prev) => prev.filter((p) => p.id !== current.id));
       showToast('Post moved to Drafts');
-    } else if (confirm.action === 'delete-draft') {
-      setDrafts((prev) => prev.filter((d) => d.id !== confirm.id));
+    } else if (current.action === 'delete-draft') {
+      setDrafts((prev) => prev.filter((d) => d.id !== current.id));
       showToast('Draft deleted');
     }
-    setConfirm(null);
-  }, [confirm, showToast]);
+  }, [confirm, posts, showToast]);
 
   if (loading) {
     return (
@@ -464,7 +502,7 @@ export default function UserProfile() {
                     <DraftCard
                       key={draft.id}
                       draft={draft}
-                      onPublish={() => showToast('Publish coming soon')}
+                      onPublish={() => handleDraftPublish(draft.id)}
                       onEdit={() => navigate(`/post/${draft.id}/edit`)}
                       onDelete={() => handleDraftDelete(draft.id)}
                     />

@@ -1,6 +1,7 @@
 import axios from 'axios';
-import { getToken, setAccessToken, clearSession } from './tokenStore';
+import { getToken, clearSession } from './tokenStore';
 import { emit } from './authEvents';
+import { refreshSession } from './sessionRefresh';
 
 const userApi = axios.create({
   baseURL: '/user',
@@ -15,9 +16,8 @@ userApi.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401: attempt a silent refresh before giving up and logging the user out.
-let refreshing: Promise<string> | null = null;
-
+// On 401: attempt a silent refresh before giving up and logging the user out. The refresh
+// itself is single-flight and shared across both axios instances (see sessionRefresh).
 userApi.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -28,16 +28,8 @@ userApi.interceptors.response.use(
     original._retried = true;
 
     try {
-      if (!refreshing) {
-        refreshing = userApi
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .post<{ accessToken: string }>('/api/v1/auth/refresh', undefined, { _retried: true } as any)
-          .then((r) => r.data.accessToken)
-          .finally(() => { refreshing = null; });
-      }
-      const newToken = await refreshing;
-      setAccessToken(newToken);
-      original.headers.Authorization = `Bearer ${newToken}`;
+      const { accessToken } = await refreshSession();
+      original.headers.Authorization = `Bearer ${accessToken}`;
       return userApi(original);
     } catch {
       clearSession();

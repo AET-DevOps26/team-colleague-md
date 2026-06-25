@@ -11,7 +11,7 @@ services:
       - user-db-data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${USER_DB_USER:-svc_user} -d ${USER_DB_NAME:-verita_users}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${USER_DB_USER:-svc_user} -d ${USER_DB_NAME:-verita_users}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +26,7 @@ services:
       - content-db-data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CONTENT_DB_USER:-svc_content} -d ${CONTENT_DB_NAME:-verita_contents}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${CONTENT_DB_USER:-svc_content} -d ${CONTENT_DB_NAME:-verita_contents}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,7 +41,7 @@ services:
       - recommendation-db-data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${RECOMMENDATION_DB_USER:-svc_recommendation} -d ${RECOMMENDATION_DB_NAME:-verita_recommendations}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${RECOMMENDATION_DB_USER:-svc_recommendation} -d ${RECOMMENDATION_DB_NAME:-verita_recommendations}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -160,7 +160,7 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -194,7 +194,7 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8082/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -218,7 +218,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -228,7 +228,7 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      test: [ "CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -246,7 +246,7 @@ services:
       - MINIO_URL=http://minio:9000
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/" ]
       interval: 30s
       timeout: 10s
       retries: 3

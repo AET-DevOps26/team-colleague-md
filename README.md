@@ -51,17 +51,15 @@ to the code they describe.
 
 ## Demo Accounts
 
-Two built-in demo accounts let you explore the frontend without a backend — they are handled
-entirely client-side, so they work at the deployed frontend or at `http://localhost:3000`
-after running `docker compose up --build`. Real accounts are created through **Sign Up**.
+Authentication is always against the real backend. Seed the database (`scripts/seed`) to create the demo users, then log in at `http://localhost:3000` after `docker compose up --build`. All seed users share the password `Password123!`.
 
-| Display Name | Email | Password | Role |
-|---|---|---|---|
-| Alice Morgan | `alice@verita.demo` | `demo1234` | Verified |
-| Bob Nakamura | `bob@verita.demo` | `demo1234` | User |
+| Display Name | Username | Role |
+|---|---|---|
+| Alex Chen | `alexchen` | Admin |
+| Sarah Kim | `sarahjkim` | Verified |
+| Marcello Rossi | `marcello_r` | User |
 
-Both demo accounts have complete profiles (bio, organisation, expertise areas) and populated
-posts, bookmarks, and liked-posts tabs in the User Profile page.
+Profiles (bio, organisation, expertise areas) come from the seed. Posts, bookmarks, and liked-posts tabs are populated only once content-service is seeded — to preview a populated UI before then, start the frontend in **demo mode** (`npm run dev:demo`), which keeps auth real but fills those data-sparse tabs from a mock display layer (see ADR-0011).
 
 ## Docker Compose (Recommended)
 
@@ -207,19 +205,31 @@ expects PostgreSQL and MinIO to already be running and fails with a clear messag
 are not reachable.
 
 ```bash
-docker compose up -d user-db minio minio-init user-service
+docker compose up -d user-db content-db recommendation-db minio minio-init user-service content-service recommendation-service
 npm install
 npm run seed:local
 ```
 
-The first seed domain creates 8 curated users, uploads their default avatar PNGs to the
-existing `verita-user-portraits` MinIO bucket, and stores public avatar URLs on the user
-rows. It is idempotent and non-destructive for unrelated local users: known seeded users
-are updated by their fixed UUIDs, but identity conflicts on username/email fail instead of
-rewriting primary keys.
+The default seed runs domains in order: `users`, `content`, then `recommendations`.
 
-The seed writes directly to the local user database, so `user-service` must have started
-once to let Flyway create the `users` and `user_expertise` tables.
+- `users` creates 8 curated users, uploads default avatar PNGs to the existing
+  `verita-user-portraits` MinIO bucket with user-service storage credentials, and
+  stores public avatar URLs.
+- `content` creates frontend-inspired posts with topics, source URLs, comments,
+  bookmarks, post-like votes, and 6 local PNG cover images in the existing
+  `verita-post-photos` bucket with content-service storage credentials. Cover images
+  are written under the `seed-post-covers/` object prefix.
+- `recommendations` creates topic follows, user follows, sampled interactions, and
+  notifications that reference the seeded users/content.
+
+The seed writes directly to local databases, so each Spring service must have started
+once to let Hibernate/Flyway create the required tables. The seed is idempotent and
+non-destructive for unrelated local data: known seeded fixtures are overwritten by their
+fixed IDs or scoped keys, while unrelated rows are left alone.
+
+If a database rejects the documented credentials after pulling newer Compose settings,
+your local Postgres volume may have been initialized with older credentials. Recreate the
+local volumes only if you are comfortable deleting local database data.
 
 Seeded users are login-capable with this shared dev-only password:
 
@@ -232,7 +242,9 @@ Useful options:
 ```bash
 npm run seed:local -- --dry-run
 npm run seed:local -- --only users
-npm run seed:local -- --dry-run --only users
+npm run seed:local -- --only content
+npm run seed:local -- --only recommendations
+npm run seed:local -- --dry-run --only users,content,recommendations
 ```
 
 Connection defaults match `docker-compose.yml` and can be overridden:
@@ -244,11 +256,28 @@ Connection defaults match `docker-compose.yml` and can be overridden:
 | `USER_DB_NAME` | `verita_users` |
 | `USER_DB_USER` | `svc_user` |
 | `USER_DB_PASSWORD` | `svc_user_password` |
-| `MINIO_ENDPOINT` | `http://localhost:9000` |
-| `MINIO_PUBLIC_ENDPOINT` | `http://localhost:9000` |
-| `MINIO_ACCESS_KEY` | `verita_minio` |
-| `MINIO_SECRET_KEY` | `verita_minio_password` |
+| `CONTENT_DB_HOST` | `localhost` |
+| `CONTENT_DB_PORT` | `5433` |
+| `CONTENT_DB_NAME` | `verita_contents` |
+| `CONTENT_DB_USER` | `svc_content` |
+| `CONTENT_DB_PASSWORD` | `svc_content_password` |
+| `RECOMMENDATION_DB_HOST` | `localhost` |
+| `RECOMMENDATION_DB_PORT` | `5434` |
+| `RECOMMENDATION_DB_NAME` | `verita_recommendations` |
+| `RECOMMENDATION_DB_USER` | `svc_recommendation` |
+| `RECOMMENDATION_DB_PASSWORD` | `svc_recommendation_password` |
+| `STORAGE_S3_ENDPOINT` | `http://localhost:9000` |
+| `STORAGE_S3_PUBLIC_ENDPOINT` | `http://localhost:9000` |
+| `USER_STORAGE_S3_ENDPOINT` | falls back to `STORAGE_S3_ENDPOINT` |
+| `USER_STORAGE_S3_PUBLIC_ENDPOINT` | falls back to `STORAGE_S3_PUBLIC_ENDPOINT` |
+| `USER_STORAGE_S3_ACCESS_KEY` | `user-service` |
+| `USER_STORAGE_S3_SECRET_KEY` | `user-service-s3-secret` |
 | `USER_PORTRAITS_BUCKET` | `verita-user-portraits` |
+| `CONTENT_STORAGE_S3_ENDPOINT` | falls back to `STORAGE_S3_ENDPOINT` |
+| `CONTENT_STORAGE_S3_PUBLIC_ENDPOINT` | falls back to `STORAGE_S3_PUBLIC_ENDPOINT` |
+| `CONTENT_STORAGE_S3_ACCESS_KEY` | `content-service` |
+| `CONTENT_STORAGE_S3_SECRET_KEY` | `content-service-s3-secret` |
+| `CONTENT_POST_PHOTOS_BUCKET` | `verita-post-photos` |
 
 ---
 
