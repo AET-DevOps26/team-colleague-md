@@ -362,7 +362,7 @@
         "y": 1110
       },
       "data": {
-        "name": "Database Layer",
+        "name": "Data & Storage Layer",
         "isComponentSubsystemHeaderShown": true
       },
       "measured": {
@@ -419,7 +419,7 @@
       },
       "parentId": "73e9feb4-dbf5-4882-91f5-096cf48d6a25",
       "data": {
-        "name": "Vector DB",
+        "name": "Recommendation DB",
         "isComponentHeaderShown": true
       },
       "measured": {
@@ -438,12 +438,48 @@
       },
       "parentId": "73e9feb4-dbf5-4882-91f5-096cf48d6a25",
       "data": {
-        "name": "User Event DB",
+        "name": "Object Storage (MinIO)",
         "isComponentHeaderShown": true
       },
       "measured": {
         "width": 180,
         "height": 120
+      }
+    },
+    {
+      "id": "a1b2c3d4-rec0-metr-ics0-000000000001",
+      "width": 30,
+      "height": 30,
+      "type": "componentInterface",
+      "position": {
+        "x": 1090,
+        "y": 540
+      },
+      "parentId": "714b53b8-4f3d-4f27-8222-6702e1fb2c32",
+      "data": {
+        "name": "Metrics API"
+      },
+      "measured": {
+        "width": 30,
+        "height": 30
+      }
+    },
+    {
+      "id": "f0e1d2c3-llm0-prov-ider-000000000002",
+      "width": 240,
+      "height": 130,
+      "type": "component",
+      "position": {
+        "x": 1620,
+        "y": 650
+      },
+      "data": {
+        "name": "LLM Provider (NVIDIA / OpenRouter / Google)",
+        "isComponentHeaderShown": true
+      },
+      "measured": {
+        "width": 240,
+        "height": 130
       }
     }
   ],
@@ -669,8 +705,8 @@
       }
     },
     {
-      "id": "b6cbf5a0-b1b1-4eab-a53d-7c349ed1e239",
-      "source": "5239e721-3187-4123-a701-8660b6b7cb04",
+      "id": "8ae9c104-151e-494a-87a8-8217e3b9caf8",
+      "source": "5cbe8baa-69c8-4fca-8578-cf968356b80a",
       "target": "a0f84992-ea47-4455-9883-659c2c8f6ddc",
       "type": "ComponentDependency",
       "sourceHandle": "bottom",
@@ -680,12 +716,56 @@
       }
     },
     {
-      "id": "8ae9c104-151e-494a-87a8-8217e3b9caf8",
-      "source": "5cbe8baa-69c8-4fca-8578-cf968356b80a",
+      "id": "c1d2e3f4-user-minio-dep-000000000003",
+      "source": "7847b828-ba55-42a7-bc5e-b7aebf3c0cac",
       "target": "2da30253-2fe1-40f2-a35a-3c8dc65a0d98",
       "type": "ComponentDependency",
       "sourceHandle": "bottom",
       "targetHandle": "top",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "d2e3f4a5-content-minio-dep-00000004",
+      "source": "91a1e5d0-6fca-4e1b-8e4a-a6e08e34fd13",
+      "target": "2da30253-2fe1-40f2-a35a-3c8dc65a0d98",
+      "type": "ComponentDependency",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "e3f4a5b6-rec-metrics-prov-00000005",
+      "source": "5cbe8baa-69c8-4fca-8578-cf968356b80a",
+      "target": "a1b2c3d4-rec0-metr-ics0-000000000001",
+      "type": "ComponentProvidedInterface",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "f4a5b6c7-prom-rec-scrape-00000006",
+      "source": "01b2dae2-083e-43cb-9233-f637368e4cd8",
+      "target": "a1b2c3d4-rec0-metr-ics0-000000000001",
+      "type": "ComponentDependency",
+      "sourceHandle": "top",
+      "targetHandle": "bottom",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "a5b6c7d8-genai-llm-dep-0000000007",
+      "source": "5239e721-3187-4123-a701-8660b6b7cb04",
+      "target": "f0e1d2c3-llm0-prov-ider-000000000002",
+      "type": "ComponentDependency",
+      "sourceHandle": "right",
+      "targetHandle": "left",
       "data": {
         "points": []
       }
