@@ -158,9 +158,11 @@ services:
       - STORAGE_S3_ENDPOINT=http://minio:9000
       - STORAGE_S3_ACCESS_KEY=user-service
       - STORAGE_S3_SECRET_KEY=user-service-s3-secret
-      # Downstream services for cross-service user-deletion cleanup
+      # Peer service URLs (full set for redundancy; only some are used today).
       - CONTENT_SERVICE_BASE_URL=http://content-service:8082
       - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083
+      - GENAI_SERVICE_BASE_URL=http://genai-service:8000
+      - MINIO_URL=http://minio:9000
     depends_on:
       user-db:
         condition: service_healthy
@@ -192,9 +194,12 @@ services:
       - STORAGE_S3_ENDPOINT=http://minio:9000
       - STORAGE_S3_ACCESS_KEY=content-service
       - STORAGE_S3_SECRET_KEY=content-service-s3-secret
-      # Cross-service calls (Clients.java): reach peers by compose service name, not localhost.
+      # Peer service URLs (full set for redundancy; only some are used today).
+      # Cross-service calls (Clients.java) reach peers by compose service name, not localhost.
       - USER_SERVICE_BASE_URL=http://user-service:8081
       - GENAI_SERVICE_BASE_URL=http://genai-service:8000
+      - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083
+      - MINIO_URL=http://minio:9000
     depends_on:
       content-db:
         condition: service_healthy
@@ -222,7 +227,11 @@ services:
       - DB_NAME=verita_recommendations
       - DB_USER=svc_recommendation
       - DB_PASSWORD=svc_recommendation_password
+      # Peer service URLs (full set for redundancy; only some are used today).
       - CONTENT_SERVICE_BASE_URL=http://content-service:8082
+      - USER_SERVICE_BASE_URL=http://user-service:8081
+      - GENAI_SERVICE_BASE_URL=http://genai-service:8000
+      - MINIO_URL=http://minio:9000
     depends_on:
       recommendation-db:
         condition: service_healthy
@@ -241,6 +250,12 @@ services:
       - "8000:8000"
     env_file:
       - ./genai-service/.env
+    environment:
+      # Peer service URLs (full set for redundancy; genai talks to none of them today).
+      - USER_SERVICE_BASE_URL=http://user-service:8081
+      - CONTENT_SERVICE_BASE_URL=http://content-service:8082
+      - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083
+      - MINIO_URL=http://minio:9000
     healthcheck:
       # Poll FastAPI health endpoint via the bundled Python runtime — the slim base ships no curl/wget.
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
@@ -255,6 +270,21 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:80"  # nginx listens on 80 inside the container, exposed on 3000 to match dev server
+    environment:
+      # nginx proxies /user, /content, etc. to the backends by compose service name.
+      # Without these the Dockerfile defaults to localhost:* which resolves to the
+      # frontend container itself → 502 on every API call.
+      - USER_SERVICE_URL=http://user-service:8081
+      - CONTENT_SERVICE_URL=http://content-service:8082
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:8083
+      - GENAI_SERVICE_URL=http://genai-service:8000
+      - MINIO_URL=http://minio:9000
+    depends_on:
+      - user-service
+      - content-service
+      - recommendation-service
+      - genai-service
+      - minio
     healthcheck:
       # wget is available in nginx:alpine; curl is not
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]

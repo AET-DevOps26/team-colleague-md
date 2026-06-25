@@ -30,6 +30,8 @@
   line-height: 1;
   white-space: nowrap;
   gap: 0;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .brandV {

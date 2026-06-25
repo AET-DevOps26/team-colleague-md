@@ -65,7 +65,9 @@ public class PostEntity extends BaseTimeEntity {
     public String getCoverImageUrl() { return coverImageUrl; }
     public void setCoverImageUrl(String coverImageUrl) { this.coverImageUrl = coverImageUrl; }
     public List<String> getSourceUrls() { return sourceUrls; }
-    public void setSourceUrls(List<String> sourceUrls) { this.sourceUrls = sourceUrls == null ? new ArrayList<>() : sourceUrls; }
+    // Copy into a mutable list: callers pass immutable Stream.toList() results, which
+    // Hibernate cannot manage as an @ElementCollection (mutating ops throw on flush).
+    public void setSourceUrls(List<String> sourceUrls) { this.sourceUrls = sourceUrls == null ? new ArrayList<>() : new ArrayList<>(sourceUrls); }
     public String getContentSummary() { return contentSummary; }
     public void setContentSummary(String contentSummary) { this.contentSummary = contentSummary; }
     public PostStatus getStatus() { return status; }

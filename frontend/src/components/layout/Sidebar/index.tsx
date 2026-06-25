@@ -63,10 +63,10 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       data-testid="sidebar"
     >
       <div className={styles.brand}>
-        <div className={styles.brandWordmark}>
+        <Link to="/" className={styles.brandWordmark} aria-label="Verita home">
           <span className={styles.brandV}>V</span>
           <span className={styles.brandErita}>erita</span>
-        </div>
+        </Link>
       </div>
 
       <nav className={styles.nav} aria-label="Primary">

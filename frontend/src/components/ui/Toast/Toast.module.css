@@ -35,5 +35,10 @@
   background: #0a0a0a;
 }
 
+.error {
+  background: #c0392b;
+}
+
 .iconCheck { color: #9ce0a0; }
 .iconMinus { color: rgba(255,255,255,0.6); }
+.iconWarn { color: #ffe0e0; }

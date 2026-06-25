@@ -22,7 +22,10 @@ public class AuthEntryPointJwt implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException, ServletException {
-        log.error("Unauthorized error: {}", authException.getMessage());
+        // A 401 here is the expected outcome for anonymous visitors hitting a protected
+        // endpoint (e.g. an unauthenticated page load probing /auth/refresh with no cookie).
+        // Log at debug so normal logged-out traffic does not spam ERROR-level noise.
+        log.debug("Unauthorized error: {}", authException.getMessage());
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Error: Unauthorized");
     }
 }
