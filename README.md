@@ -6,6 +6,102 @@ share and discover practical AI knowledge through intelligent curation, automate
 summarization, and personalized recommendations. It is built as four backend microservices
 (Spring Boot + FastAPI) behind a React frontend.
 
+## Quick Start with Docker Compose (Local)
+
+The fastest way to run the full platform.
+
+**First-time setup.** Create `genai-service/.env` from the template (the placeholder values
+are enough to boot; add a real `NVIDIA_NIM_API_KEY` to enable AI summaries and the daily
+digest):
+
+```bash
+cp genai-service/.env.example genai-service/.env
+```
+
+Run the docker compose from the repository root:
+
+```bash
+docker compose up --build
+```
+
+This builds the application services plus one PostgreSQL database per service and MinIO
+object storage:
+
+| Service | URL | Description |
+|---|---|---|
+| `frontend` | http://localhost:3000 | React UI (served by nginx) |
+| `user-service` | http://localhost:8081 | Spring Boot — user identity & auth |
+| `content-service` | http://localhost:8082 | Spring Boot — posts, comments & topics |
+| `recommendation-service` | http://localhost:8083 | Spring Boot — feeds & notifications |
+| `genai-service` | http://localhost:8000 | FastAPI — AI summaries & daily digest |
+| `user-db` | localhost:5432 | PostgreSQL — user-service data |
+| `content-db` | localhost:5433 | PostgreSQL — content-service data |
+| `recommendation-db` | localhost:5434 | PostgreSQL — recommendation-service data |
+| `minio` | http://localhost:9000 | S3-compatible object storage API |
+| `minio` console | http://localhost:9001 | Object storage admin UI |
+
+MinIO starts with two buckets and a scoped, least-privilege S3 user per service. Root console
+credentials, connection details, and the storage rationale live in
+[Backend Infrastructure](#backend-infrastructure-databases--object-storage) below.
+
+Common lifecycle commands:
+
+```bash
+docker compose down                       # stop all services (data is kept)
+docker compose down -v                    # stop and delete all data (DBs + object storage)
+docker compose up --build user-service    # start a single service only
+```
+
+> **Note:** Postgres applies its credentials only on the *first* startup of an empty data
+> volume — see the note at the top of [`docker-compose.yml`](docker-compose.yml) if you change
+> DB credentials against an existing volume.
+
+### Health Checks
+
+All services run Docker health checks every 30 seconds and expose a status endpoint:
+
+```text
+http://localhost:8081/actuator/health   # user-service
+http://localhost:8082/actuator/health   # content-service
+http://localhost:8083/actuator/health   # recommendation-service
+http://localhost:8000/health            # genai-service
+```
+
+### Monitoring (optional)
+
+Layer a Prometheus + Grafana stack on top of the dev stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
+# Grafana http://localhost:3001 log in with (admin / verita_grafana_admin)
+# Prometheus http://localhost:9090
+```
+
+See [`infra/monitoring/README.md`](infra/monitoring/README.md) for what is collected and the Azure/Kubernetes variants.
+
+---
+
+## Cloud Deployments
+
+Live environments:
+
+| Environment | URL | Platform |
+|---|---|---|
+| Production | https://verita.stud.k8s.aet.cit.tum.de/ | Kubernetes (Rancher) |
+| Development | https://dev.verita.stud.k8s.aet.cit.tum.de/ | Kubernetes (Rancher) |
+| Azure VM | http://20.91.194.13/ | Docker Compose on a single VM |
+
+See [Infrastructure Design](docs/Infrastructure_Design.md) and the
+[Helm Chart](infra/helm/verita/README.md) for how these are provisioned and deployed.
+
+---
+
+## Check List (2.Review)
+- Sign up and login
+
+
+---
+
 ## Documentation
 
 Project-wide documentation lives under [`docs/`](docs/); component and tooling docs live next
@@ -15,13 +111,13 @@ to the code they describe.
 
 | Document | What's inside |
 |---|---|
-| [System Overview & Architecture](docs/System_Overview_Architecture.md) | Services, technology decisions, data architecture, UML diagrams, product backlog |
 | [Problem Statement](docs/Problem_Statement.md) | The problem Verita solves, target users, and epics/user stories |
+| [System Overview & Architecture](docs/System_Overview_Architecture.md) | Services, technology decisions, data architecture, UML diagrams, product backlog |
+| [API Gateway & Routing](docs/API_Gateway_Routing.md) | Path-prefix routing pattern across local, Azure, and Kubernetes |
+| [Infrastructure Design](docs/Infrastructure_Design.md) | Deployment toolchain and infrastructure goals |
 | [Project Plan](docs/Project_Plan.md) | Milestones, scope, and team plan |
 | [Frontend PRD](docs/Frontend_PRD.md) | Product requirements for the web client |
-| [Infrastructure Design](docs/Infrastructure_Design.md) | Deployment toolchain and infrastructure goals |
-| [API Gateway & Routing](docs/API_Gateway_Routing.md) | Path-prefix routing pattern across local, Azure, and Kubernetes |
-| [API Gap Analysis](docs/API_Gap_Analysis.md) | Gaps between the Problem Statement and the per-service OpenAPI contracts |
+
 
 ### Database
 
@@ -49,7 +145,7 @@ to the code they describe.
 | [Helm Chart](infra/helm/verita/README.md) | Kubernetes deployment via the `verita` umbrella chart |
 | [API Client (Bruno)](bruno/README.md) | Repo-level Bruno collection for exercising the APIs |
 
-## Demo Accounts
+<!-- ## Demo Accounts
 
 Two built-in demo accounts let you explore the frontend without a backend — they are handled
 entirely client-side, so they work at the deployed frontend or at `http://localhost:3000`
@@ -61,102 +157,7 @@ after running `docker compose up --build`. Real accounts are created through **S
 | Bob Nakamura | `bob@verita.demo` | `demo1234` | User |
 
 Both demo accounts have complete profiles (bio, organisation, expertise areas) and populated
-posts, bookmarks, and liked-posts tabs in the User Profile page.
-
-## Docker Compose (Recommended)
-
-The fastest way to run the full platform.
-
-**First-time setup.** The `genai-service` container loads `genai-service/.env`, which is
-git-ignored, so Compose fails to start until it exists. Create it from the template:
-
-```bash
-cp genai-service/.env.example genai-service/.env
-```
-
-The placeholder values are enough for the stack to boot; add a real `NVIDIA_NIM_API_KEY` (or
-switch `LLM_PROVIDER`) to enable AI summaries and the daily digest.
-
-Then, from the repository root:
-
-```bash
-docker compose up --build
-```
-
-This builds and starts the application services plus one PostgreSQL database per service and
-MinIO object storage:
-
-| Service | URL | Description |
-|---|---|---|
-| `frontend` | http://localhost:3000 | React UI (served by nginx) |
-| `user-service` | http://localhost:8081 | Spring Boot — user identity & auth |
-| `content-service` | http://localhost:8082 | Spring Boot — posts, comments & topics |
-| `recommendation-service` | http://localhost:8083 | Spring Boot — feeds & notifications |
-| `genai-service` | http://localhost:8000 | FastAPI — AI summaries & daily digest |
-| `user-db` | localhost:5432 | PostgreSQL — user-service data |
-| `content-db` | localhost:5433 | PostgreSQL — content-service data |
-| `recommendation-db` | localhost:5434 | PostgreSQL — recommendation-service data |
-| `minio` | http://localhost:9000 | S3-compatible object storage API |
-| `minio` console | http://localhost:9001 | Object storage admin UI |
-
-The MinIO root credentials (used for the console at `:9001`) are `verita_minio` /
-`verita_minio_password`. Each service authenticates to MinIO with its own scoped, least-
-privilege S3 user rather than the root account. On startup, Compose creates two buckets:
-
-| Bucket | Used for |
-|---|---|
-| `verita-user-portraits` | User portrait/avatar objects owned by `user-service` |
-| `verita-post-photos` | Post photo/cover objects owned by `content-service` |
-
-To stop all services:
-
-```bash
-docker compose down
-```
-
-Persistent data is stored in named Docker volumes — `team-colleague-md_user-db-data`,
-`team-colleague-md_content-db-data`, `team-colleague-md_recommendation-db-data`, and
-`team-colleague-md_minio-data`. To remove the databases and object storage as well:
-
-```bash
-docker compose down -v
-```
-
-> **Note:** Postgres only applies its user/database/password on the *first* startup of an
-> empty data volume. If you change DB credentials against an existing volume, wipe it first
-> with `docker compose down -v`.
-
-To start a single service only:
-
-```bash
-docker compose up --build user-service
-```
-
-### Health Checks
-
-All services are configured with Docker health checks that run automatically every 30 seconds. Once started, the Spring Boot services expose their health status at `/actuator/health`:
-
-```text
-http://localhost:8081/actuator/health   # user-service
-http://localhost:8082/actuator/health   # content-service
-http://localhost:8083/actuator/health   # recommendation-service
-http://localhost:8000/health            # genai-service
-```
-
-Health check activity is visible in the compose log output. The frontend (nginx) logs every health probe as an access log line (`GET / HTTP/1.1 200`). The Spring Boot services run their checks silently — no log line appears unless the check fails, which is expected behavior.
-
-### Monitoring (optional)
-
-A Prometheus + Grafana stack can be layered on top of the dev stack with the monitoring
-overrides:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
-# Grafana http://localhost:3001   Prometheus http://localhost:9090   (admin / verita_grafana_admin)
-```
-
-See [`infra/monitoring/README.md`](infra/monitoring/README.md) for what is collected, the
-Azure/Kubernetes variants, and why the local override is required.
+posts, bookmarks, and liked-posts tabs in the User Profile page. -->
 
 ---
 
