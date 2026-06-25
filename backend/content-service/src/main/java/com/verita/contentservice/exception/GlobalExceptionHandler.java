@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
@@ -56,6 +57,17 @@ public class GlobalExceptionHandler {
                 .status(400)
                 .error("BAD_REQUEST")
                 .message(ex.getMessage()));
+    }
+
+    // Files above the multipart parser ceiling never reach FileStorageService's friendly check,
+    // so translate the parser's exception into the same 400 contract instead of a 500.
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.badRequest().body(new ErrorResponse()
+                .timestamp(OffsetDateTime.now())
+                .status(400)
+                .error("BAD_REQUEST")
+                .message("File exceeds the maximum allowed size."));
     }
 
     @ExceptionHandler(Exception.class)
