@@ -10,7 +10,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'npm run dev',
+    // Demo build: posts/bookmarks/likes/drafts come from the in-app mock display layer
+    // (ADR-0011), so E2E specs only need to mock the auth + profile endpoints.
+    command: 'npm run dev:demo',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 30000,
