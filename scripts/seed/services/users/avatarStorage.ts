@@ -1,11 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Client as MinioClient } from "minio";
-import type { SeedConfig } from "../config.ts";
-import type { SeedUser } from "../data/users.ts";
-import { AVATAR_ASSETS_DIR } from "../data/users.ts";
+import type { SeedConfig, StorageConfig } from "../../config.ts";
+import type { SeedUser } from "./usersData.ts";
+import { AVATAR_ASSETS_DIR } from "./usersData.ts";
 
-export interface  AvatarObject {
+export interface AvatarObject {
   user: SeedUser;
   filePath: string;
   objectName: string;
@@ -13,13 +13,14 @@ export interface  AvatarObject {
 }
 
 export function buildAvatarObjects(config: SeedConfig, users: SeedUser[]): AvatarObject[] {
+  const storage = config.storage.users;
   return users.map((user) => {
     const objectName = `${user.username}/avatar.png`;
     return {
       user,
       filePath: path.join(AVATAR_ASSETS_DIR, user.avatarFile),
       objectName,
-      publicUrl: `${config.minio.publicEndpoint}/${config.minio.userPortraitsBucket}/${objectName}`,
+      publicUrl: `${storage.publicEndpoint}/${storage.bucket}/${objectName}`,
     };
   });
 }
@@ -41,7 +42,11 @@ export async function assertAvatarFilesExist(avatars: AvatarObject[]) {
 }
 
 export function createMinioClient(config: SeedConfig): MinioClient {
-  const endpoint = new URL(config.minio.endpoint);
+  return createStorageClient(config.storage.users);
+}
+
+function createStorageClient(storage: StorageConfig): MinioClient {
+  const endpoint = new URL(storage.endpoint);
   const useSSL = endpoint.protocol === "https:";
   const defaultPort = useSSL ? 443 : 80;
 
@@ -49,26 +54,27 @@ export function createMinioClient(config: SeedConfig): MinioClient {
     endPoint: endpoint.hostname,
     port: endpoint.port ? Number(endpoint.port) : defaultPort,
     useSSL,
-    accessKey: config.minio.accessKey,
-    secretKey: config.minio.secretKey,
+    accessKey: storage.accessKey,
+    secretKey: storage.secretKey,
   });
 }
 
 export async function assertUserPortraitsBucketExists(client: MinioClient, config: SeedConfig) {
+  const storage = config.storage.users;
   let exists = false;
   try {
-    exists = await client.bucketExists(config.minio.userPortraitsBucket);
+    exists = await client.bucketExists(storage.bucket);
   } catch (error) {
     const message = formatError(error);
     throw new Error(
-      `Could not connect to MinIO at ${config.minio.endpoint}: ${message}. ` +
+      `Could not connect to user portrait storage at ${storage.endpoint}: ${message}. ` +
         "Start local object storage with: docker compose up -d minio minio-init",
     );
   }
 
   if (!exists) {
     throw new Error(
-      `MinIO bucket "${config.minio.userPortraitsBucket}" does not exist. ` +
+      `User portrait bucket "${storage.bucket}" does not exist or is not accessible with the configured user storage credentials. ` +
         "Start bucket initialisation with: docker compose up -d minio minio-init",
     );
   }
@@ -85,9 +91,10 @@ function formatError(error: unknown): string {
 }
 
 export async function uploadAvatars(client: MinioClient, config: SeedConfig, avatars: AvatarObject[]) {
+  const storage = config.storage.users;
   for (const avatar of avatars) {
     await client.fPutObject(
-      config.minio.userPortraitsBucket,
+      storage.bucket,
       avatar.objectName,
       avatar.filePath,
       { "Content-Type": "image/png" },

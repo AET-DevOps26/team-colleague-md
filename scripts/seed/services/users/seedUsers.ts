@@ -1,21 +1,21 @@
 import bcrypt from "bcryptjs";
-import type { SeedOptions } from "../cli.ts";
-import type { SeedConfig } from "../config.ts";
-import { DEFAULT_SEED_PASSWORD, SEED_USERS } from "../data/users.ts";
+import type { SeedOptions } from "../../cli.ts";
+import type { SeedConfig } from "../../config.ts";
+import { DEFAULT_SEED_PASSWORD, SEED_USERS } from "./usersData.ts";
 import {
   assertNoUserIdentityConflicts,
   assertUserSeedSchemaExists,
   connectUserDb,
   createUserDbClient,
   upsertSeedUsers,
-} from "../db/userSeedRepository.ts";
+} from "./usersRepository.ts";
 import {
   assertAvatarFilesExist,
   assertUserPortraitsBucketExists,
   buildAvatarObjects,
   createMinioClient,
   uploadAvatars,
-} from "../storage/avatarStorage.ts";
+} from "./avatarStorage.ts";
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -36,7 +36,7 @@ export async function seedUsers(config: SeedConfig, options: SeedOptions) {
     await assertNoUserIdentityConflicts(dbClient, SEED_USERS);
 
     if (options.dryRun) {
-      console.log(`Would upload ${avatars.length} avatar object(s) to ${config.minio.userPortraitsBucket}.`);
+      console.log(`Would upload ${avatars.length} avatar object(s) to ${config.storage.users.bucket}.`);
       console.log(`Would upsert ${SEED_USERS.length} user row(s) and replace their expertise rows.`);
       console.log(`Default seeded user password: ${DEFAULT_SEED_PASSWORD}`);
       return;
