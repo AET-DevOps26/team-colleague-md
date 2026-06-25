@@ -1,0 +1,104 @@
+# Monitoring stack for the Azure (Docker Compose) deployment.
+# Run merged with the app stack so it shares the same project network and can reach the
+# services + databases by name:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml up -d
+# (locally: swap docker-compose.prod.yml for docker-compose.yml)
+#
+# Prometheus and Grafana bind to 127.0.0.1 only — reach them via an SSH tunnel, e.g.
+#   ssh -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 <vm>
+# Never expose them publicly: Prometheus has no auth and Grafana would be brute-forceable.
+#
+# NOTE ON SHARED FILES: the alert rules and the Grafana dashboard are the single source of
+# truth under infra/helm/verita/ (Helm's .Files.Get cannot read outside the chart, so the
+# chart owns them and this compose file mounts the same paths to avoid drift).
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./infra/monitoring/azure/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/monitoring/azure/alerts-host.yml:/etc/prometheus/rules/alerts-host.yml:ro
+      - ./infra/helm/verita/files/verita-alerts.yml:/etc/prometheus/rules/verita-alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-verita_grafana_admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./infra/monitoring/azure/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./infra/monitoring/azure/grafana/dashboards-provider.yml:/etc/grafana/provisioning/dashboards/provider.yml:ro
+      - ./infra/helm/verita/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    command:
+      - "--path.rootfs=/host"
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  user-db-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_URI: "user-db:5432/${DB_NAME:-verita_users}?sslmode=disable"
+      DATA_SOURCE_USER: ${DB_USER:-verita_user}
+      DATA_SOURCE_PASS: ${DB_PASSWORD}
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  content-db-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_URI: "content-db:5432/${CONTENT_DB_NAME:-verita_content}?sslmode=disable"
+      DATA_SOURCE_USER: ${CONTENT_DB_USER:-verita_content_user}
+      DATA_SOURCE_PASS: ${CONTENT_DB_PASSWORD}
+    depends_on:
+      content-db:
+        condition: service_healthy
+
+  recommendation-db-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_URI: "recommendation-db:5432/${RECOMMENDATION_DB_NAME:-verita_recommendations}?sslmode=disable"
+      DATA_SOURCE_USER: ${RECOMMENDATION_DB_USER:-verita_user}
+      DATA_SOURCE_PASS: ${RECOMMENDATION_DB_PASSWORD}
+    depends_on:
+      recommendation-db:
+        condition: service_healthy
+
+volumes:
+  prometheus-data:
+  grafana-data:

@@ -9,6 +9,12 @@ metadata:
     app.kubernetes.io/name: {{ $name }}
     app.kubernetes.io/instance: {{ $.Release.Name }}
     app.kubernetes.io/managed-by: {{ $.Release.Service }}
+  {{- if $svc.metrics }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: {{ $svc.port | quote }}
+    prometheus.io/path: {{ $svc.metrics.path | quote }}
+  {{- end }}
 spec:
   type: ClusterIP
   ports:
