@@ -75,19 +75,6 @@ ssh -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 <vm>
 ```
 Set `GRAFANA_ADMIN_PASSWORD` (and DB credential vars, shared with the app stack) in the env.
 
-## Local (Docker Compose)
-
-Add `docker-compose.monitoring.local.yml` on top of the local app stack:
-```bash
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
-```
-- Grafana: **http://localhost:3001** — login `admin` / `verita_grafana_admin`.
-- Prometheus: **http://localhost:9090**.
-- The postgres_exporters default to the base compose DB credentials, so **no env vars are
-  needed** locally.
-- The `node` target reads **DOWN by design** — node-exporter is disabled locally because its
-  host-root mount fails on Docker Desktop's WSL2 backend.
-
 ## Shared files (single source of truth)
 
 Helm's `.Files.Get` cannot read outside the chart, so the chart owns the shared assets and
