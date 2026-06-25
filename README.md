@@ -1,42 +1,107 @@
 # team-colleague-md - Verita Platform
 [![API Docs](https://img.shields.io/badge/API-Documentation-blue)](https://AET-DevOps26.github.io/team-colleague-md/)
 
-Technical documentation for all Verita microservices.
+Verita is an AI-focused community platform where developers, researchers, and enthusiasts
+share and discover practical AI knowledge through intelligent curation, automated
+summarization, and personalized recommendations. It is built as four backend microservices
+(Spring Boot + FastAPI) behind a React frontend.
+
+## Documentation
+
+Project-wide documentation lives under [`docs/`](docs/); component and tooling docs live next
+to the code they describe.
+
+### Architecture & Product
+
+| Document | What's inside |
+|---|---|
+| [System Overview & Architecture](docs/System_Overview_Architecture.md) | Services, technology decisions, data architecture, UML diagrams, product backlog |
+| [Problem Statement](docs/Problem_Statement.md) | The problem Verita solves, target users, and epics/user stories |
+| [Project Plan](docs/Project_Plan.md) | Milestones, scope, and team plan |
+| [Frontend PRD](docs/Frontend_PRD.md) | Product requirements for the web client |
+| [Infrastructure Design](docs/Infrastructure_Design.md) | Deployment toolchain and infrastructure goals |
+| [API Gateway & Routing](docs/API_Gateway_Routing.md) | Path-prefix routing pattern across local, Azure, and Kubernetes |
+| [API Gap Analysis](docs/API_Gap_Analysis.md) | Gaps between the Problem Statement and the per-service OpenAPI contracts |
+
+### Database
+
+| Document | What's inside |
+|---|---|
+| [Schema Overview](docs/database/schema.md) | Database-per-service model and cross-service reference rules |
+| [User Service Schema](docs/database/user_service_schema.md) | `verita_users` tables |
+| [Content Service Schema](docs/database/content_service_schema.md) | `verita_contents` tables |
+| [Recommendation Service Schema](docs/database/recommendation_service_schema.md) | `verita_recommendations` tables |
+
+### Testing & Workflow
+
+| Document | What's inside |
+|---|---|
+| [Testing Strategy](docs/Testing.md) | Backend test tooling, coverage gates, and how to run tests per service |
+| [Frontend Testing](docs/Frontend_Testing.md) | Unit, component, and end-to-end test layers for the frontend |
+| [Git Branching Guide](docs/Git_Branching_Guide.md) | Branch naming and pull-request workflow |
+
+### Operations & Tooling
+
+| Document | What's inside |
+|---|---|
+| [Frontend](frontend/README.md) | React app — dev scripts, demo mode, and structure |
+| [Monitoring](infra/monitoring/README.md) | Prometheus + Grafana stack for Compose and Kubernetes |
+| [Helm Chart](infra/helm/verita/README.md) | Kubernetes deployment via the `verita` umbrella chart |
+| [API Client (Bruno)](bruno/README.md) | Repo-level Bruno collection for exercising the APIs |
 
 ## Demo Accounts
 
-Two pre-configured accounts are available for exploring the platform. No registration required — log in at the deployed frontend or at `http://localhost:3000` after running `docker compose up --build`.
+Two built-in demo accounts let you explore the frontend without a backend — they are handled
+entirely client-side, so they work at the deployed frontend or at `http://localhost:3000`
+after running `docker compose up --build`. Real accounts are created through **Sign Up**.
 
 | Display Name | Email | Password | Role |
 |---|---|---|---|
 | Alice Morgan | `alice@verita.demo` | `demo1234` | Verified |
 | Bob Nakamura | `bob@verita.demo` | `demo1234` | User |
 
-Both accounts have complete profiles (bio, organisation, expertise areas) and populated posts, bookmarks, and liked-posts tabs in the User Profile page.
+Both demo accounts have complete profiles (bio, organisation, expertise areas) and populated
+posts, bookmarks, and liked-posts tabs in the User Profile page.
 
 ## Docker Compose (Recommended)
 
-The fastest way to run the full platform. From the repository root:
+The fastest way to run the full platform.
+
+**First-time setup.** The `genai-service` container loads `genai-service/.env`, which is
+git-ignored, so Compose fails to start until it exists. Create it from the template:
+
+```bash
+cp genai-service/.env.example genai-service/.env
+```
+
+The placeholder values are enough for the stack to boot; add a real `NVIDIA_NIM_API_KEY` (or
+switch `LLM_PROVIDER`) to enable AI summaries and the daily digest.
+
+Then, from the repository root:
 
 ```bash
 docker compose up --build
 ```
 
-This builds and starts the application services plus PostgreSQL and MinIO object storage:
+This builds and starts the application services plus one PostgreSQL database per service and
+MinIO object storage:
 
 | Service | URL | Description |
 |---|---|---|
 | `frontend` | http://localhost:3000 | React UI (served by nginx) |
 | `user-service` | http://localhost:8081 | Spring Boot — user identity & auth |
-| `user-db` | localhost:5432 | PostgreSQL — persistent user data |
+| `content-service` | http://localhost:8082 | Spring Boot — posts, comments & topics |
+| `recommendation-service` | http://localhost:8083 | Spring Boot — feeds & notifications |
+| `genai-service` | http://localhost:8000 | FastAPI — AI summaries & daily digest |
+| `user-db` | localhost:5432 | PostgreSQL — user-service data |
+| `content-db` | localhost:5433 | PostgreSQL — content-service data |
+| `recommendation-db` | localhost:5434 | PostgreSQL — recommendation-service data |
 | `minio` | http://localhost:9000 | S3-compatible object storage API |
 | `minio` console | http://localhost:9001 | Object storage admin UI |
-| `content-service` | http://localhost:8082 | Spring Boot — posts & content |
-| `recommendation-service` | http://localhost:8083 | Spring Boot — feeds & notifications |
-| `genai-service` | http://localhost:8000 | FastAPI — AI features |
 
-MinIO development credentials are `verita_minio` / `verita_minio_password`.
-On startup, Compose creates two buckets:
+The MinIO root credentials (used for the console at `:9001`) are `verita_minio` /
+`verita_minio_password`. Each service authenticates to MinIO with its own scoped, least-
+privilege S3 user rather than the root account. On startup, Compose creates two buckets:
 
 | Bucket | Used for |
 |---|---|
@@ -49,13 +114,17 @@ To stop all services:
 docker compose down
 ```
 
-User data is stored in the named Docker volume `team-colleague-md_user-db-data`.
-Object storage data is stored in `team-colleague-md_minio-data`.
-To remove persistent database and object storage data as well:
+Persistent data is stored in named Docker volumes — `team-colleague-md_user-db-data`,
+`team-colleague-md_content-db-data`, `team-colleague-md_recommendation-db-data`, and
+`team-colleague-md_minio-data`. To remove the databases and object storage as well:
 
 ```bash
 docker compose down -v
 ```
+
+> **Note:** Postgres only applies its user/database/password on the *first* startup of an
+> empty data volume. If you change DB credentials against an existing volume, wipe it first
+> with `docker compose down -v`.
 
 To start a single service only:
 
@@ -76,6 +145,19 @@ http://localhost:8000/health            # genai-service
 
 Health check activity is visible in the compose log output. The frontend (nginx) logs every health probe as an access log line (`GET / HTTP/1.1 200`). The Spring Boot services run their checks silently — no log line appears unless the check fails, which is expected behavior.
 
+### Monitoring (optional)
+
+A Prometheus + Grafana stack can be layered on top of the dev stack with the monitoring
+overrides:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
+# Grafana http://localhost:3001   Prometheus http://localhost:9090   (admin / verita_grafana_admin)
+```
+
+See [`infra/monitoring/README.md`](infra/monitoring/README.md) for what is collected, the
+Azure/Kubernetes variants, and why the local override is required.
+
 ---
 
 ## Local Development
@@ -83,36 +165,27 @@ Health check activity is visible in the compose log output. The frontend (nginx)
 ### Prerequisites
 
 - Node.js and npm (for frontend)
-- Java 25 (for backend services)
-- Python 3.11+ and `pip` (for genai-service)
+- Java 25 (for backend services — Spring Boot 4)
+- Python 3.12+ and `pip` (for genai-service)
 - Docker & Docker Compose
 
-### Backend Infrastructure (Database & Object Storage)
+### Backend Infrastructure (Databases & Object Storage)
 
-When running individual backend services locally, start the required infrastructure first:
-
-```bash
-# PostgreSQL for user-service
-docker compose up -d user-db
-
-# MinIO object storage + bucket initialisation (needed for portrait/photo uploads)
-docker compose up -d minio minio-init
-```
-
-Or start both at once:
+When running individual backend services locally, start the required infrastructure first.
+Each backend service has its own database, so start the one(s) you need (or all of them):
 
 ```bash
-docker compose up -d user-db minio minio-init
+# All three service databases + MinIO (object storage) with bucket initialisation
+docker compose up -d user-db content-db recommendation-db minio minio-init
 ```
 
-**PostgreSQL connection details:**
+**PostgreSQL connection details** (each database is published on a distinct host port):
 
-| Property | Value |
-|---|---|
-| Host | `localhost:5432` |
-| Database | `verita_users` |
-| User | `verita_user` |
-| Password | `verita_password` |
+| Database | Host:Port | Database name | User | Password |
+|---|---|---|---|---|
+| `user-db` | `localhost:5432` | `verita_users` | `svc_user` | `svc_user_password` |
+| `content-db` | `localhost:5433` | `verita_contents` | `svc_content` | `svc_content_password` |
+| `recommendation-db` | `localhost:5434` | `verita_recommendations` | `svc_recommendation` | `svc_recommendation_password` |
 
 **MinIO connection details:**
 
@@ -120,8 +193,12 @@ docker compose up -d user-db minio minio-init
 |---|---|
 | API endpoint | `http://localhost:9000` |
 | Console (browser) | `http://localhost:9001` |
-| Access key | `verita_minio` |
-| Secret key | `verita_minio_password` |
+| Root access key | `verita_minio` |
+| Root secret key | `verita_minio_password` |
+
+The root credentials log in to the console. The services themselves use scoped S3 users
+(`user-service` / `content-service`) created by `minio-init`; these defaults are already
+wired into each service's `application-dev.properties`.
 
 ### Local Seed Data
 
@@ -142,7 +219,7 @@ are updated by their fixed UUIDs, but identity conflicts on username/email fail 
 rewriting primary keys.
 
 The seed writes directly to the local user database, so `user-service` must have started
-once to let Hibernate create the `users` and `user_expertise` tables.
+once to let Flyway create the `users` and `user_expertise` tables.
 
 Seeded users are login-capable with this shared dev-only password:
 
@@ -165,8 +242,8 @@ Connection defaults match `docker-compose.yml` and can be overridden:
 | `USER_DB_HOST` | `localhost` |
 | `USER_DB_PORT` | `5432` |
 | `USER_DB_NAME` | `verita_users` |
-| `USER_DB_USER` | `verita_user` |
-| `USER_DB_PASSWORD` | `verita_password` |
+| `USER_DB_USER` | `svc_user` |
+| `USER_DB_PASSWORD` | `svc_user_password` |
 | `MINIO_ENDPOINT` | `http://localhost:9000` |
 | `MINIO_PUBLIC_ENDPOINT` | `http://localhost:9000` |
 | `MINIO_ACCESS_KEY` | `verita_minio` |
@@ -183,13 +260,14 @@ npm install
 npm run dev
 ```
 
-Default dev server: `http://localhost:3000`
+Default dev server: `http://localhost:3000`. See [`frontend/README.md`](frontend/README.md)
+for demo-mode auto-login scripts (`npm run dev:alice` / `dev:bob`) and project structure.
 
 ---
 
 ### Backend — User Service
 
-Start infrastructure first (see [Backend Infrastructure](#backend-infrastructure-database--object-storage) above), then:
+Start infrastructure first (see [Backend Infrastructure](#backend-infrastructure-databases--object-storage) above), then:
 
 ```bash
 cd backend/user-service
@@ -198,45 +276,53 @@ cd backend/user-service
 
 Health check: `http://localhost:8081/actuator/health`
 
-Local `bootRun` uses the default `dev` Spring profile with PostgreSQL. Start `user-db`
-first, or provide `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` for another
+A bare `bootRun` uses the default `dev` profile, which connects to `user-db` on
+`localhost:5432` with the `svc_user` credentials and falls back to the shared dev `JWT_SECRET`
+and internal-service token — so it interoperates with the other services out of the box.
+Override `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` to point at another
 PostgreSQL instance. User portrait storage uses the MinIO defaults in
-`application.properties`; start MinIO with `docker compose up -d minio minio-init` when
+`application-dev.properties`; start MinIO with `docker compose up -d minio minio-init` when
 working on portrait uploads locally.
 
-To run with the production profile:
-
-```bash
-cd backend/user-service
-DB_HOST=localhost DB_NAME=verita_users DB_USER=verita_user DB_PASSWORD=verita_password ./gradlew bootRun --args="--spring.profiles.active=prod"
-```
+> The `prod` profile is for Docker Compose / Helm: it has **no** built-in secrets and
+> requires `JWT_SECRET`, `INTERNAL_SERVICE_TOKEN`, and the `DB_*` / S3 variables to be
+> injected by the environment.
 
 ---
 
 ### Backend — Content Service
 
-Start infrastructure first (see [Backend Infrastructure](#backend-infrastructure-database--object-storage) above), then:
+Start infrastructure first, then point the service at `content-db` (published on host port
+`5433`):
 
 ```bash
 cd backend/content-service
-./gradlew bootRun    # Windows: .\gradlew.bat bootRun
+DB_PORT=5433 ./gradlew bootRun    # Windows: $env:DB_PORT=5433; .\gradlew.bat bootRun
 ```
 
 Health check: `http://localhost:8082/actuator/health`
 
-Post photo storage uses the MinIO defaults in `application.properties`; start MinIO with
-`docker compose up -d minio minio-init` when working on post photo uploads locally.
+The `dev` profile defaults to `localhost:5432`, so `DB_PORT=5433` is required to reach the
+Compose `content-db`. Post photo storage uses the MinIO defaults in
+`application-dev.properties`; start MinIO with `docker compose up -d minio minio-init` when
+working on post photo uploads locally.
 
 ---
 
 ### Backend — Recommendation Service
 
+Start infrastructure first, then point the service at `recommendation-db` (published on host
+port `5434`):
+
 ```bash
 cd backend/recommendation-service
-./gradlew bootRun    # Windows: .\gradlew.bat bootRun
+DB_PORT=5434 ./gradlew bootRun    # Windows: $env:DB_PORT=5434; .\gradlew.bat bootRun
 ```
 
 Health check: `http://localhost:8083/actuator/health`
+
+The `dev` profile defaults to `localhost:5432`, so `DB_PORT=5434` is required to reach the
+Compose `recommendation-db`.
 
 ---
 
@@ -244,10 +330,15 @@ Health check: `http://localhost:8083/actuator/health`
 
 ```bash
 cd genai-service
+cp .env.example .env    # first time only — add an LLM API key to enable AI features
 pip install -r requirements.txt
-python main.py
+uvicorn app.main:app --reload --port 8000
 ```
 
 Health check: `http://localhost:8000/health`
+
+The service starts without a real API key (health and docs respond), but summarization and
+digest generation need a valid `NVIDIA_NIM_API_KEY` — or another provider selected via
+`LLM_PROVIDER` — in `.env`.
 
 ---

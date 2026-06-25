@@ -87,7 +87,7 @@ Key Libraries:
 
 ```yaml
 Core Framework:
-  - React 18 with TypeScript
+  - React 19 with TypeScript
   - Build Tool: Vite
   - Package Manager: npm
 
