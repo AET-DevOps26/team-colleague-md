@@ -1,6 +1,8 @@
 import { parseSeedOptions } from "./seed/cli.ts";
 import { getSeedConfig } from "./seed/config.ts";
-import { seedUsers } from "./seed/users/seedUsers.ts";
+import { seedContent } from "./seed/services/content/seedContent.ts";
+import { seedRecommendations } from "./seed/services/recommendations/seedRecommendations.ts";
+import { seedUsers } from "./seed/services/users/seedUsers.ts";
 
 async function main() {
   const options = parseSeedOptions(process.argv.slice(2));
@@ -11,6 +13,17 @@ async function main() {
 
   if (options.only.includes("users")) {
     await seedUsers(config, options);
+  }
+  if (options.only.includes("content")) {
+    await seedContent(config, options, {
+      usersPlannedInCurrentDryRun: options.dryRun && options.only.includes("users"),
+    });
+  }
+  if (options.only.includes("recommendations")) {
+    await seedRecommendations(config, options, {
+      usersPlannedInCurrentDryRun: options.dryRun && options.only.includes("users"),
+      contentPlannedInCurrentDryRun: options.dryRun && options.only.includes("content"),
+    });
   }
 
   console.log(options.dryRun ? "Dry run completed." : "Seed completed.");

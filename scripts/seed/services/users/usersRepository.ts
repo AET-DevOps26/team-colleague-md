@@ -1,7 +1,7 @@
 import pg from "pg";
-import type { SeedConfig } from "../config.ts";
-import type { SeedUser } from "../data/users.ts";
-import type { AvatarObject } from "../storage/avatarStorage.ts";
+import type { SeedConfig } from "../../config.ts";
+import type { AvatarObject } from "./avatarStorage.ts";
+import type { SeedUser } from "./usersData.ts";
 
 const { Client } = pg;
 
