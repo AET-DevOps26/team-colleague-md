@@ -13,6 +13,8 @@ services:
     image: user-service
     tag: latest
     port: 8081
+    metrics:
+      path: /actuator/prometheus
     springProfile: dev
     # Sends the ADR-0007 X-Internal-Service-Token header to content-/recommendation-service
     # when cleaning up a deleted user's cross-service data (Content/RecommendationServiceClient).
@@ -44,6 +46,8 @@ services:
     image: content-service
     tag: latest
     port: 8082
+    metrics:
+      path: /actuator/prometheus
     springProfile: dev
     # Validates the ADR-0007 X-Internal-Service-Token header (InternalAuthFilter).
     internalToken: true
@@ -71,6 +75,8 @@ services:
     image: recommendation-service
     tag: latest
     port: 8083
+    metrics:
+      path: /actuator/prometheus
     springProfile: dev
     # Sends the ADR-0007 X-Internal-Service-Token header to content-service (ContentClient).
     internalToken: true
@@ -95,6 +101,8 @@ services:
     image: genai-service
     tag: latest
     port: 8000
+    metrics:
+      path: /metrics
     replicaCount: 2
     health:
       path: /health
@@ -133,6 +141,18 @@ ingress:
 
 user-postgresql:
   enabled: true
+  # postgres_exporter sidecar (port 9187, service port named "metrics"). The Prometheus
+  # job discovers it by that port name. resources.limits are mandatory — the namespace
+  # ResourceQuota rejects any pod whose containers do not declare limits.
+  metrics:
+    enabled: true
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
   auth:
     username: svc_user
     password: verita_password
@@ -148,6 +168,15 @@ user-postgresql:
 
 content-postgresql:
   enabled: true
+  metrics:
+    enabled: true
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
   auth:
     username: svc_content
     password: verita_password
@@ -163,6 +192,15 @@ content-postgresql:
 
 recommendation-postgresql:
   enabled: true
+  metrics:
+    enabled: true
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
   auth:
     username: svc_recommendation
     password: verita_password
@@ -187,6 +225,15 @@ minio:
   enabled: true
   mode: standalone
   replicas: 1
+  # Standalone MinIO binds a single RWO PVC. The chart default RollingUpdate
+  # (maxSurge 100%, maxUnavailable 0) spins up the new pod *before* terminating
+  # the old one, but the new pod can never mount the RWO volume the old pod still
+  # holds — it hangs in ContainerCreating, the post-upgrade provisioning hook
+  # waits on a never-Ready MinIO, and `helm upgrade` fails with a hook timeout.
+  # Recreate tears the old pod down first, so the volume is free for the new one.
+  # No data loss: the PVC/PV is independent of the pod and is re-mounted as-is.
+  deploymentUpdate:
+    type: Recreate
   rootUser: verita_minio
   rootPassword: verita_minio_password
   # The default fsGroupChangePolicy "OnRootMismatch" does not trigger the
@@ -264,21 +311,80 @@ minio:
       policy: download
       purge: false
   # The namespace ResourceQuota requires every pod to declare limits. The
-  # post-install job runs two containers (make-bucket and make-user), so both
-  # need an explicit resources block with limits.
+  # post-install job runs three containers (make-policy, make-bucket, make-user)
+  # — defining policies[] adds the make-policy container — so all three need an
+  # explicit resources block with limits, or the Job pod is rejected by the quota
+  # (FailedCreate) and the post-install hook times out.
+  #
+  # The memory limit must be 256Mi, not 64Mi: the mc client running `admin user
+  # add` is OOMKilled (exit 137) at 64Mi, which fails the make-user step and
+  # exhausts the Job backoff limit. make-policy/make-bucket happen to fit in 64Mi
+  # but are kept uniform for headroom.
+  makePolicyJob:
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "64Mi"
+      limits:
+        cpu: "50m"
+        memory: "256Mi"
   makeBucketJob:
     resources:
       requests:
         cpu: "25m"
-        memory: "32Mi"
+        memory: "64Mi"
       limits:
         cpu: "50m"
-        memory: "64Mi"
+        memory: "256Mi"
   makeUserJob:
     resources:
       requests:
         cpu: "25m"
-        memory: "32Mi"
+        memory: "64Mi"
       limits:
         cpu: "50m"
-        memory: "64Mi"
+        memory: "256Mi"
+
+# ---------------------------------------------------------------------------
+# Self-hosted, namespace-scoped monitoring (Prometheus + Grafana) — "Model B".
+# No Prometheus Operator / CRDs and no cluster-scoped RBAC, so it runs inside a
+# shared student namespace. Service discovery is annotation-based (see service.yaml,
+# kept namespace-restricted in the Prometheus config) and RBAC is a namespaced Role.
+# Set enabled: false to instead rely on a cluster-provided Prometheus.
+# ---------------------------------------------------------------------------
+monitoring:
+  enabled: true
+  # "" uses the cluster default StorageClass; set explicitly (e.g. csi-rbd) if the
+  # namespace has no default, matching what the postgresql/minio subcharts use.
+  storageClass: ""
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    retention: 7d
+    scrapeInterval: 30s
+    persistence:
+      size: 5Gi
+    # Sized for this namespace's modest target count (a handful of services +
+    # exporters scraped every 30s, 7d retention). Active series stay well under
+    # what 256Mi holds; bump the limit to 384Mi if Prometheus gets OOMKilled.
+    # Kept tight on purpose: the shared namespace ResourceQuota caps total
+    # limits.memory, and monitoring must leave room for the app + DB + MinIO pods.
+    resources:
+      requests: { cpu: "100m", memory: "128Mi" }
+      limits: { cpu: "250m", memory: "256Mi" }
+  grafana:
+    image: grafana/grafana:11.4.0
+    adminUser: admin
+    # Override per environment and rotate; consider sourcing from a Secret instead.
+    adminPassword: verita_grafana_admin
+    persistence:
+      size: 1Gi
+    # Grafana idles around ~100Mi with our single dashboard; 192Mi leaves headroom
+    # while staying inside the namespace quota (see prometheus note above).
+    resources:
+      requests: { cpu: "50m", memory: "96Mi" }
+      limits: { cpu: "150m", memory: "192Mi" }
+    # Exposed through the shared Ingress at this sub-path (see templates/ingress.yaml).
+    # Grafana is told to serve from the sub-path via GF_SERVER_* env in grafana.yaml.
+    ingress:
+      enabled: true
+      path: /grafana

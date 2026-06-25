@@ -1,0 +1,41 @@
+{{- if .Values.monitoring.enabled }}
+# Namespaced RBAC for Prometheus service discovery. A Role (not ClusterRole) is used
+# deliberately so the stack works in a shared student namespace without cluster-admin.
+# Combined with `namespaces: { names: [<ns>] }` in the Prometheus config, get/list/watch
+# on these resources is all that kubernetes_sd needs.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-prometheus
+  labels:
+    {{- include "verita.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-prometheus
+  labels:
+    {{- include "verita.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+rules:
+  - apiGroups: [""]
+    resources: ["services", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-prometheus
+  labels:
+    {{- include "verita.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-prometheus
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-prometheus
+    namespace: {{ .Release.Namespace }}
+{{- end }}

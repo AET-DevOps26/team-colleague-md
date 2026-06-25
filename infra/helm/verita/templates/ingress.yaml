@@ -22,6 +22,19 @@ spec:
     - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
+          {{- if and .Values.monitoring.enabled .Values.monitoring.grafana.ingress.enabled }}
+          # Grafana lives on the same host (a second same-host Ingress would trip
+          # the nginx admission webhook on upgrade — see note above). nginx routes
+          # by longest matching prefix, so this sub-path wins over the "/" frontend
+          # rule. Grafana serves from the sub-path via GF_SERVER_* (grafana.yaml).
+          - path: {{ .Values.monitoring.grafana.ingress.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ printf "%s-grafana" .Release.Name }}
+                port:
+                  number: 3000
+          {{- end }}
           - path: /
             pathType: Prefix
             backend:

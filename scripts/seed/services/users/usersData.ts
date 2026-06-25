@@ -30,7 +30,7 @@ export interface SeedUser {
 }
 
 const seedDataDir = path.dirname(fileURLToPath(import.meta.url));
-export const AVATAR_ASSETS_DIR = path.resolve(seedDataDir, "../assets/avatars");
+export const AVATAR_ASSETS_DIR = path.resolve(seedDataDir, "../../assets/avatars");
 
 export const SEED_USERS: SeedUser[] = [
   {

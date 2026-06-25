@@ -9,6 +9,7 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import Settings, get_settings
 from app.routers import digest, health, summarize
@@ -64,6 +65,14 @@ def create_app() -> FastAPI:
     application.include_router(health.router)
     application.include_router(summarize.router)
     application.include_router(digest.router)
+
+    # --- Prometheus metrics ---
+    # Exposes RED metrics (request count, latency histogram, in-progress) at GET /metrics.
+    # Scraped directly by Prometheus on the service port; the nginx gateway blocks
+    # /genai/metrics so it is not reachable from the public internet.
+    Instrumentator().instrument(application).expose(
+        application, endpoint="/metrics", include_in_schema=False
+    )
 
     logger.info(
         "GenAI Service started (model=%s, cors=%s)",
