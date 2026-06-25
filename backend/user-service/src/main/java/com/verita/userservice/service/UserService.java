@@ -63,6 +63,15 @@ public class UserService {
             URI website = request.getWebsite().get();
             user.setWebsite(website != null ? website.toString() : null);
         }
+        if (request.getOrganisation() != null && request.getOrganisation().isPresent()) {
+            user.setOrganisation(request.getOrganisation().get());
+        }
+        if (request.getExpertiseAreas() != null && request.getExpertiseAreas().isPresent()) {
+            List<String> areas = request.getExpertiseAreas().get();
+            // Copy into a mutable list: Hibernate manages this @ElementCollection in place
+            // and a null clears it.
+            user.setExpertiseAreas(areas == null ? new ArrayList<>() : new ArrayList<>(areas));
+        }
         userRepository.save(user);
         return mapToDto(user);
     }
