@@ -1,0 +1,19 @@
+meta {
+  name: Delete current user
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{userBaseUrl}}/api/v1/users/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Destructive: deletes the authenticated account. Run only against a throwaway user.
+}

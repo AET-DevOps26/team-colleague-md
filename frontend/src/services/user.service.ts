@@ -1,247 +1,114 @@
-import type { UserProfile, UpdateUserRequest, DraftPost, Post } from '../types';
+import type { UserProfile, UpdateUserRequest, DraftPost, Post, PostResponse } from '../types';
 import { contentService } from './content.service';
+import { isDemoMode } from './demoMode';
+import { MOCK_BOOKMARKS, MOCK_LIKED, MOCK_DRAFTS } from './mocks/userMocks';
+import api from './api';
+import userApi from './userApi';
 
-const PROFILE_KEY_PREFIX = 'verita_profile_';
+/** Maps a content-service PostResponse to the lightweight card-shaped Post. */
+function toCardPost(r: PostResponse): Post {
+  return {
+    id: r.id,
+    title: r.title,
+    excerpt: r.excerpt,
+    coverImageUrl: r.coverImageUrl ?? undefined,
+    author: r.author,
+    topics: r.topics,
+    likeCount: r.likeCount,
+    commentCount: r.commentCount,
+    viewCount: r.viewCount,
+    isLikedByMe: r.isLikedByMe,
+    createdAt: r.createdAt,
+    readTimeMinutes: r.readTimeMinutes,
+  };
+}
 
-const MOCK_PROFILES: Record<string, UserProfile> = {
-  alice_verita: {
-    id: 'demo-alice',
-    username: 'alice_verita',
-    displayName: 'Alice Morgan',
-    avatarUrl: null,
-    bio: 'Senior ML engineer at a Series B startup. I work on LLM evaluation, prompt reliability, and anything that sits between a research paper and a shipped product. Writing here to think out loud.',
-    website: 'https://alicemorgan.dev',
-    organisation: 'Verita Labs',
-    expertiseAreas: ['LLMs', 'Evaluation', 'Agents', 'Fine-tuning'],
-    role: 'VERIFIED',
-    isBanned: false,
-    postCount: 4,
-    followerCount: 874,
-    followingCount: 141,
-    likeReceivedCount: 3620,
-    createdAt: '2024-02-01T09:00:00Z',
-    updatedAt: '2025-06-01T10:00:00Z',
-    email: 'alice@verita.demo',
-  },
-  bob_verita: {
-    id: 'demo-bob',
-    username: 'bob_verita',
-    displayName: 'Bob Nakamura',
-    avatarUrl: null,
-    bio: 'AI infrastructure engineer. I care about latency, cost, and making models actually useful in production. Currently obsessed with speculative decoding and KV cache optimisation.',
-    website: null,
-    organisation: 'CloudMind AI',
-    expertiseAreas: ['Inference', 'RAG', 'MLOps'],
-    role: 'USER',
-    isBanned: false,
-    postCount: 3,
-    followerCount: 389,
-    followingCount: 76,
-    likeReceivedCount: 1230,
-    createdAt: '2024-04-10T14:00:00Z',
-    updatedAt: '2025-05-28T08:30:00Z',
-    email: 'bob@verita.demo',
-  },
-  alexchen: {
-    id: 'user-1',
-    username: 'alexchen',
-    displayName: 'Alex Chen',
-    avatarUrl: null,
-    bio: 'ML engineer building agents and RAG systems. Writing about practical AI implementation — the parts that don\'t make it into the paper abstracts.',
-    website: 'https://alexchen.dev',
-    organisation: null,
-    expertiseAreas: ['Agents', 'RAG', 'Fine-tuning'],
-    role: 'USER',
-    isBanned: false,
-    postCount: 12,
-    followerCount: 342,
-    followingCount: 89,
-    likeReceivedCount: 1840,
-    createdAt: '2024-03-15T10:00:00Z',
-    updatedAt: '2025-05-10T08:00:00Z',
-    email: 'alex@example.com',
-  },
-  sarahjkim: {
-    id: 'u1',
-    username: 'sarahjkim',
-    displayName: 'Sarah Kim',
-    avatarUrl: null,
-    bio: 'Researcher at DeepMind. Working on mechanistic interpretability and alignment. I summarize papers so you don\'t have to.',
-    website: null,
-    organisation: 'DeepMind',
-    expertiseAreas: ['Interpretability', 'Alignment', 'Fine-tuning'],
-    role: 'VERIFIED',
-    isBanned: false,
-    postCount: 47,
-    followerCount: 2100,
-    followingCount: 183,
-    likeReceivedCount: 8400,
-    createdAt: '2024-01-10T00:00:00Z',
-    updatedAt: '2025-05-20T12:00:00Z',
-  },
-  priya_ml: {
-    id: 'u3',
-    username: 'priya_ml',
-    displayName: 'Priya Nair',
-    avatarUrl: null,
-    bio: 'Open source ML at Hugging Face. Making large models accessible. RAG researcher and retrieval nerd.',
-    website: 'https://priyanair.dev',
-    organisation: 'Hugging Face',
-    expertiseAreas: ['RAG', 'Open Source', 'Multimodal'],
-    role: 'VERIFIED',
-    isBanned: false,
-    postCount: 31,
-    followerCount: 1450,
-    followingCount: 212,
-    likeReceivedCount: 5200,
-    createdAt: '2024-02-20T00:00:00Z',
-    updatedAt: '2025-04-15T09:30:00Z',
-  },
-  marcello_r: {
-    id: 'u2',
-    username: 'marcello_r',
-    displayName: 'Marcello Rossi',
-    avatarUrl: null,
-    bio: 'Building AI systems in production at a small team. Interested in the gap between research and engineering reality.',
-    website: 'https://marcellorossi.io',
-    organisation: null,
-    expertiseAreas: ['Agents', 'LLMs'],
-    role: 'USER',
-    isBanned: false,
-    postCount: 8,
-    followerCount: 127,
-    followingCount: 45,
-    likeReceivedCount: 654,
-    createdAt: '2024-06-01T00:00:00Z',
-    updatedAt: '2025-03-28T14:00:00Z',
-  },
-};
+/** Resolves a username to its content-service / user-service UUID. */
+async function resolveUserId(username: string): Promise<string> {
+  const { data } = await userApi.get<{ id: string }>(
+    `/api/v1/users/by-username/${encodeURIComponent(username)}`,
+  );
+  return data.id;
+}
 
-const FALLBACK_PROFILE: UserProfile = {
-  id: 'unknown',
-  username: 'unknown',
-  displayName: 'Unknown User',
-  avatarUrl: null,
-  bio: null,
-  website: null,
-  organisation: null,
-  expertiseAreas: [],
-  role: 'USER',
-  isBanned: false,
-  postCount: 0,
-  followerCount: 0,
-  followingCount: 0,
-  likeReceivedCount: 0,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
+/** Fetches one page of the current user's published posts from a content-service collection. */
+async function fetchUserPostPage(path: string): Promise<Post[]> {
+  const { data } = await api.get<{ content: PostResponse[] }>(path, {
+    params: { page: 0, size: 50 },
+  });
+  return data.content.map(toCardPost);
+}
 
-const MOCK_BOOKMARKS: Record<string, Post[]> = {
-  alice_verita: contentService.getPostsByAuthor('sarahjkim').concat(contentService.getPostsByAuthor('priya_ml').slice(0, 1)),
-  bob_verita: contentService.getPostsByAuthor('alexchen').slice(0, 2),
-  alexchen: contentService.getPostsByAuthor('sarahjkim').slice(0, 3),
-  sarahjkim: contentService.getPostsByAuthor('priya_ml').slice(0, 2),
-  priya_ml: contentService.getPostsByAuthor('marcello_r').slice(0, 2),
-  marcello_r: contentService.getPostsByAuthor('sarahjkim').slice(0, 1),
-};
-
-const MOCK_LIKED: Record<string, Post[]> = {
-  alice_verita: contentService.getPostsByAuthor('priya_ml').concat(contentService.getPostsByAuthor('marcello_r')),
-  bob_verita: contentService.getPostsByAuthor('sarahjkim').slice(0, 2).concat(contentService.getPostsByAuthor('alexchen').slice(0, 1)),
-  alexchen: contentService.getPostsByAuthor('priya_ml').concat(contentService.getPostsByAuthor('marcello_r')),
-  sarahjkim: contentService.getPostsByAuthor('marcello_r'),
-  priya_ml: contentService.getPostsByAuthor('sarahjkim').slice(0, 2),
-  marcello_r: contentService.getPostsByAuthor('priya_ml').slice(0, 1),
-};
-
-const MOCK_DRAFTS: DraftPost[] = [
-  {
-    id: 'd1',
-    title: 'When RAG Fails: A Taxonomy of Retrieval Errors',
-    excerpt: 'Three patterns I keep seeing across production RAG systems — and what you can actually do about them.',
-    topics: [{ id: 't4', name: 'RAG' }, { id: 't1', name: 'LLMs' }],
-    updatedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: 'd2',
-    title: 'Tool-Use Patterns for Agentic Systems',
-    excerpt: 'What separates a demo agent from a production one usually isn\'t the model — it\'s how you define and validate tool schemas.',
-    topics: [{ id: 't2', name: 'Agents' }],
-    updatedAt: new Date(Date.now() - 26 * 3600 * 1000).toISOString(),
-  },
-];
-
-function loadStoredOverride(username: string): Partial<UserProfile> | null {
-  const raw = localStorage.getItem(PROFILE_KEY_PREFIX + username);
-  return raw ? (JSON.parse(raw) as Partial<UserProfile>) : null;
+/** Converts a base64 `data:` URL (the cropped avatar from EditProfileModal) to a Blob for multipart upload. */
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/data:(.*?);/)?.[1] ?? 'image/png';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
 }
 
 export const userService = {
-  getProfile(username: string): Promise<UserProfile> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const base = MOCK_PROFILES[username] ?? { ...FALLBACK_PROFILE, username, displayName: username };
-        const override = loadStoredOverride(username);
-        resolve(override ? { ...base, ...override } : base);
-      }, 300);
-    });
+  async getProfile(username: string): Promise<UserProfile> {
+    const { data } = await userApi.get<UserProfile>(
+      `/api/v1/users/by-username/${encodeURIComponent(username)}`,
+    );
+    return data;
   },
 
-  getUserPosts(username: string): Promise<Post[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(contentService.getPostsByAuthor(username)), 250);
-    });
+  // Published posts authored by the user. Demo mode serves seeded fixtures so the
+  // profile and home feed look populated; real mode hits content-service with no fallback.
+  async getUserPosts(username: string): Promise<Post[]> {
+    if (isDemoMode()) return contentService.getPostsByAuthor(username);
+    const userId = await resolveUserId(username);
+    return fetchUserPostPage(`/api/v1/users/${userId}/posts`);
   },
 
-  getUserBookmarks(username: string): Promise<Post[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(MOCK_BOOKMARKS[username] ?? []), 250);
-    });
+  async getUserBookmarks(username: string): Promise<Post[]> {
+    if (isDemoMode()) return MOCK_BOOKMARKS[username] ?? [];
+    const userId = await resolveUserId(username);
+    return fetchUserPostPage(`/api/v1/users/${userId}/bookmarks`);
   },
 
-  getUserLikedPosts(username: string): Promise<Post[]> {
-    return new Promise((resolve) => {
-      const posts = (MOCK_LIKED[username] ?? []).map((p) => ({ ...p, isLikedByMe: true }));
-      setTimeout(() => resolve(posts), 250);
-    });
+  async getUserLikedPosts(username: string): Promise<Post[]> {
+    if (isDemoMode()) {
+      return (MOCK_LIKED[username] ?? []).map((p) => ({ ...p, isLikedByMe: true }));
+    }
+    const userId = await resolveUserId(username);
+    return fetchUserPostPage(`/api/v1/users/${userId}/likes`);
   },
 
-  getUserDrafts(_username: string): Promise<DraftPost[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...MOCK_DRAFTS]), 250);
+  async getUserDrafts(_username: string): Promise<DraftPost[]> {
+    if (isDemoMode()) return [...MOCK_DRAFTS];
+    const { data } = await api.get<{ content: PostResponse[] }>('/api/v1/me/drafts', {
+      params: { page: 0, size: 50 },
     });
+    return data.content.map((r) => ({
+      id: r.id,
+      title: r.title,
+      excerpt: r.excerpt,
+      topics: r.topics,
+      updatedAt: r.updatedAt,
+    }));
   },
 
-  updateProfile(username: string, data: UpdateUserRequest): Promise<UserProfile> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const base = MOCK_PROFILES[username] ?? { ...FALLBACK_PROFILE, username };
-        const stored = loadStoredOverride(username) ?? {};
-        const merged: Partial<UserProfile> = {
-          ...stored,
-          ...data,
-          expertiseAreas: data.expertiseAreas ?? undefined,
-          updatedAt: new Date().toISOString(),
-        };
+  // Profile edits are always real (own profile only). Text fields go to PUT /users/me;
+  // the avatar — a freshly cropped `data:` URL or a clear — uses the dedicated multipart endpoint.
+  async updateProfile(_username: string, data: UpdateUserRequest & { avatarUrl?: string | null }): Promise<UserProfile> {
+    const { avatarUrl, ...fields } = data;
+    let { data: user } = await userApi.put<UserProfile>('/api/v1/users/me', fields);
 
-        // Store the full merged profile including avatarUrl.
-        // try/catch below handles QuotaExceededError if the base64 is too large;
-        // in that case the avatar lives in MOCK_PROFILES memory only (session-scoped).
-        const toStore = merged;
+    if (typeof avatarUrl === 'string' && avatarUrl.startsWith('data:')) {
+      const form = new FormData();
+      form.append('avatar', dataUrlToBlob(avatarUrl), 'avatar');
+      ({ data: user } = await userApi.put<UserProfile>('/api/v1/users/me/avatar', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }));
+    } else if (avatarUrl === null && user.avatarUrl) {
+      ({ data: user } = await userApi.delete<UserProfile>('/api/v1/users/me/avatar'));
+    }
 
-        try {
-          localStorage.setItem(PROFILE_KEY_PREFIX + username, JSON.stringify(toStore));
-        } catch {
-          // quota exceeded — skip persistence, keep in-memory only
-        }
-
-        // Update in-memory profile so getProfile() returns the new avatar for this session
-        if (MOCK_PROFILES[username]) {
-          MOCK_PROFILES[username] = { ...MOCK_PROFILES[username], ...merged } as UserProfile;
-        }
-
-        resolve({ ...base, ...merged });
-      }, 400);
-    });
+    return user;
   },
 };

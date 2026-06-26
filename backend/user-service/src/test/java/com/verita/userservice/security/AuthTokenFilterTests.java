@@ -1,7 +1,7 @@
 package com.verita.userservice.security;
 
 import com.verita.model.UserRole;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.entity.UserEntity;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

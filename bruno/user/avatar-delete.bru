@@ -1,0 +1,15 @@
+meta {
+  name: Delete avatar
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{userBaseUrl}}/api/v1/users/me/avatar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

@@ -1,0 +1,11 @@
+meta {
+  name: User posts
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/users/{{ownUserId}}/posts
+  body: none
+  auth: none
+}

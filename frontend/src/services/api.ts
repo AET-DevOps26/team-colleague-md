@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { getToken, setAccessToken, clearSession } from './tokenStore';
+import { getToken, clearSession } from './tokenStore';
 import { emit } from './authEvents';
-import userApi from './userApi';
+import { refreshSession } from './sessionRefresh';
 
 const api = axios.create({
   baseURL: '/content',
@@ -15,10 +15,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Mirror the same silent-refresh logic as userApi so content-service 401s
-// also attempt a token refresh before logging the user out.
-let refreshing: Promise<string> | null = null;
-
+// Mirror the same silent-refresh logic as userApi so content-service 401s also attempt a token
+// refresh before logging the user out. The refresh is single-flight and shared across both axios
+// instances (see sessionRefresh) so concurrent 401s can't trigger the refresh-rotation race.
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -29,15 +28,8 @@ api.interceptors.response.use(
     original._retried = true;
 
     try {
-      if (!refreshing) {
-        refreshing = userApi
-          .post<{ accessToken: string }>('/api/v1/auth/refresh')
-          .then((r) => r.data.accessToken)
-          .finally(() => { refreshing = null; });
-      }
-      const newToken = await refreshing;
-      setAccessToken(newToken);
-      original.headers.Authorization = `Bearer ${newToken}`;
+      const { accessToken } = await refreshSession();
+      original.headers.Authorization = `Bearer ${accessToken}`;
       return api(original);
     } catch {
       clearSession();

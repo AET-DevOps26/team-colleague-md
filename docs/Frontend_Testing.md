@@ -274,6 +274,9 @@ All tests mock auth refresh + user/profile API responses to match user-service O
 
 The app uses an in-memory mock service (`src/services/content.service.ts`). E2E tests inject a `verita_user` into `localStorage` and mock the refresh endpoint to simulate a logged-in session without a real backend.
 
-Demo accounts available when running against the full docker compose stack:
-- `alice@verita.demo` / `demo1234` (Alice Morgan — VERIFIED)
-- `bob@verita.demo` / `demo1234` (Bob Nakamura — USER)
+Demo accounts come from the seed (`scripts/seed`) and authenticate against the real backend (all share `Password123!`):
+- `alexchen` (Alex Chen — ADMIN)
+- `sarahjkim` (Sarah Kim — VERIFIED)
+- `marcello_r` (Marcello Rossi — USER)
+
+To preview populated post/bookmark/like/draft tabs before content-service is seeded, run the demo-flag build (`npm run dev:demo`, `VITE_DEMO_MODE`) — auth stays real, only those data-sparse reads use a mock display layer (ADR-0011).

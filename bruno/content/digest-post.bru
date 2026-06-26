@@ -1,0 +1,26 @@
+meta {
+  name: Create digest post (internal)
+  type: http
+  seq: 25
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/posts/digest
+  body: json
+  auth: none
+}
+
+headers {
+  X-Internal-Service-Token: {{internalServiceToken}}
+}
+
+body:json {
+  {
+    "title": "Daily digest",
+    "content": "Digest markdown body."
+  }
+}
+
+docs {
+  Internal-service endpoint (ADR-0007): system-authored post, gated by X-Internal-Service-Token.
+}

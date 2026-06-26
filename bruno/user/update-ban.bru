@@ -1,0 +1,21 @@
+meta {
+  name: Update ban status (admin)
+  type: http
+  seq: 16
+}
+
+patch {
+  url: {{userBaseUrl}}/api/v1/users/{{otherUserId}}/ban
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "banned": true
+  }
+}

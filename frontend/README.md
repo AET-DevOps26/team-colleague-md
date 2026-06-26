@@ -22,9 +22,8 @@ App runs at `http://localhost:3000`.
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start Vite dev server on port 3000 (unauthenticated by default) |
-| `npm run dev:alice` | Start dev server and auto-login as **Alice Morgan** (VERIFIED, `alice@verita.demo`) |
-| `npm run dev:bob` | Start dev server and auto-login as **Bob Nakamura** (USER, `bob@verita.demo`) |
+| `npm run dev` | Start Vite dev server on port 3000 — pure real backend |
+| `npm run dev:demo` | Start dev server in **demo mode** (`VITE_DEMO_MODE`): real backend + mock display layer for data-sparse reads (ADR-0011) |
 | `npm run build` | Type-check and build for production |
 | `npm run lint` | Run ESLint |
 | `npm run test:unit` | Run unit + component tests (Vitest, ~5s) |
@@ -32,7 +31,7 @@ App runs at `http://localhost:3000`.
 | `npm test` | Run all E2E + API contract tests (Playwright, requires browser) |
 | `npm run test:ui` | Open Playwright's interactive debug UI |
 
-Demo accounts use password `demo1234` at the login form, or are injected automatically via `VITE_DEMO_USER` when using `dev:alice` / `dev:bob`.
+Authentication is always real: log in with a seed user (e.g. `alexchen` / `Password123!`, see `scripts/seed`). `dev:demo` only adds a mock display layer over the four data-sparse, post-derived reads (posts, bookmarks, likes, drafts) so the UI looks populated before content-service is seeded.
 
 ---
 
@@ -116,13 +115,12 @@ npx serve .
 
 The app works without a running backend for content browsing. `src/services/content.service.ts` returns in-memory mock posts, comments, and digests.
 
-Auth (`src/services/auth.service.ts`) now calls the real User Service at `http://localhost:8081`. Start the User Service (or run `docker compose up`) before using sign-in or registration. Auth session is stored in `localStorage` under the key `verita_user`.
+Auth and user profiles call the real User Service at `http://localhost:8081`; user posts/bookmarks/likes/drafts call the real Content Service. Start the backend (or run `docker compose up`) and seed it (`scripts/seed`) before signing in. Auth session is stored in `localStorage` under the key `verita_user`.
 
-Two built-in demo accounts work without a backend — use them at the login form (`demo1234`) or start the dev server pre-logged-in:
+To preview a populated UI before content-service has seeded posts, start in **demo mode** — login is still real (use a seed user, e.g. `alexchen` / `Password123!`), but the four data-sparse reads are served from a mock display layer (ADR-0011):
 
 ```bash
-npm run dev:alice   # auto-login as Alice Morgan (VERIFIED)
-npm run dev:bob     # auto-login as Bob Nakamura (USER)
+npm run dev:demo
 ```
 
 ---

@@ -1,0 +1,15 @@
+meta {
+  name: List own posts
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/users/{{ownUserId}}/posts
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

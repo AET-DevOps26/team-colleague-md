@@ -9,9 +9,8 @@
  * Endpoints under test:
  *
  * User Service OpenAPI:
- *   GET  /api/v1/users/me               → authenticated user's own profile
- *   GET  /api/v1/users/:userId          → any user's public profile
- *   PATCH /api/v1/users/me             → update own profile
+ *   GET  /api/v1/users/by-username/:username → any user's profile (own + others, ADR-0011)
+ *   PATCH /api/v1/users/me                   → update own profile
  *
  * Content Service OpenAPI:
  *   GET  /api/v1/users/{id}/posts       → Posts tab
@@ -21,9 +20,9 @@
  *   DELETE /api/v1/posts/{id}           → Delete post (manage dropdown)
  *   PUT  /api/v1/posts/{id}             → Unpublish post (status: DRAFT)
  *
- * Note: AuthorSummary in the content-service spec uses `organisation` (British
- * spelling). The frontend type uses `organization`. This mapping must be handled
- * during backend integration.
+ * Runs against the demo build (VITE_DEMO_MODE): profile + auth are mocked here at the
+ * network layer, while the four post-derived tabs come from the in-app demo display
+ * layer (ADR-0011). Both the API and the frontend type use British `organisation`.
  */
 
 import { test, expect, type Page } from '@playwright/test';
@@ -38,7 +37,7 @@ const API_USER_ALEX = {
   avatarUrl: null,
   bio: 'ML engineer building agents and RAG systems.',
   website: 'https://alexchen.dev',
-  organization: null,
+  organisation: null,
   expertiseAreas: ['Agents', 'RAG'],
   role: 'USER',
   isBanned: false,
@@ -57,7 +56,7 @@ const API_USER_SARAH = {
   avatarUrl: null,
   bio: 'Researcher at DeepMind.',
   website: null,
-  organization: 'DeepMind',
+  organisation: 'DeepMind',
   expertiseAreas: ['Interpretability', 'Alignment'],
   role: 'VERIFIED',
   isBanned: false,
@@ -67,6 +66,11 @@ const API_USER_SARAH = {
   likeReceivedCount: 8400,
   createdAt: '2024-01-10T00:00:00Z',
   updatedAt: '2025-05-20T12:00:00Z',
+};
+
+const API_PROFILES: Record<string, Record<string, unknown>> = {
+  alexchen: API_USER_ALEX,
+  sarahjkim: API_USER_SARAH,
 };
 
 async function loginAndInterceptProfileApi(page: Page) {
@@ -81,6 +85,18 @@ async function loginAndInterceptProfileApi(page: Page) {
       body: JSON.stringify({ accessToken: 'mock-token', user: mockUser }),
     })
   );
+  // Profiles are always fetched from the real backend via /users/by-username/{username}
+  // (ADR-0011), even in demo mode. Serve a spec-shaped profile, falling back to a minimal
+  // record for unknown usernames so the page still renders.
+  await page.route('**/api/v1/users/by-username/*', (route) => {
+    const username = decodeURIComponent(route.request().url().split('/').pop()!.split('?')[0]);
+    const profile = API_PROFILES[username] ?? {
+      id: `u-${username}`, username, displayName: username, role: 'USER', isBanned: false,
+      postCount: 0, followerCount: 0, followingCount: 0, likeReceivedCount: 0,
+      createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z',
+    };
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(profile) });
+  });
 }
 
 // ── API-1: own profile — GET /api/v1/users/me ──────────────────────────────

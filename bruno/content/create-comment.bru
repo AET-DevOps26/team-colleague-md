@@ -1,0 +1,21 @@
+meta {
+  name: Create comment
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}/comments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "text": "A comment from Bruno"
+  }
+}

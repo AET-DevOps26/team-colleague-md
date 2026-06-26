@@ -6,8 +6,8 @@
   "nodes": [
     {
       "id": "48928833-d17e-4e4a-b432-8fa8a068fa03",
-      "width": 240,
-      "height": 670,
+      "width": 290,
+      "height": 850,
       "type": "class",
       "position": {
         "x": 1080,
@@ -17,96 +17,120 @@
         "name": "User",
         "methods": [
           {
-            "id": "aba446e3-2d43-4fc5-ad1d-67c52acad216",
+            "id": "user-m-register",
             "name": "+ register()"
           },
           {
-            "id": "e05f5a1d-bf8b-48f9-b3c4-cfc8010800f8",
+            "id": "user-m-login",
             "name": "+ login()"
           },
           {
-            "id": "281baadc-b8ec-4ee2-aae0-612cd2049540",
+            "id": "user-m-updateProfile",
             "name": "+ updateProfile()"
           },
           {
-            "id": "9ee8834f-9ae7-4bef-ae9e-11e401c2fc89",
-            "name": "+ applyForVerification()"
+            "id": "user-m-updatePreferences",
+            "name": "+ updatePreferences()"
           }
         ],
         "attributes": [
           {
-            "id": "467493e7-8612-4100-a4c9-11b30e584509",
+            "id": "user-a-id",
             "name": "- id: UUID"
           },
           {
-            "id": "2afe0b09-996f-4839-aae7-61f71c017c82",
+            "id": "user-a-username",
             "name": "- username: String"
           },
           {
-            "id": "9155d814-ed00-46b7-a737-6764021df21e",
+            "id": "user-a-displayName",
             "name": "- displayName: String"
           },
           {
-            "id": "bfcf1d43-bc54-435a-95ac-696649425493",
+            "id": "user-a-email",
             "name": "- email: String"
           },
           {
-            "id": "bc6cee61-b146-470c-9820-5763cbaf3276",
-            "name": "- passwordHash: String"
+            "id": "user-a-password",
+            "name": "- password: String"
           },
           {
-            "id": "9ac4786b-d666-4a30-b956-a17f06aad947",
-            "name": "- role: UserRole"
-          },
-          {
-            "id": "1c1cd1a1-051a-40d4-a4c6-0e9b77032eb5",
-            "name": "- bio: String"
-          },
-          {
-            "id": "0b592aaf-14f6-4689-9de3-b04cf4f49ded",
+            "id": "user-a-avatarUrl",
             "name": "- avatarUrl: String"
           },
           {
-            "id": "262d5d75-698d-41d8-adf0-acea1efaa0e0",
+            "id": "user-a-bio",
+            "name": "- bio: String"
+          },
+          {
+            "id": "user-a-website",
             "name": "- website: String"
           },
           {
-            "id": "dcbab302-87e8-445e-adb3-7ac61de3c59a",
-            "name": "- organization: JsonNode"
+            "id": "user-a-organisation",
+            "name": "- organisation: String"
           },
           {
-            "id": "bf81951d-aa92-48e8-887e-14469e31fe08",
-            "name": "- expertiseAreas: JsonNode"
+            "id": "user-a-expertiseAreas",
+            "name": "- expertiseAreas: List<String>"
           },
           {
-            "id": "d74e00d6-26ac-4927-8339-b44cb35f6b40",
-            "name": "- createdAt: Timestamp"
+            "id": "user-a-role",
+            "name": "- role: UserRole"
           },
           {
-            "id": "cd17eee4-ccb3-4057-a759-9402a7f3d917",
-            "name": "- updatedAt: Timestamp"
+            "id": "user-a-isBanned",
+            "name": "- isBanned: Boolean"
           },
           {
-            "id": "fcaa7e4c-ac81-4abf-bbc1-16042732780c",
+            "id": "user-a-postCount",
             "name": "- postCount: Integer"
           },
           {
-            "id": "a3ff783b-0167-480f-9919-1ceca93f2083",
-            "name": "- followerCount: Integer "
+            "id": "user-a-followerCount",
+            "name": "- followerCount: Integer"
           },
           {
-            "id": "1200e997-4a0c-4869-a7b6-630ecaae4916",
-            "name": "- followingCount: Integerr"
+            "id": "user-a-followingCount",
+            "name": "- followingCount: Integer"
           },
           {
-            "id": "a90ad7a1-4b7e-4566-ad1e-98caa213c3f8",
+            "id": "user-a-likeReceivedCount",
             "name": "- likeReceivedCount: Integer"
+          },
+          {
+            "id": "user-a-refreshToken",
+            "name": "- refreshToken: String"
+          },
+          {
+            "id": "user-a-refreshTokenExpiry",
+            "name": "- refreshTokenExpiry: Timestamp"
+          },
+          {
+            "id": "user-a-digestFrequency",
+            "name": "- digestFrequency: DigestFrequency"
+          },
+          {
+            "id": "user-a-showBookmarks",
+            "name": "- showBookmarks: Boolean"
+          },
+          {
+            "id": "user-a-showLikes",
+            "name": "- showLikes: Boolean"
+          },
+          {
+            "id": "user-a-createdAt",
+            "name": "- createdAt: Timestamp"
+          },
+          {
+            "id": "user-a-updatedAt",
+            "name": "- updatedAt: Timestamp"
           }
         ]
       },
       "measured": {
-        "width": 240,
-        "height": 670
+        "width": 290,
+        "height": 850
       }
     },
     {
@@ -115,7 +139,7 @@
       "height": 140,
       "type": "class",
       "position": {
-        "x": 780,
+        "x": 760,
         "y": -710
       },
       "data": {
@@ -124,16 +148,16 @@
         "methods": [],
         "attributes": [
           {
-            "id": "67a79ccc-a5ee-41c1-8164-a0d4782029ed",
+            "id": "userrole-user",
             "name": "USER"
           },
           {
-            "id": "06be1d48-29e6-42e9-94ec-d41cb1119710",
-            "name": " ADMIN"
+            "id": "userrole-verified",
+            "name": "VERIFIED"
           },
           {
-            "id": "7a6af9f8-96fc-42f5-99b4-89c8fa4a65ef",
-            "name": " VERIFIED"
+            "id": "userrole-admin",
+            "name": "ADMIN"
           }
         ]
       },
@@ -143,136 +167,87 @@
       }
     },
     {
-      "id": "36a1d68c-a97c-4623-beeb-ff111ba3a56a",
-      "width": 260,
-      "height": 370,
+      "id": "e1f783d5-f4ca-4988-b5a4-465fae662dab",
+      "width": 180,
+      "height": 140,
       "type": "class",
       "position": {
-        "x": 1070,
-        "y": 40
+        "x": 930,
+        "y": -1640
       },
       "data": {
-        "name": "VerificationRequest",
+        "name": "DigestFrequency",
+        "stereotype": "Enumeration",
+        "methods": [],
+        "attributes": [
+          {
+            "id": "digestfreq-daily",
+            "name": "DAILY"
+          },
+          {
+            "id": "digestfreq-weekly",
+            "name": "WEEKLY"
+          },
+          {
+            "id": "digestfreq-false",
+            "name": "FALSE"
+          }
+        ]
+      },
+      "measured": {
+        "width": 180,
+        "height": 140
+      }
+    },
+    {
+      "id": "0f9c1a20-4444-4a44-9b44-aa0000000004",
+      "width": 240,
+      "height": 220,
+      "type": "class",
+      "position": {
+        "x": 720,
+        "y": -200
+      },
+      "data": {
+        "name": "UserSubscription",
         "methods": [
           {
-            "id": "5fe7cb0e-6b84-4744-ba3a-92c9f103caac",
-            "name": "+ submit()"
+            "id": "usersub-m-follow",
+            "name": "+ follow()"
           },
           {
-            "id": "c51986d0-964a-4c39-a526-18da870c6437",
-            "name": "+ approve()"
-          },
-          {
-            "id": "6eeb7219-8670-427f-b0c7-3abb974f80d5",
-            "name": "+ reject()"
+            "id": "usersub-m-unfollow",
+            "name": "+ unfollow()"
           }
         ],
         "attributes": [
           {
-            "id": "491d8e63-ca7a-4371-b1ff-5245f50d63ac",
+            "id": "usersub-a-id",
             "name": "- id: UUID"
           },
           {
-            "id": "6db5f7ae-ac25-4bf2-8ce5-26653caee20b",
-            "name": "- userId: UUID"
+            "id": "usersub-a-followerId",
+            "name": "- followerId: UUID"
           },
           {
-            "id": "8b69616a-6746-43eb-8e74-13ad30591c0a",
-            "name": "- requestType: VerificationType"
+            "id": "usersub-a-followedId",
+            "name": "- followedId: UUID"
           },
           {
-            "id": "e2d56ea7-01f3-4a95-a36b-455242627886",
-            "name": "- supportingInfo: String"
-          },
-          {
-            "id": "a5848973-4278-4184-8202-5cc1a428874d",
-            "name": "- status: VerificationStatus"
-          },
-          {
-            "id": "99fe858b-cc05-4bac-ad14-d581877cc8d8",
-            "name": "- reviewedBy: Long"
-          },
-          {
-            "id": "f1180888-a689-4bed-b056-e2a33d4e2acd",
-            "name": "- reviewedAt: Timestamp"
-          },
-          {
-            "id": "d30e151a-cecf-4e27-a7af-d5675bbaa24a",
+            "id": "usersub-a-createdAt",
             "name": "- createdAt: Timestamp"
           }
         ]
       },
       "measured": {
-        "width": 260,
-        "height": 370
-      }
-    },
-    {
-      "id": "6dd70b31-613d-4edd-ada1-6145f87805b3",
-      "width": 160,
-      "height": 110,
-      "type": "class",
-      "position": {
-        "x": 790,
-        "y": 60
-      },
-      "data": {
-        "name": "VerificationType",
-        "stereotype": "Enumeration",
-        "methods": [],
-        "attributes": [
-          {
-            "id": "fb19cec6-7560-448c-beb0-c07aec0017ca",
-            "name": "ORGANIZATION"
-          },
-          {
-            "id": "d8dc3985-0dd4-4b59-9fdf-2dacb6195ca2",
-            "name": "EXPERT"
-          }
-        ]
-      },
-      "measured": {
-        "width": 160,
-        "height": 110
-      }
-    },
-    {
-      "id": "045f9087-451b-472c-ad17-5ac51a1f4cba",
-      "width": 160,
-      "height": 140,
-      "type": "class",
-      "position": {
-        "x": 800,
-        "y": 300
-      },
-      "data": {
-        "name": "VerificationStatus",
-        "stereotype": "Enumeration",
-        "methods": [],
-        "attributes": [
-          {
-            "id": "ee8c3d6c-c99a-4134-8e49-c0598b35089c",
-            "name": "PENDING"
-          },
-          {
-            "id": "d1a48e3d-8296-42be-9143-3fceb71ddfb4",
-            "name": "APPROVED"
-          },
-          {
-            "id": "bb16b18f-b22f-4ad2-b063-08f24f12f479",
-            "name": "REJECTED"
-          }
-        ]
-      },
-      "measured": {
-        "width": 160,
-        "height": 140
+        "width": 240,
+        "height": 220
       }
     },
     {
       "id": "24118a55-37fc-4028-96f7-353d5b7b5453",
-      "width": 250,
-      "height": 730,
+      "width": 270,
+      "height": 790,
       "type": "class",
       "position": {
         "x": 2290,
@@ -282,110 +257,176 @@
         "name": "Post",
         "methods": [
           {
-            "id": "a51fc0cf-747e-4e32-8389-f219363b1055",
+            "id": "post-m-create",
             "name": "+ create()"
           },
           {
-            "id": "77a7a2a8-f1aa-4d67-af07-d62352689e89",
+            "id": "post-m-update",
             "name": "+ update()"
           },
           {
-            "id": "8684d90c-c8c1-4496-ad1c-718e6519537a",
+            "id": "post-m-delete",
             "name": "+ delete()"
           },
           {
-            "id": "cc796645-6143-42d7-8fe3-45614c003be6",
+            "id": "post-m-addComment",
             "name": "+ addComment()"
           },
           {
-            "id": "e5362989-8580-4277-8ea8-a47a09e425f1",
-            "name": "+ addTag()"
+            "id": "post-m-addTopic",
+            "name": "+ addTopic()"
           },
           {
-            "id": "4a0bcc30-e37b-46d8-838d-bf474ea37920",
+            "id": "post-m-generateSummary",
             "name": "+ generateSummary()"
           }
         ],
         "attributes": [
           {
-            "id": "4559e85d-846f-47db-bfaf-64e1c00794c0",
+            "id": "post-a-id",
             "name": "- id: UUID"
           },
           {
-            "id": "c729a367-b078-4c38-aab8-3aad1dbe157e",
-            "name": "- userId: UUID"
+            "id": "post-a-authorId",
+            "name": "- authorId: UUID"
           },
           {
-            "id": "737dae09-3ddb-49bc-afdb-78329c98f372",
+            "id": "post-a-status",
             "name": "- status: PostStatus"
           },
           {
-            "id": "2bf8635d-9a6a-494e-9b39-3cb3b4ec38cf",
+            "id": "post-a-type",
+            "name": "- type: PostType"
+          },
+          {
+            "id": "post-a-title",
             "name": "- title: String"
           },
           {
-            "id": "70cb5a8f-f7d0-4301-8321-fb61c7d96ef3",
+            "id": "post-a-content",
             "name": "- content: String"
           },
           {
-            "id": "558f40e0-7d1d-4443-ac53-72bd5d3a7228",
+            "id": "post-a-excerpt",
+            "name": "- excerpt: String"
+          },
+          {
+            "id": "post-a-contentSummary",
             "name": "- contentSummary: String"
           },
           {
-            "id": "d155a22a-2328-4a83-b494-ac3f50ae5005",
-            "name": "- sourceUrl: String[]"
-          },
-          {
-            "id": "35daa51c-c777-4a52-a8bc-cad20c49fb3c",
+            "id": "post-a-coverImageUrl",
             "name": "- coverImageUrl: String"
           },
           {
-            "id": "a2fc0266-9590-4afa-a8f9-3db41142de82",
-            "name": "- viewCount: Integer"
+            "id": "post-a-sourceUrls",
+            "name": "- sourceUrls: List<String>"
           },
           {
-            "id": "c7657e48-dae0-4db0-9919-f712431ca5c9",
-            "name": "- likeCount: Integer"
+            "id": "post-a-viewCount",
+            "name": "- viewCount: Long"
           },
           {
-            "id": "ce2b86f1-3d08-4957-b98e-c38c5607ca36",
-            "name": "- dislikeCount: Integer"
+            "id": "post-a-likeCount",
+            "name": "- likeCount: Long"
           },
           {
-            "id": "8696fc0e-aab4-48ff-afbe-4ac80a837dcd",
-            "name": "- commentCount: Integer"
+            "id": "post-a-dislikeCount",
+            "name": "- dislikeCount: Long"
           },
           {
-            "id": "b672339a-60b9-4c92-b3de-c9559778ec5b",
+            "id": "post-a-commentCount",
+            "name": "- commentCount: Long"
+          },
+          {
+            "id": "post-a-saveCount",
+            "name": "- saveCount: Long"
+          },
+          {
+            "id": "post-a-deleted",
+            "name": "- deleted: Boolean"
+          },
+          {
+            "id": "post-a-deletedAt",
+            "name": "- deletedAt: Timestamp"
+          },
+          {
+            "id": "post-a-createdAt",
             "name": "- createdAt: Timestamp"
           },
           {
-            "id": "038e6d24-9c5b-49b6-aeea-115fae0e334b",
+            "id": "post-a-updatedAt",
             "name": "- updatedAt: Timestamp"
-          },
-          {
-            "id": "9675e442-b8aa-464e-b983-d05159f5356f",
-            "name": "- authorUsername: String"
-          },
-          {
-            "id": "b627b7b0-531b-4798-a073-965e79e7dd86",
-            "name": "- authorDisplayName: String "
-          },
-          {
-            "id": "235243ea-04e6-4e5e-9a5f-2b4c8c36b174",
-            "name": "- authorAvatarUrl: String"
           }
         ]
       },
       "measured": {
-        "width": 250,
-        "height": 730
+        "width": 270,
+        "height": 790
+      }
+    },
+    {
+      "id": "a733247f-a751-4405-b08d-68588d32c670",
+      "width": 170,
+      "height": 110,
+      "type": "class",
+      "position": {
+        "x": 2610,
+        "y": -710
+      },
+      "data": {
+        "name": "PostStatus",
+        "stereotype": "Enumeration",
+        "methods": [],
+        "attributes": [
+          {
+            "id": "poststatus-draft",
+            "name": "DRAFT"
+          },
+          {
+            "id": "poststatus-published",
+            "name": "PUBLISHED"
+          }
+        ]
+      },
+      "measured": {
+        "width": 170,
+        "height": 110
+      }
+    },
+    {
+      "id": "0f9c1a20-1111-4a11-9b11-aa0000000001",
+      "width": 170,
+      "height": 110,
+      "type": "class",
+      "position": {
+        "x": 2610,
+        "y": -560
+      },
+      "data": {
+        "name": "PostType",
+        "stereotype": "Enumeration",
+        "methods": [],
+        "attributes": [
+          {
+            "id": "posttype-normal",
+            "name": "NORMAL"
+          },
+          {
+            "id": "posttype-digest",
+            "name": "DIGEST"
+          }
+        ]
+      },
+      "measured": {
+        "width": 170,
+        "height": 110
       }
     },
     {
       "id": "f6a235b7-5610-4253-9bc0-29f5359fc955",
-      "width": 240,
-      "height": 490,
+      "width": 250,
+      "height": 460,
       "type": "class",
       "position": {
         "x": 1300,
@@ -395,187 +436,283 @@
         "name": "Comment",
         "methods": [
           {
-            "id": "b8a0417b-55b7-4683-89ac-b56ea0801ef4",
+            "id": "comment-m-create",
             "name": "+ create()"
           },
           {
-            "id": "1380d857-cdbb-4f26-8c79-df340fb21aa8",
+            "id": "comment-m-update",
             "name": "+ update()"
           },
           {
-            "id": "d1657661-5b77-498b-a4b4-495e5dfbe2b3",
+            "id": "comment-m-delete",
             "name": "+ delete()"
           },
           {
-            "id": "8be7843e-dc53-467d-852a-5f95eef76bec",
+            "id": "comment-m-reply",
             "name": "+ reply()"
           }
         ],
         "attributes": [
           {
-            "id": "25431b90-5ec0-4fd9-935c-503dd437d2ed",
+            "id": "comment-a-id",
             "name": "- id: UUID"
           },
           {
-            "id": "72ae89d5-53d1-450b-af90-aebcc8dac2f1",
+            "id": "comment-a-postId",
             "name": "- postId: UUID"
           },
           {
-            "id": "179ef6d6-edaa-4668-ac8b-d36c6285daa9",
-            "name": "- userId: UUID"
+            "id": "comment-a-authorId",
+            "name": "- authorId: UUID"
           },
           {
-            "id": "99bc0f10-7ecf-4b29-afcb-21fbfc9c3978",
+            "id": "comment-a-parentCommentId",
             "name": "- parentCommentId: UUID"
           },
           {
-            "id": "71eaf603-4659-463c-8ba2-d06d99492897",
-            "name": "- content: String"
+            "id": "comment-a-text",
+            "name": "- text: String"
           },
           {
-            "id": "b24e0505-d3e9-4e36-b3f2-93231295635a",
-            "name": "- likeCount: Integer"
+            "id": "comment-a-likeCount",
+            "name": "- likeCount: Long"
           },
           {
-            "id": "410e1fef-6a40-498c-9446-e83fc7223e09",
+            "id": "comment-a-deleted",
+            "name": "- deleted: Boolean"
+          },
+          {
+            "id": "comment-a-deletedAt",
+            "name": "- deletedAt: Timestamp"
+          },
+          {
+            "id": "comment-a-createdAt",
             "name": "- createdAt: Timestamp"
           },
           {
-            "id": "27343dbf-5883-4be2-b39d-00c4a19568d3",
+            "id": "comment-a-updatedAt",
             "name": "- updatedAt: Timestamp"
-          },
-          {
-            "id": "c786e3dc-94ef-44d6-a6e1-768e740a8af6",
-            "name": "- authorUsername: String"
-          },
-          {
-            "id": "f5f7991d-dd77-43b9-9a8d-95d877da5605",
-            "name": "- authorDisplayName: String"
-          },
-          {
-            "id": "2a094230-77a6-4783-8720-b05dfe525345",
-            "name": "- authorAvatarUrl: String"
           }
         ]
       },
       "measured": {
-        "width": 240,
-        "height": 490
+        "width": 250,
+        "height": 460
       }
     },
     {
       "id": "7b011ba9-bd53-415a-975b-64ac3d5198c0",
-      "width": 220,
-      "height": 280,
+      "width": 250,
+      "height": 520,
       "type": "class",
       "position": {
         "x": 1980,
         "y": -440
       },
       "data": {
-        "name": "Tag",
+        "name": "Topic",
         "methods": [
           {
-            "id": "167cea06-ab95-4120-ad1d-11ac5982988e",
+            "id": "topic-m-create",
             "name": "+ create()"
           },
           {
-            "id": "265895b4-2ec8-4454-a5ae-b6f469be4fd8",
-            "name": "+ incrementPostCount()"
+            "id": "topic-m-recomputeStats",
+            "name": "+ recomputeStats()"
           },
           {
-            "id": "d1dc5ec2-b9c7-46cb-9ea8-4d13fef22d30",
+            "id": "topic-m-getRelatedPosts",
             "name": "+ getRelatedPosts()"
           }
         ],
         "attributes": [
           {
-            "id": "747d9043-ed20-4bea-8e68-8660abebcc40",
+            "id": "topic-a-id",
             "name": "- id: UUID"
           },
           {
-            "id": "283d67ff-2ba3-4cb4-9345-95a18373f9be",
+            "id": "topic-a-name",
             "name": "- name: String"
           },
           {
-            "id": "6d413e5d-b2f5-4a41-8da8-16d8ed1c1036",
-            "name": "- description: String"
+            "id": "topic-a-displayName",
+            "name": "- displayName: String"
           },
           {
-            "id": "acf0b037-acd9-4d8a-9c7a-88941bcf254d",
-            "name": "- postCount: Integer"
+            "id": "topic-a-categoryId",
+            "name": "- categoryId: String"
           },
           {
-            "id": "36f039f8-b1b6-4898-815e-3cda035fa747",
+            "id": "topic-a-sortOrder",
+            "name": "- sortOrder: Integer"
+          },
+          {
+            "id": "topic-a-totalPostCount",
+            "name": "- totalPostCount: Integer"
+          },
+          {
+            "id": "topic-a-postsThisWeek",
+            "name": "- postsThisWeek: Integer"
+          },
+          {
+            "id": "topic-a-postsPrevWeek",
+            "name": "- postsPrevWeek: Integer"
+          },
+          {
+            "id": "topic-a-activityScore",
+            "name": "- activityScore: BigDecimal"
+          },
+          {
+            "id": "topic-a-isHot",
+            "name": "- isHot: Boolean"
+          },
+          {
+            "id": "topic-a-followerCount",
+            "name": "- followerCount: Integer"
+          },
+          {
+            "id": "topic-a-createdAt",
             "name": "- createdAt: Timestamp"
+          },
+          {
+            "id": "topic-a-updatedAt",
+            "name": "- updatedAt: Timestamp"
+          }
+        ]
+      },
+      "measured": {
+        "width": 250,
+        "height": 520
+      }
+    },
+    {
+      "id": "0f9c1a20-2222-4a22-9b22-aa0000000002",
+      "width": 220,
+      "height": 130,
+      "type": "class",
+      "position": {
+        "x": 1980,
+        "y": 140
+      },
+      "data": {
+        "name": "TopicCategory",
+        "methods": [],
+        "attributes": [
+          {
+            "id": "topiccat-a-id",
+            "name": "- id: String"
+          },
+          {
+            "id": "topiccat-a-label",
+            "name": "- label: String"
+          },
+          {
+            "id": "topiccat-a-sortOrder",
+            "name": "- sortOrder: Integer"
           }
         ]
       },
       "measured": {
         "width": 220,
-        "height": 280
+        "height": 130
+      }
+    },
+    {
+      "id": "0f9c1a20-3333-4a33-9b33-aa0000000003",
+      "width": 240,
+      "height": 130,
+      "type": "class",
+      "position": {
+        "x": 2300,
+        "y": 140
+      },
+      "data": {
+        "name": "TopicWeeklyStats",
+        "methods": [],
+        "attributes": [
+          {
+            "id": "topicstats-a-topicId",
+            "name": "- topicId: UUID"
+          },
+          {
+            "id": "topicstats-a-weekStart",
+            "name": "- weekStart: Date"
+          },
+          {
+            "id": "topicstats-a-postCount",
+            "name": "- postCount: Integer"
+          }
+        ]
+      },
+      "measured": {
+        "width": 240,
+        "height": 130
       }
     },
     {
       "id": "51581d51-bb1d-4d40-9883-255f8e1b4744",
       "width": 250,
-      "height": 310,
+      "height": 340,
       "type": "class",
       "position": {
         "x": 1850,
         "y": -1400
       },
       "data": {
-        "name": "Like",
+        "name": "Vote",
         "methods": [
           {
-            "id": "72ca37cb-53e6-43ba-b034-336b2c01d5cd",
+            "id": "vote-m-cast",
             "name": "+ cast()"
           },
           {
-            "id": "9ea950b0-bd71-4acd-9784-7258f3f6fd8b",
+            "id": "vote-m-remove",
             "name": "+ remove()"
           },
           {
-            "id": "5988e026-204d-4486-9377-320dd557acad",
-            "name": "+ switch()"
+            "id": "vote-m-change",
+            "name": "+ change()"
           }
         ],
         "attributes": [
           {
-            "id": "cec3f5fa-cac0-4681-aa55-f99c164eb067",
+            "id": "vote-a-id",
             "name": "- id: UUID"
           },
           {
-            "id": "a5b3a950-202e-4ffc-99e7-333629d7c40e",
+            "id": "vote-a-userId",
             "name": "- userId: UUID"
           },
           {
-            "id": "83e68ce5-52bf-4466-ae18-9ae9c1535b78",
-            "name": "- targetType: LikeTargetType"
+            "id": "vote-a-targetType",
+            "name": "- targetType: VoteTargetType"
           },
           {
-            "id": "e29b750d-92a6-4266-b326-0a542b5544cd",
+            "id": "vote-a-targetId",
             "name": "- targetId: UUID"
           },
           {
-            "id": "20494228-859d-44e4-bdf1-390b3a443d86",
-            "name": "- likeType: LikeType"
+            "id": "vote-a-voteType",
+            "name": "- voteType: VoteType"
           },
           {
-            "id": "adad1f23-61d3-42c2-94a5-03e92f330246",
+            "id": "vote-a-createdAt",
             "name": "- createdAt: Timestamp"
+          },
+          {
+            "id": "vote-a-updatedAt",
+            "name": "- updatedAt: Timestamp"
           }
         ]
       },
       "measured": {
         "width": 250,
-        "height": 310
+        "height": 340
       }
     },
     {
       "id": "a173584c-067d-4ae2-ab10-2f1956153a86",
-      "width": 160,
+      "width": 190,
       "height": 110,
       "type": "class",
       "position": {
@@ -583,58 +720,58 @@
         "y": -1010
       },
       "data": {
-        "name": "LikeTargetType",
+        "name": "VoteTargetType",
         "stereotype": "Enumeration",
         "methods": [],
         "attributes": [
           {
-            "id": "cd940f24-dc32-41b3-ab67-be94441de8e5",
+            "id": "votetarget-post",
             "name": "POST"
           },
           {
-            "id": "a95f97b6-3622-4321-b6b1-cbc362dfba5a",
+            "id": "votetarget-comment",
             "name": "COMMENT"
           }
         ]
       },
       "measured": {
-        "width": 160,
+        "width": 190,
         "height": 110
       }
     },
     {
       "id": "976a80ca-b665-47ec-a98a-cc4981eb6404",
-      "width": 160,
+      "width": 190,
       "height": 110,
       "type": "class",
       "position": {
-        "x": 1790,
+        "x": 1780,
         "y": -1010
       },
       "data": {
-        "name": "LikeType",
+        "name": "VoteType",
         "stereotype": "Enumeration",
         "methods": [],
         "attributes": [
           {
-            "id": "ac05e5b5-d603-4231-abd9-ec2e9753a09b",
-            "name": "LIKE"
+            "id": "votetype-upvote",
+            "name": "UPVOTE"
           },
           {
-            "id": "b2467cec-63b7-4af8-b6bd-99a634a12f66",
-            "name": "DISLIKE"
+            "id": "votetype-downvote",
+            "name": "DOWNVOTE"
           }
         ]
       },
       "measured": {
-        "width": 160,
+        "width": 190,
         "height": 110
       }
     },
     {
       "id": "2cf8b015-b9fb-4ac0-bda3-339c2154d5bf",
       "width": 270,
-      "height": 220,
+      "height": 250,
       "type": "class",
       "position": {
         "x": 1630,
@@ -644,29 +781,139 @@
         "name": "Bookmark",
         "methods": [
           {
-            "id": "74137310-fc7c-498a-9a55-5e109eb9a80e",
+            "id": "bookmark-m-save",
             "name": "+ save()"
           },
           {
-            "id": "0dbf5811-2644-4036-95c9-15d104a9fb97",
+            "id": "bookmark-m-remove",
             "name": "+ remove()"
           }
         ],
         "attributes": [
           {
-            "id": "c126a309-7fda-45ac-8024-f2d6d00a2fb3",
+            "id": "bookmark-a-id",
             "name": "- id: UUID"
           },
           {
-            "id": "5bbd46ad-7b43-4436-95a4-b0a1fb22a626",
+            "id": "bookmark-a-userId",
             "name": "- userId: UUID"
           },
           {
-            "id": "1d813691-a911-4c25-8878-1634e641637f",
+            "id": "bookmark-a-postId",
             "name": "- postId: UUID"
           },
           {
-            "id": "00fe22ed-8bea-405f-8edf-e100cc5cb30d",
+            "id": "bookmark-a-createdAt",
+            "name": "- createdAt: Timestamp"
+          },
+          {
+            "id": "bookmark-a-updatedAt",
+            "name": "- updatedAt: Timestamp"
+          }
+        ]
+      },
+      "measured": {
+        "width": 270,
+        "height": 250
+      }
+    },
+    {
+      "id": "c643e9a9-9b2b-457b-8c6f-e0b28606aa29",
+      "width": 270,
+      "height": 340,
+      "type": "class",
+      "position": {
+        "x": 1630,
+        "y": -220
+      },
+      "data": {
+        "name": "Interaction",
+        "methods": [
+          {
+            "id": "interaction-m-track",
+            "name": "+ track()"
+          },
+          {
+            "id": "interaction-m-analyze",
+            "name": "+ analyze()"
+          }
+        ],
+        "attributes": [
+          {
+            "id": "interaction-a-id",
+            "name": "- id: UUID"
+          },
+          {
+            "id": "interaction-a-userId",
+            "name": "- userId: UUID"
+          },
+          {
+            "id": "interaction-a-postId",
+            "name": "- postId: UUID"
+          },
+          {
+            "id": "interaction-a-interactionType",
+            "name": "- interactionType: String"
+          },
+          {
+            "id": "interaction-a-durationSeconds",
+            "name": "- durationSeconds: Integer"
+          },
+          {
+            "id": "interaction-a-scrollDepth",
+            "name": "- scrollDepth: Integer"
+          },
+          {
+            "id": "interaction-a-metadata",
+            "name": "- metadata: JsonNode"
+          },
+          {
+            "id": "interaction-a-createdAt",
+            "name": "- createdAt: Timestamp"
+          }
+        ]
+      },
+      "measured": {
+        "width": 270,
+        "height": 340
+      }
+    },
+    {
+      "id": "08a7113c-3274-45b7-a476-7fb83a4833d9",
+      "width": 270,
+      "height": 220,
+      "type": "class",
+      "position": {
+        "x": 1630,
+        "y": -450
+      },
+      "data": {
+        "name": "TopicSubscription",
+        "methods": [
+          {
+            "id": "topicsub-m-subscribe",
+            "name": "+ subscribe()"
+          },
+          {
+            "id": "topicsub-m-unsubscribe",
+            "name": "+ unsubscribe()"
+          }
+        ],
+        "attributes": [
+          {
+            "id": "topicsub-a-id",
+            "name": "- id: UUID"
+          },
+          {
+            "id": "topicsub-a-userId",
+            "name": "- userId: UUID"
+          },
+          {
+            "id": "topicsub-a-topicId",
+            "name": "- topicId: UUID"
+          },
+          {
+            "id": "topicsub-a-createdAt",
             "name": "- createdAt: Timestamp"
           }
         ]
@@ -674,112 +921,6 @@
       "measured": {
         "width": 270,
         "height": 220
-      }
-    },
-    {
-      "id": "c643e9a9-9b2b-457b-8c6f-e0b28606aa29",
-      "width": 270,
-      "height": 370,
-      "type": "class",
-      "position": {
-        "x": 1630,
-        "y": -220
-      },
-      "data": {
-        "name": "UserBehaviorEvent",
-        "methods": [
-          {
-            "id": "0d6e7b3e-8277-48a5-a49f-deccbba836b3",
-            "name": "+ track()"
-          },
-          {
-            "id": "dcd786f1-37d2-4879-a91f-1db25f6da539",
-            "name": "+ analyze()"
-          }
-        ],
-        "attributes": [
-          {
-            "id": "b39f555a-23cc-4b57-bef5-8a46203f686f",
-            "name": "- id: UUID"
-          },
-          {
-            "id": "016b47a4-c164-4e2a-8b19-464d03230c28",
-            "name": "- userId: UUID"
-          },
-          {
-            "id": "f39c6afc-449b-4683-8fd7-77c3c9f002cc",
-            "name": "- postId: UUID"
-          },
-          {
-            "id": "6e89fbaf-6327-41c2-881b-a959bac8b43a",
-            "name": "- eventType: String"
-          },
-          {
-            "id": "fd0b2e1e-b73e-4332-961a-5c8c672d50ca",
-            "name": "- timeSpentSeconds: Integer"
-          },
-          {
-            "id": "210c5979-7af6-4a37-9d4b-61f371ed6148",
-            "name": "- scrollDepth: Integer"
-          },
-          {
-            "id": "33e050d8-1301-4251-9d01-c0fd70ef7f7c",
-            "name": "- viewportTime: Integer"
-          },
-          {
-            "id": "663734df-c5d2-49ce-9c4f-9fb2000271a9",
-            "name": "- metadata: JsonNode"
-          },
-          {
-            "id": "931763fc-dbae-41d2-acfc-465b4b096e27",
-            "name": "- createdAt: Timestamp"
-          }
-        ]
-      },
-      "measured": {
-        "width": 270,
-        "height": 370
-      }
-    },
-    {
-      "id": "08a7113c-3274-45b7-a476-7fb83a4833d9",
-      "width": 270,
-      "height": 190,
-      "type": "class",
-      "position": {
-        "x": 1630,
-        "y": -450
-      },
-      "data": {
-        "name": "TagSubscription",
-        "methods": [
-          {
-            "id": "ca4157d7-21be-4387-bee1-b8f5022d7fcb",
-            "name": "+ subscribe()"
-          },
-          {
-            "id": "6bf3a2a7-f3ac-4662-8be5-7ec003832db3",
-            "name": "+ unsubscribe()"
-          }
-        ],
-        "attributes": [
-          {
-            "id": "8145e58c-3afb-4d62-ad6f-a508b741f54a",
-            "name": "- userId: UUID"
-          },
-          {
-            "id": "1565b2ce-b1a7-4488-9249-21120b586c39",
-            "name": "- tagId: UUID"
-          },
-          {
-            "id": "7da65f3b-d05d-4b42-93cb-341107893189",
-            "name": "- subscribedAt: Timestamp"
-          }
-        ]
-      },
-      "measured": {
-        "width": 270,
-        "height": 190
       }
     },
     {
@@ -795,45 +936,45 @@
         "name": "Notification",
         "methods": [
           {
-            "id": "1d46454c-75c3-403c-9c1c-e12f2b2b4ad0",
+            "id": "notif-m-send",
             "name": "+ send()"
           },
           {
-            "id": "308a0a8c-a028-4cef-9718-89f58341c774",
+            "id": "notif-m-markAsRead",
             "name": "+ markAsRead()"
           },
           {
-            "id": "3a35812f-e368-43c2-b7e2-fef9c4067fae",
+            "id": "notif-m-delete",
             "name": "+ delete()"
           }
         ],
         "attributes": [
           {
-            "id": "0f9b2486-090b-4c28-99cf-d7bffde7ed8d",
+            "id": "notif-a-id",
             "name": "- id: UUID"
           },
           {
-            "id": "ec2d184b-169f-411a-932e-56808aff44f0",
+            "id": "notif-a-userId",
             "name": "- userId: UUID"
           },
           {
-            "id": "2ac65cca-896d-4066-8335-93f47125d9d8",
-            "name": "- type: NotificationType"
+            "id": "notif-a-type",
+            "name": "- type: String"
           },
           {
-            "id": "21b22db4-401a-4796-82ef-4938edd3ccb1",
+            "id": "notif-a-content",
             "name": "- content: String"
           },
           {
-            "id": "2a49708b-cfb0-4a62-ad95-ebabfb2868be",
+            "id": "notif-a-relatedPostId",
             "name": "- relatedPostId: UUID"
           },
           {
-            "id": "c715cd4b-76b4-47f5-8f42-776ce6fe4074",
+            "id": "notif-a-isRead",
             "name": "- isRead: Boolean"
           },
           {
-            "id": "bab0b261-e029-490a-b2e1-3823f45f8824",
+            "id": "notif-a-createdAt",
             "name": "- createdAt: Timestamp"
           }
         ]
@@ -841,153 +982,6 @@
       "measured": {
         "width": 220,
         "height": 340
-      }
-    },
-    {
-      "id": "aa0aae28-207a-4eb4-9f18-e96d3105c3b3",
-      "width": 280,
-      "height": 200,
-      "type": "class",
-      "position": {
-        "x": 560,
-        "y": -1400
-      },
-      "data": {
-        "name": "NotificationType",
-        "stereotype": "Enumeration",
-        "methods": [],
-        "attributes": [
-          {
-            "id": "da6718b8-694a-4e28-8577-dc528d2e44d6",
-            "name": "COMMENT"
-          },
-          {
-            "id": "2848d65c-15ee-4fa8-94d8-295d5173ee72",
-            "name": "LIKE"
-          },
-          {
-            "id": "2481ea97-14e4-4dde-9aa3-aae979669e93",
-            "name": "VERIFICATION_APPROVED"
-          },
-          {
-            "id": "61f7331e-fc95-41eb-a9c4-7816a04fdd61",
-            "name": "DAILY_DIGEST"
-          },
-          {
-            "id": "127ec6fe-770b-446a-8ecb-f698cc87fb64",
-            "name": "NEW_POST_IN_SUBSCRIBED_TAG"
-          }
-        ]
-      },
-      "measured": {
-        "width": 280,
-        "height": 200
-      }
-    },
-    {
-      "id": "a733247f-a751-4405-b08d-68588d32c670",
-      "width": 160,
-      "height": 110,
-      "type": "class",
-      "position": {
-        "x": 2610,
-        "y": -710
-      },
-      "data": {
-        "name": "PostStatus",
-        "stereotype": "Enumeration",
-        "methods": [],
-        "attributes": [
-          {
-            "id": "4f6f5ca4-91ee-473a-8cc0-a8aa2caf7b93",
-            "name": "DRAFT"
-          },
-          {
-            "id": "9c29c168-7496-446b-b80d-a52a4380ad43",
-            "name": "PUBLISHED"
-          }
-        ]
-      },
-      "measured": {
-        "width": 160,
-        "height": 110
-      }
-    },
-    {
-      "id": "c672f773-c9c0-4631-95e0-74fb5cc575a7",
-      "width": 300,
-      "height": 220,
-      "type": "class",
-      "position": {
-        "x": 860,
-        "y": -1400
-      },
-      "data": {
-        "name": "UserPreferences",
-        "methods": [],
-        "attributes": [
-          {
-            "id": "09da3a6a-86c8-4147-bdc1-0a1c7deaadac",
-            "name": "- userId: UUID"
-          },
-          {
-            "id": "82ca3c08-f4d4-4a5f-9520-be2a55caebc3",
-            "name": "- digestFrequency: DigestFrequency"
-          },
-          {
-            "id": "80602639-aec2-4ab3-a2ec-4b8df71d592c",
-            "name": "- showBookmarks: Boolean"
-          },
-          {
-            "id": "0df7e894-a266-452d-bd6d-366c2723ca5d",
-            "name": "- showLikes: Boolean"
-          },
-          {
-            "id": "6a3a8403-3f88-4037-8752-dab061f795e2",
-            "name": "- createdAt: Timestamp"
-          },
-          {
-            "id": "102077cf-3030-4391-86a4-393b7aadf9bb",
-            "name": "- updatedAt: Timestamp"
-          }
-        ]
-      },
-      "measured": {
-        "width": 300,
-        "height": 220
-      }
-    },
-    {
-      "id": "e1f783d5-f4ca-4988-b5a4-465fae662dab",
-      "width": 160,
-      "height": 140,
-      "type": "class",
-      "position": {
-        "x": 930,
-        "y": -1640
-      },
-      "data": {
-        "name": "DigestFrequency",
-        "stereotype": "Enumeration",
-        "methods": [],
-        "attributes": [
-          {
-            "id": "202f2ce3-aa74-4848-8077-02d12da24055",
-            "name": "DAILY"
-          },
-          {
-            "id": "46473770-3f52-4a72-9640-240af5b67e15",
-            "name": "WEEKLY"
-          },
-          {
-            "id": "b53a009e-1d72-494b-8a87-e5d0ef039b8f",
-            "name": "OFF"
-          }
-        ]
-      },
-      "measured": {
-        "width": 160,
-        "height": 140
       }
     }
   ],
@@ -1032,19 +1026,6 @@
       }
     },
     {
-      "id": "9d890c82-7771-441e-95ae-ddd636366d0e",
-      "source": "36a1d68c-a97c-4623-beeb-ff111ba3a56a",
-      "target": "48928833-d17e-4e4a-b432-8fa8a068fa03",
-      "type": "ClassComposition",
-      "sourceHandle": "top",
-      "targetHandle": "bottom",
-      "data": {
-        "targetRole": "1",
-        "sourceRole": "*",
-        "points": []
-      }
-    },
-    {
       "id": "857e2711-c532-4a1a-a447-30e6c71c5b7a",
       "source": "c643e9a9-9b2b-457b-8c6f-e0b28606aa29",
       "target": "48928833-d17e-4e4a-b432-8fa8a068fa03",
@@ -1071,27 +1052,40 @@
       }
     },
     {
-      "id": "5e401051-a661-4491-8f02-c582d3ab2e35",
-      "source": "36a1d68c-a97c-4623-beeb-ff111ba3a56a",
-      "target": "6dd70b31-613d-4edd-ada1-6145f87805b3",
+      "id": "e0000001-0000-4000-8000-000000000001",
+      "source": "48928833-d17e-4e4a-b432-8fa8a068fa03",
+      "target": "e1f783d5-f4ca-4988-b5a4-465fae662dab",
       "type": "ClassUnidirectional",
-      "sourceHandle": "left-top",
-      "targetHandle": "right",
+      "sourceHandle": "top",
+      "targetHandle": "bottom",
       "data": {
-        "points": [],
         "sourceRole": "1",
-        "targetRole": "1"
+        "targetRole": "1",
+        "points": []
       }
     },
     {
-      "id": "3c0ae131-98b7-4694-b66e-7ae833ffcd51",
-      "source": "36a1d68c-a97c-4623-beeb-ff111ba3a56a",
-      "target": "045f9087-451b-472c-ad17-5ac51a1f4cba",
+      "id": "e0000005-0000-4000-8000-000000000005",
+      "source": "0f9c1a20-4444-4a44-9b44-aa0000000004",
+      "target": "48928833-d17e-4e4a-b432-8fa8a068fa03",
       "type": "ClassUnidirectional",
-      "sourceHandle": "left-bottom",
-      "targetHandle": "right",
+      "sourceHandle": "top",
+      "targetHandle": "bottom",
       "data": {
-        "sourceRole": "1",
+        "sourceRole": "follower *",
+        "targetRole": "1",
+        "points": []
+      }
+    },
+    {
+      "id": "e0000006-0000-4000-8000-000000000006",
+      "source": "0f9c1a20-4444-4a44-9b44-aa0000000004",
+      "target": "48928833-d17e-4e4a-b432-8fa8a068fa03",
+      "type": "ClassUnidirectional",
+      "sourceHandle": "right",
+      "targetHandle": "bottom",
+      "data": {
+        "sourceRole": "followed *",
         "targetRole": "1",
         "points": []
       }
@@ -1139,7 +1133,7 @@
       "id": "be6bf4f8-3802-4b6b-b1ed-fc702c9bd337",
       "source": "08a7113c-3274-45b7-a476-7fb83a4833d9",
       "target": "7b011ba9-bd53-415a-975b-64ac3d5198c0",
-      "type": "ClassComposition",
+      "type": "ClassUnidirectional",
       "sourceHandle": "right",
       "targetHandle": "left-top",
       "data": {
@@ -1165,12 +1159,12 @@
       "id": "e9c89f19-6999-4be4-9977-29d169ff2c6d",
       "source": "7b011ba9-bd53-415a-975b-64ac3d5198c0",
       "target": "24118a55-37fc-4028-96f7-353d5b7b5453",
-      "type": "ClassComposition",
+      "type": "ClassBidirectional",
       "sourceHandle": "right-top",
       "targetHandle": "left",
       "data": {
         "sourceRole": "*",
-        "targetRole": "1",
+        "targetRole": "*",
         "points": []
       }
     },
@@ -1184,19 +1178,6 @@
       "data": {
         "targetRole": "1",
         "sourceRole": "*",
-        "points": []
-      }
-    },
-    {
-      "id": "e31ff49c-069d-47f2-825a-0223d6227ae4",
-      "source": "a76d3f87-9ea6-4a61-9640-f890aea4aca1",
-      "target": "aa0aae28-207a-4eb4-9f18-e96d3105c3b3",
-      "type": "ClassUnidirectional",
-      "sourceHandle": "top",
-      "targetHandle": "bottom",
-      "data": {
-        "sourceRole": "1",
-        "targetRole": "1",
         "points": []
       }
     },
@@ -1230,12 +1211,12 @@
       "id": "1c877410-b6d2-4606-88c4-334e4f86c42e",
       "source": "51581d51-bb1d-4d40-9883-255f8e1b4744",
       "target": "24118a55-37fc-4028-96f7-353d5b7b5453",
-      "type": "ClassComposition",
+      "type": "ClassUnidirectional",
       "sourceHandle": "top-right",
       "targetHandle": "top-right",
       "data": {
         "sourceRole": "*",
-        "targetRole": "1",
+        "targetRole": "0..1",
         "points": []
       }
     },
@@ -1243,11 +1224,11 @@
       "id": "cbbd06f0-d0fe-4a19-987a-e2d0f4f805fe",
       "source": "51581d51-bb1d-4d40-9883-255f8e1b4744",
       "target": "f6a235b7-5610-4253-9bc0-29f5359fc955",
-      "type": "ClassComposition",
+      "type": "ClassUnidirectional",
       "sourceHandle": "left-top",
       "targetHandle": "right-top",
       "data": {
-        "targetRole": "1",
+        "targetRole": "0..1",
         "sourceRole": "*",
         "points": []
       }
@@ -1256,7 +1237,7 @@
       "id": "0209e112-48e1-4b0f-b22b-401d5f36a9f1",
       "source": "c643e9a9-9b2b-457b-8c6f-e0b28606aa29",
       "target": "24118a55-37fc-4028-96f7-353d5b7b5453",
-      "type": "ClassComposition",
+      "type": "ClassUnidirectional",
       "sourceHandle": "right",
       "targetHandle": "left-bottom",
       "data": {
@@ -1292,26 +1273,41 @@
       }
     },
     {
-      "id": "71b8c884-1347-425c-8cc4-36df00cd2ee2",
-      "source": "c672f773-c9c0-4631-95e0-74fb5cc575a7",
-      "target": "48928833-d17e-4e4a-b432-8fa8a068fa03",
+      "id": "e0000002-0000-4000-8000-000000000002",
+      "source": "24118a55-37fc-4028-96f7-353d5b7b5453",
+      "target": "0f9c1a20-1111-4a11-9b11-aa0000000001",
       "type": "ClassUnidirectional",
-      "sourceHandle": "bottom",
-      "targetHandle": "top-mid-left",
+      "sourceHandle": "right-bottom",
+      "targetHandle": "left",
       "data": {
+        "sourceRole": "1",
+        "targetRole": "1",
         "points": []
       }
     },
     {
-      "id": "63824869-fbd6-4c42-b31e-11b103012f0b",
-      "source": "c672f773-c9c0-4631-95e0-74fb5cc575a7",
-      "target": "e1f783d5-f4ca-4988-b5a4-465fae662dab",
+      "id": "e0000003-0000-4000-8000-000000000003",
+      "source": "7b011ba9-bd53-415a-975b-64ac3d5198c0",
+      "target": "0f9c1a20-2222-4a22-9b22-aa0000000002",
       "type": "ClassUnidirectional",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "data": {
+        "sourceRole": "*",
+        "targetRole": "0..1",
+        "points": []
+      }
+    },
+    {
+      "id": "e0000004-0000-4000-8000-000000000004",
+      "source": "0f9c1a20-3333-4a33-9b33-aa0000000003",
+      "target": "7b011ba9-bd53-415a-975b-64ac3d5198c0",
+      "type": "ClassComposition",
       "sourceHandle": "top",
       "targetHandle": "bottom",
       "data": {
+        "sourceRole": "*",
         "targetRole": "1",
-        "sourceRole": "1",
         "points": []
       }
     }

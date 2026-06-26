@@ -1,0 +1,19 @@
+meta {
+  name: Upload avatar
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{userBaseUrl}}/api/v1/users/me/avatar
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:multipart-form {
+  avatar: @file(../fixtures/onepx.png)
+}

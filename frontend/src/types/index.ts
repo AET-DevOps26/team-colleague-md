@@ -139,3 +139,74 @@ export interface AuthUser {
   role: 'USER' | 'VERIFIED' | 'ADMIN';
   email: string;
 }
+
+// ── Post authoring (mirrors content-service OpenAPI) ──────────
+
+export type PostStatus = 'DRAFT' | 'PUBLISHED';
+
+/** Mirrors content-service OpenAPI PostRequest (create / full replace). */
+export interface PostRequest {
+  title: string;
+  content: string;
+  excerpt?: string;
+  coverImageUrl?: string | null;
+  sourceUrl?: string[];
+  topics?: string[];
+  status?: PostStatus;
+}
+
+/** Mirrors content-service OpenAPI PostPatchRequest (partial update). */
+export interface PostPatchRequest {
+  title?: string;
+  content?: string;
+  excerpt?: string | null;
+  coverImageUrl?: string | null;
+  sourceUrl?: string[];
+  topics?: string[];
+  status?: PostStatus;
+}
+
+/** Mirrors content-service OpenAPI PostResponse. */
+export interface PostResponse {
+  id: string;
+  author: User;
+  status: PostStatus;
+  type: 'NORMAL' | 'DIGEST';
+  title: string;
+  excerpt: string;
+  summary?: string | null;
+  content: string;
+  coverImageUrl?: string | null;
+  topics: Topic[];
+  sourceUrl: string[];
+  readTimeMinutes: number;
+  likeCount: number;
+  dislikeCount: number;
+  commentCount: number;
+  viewCount: number;
+  saveCount: number;
+  isLikedByMe: boolean;
+  isDislikedByMe: boolean;
+  isBookmarkedByMe: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Mirrors content-service OpenAPI FileUploadResponse. */
+export interface FileUploadResponse {
+  url: string;
+}
+
+/**
+ * The Post Editor's working draft state — what the form binds to.
+ * `id` is null for an unsaved new post; topics are Topic name slugs.
+ */
+export interface EditorPost {
+  id: string | null;
+  title: string;
+  content: string;
+  coverImageUrl: string | null;
+  sources: string[];
+  topics: string[];
+  status: PostStatus;
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Create post (interaction target)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/posts
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "title": "Bruno personalization flow",
+    "content": "Post used as a tracked-interaction target.",
+    "topics": ["ai"],
+    "status": "PUBLISHED"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:post-response {
+  bru.setEnvVar("postId", res.getBody().id);
+}

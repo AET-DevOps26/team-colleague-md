@@ -1,0 +1,84 @@
+# Shared Prometheus alert rules for the Verita services (application + database layer).
+# Deployment-agnostic — consumed by both the Rancher (Helm) and Azure (compose) Prometheus.
+# Host/container-level rules (node-exporter, cAdvisor) live alongside the Azure config,
+# since those exporters only exist there (a shared namespace cannot run them on Rancher).
+groups:
+  - name: verita-availability
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Scrape target down ({{ $labels.job }})"
+          description: "{{ $labels.job }} on {{ $labels.instance }} has been unreachable for >2m."
+
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL exporter reports DB down ({{ $labels.job }})"
+          description: "pg_up=0 for {{ $labels.job }} for >2m."
+
+  - name: verita-http
+    rules:
+      - alert: HighErrorRatio
+        expr: |
+          sum by (application) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            / clamp_min(sum by (application) (rate(http_server_requests_seconds_count[5m])), 1)
+            > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx ratio on {{ $labels.application }}"
+          description: "{{ $labels.application }} is serving >5% 5xx responses over 5m."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, application) (rate(http_server_requests_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency on {{ $labels.application }}"
+          description: "p95 request latency for {{ $labels.application }} has exceeded 1s for 10m."
+
+  - name: verita-jvm
+    rules:
+      - alert: JvmHeapHigh
+        expr: |
+          sum by (application) (jvm_memory_used_bytes{area="heap"})
+            / sum by (application) (jvm_memory_max_bytes{area="heap"}) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM heap >90% on {{ $labels.application }}"
+          description: "{{ $labels.application }} heap usage has been above 90% of max for 10m."
+
+  - name: verita-datasource
+    rules:
+      - alert: HikariPoolNearExhaustion
+        expr: hikaricp_connections_pending > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HikariCP threads waiting for a connection ({{ $labels.application }})"
+          description: "{{ $labels.application }} pool {{ $labels.pool }} has had pending connection requests for 5m — pool may be undersized or the DB is slow."
+
+      - alert: PostgresConnectionsHigh
+        expr: |
+          sum by (job) (pg_stat_database_numbackends)
+            / max by (job) (pg_settings_max_connections) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL connections >80% of max ({{ $labels.job }})"
+          description: "{{ $labels.job }} is using more than 80% of max_connections for 5m."

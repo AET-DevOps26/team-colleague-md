@@ -1,0 +1,29 @@
+meta {
+  name: Edit post
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{contentBaseUrl}}/api/v1/posts/{{postId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "title": "Bruno authoring flow (edited)",
+    "content": "Edited body content.",
+    "topics": ["ai"],
+    "status": "DRAFT"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.title: contains edited
+}

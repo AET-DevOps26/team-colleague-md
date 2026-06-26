@@ -25,6 +25,7 @@ public class JwtUtilsTests {
 
     private JwtUtils jwtUtils;
     private Authentication authentication;
+    private UUID userId;
 
     @BeforeEach
     void setUp() {
@@ -33,8 +34,9 @@ public class JwtUtilsTests {
         ReflectionTestUtils.setField(jwtUtils, "jwtExpirationMs", 60000);
         ReflectionTestUtils.setField(jwtUtils, "jwtRefreshExpirationMs", 604800000L);
 
+        userId = UUID.randomUUID();
         UserDetailsImpl principal = new UserDetailsImpl(
-                UUID.randomUUID(), "alice", "alice@example.com", "hashed", List.of());
+                userId, "alice", "alice@example.com", "hashed", List.of());
         authentication = new UsernamePasswordAuthenticationToken(principal, null, List.of());
     }
 
@@ -44,6 +46,13 @@ public class JwtUtilsTests {
 
         assertTrue(jwtUtils.validateJwtToken(token));
         assertEquals("alice", jwtUtils.getUserNameFromJwtToken(token));
+    }
+
+    @Test
+    void generateJwtToken_carriesUserIdClaim() {
+        String token = jwtUtils.generateJwtToken(authentication);
+
+        assertEquals(userId.toString(), jwtUtils.getUserIdFromJwtToken(token));
     }
 
     @Test

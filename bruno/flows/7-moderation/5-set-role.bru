@@ -1,0 +1,26 @@
+meta {
+  name: Promote to VERIFIED
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{userBaseUrl}}/api/v1/users/{{otherUserId}}/role
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "role": "VERIFIED"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.role: eq VERIFIED
+}

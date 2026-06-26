@@ -1,0 +1,37 @@
+meta {
+  name: Create post (draft)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/posts
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "title": "Bruno authoring flow",
+    "content": "Draft body created by the authoring flow.",
+    "topics": ["ai"],
+    "status": "DRAFT"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+}
+
+script:post-response {
+  bru.setEnvVar("postId", res.getBody().id);
+}
+
+docs {
+  Created as DRAFT so the drafts step can find it. Summary is async/best-effort (SummaryEventListener, needs LLM creds) — never asserted here.
+}

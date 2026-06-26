@@ -1,10 +1,11 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.TopicCategoryEntity;
-import com.verita.contentservice.domain.TopicEntity;
+import com.verita.contentservice.entity.TopicCategoryEntity;
+import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.repository.TopicCategoryRepository;
 import com.verita.contentservice.repository.TopicRepository;
 import com.verita.model.FollowerCountDeltaRequest;
+import com.verita.model.Topic;
 import com.verita.model.TopicCategoryGroup;
 import com.verita.model.TopicResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,34 @@ public class TopicServiceTest {
 
         assertEquals(1, result.size());
         assertEquals("java", result.get(0).getName());
+    }
+
+    @Test
+    void getByIds_mapsToMinimalTopics() {
+        TopicEntity java = topic("java", "tech", 0);
+        TopicEntity go = topic("go", "tech", 1);
+        List<UUID> ids = List.of(java.getId(), go.getId());
+        when(topicRepository.findAllById(ids)).thenReturn(List.of(java, go));
+
+        List<Topic> result = topicService.getByIds(ids);
+
+        assertEquals(2, result.size());
+        assertEquals(java.getId(), result.get(0).getId());
+        assertEquals("java", result.get(0).getName());
+    }
+
+    @Test
+    void getByIds_unknownIdsAreOmitted() {
+        TopicEntity java = topic("java", "tech", 0);
+        UUID missing = UUID.randomUUID();
+        List<UUID> ids = List.of(java.getId(), missing);
+        // Repository returns only the topics that exist.
+        when(topicRepository.findAllById(ids)).thenReturn(List.of(java));
+
+        List<Topic> result = topicService.getByIds(ids);
+
+        assertEquals(1, result.size());
+        assertEquals(java.getId(), result.get(0).getId());
     }
 
     @Test

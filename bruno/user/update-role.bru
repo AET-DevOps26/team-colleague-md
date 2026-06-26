@@ -1,0 +1,21 @@
+meta {
+  name: Update user role (admin)
+  type: http
+  seq: 15
+}
+
+patch {
+  url: {{userBaseUrl}}/api/v1/users/{{otherUserId}}/role
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "role": "VERIFIED"
+  }
+}

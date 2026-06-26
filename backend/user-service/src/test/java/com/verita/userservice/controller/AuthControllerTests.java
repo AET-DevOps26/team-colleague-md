@@ -8,7 +8,7 @@ import com.verita.userservice.exception.*;
 import com.verita.userservice.security.AuthEntryPointJwt;
 import com.verita.userservice.security.JwtUtils;
 import com.verita.userservice.security.UserDetailsServiceImpl;
-import com.verita.userservice.security.WebSecurityConfig;
+import com.verita.userservice.security.SecurityConfig;
 import com.verita.userservice.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(WebSecurityConfig.class)
+@Import(SecurityConfig.class)
 public class AuthControllerTests {
 
     private MockMvc mockMvc;

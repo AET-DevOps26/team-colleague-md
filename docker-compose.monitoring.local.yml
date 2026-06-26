@@ -1,0 +1,24 @@
+# Local override for docker-compose.monitoring.yml.
+# Remaps Grafana to port 3001 to avoid colliding with the dev frontend on 3000.
+# The postgres-exporters default to the base docker-compose.yml DB credentials, so no env
+# vars are needed locally.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
+# Then open: http://localhost:3001  (admin / verita_grafana_admin)
+#            http://localhost:9090  (Prometheus)
+services:
+  grafana:
+    # !override replaces the base ports list instead of merging into it. Without it, Compose
+    # appends 3001 to the base 3000 mapping, and 3000 collides with the frontend (0.0.0.0:3000),
+    # so Docker Desktop ends up publishing nothing and Grafana is unreachable.
+    ports: !override
+      - "127.0.0.1:3001:3000"
+
+  # node-exporter mounts the host root with rslave propagation, which Docker Desktop's
+  # WSL2 backend rejects ("path / is not a shared or slave mount"). The failure exits
+  # non-zero and aborts the whole `up`, leaving Grafana and the app services in Created.
+  # It produces no meaningful host metrics on Docker Desktop anyway, and does not run on
+  # Rancher either, so disable it locally by parking it in an unused profile. The Prometheus
+  # `node` target will read DOWN locally by design.
+  node-exporter:
+    profiles: ["host-exporters"]

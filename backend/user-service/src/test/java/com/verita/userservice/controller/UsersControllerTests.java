@@ -1,11 +1,11 @@
 package com.verita.userservice.controller;
 
 import com.verita.model.UserRole;
-import com.verita.userservice.repository.UserEntity;
+import com.verita.userservice.entity.UserEntity;
 import com.verita.userservice.security.JwtUtils;
 import com.verita.userservice.security.UserDetailsImpl;
 import com.verita.userservice.security.UserDetailsServiceImpl;
-import com.verita.userservice.security.WebSecurityConfig;
+import com.verita.userservice.security.SecurityConfig;
 import com.verita.userservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(WebSecurityConfig.class)
+@Import(SecurityConfig.class)
 public class UsersControllerTests {
 
     private MockMvc mockMvc;

@@ -1,0 +1,27 @@
+meta {
+  name: Get topics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/topics
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+script:post-response {
+  // /api/v1/topics returns an array of CATEGORIES; the topic UUID lives in category.topics[].id,
+  // not at the top level (a category's id is a slug like "research", not a UUID).
+  const b = res.getBody();
+  const cats = Array.isArray(b) ? b : (b.categories || b.content || []);
+  let topicId = null;
+  for (const c of cats) {
+    if (Array.isArray(c.topics) && c.topics.length) { topicId = c.topics[0].id; break; }
+  }
+  if (topicId) bru.setEnvVar("topicId", topicId);
+}

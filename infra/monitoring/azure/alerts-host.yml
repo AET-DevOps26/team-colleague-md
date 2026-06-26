@@ -1,0 +1,57 @@
+# Host- and container-level alerts for the Azure VM. These rely on node-exporter and
+# cAdvisor, which only run in the compose stack (a shared Rancher namespace cannot run
+# node-level exporters), so they live here rather than in the shared rule file.
+groups:
+  - name: verita-host
+    rules:
+      - alert: HostHighCpu
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU >90% ({{ $labels.instance }})"
+          description: "Average CPU usage on the VM has exceeded 90% for 10m."
+
+      - alert: HostLowMemory
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host available memory <10%"
+          description: "Less than 10% memory available on the VM for 10m."
+
+      - alert: HostLowDisk
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.1
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host disk <10% free ({{ $labels.mountpoint }})"
+          description: "Filesystem {{ $labels.mountpoint }} has less than 10% space free for 10m."
+
+  - name: verita-containers
+    rules:
+      - alert: ContainerHighMemory
+        expr: |
+          (container_memory_working_set_bytes{name!=""}
+            / container_spec_memory_limit_bytes{name!=""} > 0.9)
+          and (container_spec_memory_limit_bytes{name!=""} > 0)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container memory >90% of limit ({{ $labels.name }})"
+          description: "{{ $labels.name }} is using >90% of its memory limit for 10m — OOM-kill risk."
+
+      - alert: ContainerRestartingFrequently
+        expr: increase(container_start_time_seconds{name!=""}[15m]) > 2
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarting frequently ({{ $labels.name }})"
+          description: "{{ $labels.name }} has restarted more than twice in the last 15m."

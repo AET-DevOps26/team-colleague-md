@@ -1,10 +1,11 @@
 package com.verita.contentservice.service;
 
-import com.verita.contentservice.domain.TopicCategoryEntity;
-import com.verita.contentservice.domain.TopicEntity;
+import com.verita.contentservice.entity.TopicCategoryEntity;
+import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.repository.TopicCategoryRepository;
 import com.verita.contentservice.repository.TopicRepository;
 import com.verita.model.FollowerCountDeltaRequest;
+import com.verita.model.Topic;
 import com.verita.model.TopicCategoryGroup;
 import com.verita.model.TopicResponse;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,6 +59,18 @@ public class TopicService {
                     group.topics(e.getValue().stream().map(this::toTopicResponse).toList());
                     return group;
                 })
+                .toList();
+    }
+
+    /**
+     * Batch-resolves topic IDs to minimal {@code {id, name}} objects. Unknown IDs are
+     * silently omitted (the result may be smaller than the input). Backs
+     * {@code GET /api/v1/topics/by-ids}, consumed by recommendation-service (#160).
+     */
+    @Transactional(readOnly = true)
+    public List<Topic> getByIds(List<UUID> ids) {
+        return topicRepository.findAllById(ids).stream()
+                .map(t -> new Topic().id(t.getId()).name(t.getName()))
                 .toList();
     }
 

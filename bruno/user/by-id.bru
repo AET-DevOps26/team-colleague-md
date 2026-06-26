@@ -1,0 +1,11 @@
+meta {
+  name: Get user by id
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{userBaseUrl}}/api/v1/users/{{otherUserId}}
+  body: none
+  auth: none
+}

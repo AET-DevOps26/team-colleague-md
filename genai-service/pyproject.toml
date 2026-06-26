@@ -1,0 +1,13 @@
+# Test + coverage configuration for genai-service.
+#
+# Coverage gate mirrors the Java services' JaCoCo 0.70 LINE minimum (ADR-0009): a plain
+# `pytest` enforces it via the addopts below, so CI needs no special flags. Like the Java
+# gate excludes generated OpenAPI code, this excludes package __init__.py shims (no logic).
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+addopts = "--cov=app --cov-report=term-missing --cov-fail-under=70"
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/__init__.py", "app/*/__init__.py"]
