@@ -73,4 +73,10 @@ describe('postMapper', () => {
     const patch = toPatchRequest(EDITOR, 'DRAFT');
     expect(patch.status).toBe('DRAFT');
   });
+
+  it('(PM-7) both mappers send an excerpt derived from the edited body so the card preview never goes stale', () => {
+    const edited: EditorPost = { ...EDITOR, content: '# Heading\n\nUpdated **body** text.' };
+    expect(toCreateRequest(edited, 'DRAFT').excerpt).toBe('Heading Updated body text.');
+    expect(toPatchRequest(edited, 'DRAFT').excerpt).toBe('Heading Updated body text.');
+  });
 });

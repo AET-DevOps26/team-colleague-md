@@ -1,4 +1,99 @@
-import type { Comment, FeedPage, Post, PostDetail, DigestListItem, TopicCategory, TodayDigest } from '../types';
+import type { Comment, FeedPage, Post, PostDetail, DigestListItem, TopicCategory, TodayDigest, User, PostResponse } from '../types';
+import api from './api';
+import recommendationApi from './recommendationApi';
+import { isDemoMode } from './demoMode';
+import { getUser } from './tokenStore';
+
+/** recommendation-service FeedPage: an ordered ID list, hydrated separately via content-service. */
+interface FeedIdPage {
+  postIds: string[];
+  nextCursor: string | null;
+}
+
+/** content-service PostCard — the lightweight feed-card shape (no article body). */
+interface PostCardResponse {
+  id: string;
+  author: User;
+  title: string;
+  excerpt: string | null;
+  coverImageUrl: string | null;
+  topics: { id: string; name: string }[];
+  readTimeMinutes: number | null;
+  likeCount: number;
+  commentCount: number;
+  viewCount: number;
+  isLikedByMe: boolean;
+  createdAt: string;
+}
+
+function toCardPost(c: PostCardResponse): Post {
+  return {
+    id: c.id,
+    title: c.title,
+    excerpt: c.excerpt ?? '',
+    coverImageUrl: c.coverImageUrl ?? undefined,
+    author: c.author,
+    topics: c.topics,
+    likeCount: c.likeCount,
+    commentCount: c.commentCount,
+    viewCount: c.viewCount,
+    isLikedByMe: c.isLikedByMe,
+    createdAt: c.createdAt,
+    readTimeMinutes: c.readTimeMinutes ?? undefined,
+  };
+}
+
+function toPostDetail(r: PostResponse): PostDetail {
+  return {
+    id: r.id,
+    title: r.title,
+    excerpt: r.excerpt,
+    coverImageUrl: r.coverImageUrl ?? undefined,
+    author: r.author,
+    topics: r.topics,
+    likeCount: r.likeCount,
+    commentCount: r.commentCount,
+    viewCount: r.viewCount,
+    isLikedByMe: r.isLikedByMe,
+    createdAt: r.createdAt,
+    content: r.content,
+    saveCount: r.saveCount,
+    isBookmarkedByMe: r.isBookmarkedByMe,
+    readTimeMinutes: r.readTimeMinutes,
+    sources: r.sourceUrl.map((url) => ({ label: url, url })),
+  };
+}
+
+/**
+ * Real feed (ADR-0012, two hops): recommendation-service returns an ordered ID page
+ * (personal when logged in, trending otherwise / when a topic is selected), then
+ * content-service hydrates the cards. Order is preserved against the ID list defensively.
+ */
+async function fetchRealFeed(cursor: string | null, topic: string | null): Promise<FeedPage> {
+  const params: Record<string, string> = {};
+  if (cursor) params.cursor = cursor;
+
+  let path = '/api/v1/feed/trending';
+  if (topic) {
+    params.topic = topic;
+  } else if (getUser()) {
+    path = '/api/v1/feed/personal';
+  }
+
+  const { data: feed } = await recommendationApi.get<FeedIdPage>(path, { params });
+  if (feed.postIds.length === 0) return { posts: [], nextCursor: feed.nextCursor };
+
+  const { data: cards } = await api.get<PostCardResponse[]>('/api/v1/posts/cards', {
+    params: { ids: feed.postIds.join(',') },
+  });
+  const byId = new Map(cards.map((c) => [c.id, c]));
+  const posts = feed.postIds
+    .map((id) => byId.get(id))
+    .filter((c): c is PostCardResponse => Boolean(c))
+    .map(toCardPost);
+
+  return { posts, nextCursor: feed.nextCursor };
+}
 
 const MOCK_TOPICS = [
   { id: 't1', name: 'LLMs' },
@@ -291,6 +386,7 @@ const MOCK_POST_DETAIL: PostDetail = {
   id: 'p-skill-induction',
   title: 'Skill Induction Heads: mechanistic evidence for few-shot learning in 70B models',
   excerpt: 'We isolate ~140 attention heads that implement in-context learning in large models and show that ablating them collapses few-shot accuracy to zero-shot baseline.',
+  content: '## What we found\n\nWe isolate ~140 attention heads that implement in-context learning in large models. Ablating the cluster collapses few-shot accuracy to the zero-shot baseline, while leaving zero-shot performance almost untouched.\n\nThe heads form three sub-populations — **retrieval**, **format**, and **predict** — and appear only above 30B parameters.',
   coverImageUrl: undefined,
   author: {
     id: 'u-ananya',
@@ -480,6 +576,7 @@ const TOPIC_CATEGORIES: TopicCategory[] = [
 
 export const contentService = {
   getPosts(cursor: string | null, topic: string | null): Promise<FeedPage> {
+    if (!isDemoMode()) return fetchRealFeed(cursor, topic);
     return new Promise((resolve) => {
       setTimeout(() => {
         let posts = topic
@@ -496,27 +593,49 @@ export const contentService = {
     });
   },
 
-  toggleLike(postId: string): Promise<{ likeCount: number; isLikedByMe: boolean }> {
+  async toggleLike(postId: string, like: boolean): Promise<{ likeCount: number; isLikedByMe: boolean }> {
+    if (!isDemoMode()) {
+      const { data } = await api.post<{ likeCount: number; isLikedByMe: boolean }>(
+        `/api/v1/posts/${postId}/like`,
+        { type: like ? 'LIKE' : 'NONE' },
+      );
+      return { likeCount: data.likeCount, isLikedByMe: data.isLikedByMe };
+    }
     return new Promise((resolve) => {
       const post = BASE_POSTS.find((p) => p.id === postId);
       if (!post) return;
-      post.isLikedByMe = !post.isLikedByMe;
-      post.likeCount += post.isLikedByMe ? 1 : -1;
+      post.isLikedByMe = like;
+      post.likeCount += like ? 1 : -1;
       setTimeout(() => resolve({ likeCount: post.likeCount, isLikedByMe: post.isLikedByMe }), 200);
     });
   },
 
-  getAvailableTopics() {
-    return MOCK_TOPICS;
+  // Topic chips for the feed filter bar. Demo mode returns the mock topic names so they
+  // line up with the mock feed's filtering; real mode pulls trending topics from
+  // content-service. `name` is the slug passed to the trending feed's `?topic=`; `displayName`
+  // is what the chip shows.
+  async getAvailableTopics(): Promise<{ id: string; name: string; displayName: string }[]> {
+    if (isDemoMode()) {
+      return MOCK_TOPICS.map((t) => ({ ...t, displayName: t.name }));
+    }
+    const { data } = await api.get<{ id: string; name: string; displayName: string | null }[]>(
+      '/api/v1/topics/trending',
+    );
+    return data.map((t) => ({ id: t.id, name: t.name, displayName: t.displayName ?? t.name }));
   },
 
-  getPost(id: string): Promise<PostDetail> {
+  async getPost(id: string): Promise<PostDetail> {
+    if (!isDemoMode()) {
+      const { data } = await api.get<PostResponse>(`/api/v1/posts/${id}`);
+      return toPostDetail(data);
+    }
     return new Promise((resolve) => {
       setTimeout(() => {
         const base = BASE_POSTS.find((p) => p.id === id);
         if (base) {
           resolve({
             ...base,
+            content: base.excerpt,
             saveCount: 0,
             isBookmarkedByMe: false,
             readTimeMinutes: 5,
@@ -535,19 +654,14 @@ export const contentService = {
     });
   },
 
-  toggleBookmark(postId: string): Promise<{ saveCount: number; isBookmarkedByMe: boolean }> {
+  async toggleBookmark(postId: string, bookmark: boolean): Promise<void> {
+    if (!isDemoMode()) {
+      if (bookmark) await api.post(`/api/v1/posts/${postId}/bookmark`);
+      else await api.delete(`/api/v1/posts/${postId}/bookmark`);
+      return;
+    }
     return new Promise((resolve) => {
-      MOCK_POST_DETAIL.isBookmarkedByMe = !MOCK_POST_DETAIL.isBookmarkedByMe;
-      MOCK_POST_DETAIL.saveCount += MOCK_POST_DETAIL.isBookmarkedByMe ? 1 : -1;
-      setTimeout(
-        () =>
-          resolve({
-            saveCount: MOCK_POST_DETAIL.saveCount,
-            isBookmarkedByMe: MOCK_POST_DETAIL.isBookmarkedByMe,
-          }),
-        200,
-      );
-      void postId;
+      setTimeout(() => resolve(), 200);
     });
   },
 

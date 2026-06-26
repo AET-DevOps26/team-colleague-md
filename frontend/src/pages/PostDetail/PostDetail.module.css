@@ -51,6 +51,13 @@
   font-weight: 700;
   letter-spacing: -0.01em;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.authorAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .authorInfo {

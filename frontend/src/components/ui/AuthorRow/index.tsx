@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../../../types';
 import { timeAgo } from '../../../utils/timeAgo';
+import { getInitials } from '../../../utils/getInitials';
 import styles from './AuthorRow.module.css';
 
 function IconHeart({ filled }: { filled: boolean }) {
@@ -30,12 +31,6 @@ interface Props {
 
 export default function AuthorRow({ author, createdAt, likeCount, isLikedByMe, onLike }: Props) {
   const navigate = useNavigate();
-  const initials = author.displayName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <div className={styles.row}>
@@ -44,7 +39,9 @@ export default function AuthorRow({ author, createdAt, likeCount, isLikedByMe, o
         onClick={(e) => { e.stopPropagation(); navigate(`/profile/${author.username}`); }}
         aria-hidden="true"
       >
-        {initials}
+        {author.avatarUrl
+          ? <img src={author.avatarUrl} alt="" className={styles.avatarImg} />
+          : getInitials(author.displayName)}
       </span>
       <span
         className={styles.name}
