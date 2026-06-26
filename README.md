@@ -153,6 +153,7 @@ to the code they describe.
 | [Monitoring](infra/monitoring/README.md) | Prometheus + Grafana stack for Compose and Kubernetes |
 | [Helm Chart](infra/helm/verita/README.md) | Kubernetes deployment via the `verita` umbrella chart |
 | [API Client (Bruno)](bruno/README.md) | Repo-level Bruno collection for exercising the APIs |
+| [Seeding Remote Environments](docs/Seeding_Remote_Environments.md) | Running the seed against verita-dev and the Azure VM |
 
 ## Demo Accounts
 
@@ -288,6 +289,25 @@ Connection defaults match `docker-compose.yml` and can be overridden:
 | `CONTENT_STORAGE_S3_ACCESS_KEY` | `content-service` |
 | `CONTENT_STORAGE_S3_SECRET_KEY` | `content-service-s3-secret` |
 | `CONTENT_POST_PHOTOS_BUCKET` | `verita-post-photos` |
+
+#### Seeding Remote Environments (verita-dev & Azure VM)
+
+The same seed runs against the deployed demo environments — only the connectivity
+and credentials differ, so the core script is reused unchanged via two wrappers:
+
+```bash
+# verita-dev (Rancher): port-forwards in-cluster Postgres + MinIO, uses the
+# committed dev credentials — no `kubectl get secret` or GitHub secret access.
+npm run seed:rancher
+
+# Azure VM (prod compose): ships the seed over SSH and runs it in a one-off
+# node container on the compose network, reading the VM's Ansible-written .env.
+VM_HOST=<public-ip> ./scripts/seed-vm.sh
+```
+
+`seed:rancher` is guarded to `verita-dev` only. Seeding the real prod namespace is
+intentionally unsupported. See [Seeding Remote Environments](docs/Seeding_Remote_Environments.md)
+for prerequisites, scope, and troubleshooting.
 
 ---
 

@@ -41,15 +41,18 @@ export function useFeed() {
   }, [activeTopic, loadInitial]);
 
   const toggleLike = useCallback(async (postId: string) => {
+    const current = posts.find((p) => p.id === postId);
+    if (!current) return;
+    const next = !current.isLikedByMe;
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
-          ? { ...p, isLikedByMe: !p.isLikedByMe, likeCount: p.likeCount + (p.isLikedByMe ? -1 : 1) }
+          ? { ...p, isLikedByMe: next, likeCount: p.likeCount + (next ? 1 : -1) }
           : p
       )
     );
-    await contentService.toggleLike(postId);
-  }, []);
+    await contentService.toggleLike(postId, next);
+  }, [posts]);
 
   return { posts, activeTopic, setTopic, loadMore, hasMore, loading, refresh, toggleLike };
 }

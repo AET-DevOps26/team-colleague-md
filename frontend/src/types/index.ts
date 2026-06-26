@@ -115,6 +115,7 @@ export interface PostSource {
 }
 
 export interface PostDetail extends Post {
+  content: string;
   saveCount: number;
   isBookmarkedByMe: boolean;
   readTimeMinutes: number;
