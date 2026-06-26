@@ -2,8 +2,8 @@
 
 **Project:** AI Knowledge Sharing Platform (Verita)
 **Team:** Colleagues.md
-**Date:** May 2026
-**Version:** 1.0
+**Date:** June 2026
+**Version:** 1.1
 
 ---
 
@@ -35,8 +35,9 @@ The system follows a microservices architecture consisting of:
 - **GenAI Service:** AI-powered summarization, daily digest generation
 
 **Infrastructure Layer:**
-- **API Gateway:** JWT authentication, request routing, rate limiting
-- **PostgreSQL Database:** Logically separated schemas per service
+- **API Gateway / Reverse Proxy:** Path-prefix routing that strips the prefix before forwarding (Vite proxy in local dev, frontend nginx on the Azure VM, nginx Ingress on Kubernetes). JWT tokens are validated independently by each backend service, not at the gateway.
+- **PostgreSQL Databases:** One PostgreSQL 16 instance per service (user, content, recommendation) — there is no shared instance
+- **Object Storage (MinIO):** S3-compatible store for user portraits and post images
 - **Monitoring Stack:** Prometheus and Grafana for observability
 
 **Client Layer:**
@@ -86,7 +87,7 @@ Key Libraries:
 
 ```yaml
 Core Framework:
-  - React 18 with TypeScript
+  - React 19 with TypeScript
   - Build Tool: Vite
   - Package Manager: npm
 
@@ -139,32 +140,37 @@ Start simple → Add complexity only when needed → Optimize based on real requ
 ```yaml
 Framework: FastAPI (Python 3.12)
 AI Framework: LangChain
-LLM Support:
-  Cloud (Required - P1):
-    - OpenAI API (GPT-4, GPT-3.5-turbo)
-  Local (Optional - P2):
-    - GPT4All
-    - LLaMA via Ollama
+LLM Provider: Pluggable via LLM_PROVIDER config (no code change to switch)
+  - NVIDIA NIM (default, e.g. moonshotai/kimi-k2.6)
+  - OpenRouter (OpenAI-compatible endpoint)
+  - Google Gemini
+External Content Sources (Daily Digest):
+  - GitHub API
+  - GNews API
+Observability: Prometheus /metrics endpoint (prometheus-fastapi-instrumentator)
 Testing: pytest, pytest-asyncio
 API Documentation: Auto-generated via FastAPI (Swagger UI)
 ```
 
 **Rationale:**
 - FastAPI provides automatic OpenAPI documentation and async support
-- LangChain simplifies prompt management and LLM integration
-- Cloud models prioritized for MVP due to superior quality and easier setup
-- Local model support deferred to P2 for cost optimization and offline capability
+- LangChain abstracts the model behind one interface, so the LLM provider (NVIDIA / OpenRouter / Google) is swappable via configuration without code changes
+- The service is **stateless**: it generates text only and persists nothing — summaries are stored by Content Service on the post, and the Daily Digest is published as a `type = DIGEST` post (no GenAI-owned database)
 
 ---
 
 ### 2.4 Database
 
 ```yaml
-Database System: PostgreSQL 16
-Schema Organization: Logical separation per microservice
-  - user_schema (User Service)
-  - content_schema (Content Service)
-  - recommendation_schema (Recommendation Service)
+Database System: PostgreSQL 16 — one independent instance per service
+Per-Service Databases:
+  - verita_users (User Service)
+  - verita_contents (Content Service)
+  - verita_recommendations (Recommendation Service)
+
+Object Storage: MinIO (S3-compatible), per-service least-privilege buckets
+  - verita-user-portraits (User Service — avatars/portraits)
+  - verita-post-photos (Content Service — post & cover images)
 
 Key Features:
   - JSONB: Flexible storage for user preferences, expertise areas
@@ -182,11 +188,11 @@ Connection Pooling: HikariCP (Spring Boot default)
 4. **Extensibility:** PostGIS for future location-based features (optional)
 5. **Standards Compliance:** Stricter SQL standards adherence
 
-**Schema Separation Strategy:**
-- Each microservice owns its logical schema (namespace)
-- Services access only their schema, enforcing loose coupling
-- Cross-service data access via REST APIs, not direct database joins
-- Enables independent scaling and potential database sharding in future
+**Database Separation Strategy:**
+- Each microservice owns its own PostgreSQL database in a separate instance/container, enforcing strict data isolation
+- No cross-database joins; cross-service references are stored as soft `UUID` values with **no** foreign-key constraints and resolved via REST API calls
+- Enables independent scaling, backup, and potential sharding per service
+- Binary assets (images) live in MinIO, not in the database — rows store only the object URL/key
 
 ---
 
@@ -219,13 +225,22 @@ The system is divided into four independent services following Domain-Driven Des
 
 **Database Organization:**
 
-PostgreSQL instance with three logical schemas:
+Three independent PostgreSQL 16 databases — one per service, no shared instance:
 
-| Schema | Owner Service | Tables |
+| Database | Owner Service | Tables |
 |--------|--------------|--------|
-| **user_schema** | User Service | users |
-| **content_schema** | Content Service | posts, comments, topics, post_topics, post_reactions, comment_likes, bookmarks |
-| **recommendation_schema** | Recommendation Service | user_interactions, topic_subscriptions <br>(P2: user_follows, notifications) |
+| **verita_users** | User Service | users |
+| **verita_contents** | Content Service | posts, comments, topics, post_topics, post_reactions, comment_likes, bookmarks |
+| **verita_recommendations** | Recommendation Service | user_interactions, topic_subscriptions <br>(P2: user_follows, notifications) |
+
+**Object Storage (MinIO):**
+
+Binary assets are stored in MinIO, not in PostgreSQL — database rows hold only the object URL/key.
+
+| Bucket | Owner Service | Contents |
+|--------|--------------|----------|
+| **verita-user-portraits** | User Service | User avatars / portrait images |
+| **verita-post-photos** | Content Service | Post inline images and cover images |
 
 ---
 
