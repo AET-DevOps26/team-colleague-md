@@ -1,4 +1,5 @@
 import type { EditorPost, PostPatchRequest, PostRequest, PostResponse, PostStatus } from '../../types';
+import { deriveExcerpt } from '../../utils/deriveExcerpt';
 
 const clean = (xs: string[]): string[] => xs.map((x) => x.trim()).filter(Boolean);
 
@@ -20,6 +21,7 @@ export function toCreateRequest(post: EditorPost, status: PostStatus): PostReque
   return {
     title: post.title,
     content: post.content,
+    excerpt: deriveExcerpt(post.content),
     coverImageUrl: post.coverImageUrl,
     sourceUrl: clean(post.sources),
     topics: clean(post.topics),
@@ -29,12 +31,15 @@ export function toCreateRequest(post: EditorPost, status: PostStatus): PostReque
 
 /**
  * Build a partial update. `status` is included only when explicitly passed, so
- * saving edits to a published post never downgrades it to a draft.
+ * saving edits to a published post never downgrades it to a draft. The excerpt
+ * is recomputed from the edited body — the backend persists it rather than
+ * deriving it on read, so omitting it would leave the card preview stale.
  */
 export function toPatchRequest(post: EditorPost, status?: PostStatus): PostPatchRequest {
   const patch: PostPatchRequest = {
     title: post.title,
     content: post.content,
+    excerpt: deriveExcerpt(post.content),
     coverImageUrl: post.coverImageUrl,
     sourceUrl: clean(post.sources),
     topics: clean(post.topics),

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "seed:local": "tsx scripts/seed-local.ts",
+    "seed:rancher": "./scripts/seed-rancher.sh",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

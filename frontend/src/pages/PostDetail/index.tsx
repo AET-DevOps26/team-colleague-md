@@ -1,45 +1,32 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { Comment, PostDetail as PostDetailType } from '../../types';
+import type { PostDetail as PostDetailType } from '../../types';
 import { contentService } from '../../services/content.service';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import PostDetailTopbar from '../../components/layout/PostDetailTopbar';
-import AISummaryPanel from '../../components/post/AISummaryPanel';
-import PostBody from '../../components/post/PostBody';
 import PostFooter from '../../components/post/PostFooter';
 import EngageRow from '../../components/post/EngageRow';
-import CommentSection from '../../components/post/CommentSection';
 import BottomBar from '../../components/post/BottomBar';
+import Markdown from '../../components/ui/Markdown';
 import Toast from '../../components/ui/Toast';
 import { timeAgo } from '../../utils/timeAgo';
+import { getInitials } from '../../utils/getInitials';
 import styles from './PostDetail.module.css';
-
-const AI_BULLETS = [
-  { html: 'The authors isolate a class of <b>~140 attention heads</b> across layers 18–32 that fire only on <em>coherent</em> in-context examples — not on shuffled or noisy ones.' },
-  { html: 'Ablating a <em>single</em> head drops 5-shot accuracy by <code style="font-family:var(--font-mono);font-size:12.5px;background:#fff;padding:1px 5px;border-radius:3px;border:1px solid var(--border-subtle)">11–18 pts</code> on MMLU-Pro; ablating the cluster collapses few-shot to zero-shot performance.' },
-  { html: 'Heads form three sub-populations: <b>retrieval</b> (find the demonstration), <b>format</b> (lock onto the output shape), and <b>predict</b> (apply the rule).' },
-  { html: 'The circuit appears <em>only above 30B parameters</em>; smaller models show statistically null versions of the same heads.' },
-  { html: 'Activation patching localises the effect to a sparse, <code style="font-family:var(--font-mono);font-size:12.5px;background:#fff;padding:1px 5px;border-radius:3px;border:1px solid var(--border-subtle)">&lt; 800-feature</code> subspace in the residual stream — small enough to start naming individual features.' },
-];
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const articleRef = useRef<HTMLElement>(null);
-  const commentsRef = useRef<HTMLDivElement>(null);
   const progress = useReadingProgress(articleRef);
 
   const [post, setPost] = useState<PostDetailType | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, message: '' });
 
   useEffect(() => {
     if (!id) { navigate('/'); return; }
     setLoading(true);
-    Promise.all([contentService.getPost(id), contentService.getComments(id)]).then(
-      ([p, c]) => { setPost(p); setComments(c); setLoading(false); },
-    );
+    contentService.getPost(id).then((p) => { setPost(p); setLoading(false); });
   }, [id, navigate]);
 
   const hideToast = useCallback(() => setToast((t) => ({ ...t, show: false })), []);
@@ -52,23 +39,24 @@ export default function PostDetail() {
     if (!post) return;
     const next = !post.isLikedByMe;
     setPost((p) => p && { ...p, isLikedByMe: next, likeCount: p.likeCount + (next ? 1 : -1) });
-    contentService.toggleLike(post.id);
+    contentService.toggleLike(post.id, next);
   }
 
   function handleBookmark() {
     if (!post) return;
-    contentService.toggleBookmark(post.id).then(({ saveCount, isBookmarkedByMe }) => {
-      setPost((p) => p && { ...p, saveCount, isBookmarkedByMe });
-      showToast(isBookmarkedByMe ? 'Saved to bookmarks' : 'Removed from bookmarks');
-    });
+    const next = !post.isBookmarkedByMe;
+    setPost((p) => p && { ...p, isBookmarkedByMe: next, saveCount: p.saveCount + (next ? 1 : -1) });
+    contentService.toggleBookmark(post.id, next)
+      .then(() => showToast(next ? 'Saved to bookmarks' : 'Removed from bookmarks'))
+      .catch(() => {
+        // Revert the optimistic update if the server rejected it.
+        setPost((p) => p && { ...p, isBookmarkedByMe: !next, saveCount: p.saveCount + (next ? -1 : 1) });
+        showToast('Could not update bookmark');
+      });
   }
 
   function handleShare() {
     navigator.clipboard.writeText(window.location.href).then(() => showToast('Link copied to clipboard'));
-  }
-
-  function handleScrollToComments() {
-    commentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   if (loading || !post) {
@@ -80,7 +68,6 @@ export default function PostDetail() {
     );
   }
 
-  const authorInitials = post.author.displayName.slice(0, 2).toUpperCase();
   const dateStr = new Date(post.createdAt).toLocaleDateString('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
   });
@@ -99,7 +86,11 @@ export default function PostDetail() {
 
           {/* Author block */}
           <div className={styles.authorBlock}>
-            <div className={styles.authorAvatar}>{authorInitials}</div>
+            <div className={styles.authorAvatar}>
+              {post.author.avatarUrl
+                ? <img src={post.author.avatarUrl} alt="" className={styles.authorAvatarImg} />
+                : getInitials(post.author.displayName)}
+            </div>
             <div className={styles.authorInfo}>
               <div className={styles.authorName}>
                 {post.author.displayName}
@@ -129,11 +120,9 @@ export default function PostDetail() {
           {/* Title */}
           <h1 className={styles.postTitle}>{post.title}</h1>
 
-          {/* AI Summary */}
-          <AISummaryPanel bullets={AI_BULLETS} />
-
-          {/* Article body */}
-          <PostBody />
+          {/* Article body (real Markdown). AI summary and comments are intentionally
+              hidden until those backends are wired (ADR-0012). */}
+          <Markdown>{post.content}</Markdown>
 
           {/* Footer: tags + sources */}
           <PostFooter topics={post.topics} sources={post.sources} />
@@ -145,11 +134,6 @@ export default function PostDetail() {
             saveCount={post.saveCount}
             viewCount={post.viewCount}
           />
-
-          {/* Comments */}
-          <div ref={commentsRef}>
-            <CommentSection comments={comments} postAuthorId={post.author.id} />
-          </div>
 
         </article>
       </div>
@@ -163,7 +147,8 @@ export default function PostDetail() {
         onLike={handleLike}
         onBookmark={handleBookmark}
         onShare={handleShare}
-        onScrollToComments={handleScrollToComments}
+        onScrollToComments={() => {}}
+        showComments={false}
       />
 
       <Toast message={toast.message} show={toast.show} onHide={hideToast} />

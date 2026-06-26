@@ -12,6 +12,8 @@ interface BottomBarProps {
   onBookmark: () => void;
   onShare: () => void;
   onScrollToComments: () => void;
+  /** When false, the comment composer and jump-to-comments button are hidden (comments not yet wired). */
+  showComments?: boolean;
 }
 
 export default function BottomBar({
@@ -23,6 +25,7 @@ export default function BottomBar({
   onBookmark,
   onShare,
   onScrollToComments,
+  showComments = true,
 }: BottomBarProps) {
   const { isLoggedIn, user } = useAuth();
   const { open: openAuth } = useAuthModal();
@@ -65,7 +68,7 @@ export default function BottomBar({
   return (
     <div className={styles.bar}>
       {/* Comment composer */}
-      {isLoggedIn ? (
+      {showComments && (isLoggedIn ? (
         <div
           ref={composerRef}
           className={`${styles.composer} ${expanded ? styles.composerExpanded : ''}`}
@@ -110,18 +113,22 @@ export default function BottomBar({
             Sign in to comment
           </button>
         </div>
-      )}
+      ))}
 
       {/* Actions pill */}
       <div className={styles.pill}>
-        <button className={styles.act} onClick={onScrollToComments} type="button" aria-label="Jump to comments">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span>{commentCount}</span>
-        </button>
+        {showComments && (
+          <>
+            <button className={styles.act} onClick={onScrollToComments} type="button" aria-label="Jump to comments">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>{commentCount}</span>
+            </button>
 
-        <span className={styles.sep} />
+            <span className={styles.sep} />
+          </>
+        )}
 
         <button
           className={`${styles.act} ${isLikedByMe ? styles.actOn : ''}`}
