@@ -154,15 +154,23 @@ export default function UserProfile() {
       ? userService.getUserDrafts(username)
       : Promise.resolve([] as DraftPost[]);
 
+    // Only the profile and the public posts list are load-critical. Bookmarks, likes, and drafts
+    // are per-user-private tabs: content-service returns 403 when their owner hasn't opted to make
+    // them public (showBookmarks/showLikes), which is expected when viewing someone else. Tolerate
+    // those failures as "empty tab" so one private tab doesn't blank out the whole profile.
+    const tolerate = <T,>(p: Promise<T[]>) => p.catch(() => [] as T[]);
+
     Promise.all([
       userService.getProfile(username),
       userService.getUserPosts(username),
-      userService.getUserBookmarks(username),
-      draftsPromise,
-      userService.getUserLikedPosts(username),
-    ]).then(([p, userPosts, userBookmarks, userDrafts, liked]) => {
+    ]).then(async ([p, userPosts]) => {
       setProfile(p);
       setPosts(userPosts);
+      const [userBookmarks, userDrafts, liked] = await Promise.all([
+        tolerate(userService.getUserBookmarks(username)),
+        tolerate(draftsPromise),
+        tolerate(userService.getUserLikedPosts(username)),
+      ]);
       setBookmarks(userBookmarks);
       setDrafts(userDrafts as DraftPost[]);
       setLikedPosts(liked);
