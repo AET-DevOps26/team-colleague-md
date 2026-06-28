@@ -107,6 +107,13 @@ export default function AuthModal() {
     return () => clearTimeout(timer);
   }, [username, screen]);
 
+  // Radix only calls onOpenChange for internal interactions, not when the controlled `open`
+  // prop is flipped programmatically — so sync the screen to the requested tab here, otherwise
+  // opening via open('signup') would leave the modal on whatever screen it last showed.
+  useEffect(() => {
+    if (isOpen) setScreen(activeTab);
+  }, [isOpen, activeTab]);
+
   useEffect(() => {
     if (screen !== 'signup' || validateEmail(email) !== '') { setEmailAvail('idle'); return; }
     setEmailAvail('checking');

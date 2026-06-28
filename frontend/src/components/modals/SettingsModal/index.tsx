@@ -126,7 +126,7 @@ export default function SettingsModal() {
             <section className={styles.section}>
               <h3 className={styles.sectionHeading}>Digest</h3>
               <Link
-                to="/digest"
+                to="/digest?tab=topics"
                 className={styles.settingsLink}
                 data-testid="settings-manage-topics"
                 onClick={close}

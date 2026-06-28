@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthModal } from '../../contexts/ModalContext';
 import { contentService } from '../../services/content.service';
@@ -13,7 +14,9 @@ type Tab = 'past' | 'topics';
 export default function Digest() {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
-  const [activeTab, setActiveTab] = useState<Tab>('past');
+  // Allow deep-linking to the topic-management tab (e.g. Settings → "Manage Topics" → /digest?tab=topics).
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<Tab>(searchParams.get('tab') === 'topics' ? 'topics' : 'past');
   const [categories, setCategories] = useState<TopicCategory[]>([]);
   const [followedTopics, setFollowedTopics] = useState<Set<string>>(() => new Set());
 
