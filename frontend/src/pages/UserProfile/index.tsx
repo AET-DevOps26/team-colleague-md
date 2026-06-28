@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../../hooks/useAuth';
+import { useAuthModal } from '../../contexts/ModalContext';
 import { userService } from '../../services/user.service';
+import { contentService } from '../../services/content.service';
 import { postEditorService } from '../../services/postEditor.service';
 import { timeAgo } from '../../utils/timeAgo';
 import { getInitials } from '../../utils/getInitials';
@@ -16,8 +18,6 @@ import type { UserProfile, Post, DraftPost, UpdateUserRequest } from '../../type
 import styles from './UserProfile.module.css';
 
 type TabId = 'posts' | 'bookmarks' | 'likes' | 'drafts';
-
-const noop = () => {};
 
 function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
@@ -120,11 +120,16 @@ export default function UserProfile() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { user: authUser, updateUser, isRestoring } = useAuth();
+  const { open: openAuth } = useAuthModal();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [bookmarks, setBookmarks] = useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
+  // Other users' bookmark/like tabs return 403 when their owner hid them: track that so the empty
+  // state explains "kept private" rather than implying the user has none.
+  const [bookmarksPrivate, setBookmarksPrivate] = useState(false);
+  const [likesPrivate, setLikesPrivate] = useState(false);
   const [drafts, setDrafts] = useState<DraftPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -146,6 +151,8 @@ export default function UserProfile() {
     if (isRestoring) return;
     setLoading(true);
     setLoadError(false);
+    setBookmarksPrivate(false);
+    setLikesPrivate(false);
     setActiveTab('posts');
 
     // Drafts live behind /me and are only ever shown on your own profile, so don't fetch them
@@ -159,6 +166,10 @@ export default function UserProfile() {
     // them public (showBookmarks/showLikes), which is expected when viewing someone else. Tolerate
     // those failures as "empty tab" so one private tab doesn't blank out the whole profile.
     const tolerate = <T,>(p: Promise<T[]>) => p.catch(() => [] as T[]);
+    // Distinguish a 403 (owner hid the tab) from any other failure so the empty state can say so.
+    const loadVisible = (p: Promise<Post[]>): Promise<{ posts: Post[]; isPrivate: boolean }> =>
+      p.then((posts) => ({ posts, isPrivate: false }))
+        .catch((err) => ({ posts: [], isPrivate: err?.response?.status === 403 }));
 
     Promise.all([
       userService.getProfile(username),
@@ -166,14 +177,16 @@ export default function UserProfile() {
     ]).then(async ([p, userPosts]) => {
       setProfile(p);
       setPosts(userPosts);
-      const [userBookmarks, userDrafts, liked] = await Promise.all([
-        tolerate(userService.getUserBookmarks(username)),
+      const [bm, userDrafts, lk] = await Promise.all([
+        loadVisible(userService.getUserBookmarks(username)),
         tolerate(draftsPromise),
-        tolerate(userService.getUserLikedPosts(username)),
+        loadVisible(userService.getUserLikedPosts(username)),
       ]);
-      setBookmarks(userBookmarks);
+      setBookmarks(bm.posts);
+      setBookmarksPrivate(bm.isPrivate);
       setDrafts(userDrafts as DraftPost[]);
-      setLikedPosts(liked);
+      setLikedPosts(lk.posts);
+      setLikesPrivate(lk.isPrivate);
     }).catch(() => {
       setLoadError(true);
     }).finally(() => {
@@ -198,6 +211,28 @@ export default function UserProfile() {
     }
     showToast('Profile updated');
   }, [username, profile, isOwnProfile, updateUser, showToast]);
+
+  // Likes from any profile tab (posts/bookmarks/likes) must hit content-service, not a no-op.
+  // Optimistically flip every list the post appears in, then roll back if the request fails.
+  const handleLike = useCallback(async (postId: string) => {
+    if (!authUser) { openAuth('login'); return; }
+    const current = posts.find((p) => p.id === postId)
+      ?? bookmarks.find((p) => p.id === postId)
+      ?? likedPosts.find((p) => p.id === postId);
+    if (!current) return;
+    const next = !current.isLikedByMe;
+    const apply = (list: Post[]) => list.map((p) =>
+      p.id === postId ? { ...p, isLikedByMe: next, likeCount: p.likeCount + (next ? 1 : -1) } : p);
+    setPosts(apply); setBookmarks(apply); setLikedPosts(apply);
+    try {
+      await contentService.toggleLike(postId, next);
+    } catch {
+      const revert = (list: Post[]) => list.map((p) =>
+        p.id === postId ? { ...p, isLikedByMe: !next, likeCount: p.likeCount + (next ? -1 : 1) } : p);
+      setPosts(revert); setBookmarks(revert); setLikedPosts(revert);
+      showToast('Could not update like — please try again');
+    }
+  }, [authUser, openAuth, posts, bookmarks, likedPosts, showToast]);
 
   const handlePostManageEdit = useCallback((postId: string) => {
     navigate(`/post/${postId}/edit`);
@@ -303,8 +338,8 @@ export default function UserProfile() {
 
   function renderCard(post: Post, overlay?: React.ReactNode) {
     return post.coverImageUrl
-      ? <ImageCard key={post.id} post={post} onLike={noop} topRightOverlay={overlay} className={styles.profileCard} />
-      : <TextCard  key={post.id} post={post} onLike={noop} topRightOverlay={overlay} className={styles.profileCard} />;
+      ? <ImageCard key={post.id} post={post} onLike={handleLike} topRightOverlay={overlay} className={styles.profileCard} />
+      : <TextCard  key={post.id} post={post} onLike={handleLike} topRightOverlay={overlay} className={styles.profileCard} />;
   }
 
   function manageOverlay(post: Post) {
@@ -472,8 +507,12 @@ export default function UserProfile() {
           <div className={activeTab === 'bookmarks' ? styles.tabPanelActive : styles.tabPanel} role="tabpanel">
             {bookmarks.length === 0 ? (
               <div className={styles.emptyState}>
-                <strong>No bookmarks</strong>
-                {isOwnProfile ? 'Save posts to read them later.' : 'Nothing bookmarked yet.'}
+                <strong>{!isOwnProfile && bookmarksPrivate ? 'Bookmarks are private' : 'No bookmarks'}</strong>
+                {isOwnProfile
+                  ? 'Save posts to read them later.'
+                  : bookmarksPrivate
+                    ? `${profile.displayName} has chosen not to share their bookmarks.`
+                    : 'Nothing bookmarked yet.'}
               </div>
             ) : (
               <div className={styles.postsGrid}>
@@ -486,8 +525,12 @@ export default function UserProfile() {
           <div className={activeTab === 'likes' ? styles.tabPanelActive : styles.tabPanel} role="tabpanel">
             {likedPosts.length === 0 ? (
               <div className={styles.emptyState}>
-                <strong>No likes yet</strong>
-                {isOwnProfile ? 'Posts you like will appear here.' : `${profile.displayName} hasn't liked anything yet.`}
+                <strong>{!isOwnProfile && likesPrivate ? 'Likes are private' : 'No likes yet'}</strong>
+                {isOwnProfile
+                  ? 'Posts you like will appear here.'
+                  : likesPrivate
+                    ? `${profile.displayName} has chosen not to share their likes.`
+                    : `${profile.displayName} hasn't liked anything yet.`}
               </div>
             ) : (
               <div className={styles.postsGrid}>

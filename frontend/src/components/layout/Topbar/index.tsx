@@ -3,6 +3,8 @@ import type { FormEvent, ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
+import { addRecentSearch } from '../../../utils/recentSearches';
+import SearchOverlay from '../SearchOverlay';
 import Avatar from '../../ui/Avatar';
 import styles from './Topbar.module.css';
 
@@ -25,6 +27,8 @@ export default function Topbar({ bottomRow }: TopbarProps) {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayQuery, setOverlayQuery] = useState('');
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 6);
@@ -32,11 +36,20 @@ export default function Topbar({ bottomRow }: TopbarProps) {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
+  function runSearch(query: string) {
+    const q = query.trim();
+    setOverlayOpen(false);
+    if (q) {
+      addRecentSearch(q);
+      navigate(`/search?q=${encodeURIComponent(q)}`);
+    } else {
+      navigate('/');
+    }
+  }
+
   function handleSearch(e: FormEvent) {
     e.preventDefault();
-    const q = inputRef.current?.value.trim();
-    if (q) navigate(`/search?q=${encodeURIComponent(q)}`);
-    else navigate('/');
+    runSearch(inputRef.current?.value ?? '');
   }
 
   return (
@@ -53,6 +66,7 @@ export default function Topbar({ bottomRow }: TopbarProps) {
             type="text"
             placeholder="Search Verita — papers, people, topics, ideas…"
             aria-label="Search"
+            onClick={() => { setOverlayQuery(inputRef.current?.value ?? ''); setOverlayOpen(true); }}
           />
         </form>
         <div className={styles.topbarRight}>
@@ -72,6 +86,12 @@ export default function Topbar({ bottomRow }: TopbarProps) {
           {bottomRow}
         </div>
       )}
+      <SearchOverlay
+        open={overlayOpen}
+        initialQuery={overlayQuery}
+        onClose={() => setOverlayOpen(false)}
+        onSubmit={runSearch}
+      />
     </header>
   );
 }

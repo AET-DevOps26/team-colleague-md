@@ -60,6 +60,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/error",
                         "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                // Per-user digests are personal (ADR-0013): fail closed. Must precede the public
+                // /api/v1/posts/** reads below so it is not swallowed by them.
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts/digests").authenticated()
                 // Public reads — guests browse; a valid token additionally personalises (ADR-0006).
                 .requestMatchers(HttpMethod.GET,
                         "/api/v1/posts",

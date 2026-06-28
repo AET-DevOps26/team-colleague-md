@@ -166,6 +166,15 @@ public class AuthServiceTests {
     }
 
     @Test
+    void refreshToken_blank_throwsWithoutQueryingRepository() {
+        // A null/blank token must short-circuit: querying findByRefreshToken(null) matches every
+        // NULL-token row and throws a non-unique result (500) instead of the intended 401.
+        assertThrows(InvalidRefreshTokenException.class, () -> authService.refreshToken(null));
+        assertThrows(InvalidRefreshTokenException.class, () -> authService.refreshToken("  "));
+        verify(userRepository, never()).findByRefreshToken(any());
+    }
+
+    @Test
     void refreshToken_fail_tokenNotFound() {
         when(userRepository.findByRefreshToken("bad-token")).thenReturn(Optional.empty());
 
