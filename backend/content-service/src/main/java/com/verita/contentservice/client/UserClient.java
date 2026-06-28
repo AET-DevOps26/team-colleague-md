@@ -15,16 +15,23 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 /**
- * Reads other users' profile data from user-service for author cards (ADR-0002). It does not resolve
- * the caller's identity — that comes from the verified token via SecurityUtils (ADR-0006).
+ * Reads other users' data from user-service: profile cards (ADR-0002) and the bookmark/like privacy
+ * flags used to gate another user's profile tabs, fetched via the internal endpoint with the shared
+ * service token (ADR-0007). It does not resolve the caller's identity — that comes from the verified
+ * token via SecurityUtils (ADR-0006).
  */
 @Slf4j
 @Component
 public class UserClient {
 
-    private final RestClient userClient;
+    public static final String INTERNAL_TOKEN_HEADER = "X-Internal-Service-Token";
 
-    public UserClient(@Value("${app.user-service-base-url}") String userUrl) {
+    private final RestClient userClient;
+    private final String internalServiceToken;
+
+    public UserClient(@Value("${app.user-service-base-url}") String userUrl,
+                      @Value("${app.internal-service-token}") String internalServiceToken) {
+        this.internalServiceToken = internalServiceToken;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
         factory.setReadTimeout(Duration.ofSeconds(10));
@@ -40,7 +47,8 @@ public class UserClient {
 
     public UserPreferencesDto getUserPreferences(UUID id) {
         return userClient.get()
-                .uri("/api/v1/users/{id}/preferences", id)
+                .uri("/internal/v1/users/{id}/preferences", id)
+                .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
                 .retrieve()
                 .body(UserPreferencesDto.class);
     }

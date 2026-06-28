@@ -1,4 +1,4 @@
-import type { UserProfile, UpdateUserRequest, DraftPost, Post, PostResponse } from '../types';
+import type { UserProfile, UpdateUserRequest, DraftPost, Post, PostResponse, UserPreferences } from '../types';
 import { contentService } from './content.service';
 import { isDemoMode } from './demoMode';
 import { MOCK_BOOKMARKS, MOCK_LIKED, MOCK_DRAFTS } from './mocks/userMocks';
@@ -110,5 +110,16 @@ export const userService = {
     }
 
     return user;
+  },
+
+  // Account preferences (privacy toggles + digest frequency). Always real (own account only).
+  async getPreferences(): Promise<UserPreferences> {
+    const { data } = await userApi.get<UserPreferences>('/api/v1/users/me/preferences');
+    return data;
+  },
+
+  async updatePreferences(prefs: UserPreferences): Promise<UserPreferences> {
+    const { data } = await userApi.put<UserPreferences>('/api/v1/users/me/preferences', prefs);
+    return data;
   },
 };

@@ -161,6 +161,30 @@ paths:
               schema: { $ref: '#/components/schemas/AvailabilityResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
+  # --- INTERNAL (service-to-service) ---
+  /internal/v1/users/{userId}/preferences:
+    get:
+      operationId: getUserPreferencesByUserId
+      summary: Read another user's preferences (internal)
+      description: |
+        Internal endpoint called by content-service to enforce the bookmark/like privacy
+        toggles when serving another user's profile tabs. Gated by the shared
+        X-Internal-Service-Token (ADR-0007), not a user JWT.
+      tags: [Internal]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserPreferences' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # --- CURRENT USER ---
   /api/v1/users/me:
     get:

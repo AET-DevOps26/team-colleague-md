@@ -46,6 +46,17 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    void subscribeToTopic_atLimit_throws409WithoutSaving() {
+        when(topicSubscriptionRepository.existsByUserIdAndTopicId(userId, topicId)).thenReturn(false);
+        when(topicSubscriptionRepository.countByUserId(userId))
+                .thenReturn((long) SubscriptionService.MAX_FOLLOWED_TOPICS);
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> subscriptionService.subscribeToTopic(userId, topicId));
+        assertEquals(409, ex.getStatusCode().value());
+        verify(topicSubscriptionRepository, never()).save(any());
+    }
+
+    @Test
     void subscribeToTopic_existing_returnsFalseWithoutSaving() {
         when(topicSubscriptionRepository.existsByUserIdAndTopicId(userId, topicId)).thenReturn(true);
         assertFalse(subscriptionService.subscribeToTopic(userId, topicId));

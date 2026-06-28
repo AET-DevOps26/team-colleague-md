@@ -109,6 +109,13 @@ export interface FeedPage {
   nextCursor: string | null;
 }
 
+/** Mirrors user-service OpenAPI UserPreferences (GET/PUT /users/me/preferences). */
+export interface UserPreferences {
+  digestFrequency: 'DAILY' | 'WEEKLY' | 'OFF';
+  showBookmarks: boolean;
+  showLikes: boolean;
+}
+
 export interface PostSource {
   label: string;
   url: string;

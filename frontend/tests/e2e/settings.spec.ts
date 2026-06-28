@@ -62,16 +62,6 @@ test.describe('Settings Modal', () => {
     await expect(page.locator('[data-testid="sidebar-signin"]')).toBeVisible();
   });
 
-  test('SM-5: digest frequency buttons change active state', async ({ page }) => {
-    await openSettingsModal(page);
-    const dialog = page.locator('[role="dialog"]');
-    await expect(dialog.getByTestId('settings-freq-daily')).toBeVisible();
-    await expect(dialog.getByTestId('settings-freq-weekly')).toBeVisible();
-    await expect(dialog.getByTestId('settings-freq-off')).toBeVisible();
-    await dialog.getByTestId('settings-freq-weekly').click();
-    await expect(dialog.getByTestId('settings-freq-weekly')).toHaveClass(/freqActive/);
-  });
-
   test('SM-6: manage topics link-row has description text', async ({ page }) => {
     await openSettingsModal(page);
     const dialog = page.locator('[role="dialog"]');

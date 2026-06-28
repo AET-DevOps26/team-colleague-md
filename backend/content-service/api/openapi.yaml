@@ -161,6 +161,31 @@ paths:
               schema: { $ref: '#/components/schemas/PostPage' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
+  /api/v1/posts/digests:
+    get:
+      operationId: getMyDigests
+      summary: Get the current user's AI Daily Digests
+      description: >
+        Returns the caller's own digests — DIGEST-type posts whose `target_user_id` equals the
+        authenticated user's `userId` claim (ADR-0013), newest first. Auth-required (fails closed).
+        Until the genai generation pipeline exists this returns empty for every user.
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Digests retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /api/v1/posts/{id}:
     get:
       operationId: getPostById
@@ -709,6 +734,11 @@ components:
         coverImageUrl: { type: string, format: uri, nullable: true }
         sourceUrl: { type: array, items: { type: string, format: uri } }
         topics: { type: array, items: { type: string } }
+        targetUserId:
+          type: string
+          format: uuid
+          nullable: true
+          description: "User this digest was personalised for (ADR-0013); null = global/system digest belonging to no one."
 
     AuthorSummary:
       type: object

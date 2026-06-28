@@ -1,5 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { contentService } from '../../services/content.service';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { TopicCategory, TopicItem } from '../../types';
 import Toast from '../../components/ui/Toast';
 import { sortTopics } from './topicSort';
@@ -10,28 +9,40 @@ function fmtCount(n: number): string {
 }
 
 interface ManageTopicsProps {
+  categories: TopicCategory[];
   followedTopics: Set<string>;
-  onToggle: (tag: string) => void;
+  // Returns a promise so the optimistic toggle can surface a rollback error toast.
+  onToggle: (topicId: string) => void | Promise<void>;
 }
 
 const DEFAULT_VISIBLE = 5;
+// Mirrors recommendation-service's MAX_FOLLOWED_TOPICS; following more is rejected server-side.
+const MAX_FOLLOWED = 10;
 
-export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsProps) {
+export default function ManageTopics({ categories, followedTopics, onToggle }: ManageTopicsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
 
-  const rawCategories = useMemo(() => contentService.getTopicCategories(), []);
+  const rawCategories = categories;
 
-  // Per-category topic order: followed first, preserving relative order within each group
-  const [catOrder, setCatOrder] = useState<Record<string, string[]>>(() => {
-    const order: Record<string, string[]> = {};
-    for (const cat of rawCategories) {
-      const followed = cat.topics.filter(t => followedTopics.has(t.name)).map(t => t.name);
-      const unfollowed = cat.topics.filter(t => !followedTopics.has(t.name)).map(t => t.name);
-      order[cat.id] = [...followed, ...unfollowed];
-    }
-    return order;
-  });
+  // Per-category topic order (by topic id): followed first, preserving relative order in each group.
+  const [catOrder, setCatOrder] = useState<Record<string, string[]>>({});
+  // Seed the order once the catalog arrives (and when it changes). Topics already followed sort first.
+  useEffect(() => {
+    setCatOrder((prev) => {
+      const order: Record<string, string[]> = {};
+      for (const cat of rawCategories) {
+        if (prev[cat.id]) { order[cat.id] = prev[cat.id]; continue; }
+        const followed = cat.topics.filter(t => followedTopics.has(t.id)).map(t => t.id);
+        const unfollowed = cat.topics.filter(t => !followedTopics.has(t.id)).map(t => t.id);
+        order[cat.id] = [...followed, ...unfollowed];
+      }
+      return order;
+    });
+    // followedTopics intentionally excluded: re-seeding on every toggle would undo the
+    // settle-into-place animation ordering managed by handleToggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawCategories]);
 
   const [justFollowedTag, setJustFollowedTag] = useState<string | null>(null);
   const [toastShow, setToastShow] = useState(false);
@@ -39,27 +50,44 @@ export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsP
   const [toastPositive, setToastPositive] = useState(true);
   const pillRef = useRef<HTMLSpanElement>(null);
 
-  const handleToggle = useCallback((tag: string) => {
-    const willFollow = !followedTopics.has(tag);
-    onToggle(tag);
+  const handleToggle = useCallback((topicId: string) => {
+    const willFollow = !followedTopics.has(topicId);
+    const topic = rawCategories.flatMap(c => c.topics).find(t => t.id === topicId);
+    const dn = topic?.displayName ?? topicId;
 
-    // Re-sort: [followedOthers, tag, unfollowedOthers]
-    // follow  → tag lands at end of followed group
-    // unfollow → tag lands at start of unfollowed group
+    // Block before the request when already at the cap, so the user gets a clear message
+    // instead of a generic rollback toast from the rejected follow.
+    if (willFollow && followedTopics.size >= MAX_FOLLOWED) {
+      setToastMsg(`You can follow up to ${MAX_FOLLOWED} topics — unfollow one first`);
+      setToastPositive(false);
+      setToastShow(true);
+      return;
+    }
+
+    // Fire the toggle (optimistic in the parent); roll the toast back if the request fails.
+    Promise.resolve(onToggle(topicId)).catch(() => {
+      setToastMsg(`Couldn't update #${dn} — try again`);
+      setToastPositive(false);
+      setToastShow(true);
+    });
+
+    // Re-sort: [followedOthers, topic, unfollowedOthers]
+    // follow  → topic lands at end of followed group
+    // unfollow → topic lands at start of unfollowed group
     setCatOrder(prev => {
       const next = { ...prev };
       for (const cat of rawCategories) {
-        if (!cat.topics.some(t => t.name === tag)) continue;
-        const order = prev[cat.id] ?? cat.topics.map(t => t.name);
-        next[cat.id] = sortTopics(order, tag, followedTopics);
+        if (!cat.topics.some(t => t.id === topicId)) continue;
+        const order = prev[cat.id] ?? cat.topics.map(t => t.id);
+        next[cat.id] = sortTopics(order, topicId, followedTopics);
         break;
       }
       return next;
     });
 
     if (willFollow) {
-      setJustFollowedTag(tag);
-      setTimeout(() => setJustFollowedTag(cur => (cur === tag ? null : cur)), 620);
+      setJustFollowedTag(topicId);
+      setTimeout(() => setJustFollowedTag(cur => (cur === topicId ? null : cur)), 620);
     }
 
     // Bump pill animation (force-restart via reflow)
@@ -70,8 +98,6 @@ export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsP
       pill.classList.add(styles.followPillBump);
     }
 
-    const topic = rawCategories.flatMap(c => c.topics).find(t => t.name === tag);
-    const dn = topic?.displayName ?? tag;
     setToastMsg(willFollow ? `Following #${dn}` : `Unfollowed #${dn}`);
     setToastPositive(willFollow);
     setToastShow(true);
@@ -79,13 +105,15 @@ export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsP
 
   const hideToast = useCallback(() => setToastShow(false), []);
 
+  const atLimit = followedTopics.size >= MAX_FOLLOWED;
+
   // Apply order, then filter by search
   const sortedCategories = rawCategories.map(cat => {
-    const order = catOrder[cat.id] ?? cat.topics.map(t => t.name);
-    const topicMap = new Map(cat.topics.map(t => [t.name, t]));
+    const order = catOrder[cat.id] ?? cat.topics.map(t => t.id);
+    const topicMap = new Map(cat.topics.map(t => [t.id, t]));
     return {
       ...cat,
-      topics: order.map(n => topicMap.get(n)).filter((t): t is TopicItem => t !== undefined),
+      topics: order.map(id => topicMap.get(id)).filter((t): t is TopicItem => t !== undefined),
     };
   });
 
@@ -121,7 +149,7 @@ export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsP
               className={`${styles.followPill} ${followedTopics.size > 0 ? styles.followPillActive : ''}`}
             >
               <span className={styles.followPillDot} />
-              Following <strong>{followedTopics.size}</strong>
+              Following <strong>{followedTopics.size}</strong> / {MAX_FOLLOWED}
             </span>
           </div>
           <div className={styles.topicsSearchWrap}>
@@ -157,13 +185,14 @@ export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsP
               <div className={styles.topicRow}>
                 {visible.map((topic, i) => (
                   <TopicCard
-                    key={topic.name}
+                    key={topic.id}
                     topic={topic}
-                    followed={followedTopics.has(topic.name)}
+                    followed={followedTopics.has(topic.id)}
+                    disabled={atLimit && !followedTopics.has(topic.id)}
                     onToggle={handleToggle}
                     animateIn={isExpanded && i >= DEFAULT_VISIBLE}
                     animationDelay={isExpanded && i >= DEFAULT_VISIBLE ? (i - DEFAULT_VISIBLE) * 35 : 0}
-                    justFollowed={justFollowedTag === topic.name}
+                    justFollowed={justFollowedTag === topic.id}
                   />
                 ))}
               </div>
@@ -180,6 +209,7 @@ export default function ManageTopics({ followedTopics, onToggle }: ManageTopicsP
 function TopicCard({
   topic,
   followed,
+  disabled,
   onToggle,
   animateIn,
   animationDelay,
@@ -187,7 +217,8 @@ function TopicCard({
 }: {
   topic: TopicItem;
   followed: boolean;
-  onToggle: (tag: string) => void;
+  disabled: boolean;
+  onToggle: (topicId: string) => void;
   animateIn: boolean;
   animationDelay: number;
   justFollowed: boolean;
@@ -219,7 +250,9 @@ function TopicCard({
       <div className={styles.topicCardFooter}>
         <button
           className={`${styles.followBtn} ${followed ? styles.followBtnFollowed : ''}`}
-          onClick={() => onToggle(topic.name)}
+          onClick={() => onToggle(topic.id)}
+          disabled={disabled}
+          title={disabled ? `You can follow up to ${MAX_FOLLOWED} topics` : undefined}
           aria-label={followed ? `Unfollow ${topic.displayName}` : `Follow ${topic.displayName}`}
         >
           {followed ? 'Following' : 'Follow'}

@@ -214,6 +214,13 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
+    public PostPage getMyDigests(int page, int size) {
+        UUID userId = currentUserId();
+        return mapPage(postRepository.findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
+                userId, PostType.DIGEST, PageRequest.of(page, clampPageSize(size))), userId);
+    }
+
+    @Transactional(readOnly = true)
     public List<PostCard> getCards(List<UUID> ids) {
         if (ids.size() > 50) throw new ResponseStatusException(BAD_REQUEST, "max 50 ids");
         Map<UUID, PostEntity> postsMap = postRepository.findByIdInAndDeletedFalse(new LinkedHashSet<>(ids)).stream()
@@ -239,6 +246,9 @@ public class PostService {
         post.setAuthorId(digestSystemAuthorId);
         post.setType(PostType.DIGEST);
         post.setStatus(PostStatus.PUBLISHED);
+        if (request.getTargetUserId() != null && request.getTargetUserId().isPresent()) {
+            post.setTargetUserId(request.getTargetUserId().get());
+        }
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         String summary = request.getSummary() != null && request.getSummary().isPresent()

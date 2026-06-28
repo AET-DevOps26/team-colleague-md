@@ -86,6 +86,14 @@ class PostControllerTest {
     }
 
     @Test
+    void getMyDigests_returns200() throws Exception {
+        when(postService.getMyDigests(anyInt(), anyInt())).thenReturn(new PostPage());
+        mockMvc.perform(get("/api/v1/posts/digests"))
+                .andExpect(status().isOk());
+        verify(postService).getMyDigests(anyInt(), anyInt());
+    }
+
+    @Test
     void deletePost_returns204() throws Exception {
         mockMvc.perform(delete("/api/v1/posts/{id}", UUID.randomUUID()))
                 .andExpect(status().isNoContent());
