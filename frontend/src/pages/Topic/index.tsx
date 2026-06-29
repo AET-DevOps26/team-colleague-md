@@ -1,14 +1,20 @@
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthModal } from '../../contexts/ModalContext';
+import { useFollowedTopics } from '../../contexts/FollowedTopicsContext';
 import PostDetailTopbar from '../../components/layout/PostDetailTopbar';
-import PastDigests from './PastDigests';
-import styles from './Digest.module.css';
+import ManageTopics from './ManageTopics';
+import styles from './Topic.module.css';
 
-// Topic-Subscription management lives on the standalone Topic page now (ADR-0014); Digest is a
-// single Past-Digests view with no tab bar.
-export default function Digest() {
+/**
+ * The single standing home for all Topic surfaces (ADR-0014). Login-gated, sibling to Digest.
+ * Today it hosts only Topic-Subscription management; trends/radar land here later behind tabs.
+ * The subscription set it manages is shared via FollowedTopicsContext, so it drives both Digest
+ * generation and the Home Topic Filter.
+ */
+export default function Topic() {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
+  const { categories, followedTopics, toggleTopic } = useFollowedTopics();
 
   if (!isLoggedIn) {
     return (
@@ -19,11 +25,11 @@ export default function Digest() {
             <div>
               <div className={styles.signinHeroEyebrow}>
                 <span className={styles.signinHeroEyebrowDot} />
-                AI Daily Digest
+                Topics
               </div>
-              <div className={styles.signinHeroTitle}>Your personalised digest awaits</div>
+              <div className={styles.signinHeroTitle}>Follow the topics you care about</div>
               <div className={styles.signinHeroSub}>
-                Sign in to get a daily briefing on AI news and research tailored to your topics.
+                Sign in to subscribe to topics — they shape your personalised feed and daily digest.
               </div>
             </div>
             <div className={styles.signinHeroActions}>
@@ -44,7 +50,7 @@ export default function Digest() {
     <>
       <PostDetailTopbar />
       <div className={styles.content}>
-        <PastDigests />
+        <ManageTopics categories={categories} followedTopics={followedTopics} onToggle={toggleTopic} />
       </div>
     </>
   );

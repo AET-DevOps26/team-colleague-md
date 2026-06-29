@@ -43,61 +43,14 @@ test.describe('Digest Management', () => {
     await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();
   });
 
-  test('DIG-3: tabs switch between Past Digests and Manage Topics', async ({ page }) => {
+  test('DIG-3: digest is a single past-digests view with no tab bar', async ({ page }) => {
     await login(page);
     await page.goto('/digest');
 
     await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
-
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-    await expect(page.getByPlaceholder('Filter topics…')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Past digests' })).not.toBeVisible();
-
-    await page.getByRole('tab', { name: 'Past Digests' }).click();
-    await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
-  });
-
-  test('DIG-4: logged-in user can access Manage Topics tab and see topic grid', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    await expect(page.getByPlaceholder('Filter topics…')).toBeVisible();
-    await expect(page.locator('[class*="topicCard"]').first()).toBeVisible();
-  });
-
-  test('DIG-5: follow toggle updates following count in the pill', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    // The follow pill shows "Following <N>"; find the <strong> with the count
-    const countEl = page.locator('[class*="followPill"] strong');
-    const initialCount = parseInt(await countEl.textContent() ?? '0', 10);
-
-    // Click the first followed topic's button (aria-label "Unfollow X") to unfollow
-    await page.getByRole('button', { name: /^Unfollow / }).first().click();
-
-    const newCount = parseInt(await countEl.textContent() ?? '0', 10);
-    expect(newCount).toBe(initialCount - 1);
-  });
-
-  test('DIG-6: following a topic shows follow toast', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    await page.getByRole('button', { name: /^Follow / }).first().click();
-    await expect(page.getByText(/Following #/)).toBeVisible({ timeout: 3000 });
-  });
-
-  test('DIG-7: unfollowing a topic shows unfollow toast', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    await page.getByRole('button', { name: /^Unfollow / }).first().click();
-    await expect(page.getByText(/Unfollowed #/)).toBeVisible({ timeout: 3000 });
+    // Topic management moved to the standalone Topic page (ADR-0014) — no tabs remain here.
+    await expect(page.getByRole('tab', { name: 'Manage Topics' })).toHaveCount(0);
+    await expect(page.getByPlaceholder('Filter topics…')).toHaveCount(0);
   });
 
   test('DIG-8: load more adds more digest cards', async ({ page }) => {
@@ -111,19 +64,6 @@ test.describe('Digest Management', () => {
 
     const newCards = await page.locator('[role="button"][aria-label^="Read digest"]').count();
     expect(newCards).toBeGreaterThan(initialCards);
-  });
-
-  test('DIG-9: search filters topic list by displayName', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    await page.getByPlaceholder('Filter topics…').fill('agents');
-
-    // Topic displayName "AI Agents" matches the slug "agents"; card renders "#AI Agents"
-    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'AI Agents' })).toBeVisible();
-    // "Alignment" should not appear in the filtered results
-    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'Alignment' })).not.toBeVisible();
   });
 
   test('DIG-10: back button navigates away from digest page', async ({ page }) => {

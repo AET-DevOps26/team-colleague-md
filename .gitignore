@@ -97,7 +97,6 @@ verita_key
 # Agent skills scaffolding — local domain docs, not for committing.
 CONTEXT.md
 docs/agents/
-docs/adr/
 
 # Local-only standardization planning doc — not a PR surface.
 docs/Standardization_Plan.md

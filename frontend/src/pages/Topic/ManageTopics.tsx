@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { TopicCategory, TopicItem } from '../../types';
 import Toast from '../../components/ui/Toast';
 import { sortTopics } from './topicSort';
-import styles from './Digest.module.css';
+import styles from './Topic.module.css';
 
 function fmtCount(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n);

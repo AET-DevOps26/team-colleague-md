@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ManageTopics from '../../../../src/pages/Digest/ManageTopics';
+import ManageTopics from '../../../../src/pages/Topic/ManageTopics';
 import type { TopicCategory } from '../../../../src/types';
 
 // Minimal deterministic topic catalog (id === name for the mock so follow-key assertions read clearly).
