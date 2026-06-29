@@ -39,6 +39,25 @@
   background: #c0392b;
 }
 
+.action {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  background: none;
+  color: #fff;
+  font: 600 12px var(--font-sans);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 120ms, border-color 120ms;
+}
+
+.action:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
 .iconCheck { color: #9ce0a0; }
 .iconMinus { color: rgba(255,255,255,0.6); }
 .iconWarn { color: #ffe0e0; }

@@ -7,9 +7,11 @@ interface ToastProps {
   onHide: () => void;
   neutral?: boolean;
   error?: boolean;
+  // Optional inline action (e.g. Undo). Rendered as a button after the message.
+  action?: { label: string; onClick: () => void };
 }
 
-export default function Toast({ message, show, onHide, neutral = false, error = false }: ToastProps) {
+export default function Toast({ message, show, onHide, neutral = false, error = false, action }: ToastProps) {
   useEffect(() => {
     if (!show) return;
     const timer = setTimeout(onHide, 2500);
@@ -36,6 +38,11 @@ export default function Toast({ message, show, onHide, neutral = false, error = 
         </svg>
       )}
       <span>{message}</span>
+      {action && (
+        <button className={styles.action} type="button" onClick={action.onClick}>
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

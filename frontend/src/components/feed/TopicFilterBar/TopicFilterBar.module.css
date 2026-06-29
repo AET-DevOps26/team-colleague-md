@@ -40,20 +40,35 @@
   font-weight: 600;
 }
 
-/* Nudge shown when a logged-in user has no Topic Subscriptions yet — sends them to /topics. */
+/* Nudge shown when a logged-in user has no Topic Subscriptions yet — explains the trending
+   fallback (promptHint) and sends them to /topics via a prominent pill (subscribePrompt). */
+.promptHint {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 0 4px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-tertiary);
+}
+
 .subscribePrompt {
   display: inline-flex;
   align-items: center;
-  padding: 4px 14px;
-  margin-left: 4px;
-  font-size: 13.5px;
-  font-weight: 500;
+  gap: 5px;
+  padding: 4px 12px;
+  margin-left: 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
   color: var(--accent);
+  background: rgba(217, 119, 87, 0.1);
   text-decoration: none;
-  transition: color var(--motion-hover);
+  transition: background var(--motion-hover), color var(--motion-hover);
 }
 
 .subscribePrompt:hover {
+  background: rgba(217, 119, 87, 0.18);
   color: var(--accent-hover);
 }

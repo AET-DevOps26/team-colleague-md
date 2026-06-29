@@ -14,7 +14,7 @@ import styles from './Topic.module.css';
 export default function Topic() {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
-  const { categories, followedTopics, toggleTopic } = useFollowedTopics();
+  const { categories, followedTopics, toggleTopic, unfollowAll, followMany } = useFollowedTopics();
 
   if (!isLoggedIn) {
     return (
@@ -50,7 +50,13 @@ export default function Topic() {
     <>
       <PostDetailTopbar />
       <div className={styles.content}>
-        <ManageTopics categories={categories} followedTopics={followedTopics} onToggle={toggleTopic} />
+        <ManageTopics
+          categories={categories}
+          followedTopics={followedTopics}
+          onToggle={toggleTopic}
+          onUnfollowAll={unfollowAll}
+          onFollowMany={followMany}
+        />
       </div>
     </>
   );

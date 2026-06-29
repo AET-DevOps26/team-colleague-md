@@ -179,6 +179,20 @@
   100% { transform: scale(1); }
 }
 
+/* Low-key bulk clear, sits next to the Following pill — only shown when something is followed. */
+.clearAllBtn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: color 120ms;
+}
+
+.clearAllBtn:hover { color: var(--accent); }
+
 .topicsSearchWrap { position: relative; }
 
 .topicsSearch {
@@ -290,6 +304,9 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Topics with no activity yet read as "New this week" rather than a broken-looking "0 posts". */
+.postCountQuiet { color: var(--text-tertiary); }
+
 .trendingRow {
   font-size: 12px;
   font-weight: 600;
@@ -353,11 +370,21 @@
   border-color: var(--accent-hover);
 }
 
+/* At the follow cap: still clickable (fires the cap toast) but muted to read as a soft block. */
+.followBtnSoftBlocked {
+  opacity: 0.5;
+}
+
 .followerCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
+
+.followerIcon { flex-shrink: 0; }
 
 /* Just-followed pulse — topic card briefly scales + glows after being promoted */
 .topicCardJustFollowed {

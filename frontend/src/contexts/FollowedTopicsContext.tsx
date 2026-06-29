@@ -13,6 +13,10 @@ interface FollowedTopicsContextValue {
   // Optimistic follow/unfollow by topic id; resolves once the request settles, rejects (after
   // rolling the local set back) so callers can surface an error toast.
   toggleTopic: (topicId: string) => Promise<void>;
+  // Optimistic bulk clear of every subscription; rolls the whole set back on any failure.
+  unfollowAll: () => Promise<void>;
+  // Optimistic bulk follow (the Undo path for unfollowAll); rolls back the added ids on failure.
+  followMany: (topicIds: string[]) => Promise<void>;
 }
 
 const FollowedTopicsContext = createContext<FollowedTopicsContextValue>({
@@ -20,6 +24,8 @@ const FollowedTopicsContext = createContext<FollowedTopicsContextValue>({
   followedTopics: new Set(),
   loading: false,
   toggleTopic: async () => {},
+  unfollowAll: async () => {},
+  followMany: async () => {},
 });
 
 export function useFollowedTopics() {
@@ -72,8 +78,31 @@ export function FollowedTopicsProvider({ children }: { children: ReactNode }) {
     });
   }, [followedTopics]);
 
+  // Clear every subscription at once. Snapshot the set, drop it locally, fire one unfollow per
+  // id, and restore the whole snapshot if any request fails (all-or-nothing for the user).
+  const unfollowAll = useCallback((): Promise<void> => {
+    const prev = followedTopics;
+    if (prev.size === 0) return Promise.resolve();
+    setFollowedTopics(new Set());
+    return Promise.all([...prev].map((id) => contentService.unfollowTopic(id)))
+      .then(() => {})
+      .catch((err) => { setFollowedTopics(prev); throw err; });
+  }, [followedTopics]);
+
+  // Re-follow a set of ids in one shot — the Undo path for unfollowAll.
+  const followMany = useCallback((topicIds: string[]): Promise<void> => {
+    if (topicIds.length === 0) return Promise.resolve();
+    setFollowedTopics((p) => { const n = new Set(p); topicIds.forEach((id) => n.add(id)); return n; });
+    return Promise.all(topicIds.map((id) => contentService.followTopic(id)))
+      .then(() => {})
+      .catch((err) => {
+        setFollowedTopics((p) => { const n = new Set(p); topicIds.forEach((id) => n.delete(id)); return n; });
+        throw err;
+      });
+  }, []);
+
   return (
-    <FollowedTopicsContext.Provider value={{ categories, followedTopics, loading, toggleTopic }}>
+    <FollowedTopicsContext.Provider value={{ categories, followedTopics, loading, toggleTopic, unfollowAll, followMany }}>
       {children}
     </FollowedTopicsContext.Provider>
   );

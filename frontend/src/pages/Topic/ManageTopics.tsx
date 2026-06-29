@@ -13,13 +13,17 @@ interface ManageTopicsProps {
   followedTopics: Set<string>;
   // Returns a promise so the optimistic toggle can surface a rollback error toast.
   onToggle: (topicId: string) => void | Promise<void>;
+  // Optimistic bulk clear; rejects (after rollback) so we can show an error toast.
+  onUnfollowAll: () => Promise<void>;
+  // Re-follow a set of ids — backs the Undo action of the bulk clear.
+  onFollowMany: (topicIds: string[]) => Promise<void>;
 }
 
 const DEFAULT_VISIBLE = 5;
 // Mirrors recommendation-service's MAX_FOLLOWED_TOPICS; following more is rejected server-side.
 const MAX_FOLLOWED = 10;
 
-export default function ManageTopics({ categories, followedTopics, onToggle }: ManageTopicsProps) {
+export default function ManageTopics({ categories, followedTopics, onToggle, onUnfollowAll, onFollowMany }: ManageTopicsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
 
@@ -48,6 +52,7 @@ export default function ManageTopics({ categories, followedTopics, onToggle }: M
   const [toastShow, setToastShow] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastPositive, setToastPositive] = useState(true);
+  const [toastAction, setToastAction] = useState<{ label: string; onClick: () => void } | null>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
 
   const handleToggle = useCallback((topicId: string) => {
@@ -60,6 +65,7 @@ export default function ManageTopics({ categories, followedTopics, onToggle }: M
     if (willFollow && followedTopics.size >= MAX_FOLLOWED) {
       setToastMsg(`You can follow up to ${MAX_FOLLOWED} topics — unfollow one first`);
       setToastPositive(false);
+      setToastAction(null);
       setToastShow(true);
       return;
     }
@@ -68,6 +74,7 @@ export default function ManageTopics({ categories, followedTopics, onToggle }: M
     Promise.resolve(onToggle(topicId)).catch(() => {
       setToastMsg(`Couldn't update #${dn} — try again`);
       setToastPositive(false);
+      setToastAction(null);
       setToastShow(true);
     });
 
@@ -100,10 +107,47 @@ export default function ManageTopics({ categories, followedTopics, onToggle }: M
 
     setToastMsg(willFollow ? `Following #${dn}` : `Unfollowed #${dn}`);
     setToastPositive(willFollow);
+    setToastAction(null);
     setToastShow(true);
   }, [followedTopics, onToggle, rawCategories]);
 
   const hideToast = useCallback(() => setToastShow(false), []);
+
+  // Clear every subscription at once, offering an Undo that re-follows the snapshot.
+  const handleUnfollowAll = useCallback(() => {
+    const prev = [...followedTopics];
+    if (prev.length === 0) return;
+
+    Promise.resolve(onUnfollowAll()).catch(() => {
+      setToastMsg("Couldn't unfollow all — try again");
+      setToastPositive(false);
+      setToastAction(null);
+      setToastShow(true);
+    });
+
+    setToastMsg(`Unfollowed all ${prev.length} topics`);
+    setToastPositive(false);
+    setToastAction({
+      label: 'Undo',
+      onClick: () => {
+        setToastShow(false);
+        Promise.resolve(onFollowMany(prev))
+          .then(() => {
+            setToastMsg('Topics restored');
+            setToastPositive(true);
+            setToastAction(null);
+            setToastShow(true);
+          })
+          .catch(() => {
+            setToastMsg("Couldn't restore topics — try again");
+            setToastPositive(false);
+            setToastAction(null);
+            setToastShow(true);
+          });
+      },
+    });
+    setToastShow(true);
+  }, [followedTopics, onUnfollowAll, onFollowMany]);
 
   const atLimit = followedTopics.size >= MAX_FOLLOWED;
 
@@ -151,6 +195,11 @@ export default function ManageTopics({ categories, followedTopics, onToggle }: M
               <span className={styles.followPillDot} />
               Following <strong>{followedTopics.size}</strong> / {MAX_FOLLOWED}
             </span>
+            {followedTopics.size > 0 && (
+              <button className={styles.clearAllBtn} onClick={handleUnfollowAll}>
+                Unfollow all
+              </button>
+            )}
           </div>
           <div className={styles.topicsSearchWrap}>
             <svg className={styles.topicsSearchIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -188,7 +237,7 @@ export default function ManageTopics({ categories, followedTopics, onToggle }: M
                     key={topic.id}
                     topic={topic}
                     followed={followedTopics.has(topic.id)}
-                    disabled={atLimit && !followedTopics.has(topic.id)}
+                    softBlocked={atLimit && !followedTopics.has(topic.id)}
                     onToggle={handleToggle}
                     animateIn={isExpanded && i >= DEFAULT_VISIBLE}
                     animationDelay={isExpanded && i >= DEFAULT_VISIBLE ? (i - DEFAULT_VISIBLE) * 35 : 0}
@@ -201,7 +250,7 @@ export default function ManageTopics({ categories, followedTopics, onToggle }: M
         })}
       </div>
 
-      <Toast message={toastMsg} show={toastShow} onHide={hideToast} neutral={!toastPositive} />
+      <Toast message={toastMsg} show={toastShow} onHide={hideToast} neutral={!toastPositive} action={toastAction ?? undefined} />
     </>
   );
 }
@@ -209,7 +258,7 @@ export default function ManageTopics({ categories, followedTopics, onToggle }: M
 function TopicCard({
   topic,
   followed,
-  disabled,
+  softBlocked,
   onToggle,
   animateIn,
   animationDelay,
@@ -217,7 +266,9 @@ function TopicCard({
 }: {
   topic: TopicItem;
   followed: boolean;
-  disabled: boolean;
+  // At the follow cap and not already followed: the button stays clickable (it surfaces the cap
+  // toast) but renders muted to signal the soft block.
+  softBlocked: boolean;
   onToggle: (topicId: string) => void;
   animateIn: boolean;
   animationDelay: number;
@@ -237,7 +288,11 @@ function TopicCard({
       <div className={styles.tagName}>
         <span className={styles.tagNameHash}>#</span>{topic.displayName}
       </div>
-      <div className={styles.postCount}>{topic.postsThisWeek} posts this week</div>
+      <div className={styles.postCount}>
+        {topic.postsThisWeek > 0
+          ? `${topic.postsThisWeek} posts this week`
+          : <span className={styles.postCountQuiet}>New this week</span>}
+      </div>
       <div className={`${styles.trendingRow} ${!topic.isHot ? styles.trendingRowEmpty : ''}`}>
         {topic.isHot ? '↑ trending' : null}
       </div>
@@ -249,15 +304,22 @@ function TopicCard({
       </div>
       <div className={styles.topicCardFooter}>
         <button
-          className={`${styles.followBtn} ${followed ? styles.followBtnFollowed : ''}`}
+          className={`${styles.followBtn} ${followed ? styles.followBtnFollowed : ''} ${softBlocked ? styles.followBtnSoftBlocked : ''}`}
           onClick={() => onToggle(topic.id)}
-          disabled={disabled}
-          title={disabled ? `You can follow up to ${MAX_FOLLOWED} topics` : undefined}
+          title={softBlocked ? `You can follow up to ${MAX_FOLLOWED} topics` : undefined}
           aria-label={followed ? `Unfollow ${topic.displayName}` : `Follow ${topic.displayName}`}
         >
           {followed ? 'Following' : 'Follow'}
         </button>
-        <span className={styles.followerCount}>{fmtCount(topic.followerCount)}</span>
+        <span className={styles.followerCount} aria-label={`${fmtCount(topic.followerCount)} followers`}>
+          <svg className={styles.followerIcon} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          {fmtCount(topic.followerCount)}
+        </span>
       </div>
     </div>
   );

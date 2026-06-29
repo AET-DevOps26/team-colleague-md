@@ -20,14 +20,18 @@ const CATEGORIES: TopicCategory[] = [
 
 describe('ManageTopics', () => {
   let onToggle: (topicId: string) => void;
+  let onUnfollowAll: () => Promise<void>;
+  let onFollowMany: (topicIds: string[]) => Promise<void>;
 
   beforeEach(() => {
     onToggle = vi.fn<(topicId: string) => void>();
+    onUnfollowAll = vi.fn<() => Promise<void>>(() => Promise.resolve());
+    onFollowMany = vi.fn<(topicIds: string[]) => Promise<void>>(() => Promise.resolve());
   });
 
   it('(MT-1) renders followed topics before unfollowed on initial load', () => {
     render(
-      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['gamma'])} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['gamma'])} onToggle={onToggle} onUnfollowAll={onUnfollowAll} onFollowMany={onFollowMany} />
     );
     const buttons = screen.getAllByRole('button', { name: /Follow|Following/i });
     // gamma is followed — its button text is "Following"
@@ -42,14 +46,14 @@ describe('ManageTopics', () => {
 
   it('(MT-2) follow-pill shows correct followed count', () => {
     render(
-      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['alpha', 'beta'])} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['alpha', 'beta'])} onToggle={onToggle} onUnfollowAll={onUnfollowAll} onFollowMany={onFollowMany} />
     );
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
   it('(MT-3) clicking Follow fires onToggle with the correct tag', async () => {
     render(
-      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} onUnfollowAll={onUnfollowAll} onFollowMany={onFollowMany} />
     );
     const followButton = screen.getAllByRole('button', { name: /Follow Alpha/i })[0];
     await userEvent.click(followButton);
@@ -58,7 +62,7 @@ describe('ManageTopics', () => {
 
   it('(MT-4) clicking Following (unfollow) fires onToggle with the correct tag', async () => {
     render(
-      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['beta'])} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['beta'])} onToggle={onToggle} onUnfollowAll={onUnfollowAll} onFollowMany={onFollowMany} />
     );
     const unfollowButton = screen.getByRole('button', { name: /Unfollow Beta/i });
     await userEvent.click(unfollowButton);
@@ -67,7 +71,7 @@ describe('ManageTopics', () => {
 
   it('(MT-5) search filters topics by displayName', async () => {
     render(
-      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} onUnfollowAll={onUnfollowAll} onFollowMany={onFollowMany} />
     );
     const input = screen.getByPlaceholderText('Filter topics…');
     await userEvent.type(input, 'Alph');
@@ -78,7 +82,7 @@ describe('ManageTopics', () => {
 
   it('(MT-6) search matches by slug (name) too', async () => {
     render(
-      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} onUnfollowAll={onUnfollowAll} onFollowMany={onFollowMany} />
     );
     const input = screen.getByPlaceholderText('Filter topics…');
     await userEvent.type(input, 'gamma');
@@ -88,7 +92,7 @@ describe('ManageTopics', () => {
 
   it('(MT-7) clearing search restores all topics', async () => {
     render(
-      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} onUnfollowAll={onUnfollowAll} onFollowMany={onFollowMany} />
     );
     const input = screen.getByPlaceholderText('Filter topics…');
     await userEvent.type(input, 'Alph');
