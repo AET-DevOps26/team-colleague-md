@@ -1,63 +1,175 @@
-.toast {
+/* ===========================================================
+ * TOAST SYSTEM — bottom-right, tinted, 4 semantic variants,
+ * stack max 2, hover-pause, manual close (design C04).
+ * z-index sits above app modals (max 501) so feedback raised
+ * from inside a modal — e.g. Settings save — stays visible.
+ * =========================================================== */
+
+.toastStack {
   position: fixed;
   bottom: 22px;
   right: 22px;
-  z-index: 60;
-  width: 280px;
-  background: var(--accent);
-  color: #fff;
-  padding: 10px 14px;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  width: 320px;
+}
+
+.toastItem {
+  --toast-fg: var(--text-primary);
+  --toast-bg: var(--bg-surface);
+  --toast-border: var(--border-default);
+  --toast-icon: var(--text-secondary);
+
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: start;
+  gap: 10px;
+  padding: 11px 12px 11px 14px;
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  border: 1px solid var(--toast-border);
   border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   font-size: 12.5px;
   font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  line-height: 1.4;
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 200ms, transform 200ms;
-  pointer-events: none;
+  transition:
+    opacity 220ms var(--ease-out),
+    transform 220ms var(--ease-ios);
 }
+.toastItem.show { opacity: 1; transform: translateY(0); }
+.toastItem.leaving { opacity: 0; transform: translateY(-6px); }
 
-.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.toast svg {
-  width: 14px;
-  height: 14px;
+.toastIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--toast-icon);
   flex-shrink: 0;
+  margin-top: 1px;
+}
+.toastIcon svg { width: 18px; height: 18px; }
+
+.toastBody {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+  min-width: 0;
+}
+.toastMsg {
+  color: var(--toast-fg);
+  word-break: break-word;
 }
 
-.neutral {
-  background: #0a0a0a;
-}
-
-.error {
-  background: #c0392b;
-}
-
-.action {
-  margin-left: auto;
+/* Inline action (e.g. Undo) sits on the same line as the message, wrapping below only if it can't fit. */
+.toastAction {
   flex-shrink: 0;
-  padding: 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 4px 10px;
+  border: 1px solid var(--border-default);
   border-radius: 6px;
-  background: none;
-  color: #fff;
+  background: var(--bg-base);
+  color: var(--text-primary);
   font: 600 12px var(--font-sans);
   cursor: pointer;
-  pointer-events: auto;
-  transition: background 120ms, border-color 120ms;
+  transition:
+    background 140ms var(--ease-out),
+    border-color 140ms var(--ease-out);
+}
+.toastAction:hover {
+  background: var(--bg-elevated);
+  border-color: var(--text-primary);
 }
 
-.action:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.6);
+.toastClose {
+  background: transparent;
+  border: 0;
+  padding: 2px;
+  margin: -2px -2px 0 4px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition:
+    color 140ms var(--ease-out),
+    background 140ms var(--ease-out);
+  line-height: 0;
+}
+.toastClose:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+.toastClose svg { width: 12px; height: 12px; }
+
+/* Variant: success */
+.toastItem[data-variant="success"] {
+  --toast-bg: var(--success-bg);
+  --toast-border: color-mix(in oklab, var(--success) 30%, var(--border-default));
+  --toast-icon: var(--success);
+}
+/* Variant: error */
+.toastItem[data-variant="error"] {
+  --toast-bg: var(--danger-bg);
+  --toast-border: color-mix(in oklab, var(--danger) 32%, var(--border-default));
+  --toast-icon: var(--danger);
+}
+/* Variant: warning */
+.toastItem[data-variant="warning"] {
+  --toast-bg: var(--warning-bg);
+  --toast-border: color-mix(in oklab, var(--warning) 32%, var(--border-default));
+  --toast-icon: var(--warning);
+}
+/* Variant: info — ink/accent icon on the neutral surface (no --info token) */
+.toastItem[data-variant="info"] {
+  --toast-bg: var(--bg-surface);
+  --toast-border: var(--border-default);
+  --toast-icon: var(--accent);
 }
 
-.iconCheck { color: #9ce0a0; }
-.iconMinus { color: rgba(255,255,255,0.6); }
-.iconWarn { color: #ffe0e0; }
+/* ===========================================================
+ * WELCOME PILL — top-center, tinted neutral fill, text-only.
+ * One tier above the toast stack so a greeting fired at sign-in
+ * is never occluded.
+ * =========================================================== */
+.welcomePill {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-14px);
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  padding: 14px 26px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  box-shadow: 0 14px 36px -8px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 620;
+  transition:
+    opacity 240ms var(--ease-out),
+    transform 240ms var(--ease-ios);
+}
+.welcomePill.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.welcomeMsg { line-height: 1.3; }
+
+/* Reduced motion — opacity-only fade, transforms suppressed (extends globals.css). */
+@media (prefers-reduced-motion: reduce) {
+  .toastItem { transition: opacity 120ms linear; }
+  .toastItem.show,
+  .toastItem.leaving { transform: none; }
+  .welcomePill { transition: opacity 120ms linear; }
+  .welcomePill.show { transform: translateX(-50%); }
+}

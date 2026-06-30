@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useSettingsModal } from '../../../contexts/ModalContext';
 import { userService } from '../../../services/user.service';
-import Toast from '../../ui/Toast';
+import { useToast } from '../../../hooks/useToast';
 import type { UserPreferences } from '../../../types';
 import styles from './SettingsModal.module.css';
 
@@ -28,7 +28,7 @@ export default function SettingsModal() {
   // The required digestFrequency is read on open and round-tripped untouched on save
   // (GET-then-passthrough) — the Email-frequency control is intentionally not exposed here.
   const digestFrequency = useRef<UserPreferences['digestFrequency']>('DAILY');
-  const [toast, setToast] = useState({ show: false, message: '', error: false });
+  const { showToast } = useToast();
 
   // Seed the privacy toggles from the user's stored preferences each time the modal opens.
   useEffect(() => {
@@ -50,10 +50,10 @@ export default function SettingsModal() {
   // doesn't show a saved-looking state the server never persisted.
   function persist(next: { showBookmarks: boolean; showLikes: boolean }, revert: () => void) {
     userService.updatePreferences({ digestFrequency: digestFrequency.current, ...next })
-      .then(() => setToast({ show: true, message: 'Settings saved', error: false }))
+      .then(() => showToast({ variant: 'success', message: 'Settings saved' }))
       .catch(() => {
         revert();
-        setToast({ show: true, message: "Couldn't save settings — please try again", error: true });
+        showToast({ variant: 'error', message: "Couldn't save settings — please try again" });
       });
   }
 
@@ -179,17 +179,6 @@ export default function SettingsModal() {
 
           </div>
         </Dialog.Content>
-
-        {/* The shared Toast (z-index 60) would sit behind the modal overlay (z-index 100/101); a
-            fixed z-200 wrapper lifts it above so the save result is visible while the modal is open. */}
-        <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 200 }}>
-          <Toast
-            message={toast.message}
-            show={toast.show}
-            error={toast.error}
-            onHide={() => setToast((t) => ({ ...t, show: false }))}
-          />
-        </div>
       </Dialog.Portal>
     </Dialog.Root>
   );

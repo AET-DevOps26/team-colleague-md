@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, type FormEvent } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAuth } from '../../../hooks/useAuth';
+import { useWelcome } from '../../../hooks/useWelcome';
 import { useAuthModal } from '../../../contexts/ModalContext';
 import { AuthError } from '../../../errors/AuthError';
 import { checkUsernameAvailable, checkEmailAvailable } from '../../../services/userApi';
@@ -75,6 +76,7 @@ function Wordmark() {
 export default function AuthModal() {
   const { isOpen, activeTab, close, open } = useAuthModal();
   const { login, signup } = useAuth();
+  const { showWelcome } = useWelcome();
 
   const [screen, setScreen] = useState<AuthScreen>('login');
   const [email, setEmail] = useState('');
@@ -167,9 +169,10 @@ export default function AuthModal() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      const u = await login(email, password);
       close();
       resetAll();
+      showWelcome(`Welcome back, ${u.displayName}`);
     } catch (err) {
       if (err instanceof AuthError && err.code === 'NETWORK_ERROR') {
         setError('Cannot reach the server. Check your connection.');
@@ -197,6 +200,11 @@ export default function AuthModal() {
       await signup(username, email, password);
       close();
       resetAll();
+      // Default assumption: the first digest lands tomorrow — greet with that weekday.
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const weekday = tomorrow.toLocaleDateString('en-US', { weekday: 'long' });
+      showWelcome(`Welcome to Verita — your first digest arrives ${weekday}`);
     } catch (err) {
       if (err instanceof AuthError) {
         if (err.code === 'EMAIL_IN_USE') setError('An account with this email already exists.');

@@ -1,5 +1,4 @@
 import Markdown from '../../components/ui/Markdown';
-import Toast from '../../components/ui/Toast';
 import MarkdownToolbar from './components/MarkdownToolbar';
 import TagInput from './components/TagInput';
 import ImagePasteModal from './components/ImagePasteModal';
@@ -26,8 +25,6 @@ export default function PostEditor() {
     inlineImageInputRef,
     coverInputRef,
     uploading,
-    toast,
-    dismissToast,
     setView,
     setTitle,
     setContent,
@@ -220,13 +217,6 @@ export default function PostEditor() {
       </div>
 
       <ImagePasteModal file={pasteFile} onConfirm={confirmInlineImage} onCancel={cancelInlineImage} />
-
-      <Toast
-        message={toast?.message ?? ''}
-        show={toast !== null}
-        error={toast?.error ?? false}
-        onHide={dismissToast}
-      />
 
       <ExitGuardModal
         open={exitOpen}

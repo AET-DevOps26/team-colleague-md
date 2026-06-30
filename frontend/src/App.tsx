@@ -6,6 +6,8 @@ import {
 } from "./contexts/ModalContext";
 import { FollowedTopicsProvider } from "./contexts/FollowedTopicsContext";
 import { NavigationHistoryProvider } from "./contexts/NavigationHistoryContext";
+import { ToastProvider } from "./contexts/ToastContext";
+import { ToastStack, WelcomePill } from "./components/ui/Toast";
 import AppLayout from "./components/layout/AppLayout";
 import Home from "./pages/Home";
 import PostDetail from "./pages/PostDetail";
@@ -23,7 +25,8 @@ import SettingsModal from "./components/modals/SettingsModal";
 export default function App() {
   return (
     <BrowserRouter>
-      <NavigationHistoryProvider>
+      <ToastProvider>
+       <NavigationHistoryProvider>
         <AuthProvider>
           <FollowedTopicsProvider>
             <AuthModalProvider>
@@ -49,7 +52,10 @@ export default function App() {
             </AuthModalProvider>
           </FollowedTopicsProvider>
         </AuthProvider>
-      </NavigationHistoryProvider>
+       </NavigationHistoryProvider>
+       <ToastStack />
+       <WelcomePill />
+      </ToastProvider>
     </BrowserRouter>
   );
 }

@@ -7,8 +7,8 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoggedIn: boolean;
   isRestoring: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (username: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
+  signup: (username: string, email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
   updateUser: (patch: Partial<Pick<AuthUser, 'displayName' | 'avatarUrl'>>) => void;
 }
@@ -17,8 +17,8 @@ export const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoggedIn: false,
   isRestoring: true,
-  login: async () => {},
-  signup: async () => {},
+  login: async () => { throw new Error('AuthProvider missing'); },
+  signup: async () => { throw new Error('AuthProvider missing'); },
   logout: () => {},
   updateUser: () => {},
 });
@@ -44,11 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const u = await authService.login(email, password);
     setUser(u);
+    return u;
   }, []);
 
   const signup = useCallback(async (username: string, email: string, password: string) => {
     const u = await authService.signup(username, email, password);
     setUser(u);
+    return u;
   }, []);
 
   const logout = useCallback(async () => {

@@ -49,4 +49,9 @@ Manual verification status for the frontend ↔ user-service / content-service i
 - ✅ Click follow of a topic and see it in the home page topic filter under the search bar
 - ✅ Click follow of a topic and refresh the page, then back to the topic page, the topic is still followed
 
+
+## User Experience
+- ✅ There is a undo button after clicking unfollow topic accidentally.
+
+
 > Note: The other function maybe possible e.g. the digest page has some data, but its the mock data. All the available UI not mentioned above is with mock data. The integration is not fully implemented yet.

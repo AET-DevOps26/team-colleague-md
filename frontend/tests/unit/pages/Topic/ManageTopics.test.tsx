@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import userEvent from '@testing-library/user-event';
 import ManageTopics from '../../../../src/pages/Topic/ManageTopics';
+import { ToastProvider } from '../../../../src/contexts/ToastContext';
 import type { TopicCategory } from '../../../../src/types';
+
+// ManageTopics raises feedback through the global toast stack, so every render needs the provider.
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: ToastProvider });
 
 // Minimal deterministic topic catalog (id === name for the mock so follow-key assertions read clearly).
 const CATEGORIES: TopicCategory[] = [
@@ -33,7 +38,7 @@ describe('ManageTopics', () => {
     render(
       <ManageTopics categories={CATEGORIES} followedTopics={new Set(['gamma'])} onToggle={onToggle} onUnfollowAll={onUnfollowAll} onFollowMany={onFollowMany} />
     );
-    const buttons = screen.getAllByRole('button', { name: /Follow|Following/i });
+    const buttons = screen.getAllByRole('button', { name: /^(Follow|Unfollow) [A-Z]/ });
     // gamma is followed — its button text is "Following"
     // alpha and beta are unfollowed — their buttons are "Follow"
     // gamma should appear before alpha and beta in the DOM

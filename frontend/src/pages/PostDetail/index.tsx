@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { PostDetail as PostDetailType } from '../../types';
 import { contentService } from '../../services/content.service';
@@ -8,7 +8,7 @@ import PostFooter from '../../components/post/PostFooter';
 import EngageRow from '../../components/post/EngageRow';
 import BottomBar from '../../components/post/BottomBar';
 import Markdown from '../../components/ui/Markdown';
-import Toast from '../../components/ui/Toast';
+import { useToast } from '../../hooks/useToast';
 import { timeAgo } from '../../utils/timeAgo';
 import { getInitials } from '../../utils/getInitials';
 import styles from './PostDetail.module.css';
@@ -21,19 +21,13 @@ export default function PostDetail() {
 
   const [post, setPost] = useState<PostDetailType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState({ show: false, message: '' });
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!id) { navigate('/'); return; }
     setLoading(true);
     contentService.getPost(id).then((p) => { setPost(p); setLoading(false); });
   }, [id, navigate]);
-
-  const hideToast = useCallback(() => setToast((t) => ({ ...t, show: false })), []);
-
-  function showToast(message: string) {
-    setToast({ show: true, message });
-  }
 
   function handleLike() {
     if (!post) return;
@@ -47,16 +41,18 @@ export default function PostDetail() {
     const next = !post.isBookmarkedByMe;
     setPost((p) => p && { ...p, isBookmarkedByMe: next, saveCount: p.saveCount + (next ? 1 : -1) });
     contentService.toggleBookmark(post.id, next)
-      .then(() => showToast(next ? 'Saved to bookmarks' : 'Removed from bookmarks'))
+      .then(() => showToast(next
+        ? { variant: 'success', message: 'Saved to bookmarks' }
+        : { variant: 'info', message: 'Removed from bookmarks' }))
       .catch(() => {
         // Revert the optimistic update if the server rejected it.
         setPost((p) => p && { ...p, isBookmarkedByMe: !next, saveCount: p.saveCount + (next ? -1 : 1) });
-        showToast('Could not update bookmark');
+        showToast({ variant: 'error', message: 'Could not update bookmark' });
       });
   }
 
   function handleShare() {
-    navigator.clipboard.writeText(window.location.href).then(() => showToast('Link copied to clipboard'));
+    navigator.clipboard.writeText(window.location.href).then(() => showToast({ variant: 'success', message: 'Link copied to clipboard' }));
   }
 
   if (loading || !post) {
@@ -150,8 +146,6 @@ export default function PostDetail() {
         onScrollToComments={() => {}}
         showComments={false}
       />
-
-      <Toast message={toast.message} show={toast.show} onHide={hideToast} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { TopicCategory, TopicItem } from '../../types';
-import Toast from '../../components/ui/Toast';
+import { useToast } from '../../hooks/useToast';
 import { sortTopics } from './topicSort';
 import styles from './Topic.module.css';
 
@@ -49,10 +49,7 @@ export default function ManageTopics({ categories, followedTopics, onToggle, onU
   }, [rawCategories]);
 
   const [justFollowedTag, setJustFollowedTag] = useState<string | null>(null);
-  const [toastShow, setToastShow] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
-  const [toastPositive, setToastPositive] = useState(true);
-  const [toastAction, setToastAction] = useState<{ label: string; onClick: () => void } | null>(null);
+  const { showToast } = useToast();
   const pillRef = useRef<HTMLSpanElement>(null);
 
   const handleToggle = useCallback((topicId: string) => {
@@ -63,19 +60,13 @@ export default function ManageTopics({ categories, followedTopics, onToggle, onU
     // Block before the request when already at the cap, so the user gets a clear message
     // instead of a generic rollback toast from the rejected follow.
     if (willFollow && followedTopics.size >= MAX_FOLLOWED) {
-      setToastMsg(`You can follow up to ${MAX_FOLLOWED} topics — unfollow one first`);
-      setToastPositive(false);
-      setToastAction(null);
-      setToastShow(true);
+      showToast({ variant: 'warning', message: `You can follow up to ${MAX_FOLLOWED} topics — unfollow one first` });
       return;
     }
 
     // Fire the toggle (optimistic in the parent); roll the toast back if the request fails.
     Promise.resolve(onToggle(topicId)).catch(() => {
-      setToastMsg(`Couldn't update #${dn} — try again`);
-      setToastPositive(false);
-      setToastAction(null);
-      setToastShow(true);
+      showToast({ variant: 'error', message: `Couldn't update #${dn} — try again` });
     });
 
     // Re-sort: [followedOthers, topic, unfollowedOthers]
@@ -105,13 +96,12 @@ export default function ManageTopics({ categories, followedTopics, onToggle, onU
       pill.classList.add(styles.followPillBump);
     }
 
-    setToastMsg(willFollow ? `Following #${dn}` : `Unfollowed #${dn}`);
-    setToastPositive(willFollow);
-    setToastAction(null);
-    setToastShow(true);
-  }, [followedTopics, onToggle, rawCategories]);
-
-  const hideToast = useCallback(() => setToastShow(false), []);
+    showToast(
+      willFollow
+        ? { variant: 'success', message: `Following #${dn}` }
+        : { variant: 'info', message: `Unfollowed #${dn}` },
+    );
+  }, [followedTopics, onToggle, rawCategories, showToast]);
 
   // Clear every subscription at once, offering an Undo that re-follows the snapshot.
   const handleUnfollowAll = useCallback(() => {
@@ -119,35 +109,26 @@ export default function ManageTopics({ categories, followedTopics, onToggle, onU
     if (prev.length === 0) return;
 
     Promise.resolve(onUnfollowAll()).catch(() => {
-      setToastMsg("Couldn't unfollow all — try again");
-      setToastPositive(false);
-      setToastAction(null);
-      setToastShow(true);
+      showToast({ variant: 'error', message: "Couldn't unfollow all — try again" });
     });
 
-    setToastMsg(`Unfollowed all ${prev.length} topics`);
-    setToastPositive(false);
-    setToastAction({
-      label: 'Undo',
-      onClick: () => {
-        setToastShow(false);
-        Promise.resolve(onFollowMany(prev))
-          .then(() => {
-            setToastMsg('Topics restored');
-            setToastPositive(true);
-            setToastAction(null);
-            setToastShow(true);
-          })
-          .catch(() => {
-            setToastMsg("Couldn't restore topics — try again");
-            setToastPositive(false);
-            setToastAction(null);
-            setToastShow(true);
-          });
+    showToast({
+      variant: 'info',
+      message: `Unfollowed all ${prev.length} topics`,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          Promise.resolve(onFollowMany(prev))
+            .then(() => {
+              showToast({ variant: 'success', message: 'Topics restored' });
+            })
+            .catch(() => {
+              showToast({ variant: 'error', message: "Couldn't restore topics — try again" });
+            });
+        },
       },
     });
-    setToastShow(true);
-  }, [followedTopics, onUnfollowAll, onFollowMany]);
+  }, [followedTopics, onUnfollowAll, onFollowMany, showToast]);
 
   const atLimit = followedTopics.size >= MAX_FOLLOWED;
 
@@ -249,8 +230,6 @@ export default function ManageTopics({ categories, followedTopics, onToggle, onU
           );
         })}
       </div>
-
-      <Toast message={toastMsg} show={toastShow} onHide={hideToast} neutral={!toastPositive} action={toastAction ?? undefined} />
     </>
   );
 }

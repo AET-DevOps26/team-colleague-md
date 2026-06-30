@@ -144,6 +144,13 @@ test.describe('AuthModal — API integration (mocked backend)', () => {
     await expect(page.getByText('New post')).toBeVisible();
   });
 
+  test('AM-11b: login success → welcome pill greets the user by name', async ({ page }) => {
+    await mockLoginSuccess(page);
+    await fillAndSubmitLogin(page);
+    // Top-center welcome pill fires once on successful sign-in (independent of the toast stack).
+    await expect(page.getByText(`Welcome back, ${MOCK_USER.displayName}`)).toBeVisible();
+  });
+
   test('AM-12: login success → page reload keeps user logged in', async ({ page }) => {
     // Refresh returns 401 initially so the user starts logged out (modal can open)
     await page.route(REFRESH_URL, route =>
