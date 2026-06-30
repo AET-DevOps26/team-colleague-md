@@ -51,7 +51,19 @@ Manual verification status for the frontend ↔ user-service / content-service i
 
 
 ## User Experience
+- ✅ Sign in and see "Welcome back, [display name]" in the home page.
+- ✅ Sign up a new account and see "Welcome to Verita — your first digest arrives [weekday]".
+- ✅ See "Following [topic name]" and "Unfollow [topic name]" in the topic page after following/unfollowing a topic.
+- ✅ Try to follow past the cap and see "You can follow up to [N] topics — unfollow one first".
 - ✅ There is a undo button after clicking unfollow topic accidentally.
+- ✅ See "Settings saved" message after changing settings.
+- ✅ Save the profile and see "Profile updated".
+- ✅ Bookmark / un-bookmark a post and see "Saved to bookmarks" / "Removed from bookmarks".
+- ✅ Share a post and see "Link copied to clipboard".
+- ✅ Publish a post and see "Draft published"; unpublish and see "Post moved to Drafts".
+- ✅ Delete a post / draft and see "Post deleted" / "Draft deleted".
+- ✅ Upload a cover / inline image in the editor and see "Cover image uploaded" / "Image uploaded".
+- ✅ Error toasts appear on failed actions (like, publish, unpublish, bookmark, settings save, unfollow all).
 
 
 > Note: The other function maybe possible e.g. the digest page has some data, but its the mock data. All the available UI not mentioned above is with mock data. The integration is not fully implemented yet.
