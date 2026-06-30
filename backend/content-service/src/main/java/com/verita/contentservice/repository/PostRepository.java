@@ -27,10 +27,10 @@ public interface PostRepository extends JpaRepository<PostEntity, UUID> {
            nativeQuery = true)
     Page<PostEntity> searchPublished(@Param("query") String query, Pageable pageable);
     List<PostEntity> findByIdInAndDeletedFalse(Set<UUID> ids);
-    @Query(value = "select p from PostEntity p where p.id in (select b.post.id from BookmarkEntity b where b.userId = :userId) and p.deleted = false and p.status = 'PUBLISHED' order by p.createdAt desc",
+    @Query(value = "select p from PostEntity p, BookmarkEntity b where b.post.id = p.id and b.userId = :userId and p.deleted = false and p.status = 'PUBLISHED' order by b.createdAt desc",
            countQuery = "select count(p) from PostEntity p where p.id in (select b.post.id from BookmarkEntity b where b.userId = :userId) and p.deleted = false and p.status = 'PUBLISHED'")
     Page<PostEntity> findBookmarkedPublishedPostsByUserId(@Param("userId") UUID userId, Pageable pageable);
-    @Query(value = "select p from PostEntity p where p.id in (select v.targetId from VoteEntity v where v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE') and p.deleted = false and p.status = 'PUBLISHED' order by p.createdAt desc",
+    @Query(value = "select p from PostEntity p, VoteEntity v where v.targetId = p.id and v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE' and p.deleted = false and p.status = 'PUBLISHED' order by v.createdAt desc",
            countQuery = "select count(p) from PostEntity p where p.id in (select v.targetId from VoteEntity v where v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE') and p.deleted = false and p.status = 'PUBLISHED'")
     Page<PostEntity> findLikedPublishedPostsByUserId(@Param("userId") UUID userId, Pageable pageable);
     @Modifying(clearAutomatically = true)
