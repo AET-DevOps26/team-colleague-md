@@ -183,6 +183,13 @@
   justify-content: flex-end;
 }
 
+.replyCount {
+  margin-right: auto;
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+  font-variant-numeric: tabular-nums;
+}
+
 .replyCancel {
   font-size: 11.5px;
   font-weight: 500;

@@ -43,6 +43,29 @@ function toCardPost(c: PostCardResponse): Post {
   };
 }
 
+/** content-service CommentResponse — hierarchical; author is an AuthorSummary (User-shaped). */
+interface CommentResponse {
+  id: string;
+  author: User;
+  text: string;
+  likeCount: number;
+  isLikedByMe: boolean;
+  createdAt: string;
+  replies: CommentResponse[];
+}
+
+function toComment(c: CommentResponse): Comment {
+  return {
+    id: c.id,
+    author: { ...c.author, avatarUrl: c.author.avatarUrl ?? undefined },
+    text: c.text,
+    likeCount: c.likeCount,
+    isLikedByMe: c.isLikedByMe,
+    createdAt: c.createdAt,
+    replies: c.replies.map(toComment),
+  };
+}
+
 function toPostDetail(r: PostResponse): PostDetail {
   return {
     id: r.id,
@@ -474,6 +497,21 @@ const MOCK_COMMENTS: Comment[] = [
   },
 ];
 
+/** Deep-clone a mock comment so callers never mutate the shared MOCK_COMMENTS store directly. */
+function cloneComment(c: Comment): Comment {
+  return { ...c, author: { ...c.author }, replies: c.replies.map(cloneComment) };
+}
+
+/** Find a comment by id anywhere in a mock tree (top-level or reply). */
+function findMockComment(comments: Comment[], id: string): Comment | undefined {
+  for (const c of comments) {
+    if (c.id === id) return c;
+    const found = findMockComment(c.replies, id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
 }
@@ -689,9 +727,69 @@ export const contentService = {
     });
   },
 
-  getComments(_postId: string): Promise<Comment[]> {
+  async getComments(postId: string): Promise<Comment[]> {
+    if (!isDemoMode()) {
+      const { data } = await api.get<CommentResponse[]>(`/api/v1/posts/${postId}/comments`);
+      return data.map(toComment);
+    }
     return new Promise((resolve) => {
-      setTimeout(() => resolve([...MOCK_COMMENTS]), 300);
+      setTimeout(() => resolve(MOCK_COMMENTS.map(cloneComment)), 300);
+    });
+  },
+
+  async addComment(postId: string, text: string, parentId?: string): Promise<Comment> {
+    if (!isDemoMode()) {
+      const { data } = await api.post<CommentResponse>(
+        `/api/v1/posts/${postId}/comments`,
+        parentId ? { text, parentId } : { text },
+      );
+      return toComment(data);
+    }
+    return new Promise((resolve) => {
+      const me = getUser();
+      const created: Comment = {
+        id: `mock-c-${Date.now()}`,
+        author: {
+          id: me?.id ?? 'me',
+          username: me?.username ?? 'me',
+          displayName: me?.displayName ?? 'You',
+          avatarUrl: me?.avatarUrl,
+          role: me?.role ?? 'USER',
+        },
+        text,
+        likeCount: 0,
+        isLikedByMe: false,
+        createdAt: new Date().toISOString(),
+        replies: [],
+      };
+      if (parentId) {
+        const parent = MOCK_COMMENTS.find((c) => c.id === parentId);
+        if (parent) parent.replies.push(created);
+      } else {
+        MOCK_COMMENTS.unshift(created);
+      }
+      setTimeout(() => resolve(cloneComment(created)), 200);
+    });
+  },
+
+  async likeComment(commentId: string, like: boolean): Promise<{ likeCount: number; isLikedByMe: boolean }> {
+    if (!isDemoMode()) {
+      const { data } = await api.post<{ likeCount: number; isLikedByMe: boolean }>(
+        `/api/v1/comments/${commentId}/like`,
+        { type: like ? 'LIKE' : 'NONE' },
+      );
+      return { likeCount: data.likeCount, isLikedByMe: data.isLikedByMe };
+    }
+    return new Promise((resolve) => {
+      const target = findMockComment(MOCK_COMMENTS, commentId);
+      if (target) {
+        target.isLikedByMe = like;
+        target.likeCount += like ? 1 : -1;
+      }
+      setTimeout(
+        () => resolve({ likeCount: target?.likeCount ?? 0, isLikedByMe: target?.isLikedByMe ?? false }),
+        150,
+      );
     });
   },
 

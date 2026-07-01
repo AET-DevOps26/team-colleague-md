@@ -409,7 +409,8 @@ paths:
   /api/v1/comments/{id}/like:
     post:
       operationId: likeComment
-      summary: Like a comment
+      summary: Like or un-like a comment
+      description: Send LIKE to cast a like. Send NONE to remove an existing like.
       tags: [Interactions]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -417,6 +418,11 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommentLikeRequest' }
       responses:
         '200':
           description: Comment like processed successfully
@@ -841,7 +847,7 @@ components:
       type: object
       required: [text]
       properties:
-        text: { type: string, minLength: 1, maxLength: 2000 }
+        text: { type: string, minLength: 1, maxLength: 500 }
         parentId: { type: string, format: uuid, nullable: true, description: "ID of parent comment for replies" }
 
     CommentResponse:
@@ -872,6 +878,15 @@ components:
         dislikeCount: { type: integer }
         isLikedByMe: { type: boolean }
         isDislikedByMe: { type: boolean }
+
+    CommentLikeRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [LIKE, NONE]
+          description: "LIKE to cast a like. NONE to remove an existing like."
 
     CommentLikeResponse:
       type: object

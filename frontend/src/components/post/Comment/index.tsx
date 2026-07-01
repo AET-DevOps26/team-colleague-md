@@ -2,15 +2,11 @@ import { useState } from 'react';
 import type { Comment as CommentType } from '../../../types';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
+import { timeAgo } from '../../../utils/timeAgo';
+import { getInitials } from '../../../utils/getInitials';
 import styles from './Comment.module.css';
 
-function timeAgo(iso: string) {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
+const MAX_LEN = 500;
 
 function VerifiedIcon() {
   return (
@@ -24,25 +20,26 @@ function VerifiedIcon() {
 interface CommentProps {
   comment: CommentType;
   isReply?: boolean;
-  isAuthor?: boolean;
+  postAuthorId: string;
+  onLike: (commentId: string) => void;
+  onReply: (parentId: string, text: string) => Promise<void>;
 }
 
-export default function Comment({ comment, isReply = false, isAuthor = false }: CommentProps) {
+export default function Comment({ comment, isReply = false, postAuthorId, onLike, onReply }: CommentProps) {
   const { isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
-  const [liked, setLiked] = useState(comment.isLikedByMe);
-  const [likeCount, setLikeCount] = useState(comment.likeCount);
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const isAuthor = comment.author.id === postAuthorId;
 
   function handleLike() {
     if (!isLoggedIn) {
       openAuth('login');
       return;
     }
-    const next = !liked;
-    setLiked(next);
-    setLikeCount((c) => c + (next ? 1 : -1));
+    onLike(comment.id);
   }
 
   function handleReplyClick() {
@@ -53,12 +50,24 @@ export default function Comment({ comment, isReply = false, isAuthor = false }: 
     setShowReply((v) => !v);
   }
 
-  const initials = comment.author.displayName.slice(0, 2).toUpperCase();
+  async function handleReplySubmit() {
+    const text = replyText.trim();
+    if (!text || submitting) return;
+    setSubmitting(true);
+    try {
+      await onReply(comment.id, text);
+      setShowReply(false);
+      setReplyText('');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const avatarSize = isReply ? styles.avSm : styles.avMd;
 
   return (
     <article className={`${styles.cmt} ${isReply ? styles.reply : ''}`}>
-      <div className={`${styles.avatar} ${avatarSize}`}>{initials}</div>
+      <div className={`${styles.avatar} ${avatarSize}`}>{getInitials(comment.author.displayName)}</div>
       <div className={styles.body}>
         <div className={styles.head}>
           <span className={styles.who}>
@@ -81,14 +90,14 @@ export default function Comment({ comment, isReply = false, isAuthor = false }: 
 
         <div className={styles.actions}>
           <button
-            className={`${styles.actionBtn} ${liked ? styles.liked : ''}`}
+            className={`${styles.actionBtn} ${comment.isLikedByMe ? styles.liked : ''}`}
             onClick={handleLike}
             type="button"
           >
-            <svg viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" fill={comment.isLikedByMe ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
-            {likeCount}
+            {comment.likeCount}
           </button>
 
           {!isReply && (
@@ -109,10 +118,12 @@ export default function Comment({ comment, isReply = false, isAuthor = false }: 
                 className={styles.replyInput}
                 placeholder="Write a reply…"
                 value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
+                onChange={(e) => setReplyText(e.target.value.slice(0, MAX_LEN))}
+                maxLength={MAX_LEN}
                 rows={1}
               />
               <div className={styles.replyActions}>
+                <span className={styles.replyCount}>{replyText.length}/{MAX_LEN}</span>
                 <button
                   className={styles.replyCancel}
                   onClick={() => { setShowReply(false); setReplyText(''); }}
@@ -121,9 +132,10 @@ export default function Comment({ comment, isReply = false, isAuthor = false }: 
                   Cancel
                 </button>
                 <button
-                  className={`${styles.replySubmit} ${replyText.trim() ? '' : styles.disabled}`}
+                  className={`${styles.replySubmit} ${replyText.trim() && !submitting ? '' : styles.disabled}`}
                   type="button"
-                  disabled={!replyText.trim()}
+                  disabled={!replyText.trim() || submitting}
+                  onClick={handleReplySubmit}
                 >
                   Reply
                 </button>
@@ -135,7 +147,14 @@ export default function Comment({ comment, isReply = false, isAuthor = false }: 
         {comment.replies.length > 0 && (
           <div className={styles.replies}>
             {comment.replies.map((reply) => (
-              <Comment key={reply.id} comment={reply} isReply />
+              <Comment
+                key={reply.id}
+                comment={reply}
+                isReply
+                postAuthorId={postAuthorId}
+                onLike={onLike}
+                onReply={onReply}
+              />
             ))}
           </div>
         )}

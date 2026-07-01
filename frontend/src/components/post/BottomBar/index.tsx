@@ -12,7 +12,9 @@ interface BottomBarProps {
   onBookmark: () => void;
   onShare: () => void;
   onScrollToComments: () => void;
-  /** When false, the comment composer and jump-to-comments button are hidden (comments not yet wired). */
+  /** Submit a top-level comment. Resolves once persisted (optimistically) so the composer can clear. */
+  onComment: (text: string) => Promise<void>;
+  /** When false, the comment composer and jump-to-comments button are hidden. */
   showComments?: boolean;
 }
 
@@ -25,14 +27,29 @@ export default function BottomBar({
   onBookmark,
   onShare,
   onScrollToComments,
+  onComment,
   showComments = true,
 }: BottomBarProps) {
   const { isLoggedIn, user } = useAuth();
   const { open: openAuth } = useAuthModal();
   const [expanded, setExpanded] = useState(false);
   const [text, setText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
+
+  async function handleSubmit() {
+    const value = text.trim();
+    if (!value || submitting) return;
+    setSubmitting(true);
+    try {
+      await onComment(value);
+      setText('');
+      setExpanded(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -82,7 +99,8 @@ export default function BottomBar({
                 className={styles.composerTextarea}
                 placeholder="Write a comment…"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => setText(e.target.value.slice(0, 500))}
+                maxLength={500}
                 rows={3}
               />
             ) : (
@@ -94,9 +112,10 @@ export default function BottomBar({
             <div className={styles.composerFoot}>
               <span className={styles.charCount}>{text.length}/500</span>
               <button
-                className={`${styles.sendCta} ${!text.trim() ? styles.sendDisabled : ''}`}
+                className={`${styles.sendCta} ${!text.trim() || submitting ? styles.sendDisabled : ''}`}
                 type="button"
-                disabled={!text.trim()}
+                disabled={!text.trim() || submitting}
+                onClick={handleSubmit}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m22 2-7 20-4-9-9-4 20-7z" />

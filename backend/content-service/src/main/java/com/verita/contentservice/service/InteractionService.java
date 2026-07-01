@@ -11,6 +11,7 @@ import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.security.SecurityUtils;
+import com.verita.model.CommentLikeRequest;
 import com.verita.model.CommentLikeResponse;
 import com.verita.model.LikeRequest;
 import com.verita.model.PostLikeResponse;
@@ -54,13 +55,16 @@ public class InteractionService {
                 .isDislikedByMe(newType == VoteType.DOWNVOTE);
     }
 
-    public CommentLikeResponse likeComment(UUID id) {
+    public CommentLikeResponse likeComment(UUID id, CommentLikeRequest.TypeEnum type) {
         UUID userId = securityUtils.getCurrentUserId();
         commentRepository.findByIdAndDeletedFalse(id).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        applyVote(userId, VoteTargetType.COMMENT, id, VoteType.UPVOTE);
+        VoteType newType = type == CommentLikeRequest.TypeEnum.LIKE ? VoteType.UPVOTE : null;
+        applyVote(userId, VoteTargetType.COMMENT, id, newType);
         commentRepository.refreshLikeCount(id);
         var updated = commentRepository.findByIdAndDeletedFalse(id).orElseThrow();
-        return new CommentLikeResponse().likeCount((int) updated.getLikeCount()).isLikedByMe(true);
+        return new CommentLikeResponse()
+                .likeCount((int) updated.getLikeCount())
+                .isLikedByMe(newType == VoteType.UPVOTE);
     }
 
     public void bookmarkPost(UUID id) {

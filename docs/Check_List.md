@@ -43,6 +43,9 @@ Manual verification status for the frontend ↔ user-service / content-service i
 
 ## Post Detail
 - ✅ Click bookmark and like button in post detail page, then see it in user profile page
+- ✅ Leave a comment and see it in the post detail page
+- ✅ Reply to a user's comment and see it in the post detail page
+- ✅ Filter comments by "Top", "Newest" and "Oldest" in post detail page
 
 
 ## Topics
