@@ -3,7 +3,7 @@ import type { Comment as CommentType } from '../../../types';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
 import { timeAgo } from '../../../utils/timeAgo';
-import { getInitials } from '../../../utils/getInitials';
+import Avatar from '../../ui/Avatar';
 import styles from './Comment.module.css';
 
 const MAX_LEN = 500;
@@ -63,20 +63,22 @@ export default function Comment({ comment, isReply = false, postAuthorId, onLike
     }
   }
 
-  const avatarSize = isReply ? styles.avSm : styles.avMd;
+  const avSize = isReply ? 22 : 28;
 
   return (
     <article className={`${styles.cmt} ${isReply ? styles.reply : ''}`}>
-      <div className={`${styles.avatar} ${avatarSize}`}>{getInitials(comment.author.displayName)}</div>
+      <Avatar
+        displayName={comment.author.displayName}
+        avatarUrl={comment.author.avatarUrl}
+        size={avSize}
+        borderRadius={avSize}
+      />
       <div className={styles.body}>
         <div className={styles.head}>
           <span className={styles.who}>
             {comment.author.displayName}
             {comment.author.role === 'VERIFIED' && <VerifiedIcon />}
           </span>
-          {comment.author.organisation && (
-            <span className={styles.role}>{comment.author.organisation.toLowerCase()}</span>
-          )}
           {isAuthor && <span className={styles.opBadge}>Author</span>}
           <span>·</span>
           <span>{timeAgo(comment.createdAt)}</span>
