@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     app_name: str = "GenAI Service"
     app_version: str = "1.0.0"
     log_level: str = "INFO"
+    internal_service_token: str = ""
 
     # --- CORS ---
     # Comma-separated list of allowed origins (e.g., "http://localhost:3000,http://localhost:8082")
