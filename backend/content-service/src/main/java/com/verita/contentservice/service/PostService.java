@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -218,6 +219,28 @@ public class PostService {
         UUID userId = currentUserId();
         return mapPage(postRepository.findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
                 userId, PostType.DIGEST, PageRequest.of(page, clampPageSize(size))), userId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<PostResponse> findPersonalDigest(UUID userId, OffsetDateTime start, OffsetDateTime end) {
+        return postRepository.findFirstByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
+                        userId, PostType.DIGEST, start, end)
+                .map(post -> toPostResponse(post, userId));
+    }
+
+    @Transactional
+    public void softDeletePersonalDigests(UUID userId, OffsetDateTime start, OffsetDateTime end) {
+        OffsetDateTime deletedAt = OffsetDateTime.now();
+        List<PostEntity> posts = postRepository.findByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+                userId, PostType.DIGEST, start, end);
+        for (PostEntity post : posts) {
+            post.setDeleted(true);
+            post.setDeletedAt(deletedAt);
+            if (post.getStatus() == PostStatus.PUBLISHED && post.getTopics() != null) {
+                post.getTopics().forEach(topic -> topicRepository.decrementTotalPostCount(topic.getId()));
+            }
+        }
+        postRepository.saveAll(posts);
     }
 
     @Transactional(readOnly = true)
