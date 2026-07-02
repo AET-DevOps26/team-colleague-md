@@ -178,6 +178,7 @@ services:
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required — must be identical across all services}
       # Cross-service calls (Clients.java): reach peers by compose service name, not localhost.
       - USER_SERVICE_BASE_URL=http://user-service:8081
+      - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083
       - GENAI_SERVICE_BASE_URL=http://genai-service:8000
       - DB_HOST=content-db
       - DB_PORT=5432
@@ -232,6 +233,8 @@ services:
 
   genai-service:
     image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
+    environment:
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required — must be identical across all services}
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)" ]
