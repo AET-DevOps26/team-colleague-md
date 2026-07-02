@@ -1,6 +1,7 @@
 package com.verita.userservice.repository;
 
 import com.verita.userservice.entity.UserEntity;
+import com.verita.model.DigestFrequency;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,8 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     Boolean existsByEmail(String email);
 
     Optional<UserEntity> findByRefreshToken(String refreshToken);
+
+    Page<UserEntity> findByDigestFrequency(DigestFrequency digestFrequency, Pageable pageable);
 
     Page<UserEntity> findByUsernameContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(
             String username, String displayName, Pageable pageable);
