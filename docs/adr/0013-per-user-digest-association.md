@@ -51,6 +51,8 @@ read-back possible, so the frontend Past Digests page can integrate against a re
   nullable column that is meaningful only for `DIGEST` rows.
 - A global digest (`target_user_id IS NULL`) will not appear in any user's
   `GET /api/v1/posts/digests`. If a "shared digest for everyone" surface is ever needed, it
-  needs its own query — deliberately out of scope here.
+  needs its own query — deliberately out of scope here. **(Realized by ADR-0016: a
+  `null`-target digest is now the "public digest", world-readable via a dedicated public
+  endpoint, and `GET /api/v1/posts/{id}` gained the ownership guard for personal digests.)**
 - Until the genai generation job exists, `GET /api/v1/posts/digests` returns empty for every
   user; the frontend Past Digests page renders an empty state rather than mock data.

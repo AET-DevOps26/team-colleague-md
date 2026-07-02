@@ -166,6 +166,13 @@ public class PostService {
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
             throw new ResponseStatusException(NOT_FOUND);
         }
+        // A personal digest (DIGEST + target set) is readable only by its target; hide existence
+        // from everyone else with 404, mirroring the DRAFT rule (ADR-0016). Public digests
+        // (target null) and NORMAL posts are unaffected.
+        if (post.getType() == PostType.DIGEST && post.getTargetUserId() != null
+                && !Objects.equals(post.getTargetUserId(), currentUser)) {
+            throw new ResponseStatusException(NOT_FOUND);
+        }
         // Build the response while the entity is still attached: incrementViewCount runs a
         // clearAutomatically update that detaches `post`, after which its lazy topics/sourceUrls
         // collections could no longer be initialised (open-in-view is disabled).
@@ -218,6 +225,15 @@ public class PostService {
         UUID userId = currentUserId();
         return mapPage(postRepository.findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
                 userId, PostType.DIGEST, PageRequest.of(page, clampPageSize(size))), userId);
+    }
+
+    /** Newest public digest (target null) for the logged-out surface; 404 when none exists (ADR-0016). */
+    @Transactional(readOnly = true)
+    public PostResponse getPublicTodayDigest() {
+        PostEntity post = postRepository
+                .findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(PostType.DIGEST)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        return toPostResponse(post, optionalUserId());
     }
 
     @Transactional(readOnly = true)

@@ -63,6 +63,11 @@ public class PostController implements PostsApi {
     }
 
     @Override
+    public ResponseEntity<PostResponse> getPublicTodayDigest() {
+        return ResponseEntity.ok(postService.getPublicTodayDigest());
+    }
+
+    @Override
     public ResponseEntity<PostResponse> getPostById(UUID id) {
         return ResponseEntity.ok(postService.getPost(id));
     }

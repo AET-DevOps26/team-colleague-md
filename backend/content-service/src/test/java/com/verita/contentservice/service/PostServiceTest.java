@@ -261,6 +261,84 @@ public class PostServiceTest {
         verify(postRepository).incrementViewCount(draft.getId());
     }
 
+    // ---- digest access model (ADR-0016) ------------------------------------
+
+    private PostEntity digest(UUID target) {
+        PostEntity p = post(UUID.randomUUID(), PostStatus.PUBLISHED);
+        p.setType(PostType.DIGEST);
+        p.setTargetUserId(target);
+        return p;
+    }
+
+    @Test
+    void getPost_personalDigestByNonTarget_throwsNotFound() {
+        PostEntity d = digest(UUID.randomUUID()); // targeted at someone else
+        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> postService.getPost(d.getId()));
+
+        assertEquals(404, ex.getStatusCode().value());
+        verify(postRepository, never()).incrementViewCount(any());
+    }
+
+    @Test
+    void getPost_personalDigestByAnonymous_throwsNotFound() {
+        when(securityUtils.getCurrentUserIdOptional()).thenReturn(Optional.empty());
+        PostEntity d = digest(UUID.randomUUID());
+        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> postService.getPost(d.getId()));
+
+        assertEquals(404, ex.getStatusCode().value());
+    }
+
+    @Test
+    void getPost_personalDigestByTarget_isVisible() {
+        PostEntity d = digest(userId); // targeted at me
+        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
+
+        PostResponse response = postService.getPost(d.getId());
+
+        assertNotNull(response);
+        verify(postRepository).incrementViewCount(d.getId());
+    }
+
+    @Test
+    void getPost_publicDigestByAnonymous_isVisible() {
+        when(securityUtils.getCurrentUserIdOptional()).thenReturn(Optional.empty());
+        PostEntity d = digest(null); // public digest
+        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
+
+        PostResponse response = postService.getPost(d.getId());
+
+        assertNotNull(response);
+        verify(postRepository).incrementViewCount(d.getId());
+    }
+
+    @Test
+    void getPublicTodayDigest_returnsNewestNullTargetDigest() {
+        PostEntity d = digest(null);
+        when(postRepository.findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(
+                PostType.DIGEST)).thenReturn(Optional.of(d));
+
+        PostResponse response = postService.getPublicTodayDigest();
+
+        assertEquals(d.getId(), response.getId());
+    }
+
+    @Test
+    void getPublicTodayDigest_noneExists_throwsNotFound() {
+        when(postRepository.findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(
+                PostType.DIGEST)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> postService.getPublicTodayDigest());
+
+        assertEquals(404, ex.getStatusCode().value());
+    }
+
     // ---- delete + topic counters -------------------------------------------
 
     @Test

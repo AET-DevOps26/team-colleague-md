@@ -65,6 +65,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/digests").authenticated()
                 // Public reads — guests browse; a valid token additionally personalises (ADR-0006).
                 .requestMatchers(HttpMethod.GET,
+                        "/api/v1/posts/digests/today/public",
                         "/api/v1/posts",
                         "/api/v1/posts/cards",
                         "/api/v1/posts/search",
