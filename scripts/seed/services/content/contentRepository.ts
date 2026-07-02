@@ -141,7 +141,7 @@ export function validateContentFixtures() {
   // Validate digests
   const topicNames = new Set(SEED_TOPICS.map((t) => t.name));
   for (const digest of SEED_DIGESTS) {
-    seedUserId(digest.targetUsername); // target must resolve
+    if (digest.targetUsername !== null) seedUserId(digest.targetUsername); // personal target must resolve; null = public (ADR-0016)
     if (digest.coverImageFile && !validCovers.has(digest.coverImageFile)) {
       throw new Error(`Digest "${digest.title}" references unknown cover image "${digest.coverImageFile}".`);
     }
@@ -271,7 +271,7 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
           coverUrlsByPostId.get(digest.id) ?? null,
           digest.summary,
           digest.viewCount,
-          seedUserId(digest.targetUsername),
+          digest.targetUsername === null ? null : seedUserId(digest.targetUsername),
           digest.createdAt,
           digest.updatedAt,
         ],

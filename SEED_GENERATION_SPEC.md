@@ -43,10 +43,13 @@ deleted, created_at, updated_at, target_user_id (nullable UUID)`.
 
 **Digests (ADR-0013).** A digest is a **post** with `type = 'DIGEST'`, `author_id =` the fixed
 digest system id `00000000-0000-0000-0000-000000000000` (from `app.digest.system-author-id`),
-and `target_user_id =` the user it was personalised for. The **only** UI path to digests is
-`GET /api/v1/posts/digests`, which filters `type = 'DIGEST' AND target_user_id = <caller
-userId>`. The main feed (`GET /api/v1/posts`) defaults to `type = NORMAL` and excludes digests.
-Consequence: a digest with `target_user_id = NULL` is invisible on every screen.
+and `target_user_id =` the user it was personalised for (a **personal digest**), or
+`target_user_id = NULL` for a **public digest** (ADR-0016), world-readable and served to
+logged-out visitors via `GET /api/v1/posts/digests/today/public`. The per-user list
+`GET /api/v1/posts/digests` filters `type = 'DIGEST' AND target_user_id = <caller userId>` and is
+unchanged. The main feed (`GET /api/v1/posts`) defaults to `type = NORMAL` and excludes digests.
+`GET /api/v1/posts/{id}` now guards personal digests (404 to non-target) but serves public ones
+openly (ADR-0016).
 
 **Digest UI mapping (frontend `content.service.ts`).** From a digest `PostResponse`:
 `eventCount = sourceUrl.length` (fallback `topics.length`); `topStorySubtitle = summary`; the
@@ -77,9 +80,11 @@ hero requires one digest dated today.
   follower_count** in the seed. For topics that also have seeded subscriptions, final count =
   `baseline + subscriptionCount` (make the recommendation seed **add** to, not overwrite, the
   baseline).
-- **DECISION E — Digests: ~8–10, all `target_user_id = alexchen`.** Exactly one dated **today**
-  (→ hero); the rest spread across the last ~2 weeks (→ Past list). `author_id` = digest system
-  id; `type = 'DIGEST'`. **No global (`target_user_id = NULL`) digests.**
+- **DECISION E — Digests: ~8–10 personal (`target_user_id = alexchen`) + one public
+  (`target_user_id = NULL`).** Exactly one personal digest dated **today** (→ alexchen's hero);
+  the rest spread across the last ~2 weeks (→ Past list). Plus **one public digest** dated today
+  (ADR-0016 reverses the earlier "no null-target digests" stance) that powers the logged-out
+  `/digest` surface. `author_id` = digest system id; `type = 'DIGEST'`.
 - **DECISION F — Comments: most posts have comments + partial nesting.** ~25 of the ~35 posts
   get **2–6 comments each**, some with **1–2 levels** of nested replies; varied authors and
   `like_count`; ~80–100 comments total. A handful of posts may stay comment-free for realism.
@@ -290,8 +295,9 @@ Add a `SeedDigest` array + interface (mirror the post fields it needs). Produce 
       each `≤ view_count`.
 - [ ] No post/digest references a `coverImageFile` that isn't one of the 6 existing PNGs.
 - [ ] All dates are relative to `SEED_NOW`; comments ≥ their post; replies ≥ their parent;
-      exactly one digest dated today.
-- [ ] Digests: all `type='DIGEST'`, `author_id=00000000-…0000`, `target_user_id=alexchen`;
+      exactly one personal digest dated today (plus one public digest dated today).
+- [ ] Digests: all `type='DIGEST'`, `author_id=00000000-…0000`; personal ones
+      `target_user_id=alexchen`, exactly one public one `target_user_id=NULL` (ADR-0016);
       excluded from topic counters (topic `posts_this_week`/`total_post_count` count only NORMAL).
 - [ ] After seeding: several topics are `is_hot=true` (≥3 NORMAL posts in last 7 days); every
       topic shows a plausible non-zero `follower_count`.

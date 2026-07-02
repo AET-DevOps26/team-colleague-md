@@ -44,7 +44,8 @@ export interface SeedDigest {
   topicNames: string[];
   viewCount: number;
   coverImageFile: string | null;
-  targetUsername: string;
+  // `null` marks a public digest (target_user_id IS NULL) — world-readable, ADR-0016.
+  targetUsername: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -3165,6 +3166,44 @@ export const SEED_COMMENTS: SeedComment[] = [
 // ─── Digests (Decision E: 9 digests, all target_user_id = alexchen) ─────────
 
 export const SEED_DIGESTS: SeedDigest[] = [
+  // ── Today's PUBLIC digest (target_user_id IS NULL, ADR-0016) ──────────────
+  // World-readable; powers the logged-out `/digest` surface and the public
+  // "today's digest" endpoint. Dated slightly ahead of the personal hero digest
+  // so it is the newest null-target digest.
+  {
+    id: "98000000-0000-4000-8000-000000000000",
+    title: "The AI briefing: interpretability circuits, agent reliability, and faster inference",
+    summary: "Today across the Verita community: mechanistic interpretability pins down few-shot learning, agent tool-call failures get catalogued, and inference optimisation compounds into real throughput wins.",
+    content: `## Today's public briefing
+
+A snapshot of what the Verita community is reading today — free for everyone, no account required. Sign in to get a digest personalised to the topics and authors you follow.
+
+### Skill induction heads identified in large language models
+
+New mechanistic interpretability work identifies 23 attention heads in Llama 3 70B that are necessary for in-context few-shot learning. Ablating them drops 5-shot accuracy from 81% to 34%, and the circuit only emerges above ~30B parameters.
+
+- Few-shot learning is implemented by a compact, identifiable circuit
+- Monitoring these heads could help detect prompt-injection attempts
+
+### Agent tool-call reliability patterns catalogued
+
+The persistent problem of agent tool-call hallucinations traces back to ambiguous tool schemas, missing inline examples, and token-budget pressure at long contexts. Adding examples directly to tool-description fields cuts format errors by roughly 80%.
+
+### Inference optimisation compounds
+
+Combining grouped-query attention, int8 KV cache, and prefix sharing reduces per-user memory by up to 27×, making high-concurrency serving feasible on far fewer GPUs.`,
+    sourceUrls: [
+      "https://arxiv.org/abs/2506.12345",
+      "https://docs.anthropic.com/tool-use-best-practices",
+      "https://blog.vllm.ai/speculative-decoding-production",
+    ],
+    topicNames: ["mechanistic-interpretability", "ai-agents", "large-language-models"],
+    viewCount: 512,
+    coverImageFile: "mechanistic-interpretability.png",
+    targetUsername: null,
+    createdAt: hoursAgo(1),
+    updatedAt: hoursAgo(1),
+  },
   // ── Today's hero digest ───────────────────────────────────────────────────
   {
     id: "98000000-0000-4000-8000-000000000001",
