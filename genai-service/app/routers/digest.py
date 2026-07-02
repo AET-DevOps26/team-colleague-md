@@ -4,9 +4,10 @@ Daily digest router.
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from app.schemas.digest import DigestGenerateRequest, DigestJobAccepted, DigestJobStatus
+from app.security import require_internal_service
 from app.services.digest_jobs import create_job, get_job
 from app.services.digest_runner import run_digest_job
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/v1/genai",
     tags=["Digests"],
+    dependencies=[Depends(require_internal_service)],
 )
 
 

@@ -1,5 +1,6 @@
 package com.verita.contentservice.client;
 
+import com.verita.contentservice.dto.UserDigestRecipientPageDto;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import java.time.Duration;
@@ -51,6 +52,18 @@ public class UserClient {
                 .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
                 .retrieve()
                 .body(UserPreferencesDto.class);
+    }
+
+    public UserDigestRecipientPageDto getDigestRecipients(String frequency, int page, int size) {
+        return userClient.get()
+                .uri(uri -> uri.path("/internal/v1/users/digest-recipients")
+                        .queryParam("frequency", frequency)
+                        .queryParam("page", page)
+                        .queryParam("size", size)
+                        .build())
+                .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
+                .retrieve()
+                .body(UserDigestRecipientPageDto.class);
     }
 
     public Map<UUID, UserProfileDto> getUsersByIds(Collection<UUID> ids) {

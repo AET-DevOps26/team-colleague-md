@@ -712,6 +712,34 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /internal/v1/digests/generate/users/{userId}:
+    post:
+      operationId: generateUserDigest
+      summary: Generate one user's AI Daily Digest (internal)
+      description: >
+        Service-only manual trigger for the same generation orchestration used by the scheduled
+        daily digest job. By default, skips generation when the user already has a digest for the
+        current Platform Day. With force=true, soft-deletes visible same-day digests before storing
+        the regenerated one.
+      tags: [Internal]
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: force
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Digest generation result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestGenerationResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -740,6 +768,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
+    BadGateway:
+      description: Downstream service failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
     # --- SHARED ---
@@ -764,6 +797,14 @@ components:
           format: uuid
           nullable: true
           description: "User this digest was personalised for (ADR-0013); null = global/system digest belonging to no one."
+
+    DigestGenerationResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status: { type: string, enum: [GENERATED, SKIPPED] }
+        message: { type: string }
+        post: { $ref: '#/components/schemas/PostResponse' }
 
     AuthorSummary:
       type: object

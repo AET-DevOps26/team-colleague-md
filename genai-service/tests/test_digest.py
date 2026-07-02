@@ -8,16 +8,21 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
 from app.main import app
 from app.schemas.digest import DigestEvent, DigestGenerateResponse, DigestJobWarning, DigestTopic
 from app.services.digest_generator import DigestJsonParseError
 from app.services.digest_jobs import clear_jobs
 from app.services.external_sources import ExternalSourceItem
 
+INTERNAL_TOKEN = "test-internal-token"
+INTERNAL_HEADERS = {"X-Internal-Service-Token": INTERNAL_TOKEN}
+
 
 @pytest.fixture(autouse=True)
 def reset_jobs():
     """Keep the in-memory job store isolated between tests."""
+    get_settings().internal_service_token = INTERNAL_TOKEN
     clear_jobs()
     yield
     clear_jobs()
@@ -25,7 +30,9 @@ def reset_jobs():
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    test_client = TestClient(app)
+    test_client.headers.update(INTERNAL_HEADERS)
+    return test_client
 
 
 REQUEST_BODY = {
@@ -89,6 +96,11 @@ def _digest_result() -> DigestGenerateResponse:
 
 class TestDigestJobs:
     """Tests for POST /digests/generate and GET /digests/jobs/{jobId}."""
+
+    def test_digest_job_rejects_missing_internal_token(self):
+        response = TestClient(app).post("/api/v1/genai/digests/generate", json=REQUEST_BODY)
+
+        assert response.status_code == 403
 
     @patch("app.services.digest_runner.generate_digest", new_callable=AsyncMock)
     @patch("app.services.digest_runner.fetch_and_select_sources", new_callable=AsyncMock)

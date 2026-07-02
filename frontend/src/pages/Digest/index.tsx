@@ -13,6 +13,7 @@ import styles from './Digest.module.css';
 export default function Digest() {
   const { isLoggedIn } = useAuth();
 
+
   if (!isLoggedIn) {
     return (
       <>

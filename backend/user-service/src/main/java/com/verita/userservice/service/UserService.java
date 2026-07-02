@@ -186,7 +186,21 @@ public class UserService {
         return buildPaginatedUsers(entityPage);
     }
 
-    /**
+    public PaginatedDigestRecipients getDigestRecipients(DigestFrequency frequency, int page, int size) {
+        Page<UserEntity> entityPage = userRepository.findByDigestFrequency(frequency, PageRequest.of(page, size));
+        PaginatedDigestRecipients result = new PaginatedDigestRecipients();
+        result.setContent(entityPage.getContent().stream()
+                .map(user -> new DigestRecipient(user.getId()))
+                .toList());
+        result.setPage(entityPage.getNumber());
+        result.setSize(entityPage.getSize());
+        result.setTotalPages(entityPage.getTotalPages());
+        result.setTotalElements(entityPage.getTotalElements());
+        result.setHasNext(entityPage.hasNext());
+        return result;
+    }
+
+    /** 
      * Updates the role of a user. Only recognised role values are applied;
      * unrecognised values are silently ignored.
      *

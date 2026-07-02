@@ -83,6 +83,7 @@
           CONTENT_DB_PASSWORD={{ content_db_password }}
           RECOMMENDATION_DB_PASSWORD={{ recommendation_db_password }}
           JWT_SECRET={{ jwt_secret }}
+          INTERNAL_SERVICE_TOKEN={{ internal_service_token }}
           CORS_ALLOWED_ORIGINS={{ cors_allowed_origins | default('http://' ~ ansible_host) }}
           MINIO_ROOT_PASSWORD={{ minio_root_password }}
           USER_SERVICE_S3_ACCESS_KEY={{ user_service_s3_access_key }}

@@ -13,13 +13,15 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # --- LLM Provider ---
-    llm_provider: str = "nvidia"  # "openrouter", "nvidia", or "google"
+    llm_provider: str = "nvidia"  # "openrouter", "nvidia", "google", or "logos"
     llm_model: str = "moonshotai/kimi-k2.6"
     llm_temperature: float = 0.3
 
     google_api_key: str = ""
     openrouter_api_key: str = ""
     nvidia_nim_api_key: str = ""
+    logos_api_key: str = ""
+    logos_base_url: str = "https://logos.aet.cit.tum.de/v1"
 
     # --- External Source Providers ---
     github_token: str = ""
@@ -33,6 +35,7 @@ class Settings(BaseSettings):
     app_name: str = "GenAI Service"
     app_version: str = "1.0.0"
     log_level: str = "INFO"
+    internal_service_token: str = ""
 
     # --- CORS ---
     # Comma-separated list of allowed origins (e.g., "http://localhost:3000,http://localhost:8082")

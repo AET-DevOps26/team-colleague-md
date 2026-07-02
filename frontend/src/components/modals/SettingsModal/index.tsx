@@ -179,6 +179,7 @@ export default function SettingsModal() {
 
           </div>
         </Dialog.Content>
+
       </Dialog.Portal>
     </Dialog.Root>
   );

@@ -17,7 +17,7 @@ servers:
     description: Local development
 
 security:
-  - bearerAuth: []
+  - internalServiceToken: []
 
 paths:
   /health:
@@ -53,7 +53,7 @@ paths:
         generation for a post.
       tags: [GenAI]
       security:
-        - bearerAuth: []
+        - internalServiceToken: []
       requestBody:
         required: true
         content:
@@ -122,7 +122,7 @@ paths:
                   maxEvents: 8
                   tone: technical
       security:
-        - bearerAuth: []
+        - internalServiceToken: []
       responses:
         '202':
           description: |
@@ -152,7 +152,7 @@ paths:
         instead of an immediate `502` from the job creation endpoint.
       tags: [Digests]
       security:
-        - bearerAuth: []
+        - internalServiceToken: []
       parameters:
         - name: jobId
           in: path
@@ -174,10 +174,10 @@ paths:
 
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    internalServiceToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Service-Token
 
   responses:
     BadRequest:
