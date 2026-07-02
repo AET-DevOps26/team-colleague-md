@@ -11,8 +11,8 @@ summarization, and personalized recommendations. It is built as four backend mic
 The fastest way to run the full platform.
 
 **First-time setup.** Create `genai-service/.env` from the template (the placeholder values
-are enough to boot; add a real `NVIDIA_NIM_API_KEY` to enable AI summaries and the daily
-digest):
+are enough to boot; add a real LLM API key such as `NVIDIA_NIM_API_KEY` or `LOGOS_API_KEY`
+to enable AI summaries and the daily digest):
 
 ```bash
 cp genai-service/.env.example genai-service/.env
@@ -397,7 +397,8 @@ uvicorn app.main:app --reload --port 8000
 Health check: `http://localhost:8000/health`
 
 The service starts without a real API key (health and docs respond), but summarization and
-digest generation need a valid `NVIDIA_NIM_API_KEY` — or another provider selected via
-`LLM_PROVIDER` — in `.env`.
+digest generation need a valid provider key in `.env`. For the TUM Logos endpoint, use
+`LLM_PROVIDER=logos`, `LLM_MODEL=openai/gpt-oss-120b`, and `LOGOS_API_KEY`; the endpoint is
+only reachable from the TUM network or eduVPN.
 
 ---

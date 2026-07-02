@@ -41,6 +41,8 @@ def _llm_credentials_available() -> bool:
         return bool(settings.google_api_key)
     if provider == "nvidia":
         return bool(settings.nvidia_nim_api_key)
+    if provider == "logos":
+        return bool(settings.logos_api_key)
     return False
 
 
