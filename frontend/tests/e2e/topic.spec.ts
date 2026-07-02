@@ -1,26 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
-
-const MOCK_USER = {
-  id: '1',
-  username: 'testuser',
-  displayName: 'Test User',
-  role: 'USER',
-  email: 'test@example.com',
-};
-
-async function login(page: Page) {
-  await page.addInitScript((user) => {
-    localStorage.setItem('verita_user', JSON.stringify(user));
-    localStorage.setItem('verita_token', 'mock-token');
-  }, MOCK_USER);
-  await page.route('**/api/v1/auth/refresh', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ accessToken: 'mock-token', user: MOCK_USER }),
-    })
-  );
-}
+import { test, expect } from '@playwright/test';
+import { loginAs } from './support';
 
 test.describe('Topic page', () => {
   test('TOP-1: logged-out user sees sign-in prompt on /topics', async ({ page }) => {
@@ -33,7 +12,7 @@ test.describe('Topic page', () => {
   });
 
   test('TOP-2: logged-in user sees the topic grid', async ({ page }) => {
-    await login(page);
+    await loginAs(page);
     await page.goto('/topics');
 
     await expect(page.getByPlaceholder('Filter topics…')).toBeVisible();
@@ -41,7 +20,7 @@ test.describe('Topic page', () => {
   });
 
   test('TOP-3: follow toggle updates following count in the pill', async ({ page }) => {
-    await login(page);
+    await loginAs(page);
     await page.goto('/topics');
 
     const countEl = page.locator('[class*="followPill"] strong');
@@ -54,7 +33,7 @@ test.describe('Topic page', () => {
   });
 
   test('TOP-4: following a topic shows follow toast', async ({ page }) => {
-    await login(page);
+    await loginAs(page);
     await page.goto('/topics');
 
     await page.getByRole('button', { name: /^Follow / }).first().click();
@@ -62,7 +41,7 @@ test.describe('Topic page', () => {
   });
 
   test('TOP-5: unfollowing a topic shows unfollow toast', async ({ page }) => {
-    await login(page);
+    await loginAs(page);
     await page.goto('/topics');
 
     await page.getByRole('button', { name: /^Unfollow / }).first().click();
@@ -70,17 +49,18 @@ test.describe('Topic page', () => {
   });
 
   test('TOP-6: search filters topic list by displayName', async ({ page }) => {
-    await login(page);
+    await loginAs(page);
     await page.goto('/topics');
 
     await page.getByPlaceholder('Filter topics…').fill('agents');
 
-    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'AI Agents' })).toBeVisible();
+    // Seed topic displayNames (SEED_TOPICS): "Agents" matches, "Alignment" does not.
+    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'Agents' })).toBeVisible();
     await expect(page.locator('[class*="tagName"]').filter({ hasText: 'Alignment' })).not.toBeVisible();
   });
 
   test('TOP-7: sidebar Topic item navigates to /topics', async ({ page }) => {
-    await login(page);
+    await loginAs(page);
     await page.goto('/');
 
     await page.getByRole('link', { name: 'Topic', exact: true }).click();
