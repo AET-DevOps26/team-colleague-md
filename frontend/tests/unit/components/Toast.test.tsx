@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
+import { useEffect } from 'react';
 import { ToastProvider, type ToastVariant } from '../../../src/contexts/ToastContext';
 import { ToastStack, WelcomePill } from '../../../src/components/ui/Toast';
 import { useToast } from '../../../src/hooks/useToast';
@@ -15,7 +16,9 @@ let api: Api;
 function Capture() {
   const toast = useToast();
   const welcome = useWelcome();
-  api = { ...toast, ...welcome };
+  useEffect(() => {
+    api = { ...toast, ...welcome };
+  });
   return null;
 }
 
