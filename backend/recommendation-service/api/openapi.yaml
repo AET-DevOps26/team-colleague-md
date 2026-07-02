@@ -38,6 +38,31 @@ paths:
           description: User recommendation data cleaned up successfully
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /internal/v1/users/{userId}/topic-subscriptions:
+    get:
+      operationId: getUserTopicSubscriptions
+      summary: List a user's topic subscriptions (internal)
+      description: |
+        Internal endpoint called by content-service's scheduled digest job. Returns topic IDs
+        subscribed by the requested user. Gated by X-Internal-Service-Token (ADR-0007), not a
+        user JWT.
+      tags: [Internal]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Topic subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TopicSubscriptionResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   # --- FEEDS & DISCOVERY ---
   /api/v1/feed/personal:
     get:
@@ -312,6 +337,12 @@ components:
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
+
+    TopicSubscriptionResponse:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
 
     FeedPage:
       type: object

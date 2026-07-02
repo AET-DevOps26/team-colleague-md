@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -82,6 +83,28 @@ public class UserServiceTests {
         assertEquals("Example Org", result.getOrganisation().get());
         assertTrue(result.getExpertiseAreas().isPresent());
         assertEquals(List.of("java", "devops"), result.getExpertiseAreas().get());
+    }
+
+    @Test
+    void getPreferencesById_success_returnsPrivacyFlags() {
+        userEntity.setShowBookmarks(true);
+        userEntity.setShowLikes(false);
+        when(userRepository.findById(userEntity.getId())).thenReturn(Optional.of(userEntity));
+
+        UserPreferences prefs = userService.getPreferencesById(userEntity.getId());
+
+        assertTrue(prefs.getShowBookmarks());
+        assertFalse(prefs.getShowLikes());
+    }
+
+    @Test
+    void getPreferencesById_missing_throws404() {
+        UUID missing = UUID.randomUUID();
+        when(userRepository.findById(missing)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userService.getPreferencesById(missing));
+        assertEquals(404, ex.getStatusCode().value());
     }
 
     @Test

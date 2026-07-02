@@ -124,6 +124,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth ->
                 auth.requestMatchers("/api/v1/auth/**").permitAll()
                     .requestMatchers("/actuator/health").permitAll()
+                    // Service-only endpoints: permitAll at the user-auth layer; authenticated as a
+                    // service by INTERNAL_SERVICE_TOKEN in InternalAuthFilter, not a user token (ADR-0007).
+                    .requestMatchers("/internal/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/users/by-username/*").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/users/*").permitAll()

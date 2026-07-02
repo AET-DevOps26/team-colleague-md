@@ -11,13 +11,20 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
 from app.main import app
+
+INTERNAL_TOKEN = "test-internal-token"
+INTERNAL_HEADERS = {"X-Internal-Service-Token": INTERNAL_TOKEN}
 
 
 @pytest.fixture
 def client():
     """Create a FastAPI test client."""
-    return TestClient(app)
+    get_settings().internal_service_token = INTERNAL_TOKEN
+    test_client = TestClient(app)
+    test_client.headers.update(INTERNAL_HEADERS)
+    return test_client
 
 
 # ---------------------------------------------------------------------------
@@ -50,6 +57,15 @@ SHORT_CONTENT = "Too short to summarize."  # Under 50 chars
 
 class TestSummarizeEndpoint:
     """Tests for POST /api/v1/genai/summarize."""
+
+    def test_summarize_rejects_missing_internal_token(self, client):
+        """GenAI work endpoints require the internal service token."""
+        response = TestClient(app).post(
+            "/api/v1/genai/summarize",
+            json={"postId": "test-post-id", "content": VALID_CONTENT, "title": "GPT-5 Released"},
+        )
+
+        assert response.status_code == 403
 
     @patch("app.services.summarizer._build_chain")
     def test_summarize_success(self, mock_build_chain, client):

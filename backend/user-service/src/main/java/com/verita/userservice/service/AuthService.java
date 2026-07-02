@@ -81,6 +81,12 @@ public class AuthService {
      * @throws InvalidRefreshTokenException if the token does not exist or has expired
      */
     public AuthResponse refreshToken(String refreshTokenValue) {
+        // Guard a missing/blank token before querying: refresh_token is nullable and unique, so a
+        // null/blank lookup matches every NULL-token row and Spring Data throws on the non-unique
+        // result (a 500) instead of the intended 401. An anonymous tab hitting /refresh triggers this.
+        if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
+            throw new InvalidRefreshTokenException();
+        }
         UserEntity user = userRepository.findByRefreshToken(refreshTokenValue)
                 .orElseThrow(InvalidRefreshTokenException::new);
 

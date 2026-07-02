@@ -132,6 +132,34 @@ public class PostServiceTest {
         assertEquals(PostType.DIGEST, captor.getValue().getType());
         assertEquals(PostStatus.PUBLISHED, captor.getValue().getStatus());
         assertEquals(systemAuthor, captor.getValue().getAuthorId());
+        // No targetUserId supplied → global digest (ADR-0013).
+        assertNull(captor.getValue().getTargetUserId());
+    }
+
+    @Test
+    void createDigest_withTargetUserId_persistsPerUserAssociation() {
+        org.springframework.test.util.ReflectionTestUtils.setField(postService, "digestSystemAuthorId", UUID.randomUUID());
+        UUID target = UUID.randomUUID();
+        com.verita.model.DigestPostRequest req =
+                new com.verita.model.DigestPostRequest("Daily AI Digest", "## Top stories\nbody")
+                        .targetUserId(target);
+
+        postService.createDigest(req);
+
+        ArgumentCaptor<PostEntity> captor = ArgumentCaptor.forClass(PostEntity.class);
+        verify(postRepository).save(captor.capture());
+        assertEquals(target, captor.getValue().getTargetUserId());
+    }
+
+    @Test
+    void getMyDigests_queriesCallersDigestsByTargetUser() {
+        when(postRepository.findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
+                eq(userId), eq(PostType.DIGEST), any())).thenReturn(Page.empty());
+
+        postService.getMyDigests(0, 10);
+
+        verify(postRepository).findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
+                eq(userId), eq(PostType.DIGEST), any());
     }
 
     // ---- update / patch ownership ------------------------------------------

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { contentService } from '../../services/content.service';
-import type { DigestListItem } from '../../types';
+import type { DigestListItem, TodayDigest } from '../../types';
 import styles from './Digest.module.css';
 
 const PAGE_SIZE = 10;
@@ -35,9 +35,23 @@ function groupByWeek(items: DigestListItem[]): Array<{ label: string; items: Dig
 export default function PastDigests() {
   const navigate = useNavigate();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [todayDigest, setTodayDigest] = useState<TodayDigest | null>(null);
+  const [allDigests, setAllDigests] = useState<DigestListItem[]>([]);
 
-  const todayDigest = contentService.getTodayDigest();
-  const allDigests = contentService.getDigestList();
+  useEffect(() => {
+    let cancelled = false;
+    contentService.getDigests()
+      .then(({ today, items }) => {
+        if (cancelled) return;
+        setTodayDigest(today);
+        setAllDigests(today ? items.filter((d) => d.date !== today.date) : items);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   const visible = allDigests.slice(0, visibleCount);
   const groups = groupByWeek(visible);
   const hasMore = visibleCount < allDigests.length;
@@ -49,8 +63,32 @@ export default function PastDigests() {
     year: 'numeric',
   });
 
+  // Until the digest generation pipeline lands (ADR-0013) this list is empty for everyone —
+  // that is the expected state, not a bug.
+  if (!loading && !todayDigest && allDigests.length === 0) {
+    return (
+      <div className={styles.pastDigestsWrap}>
+        <div className={styles.todayHero}>
+          <div className={styles.todayHeroInner}>
+            <div className={styles.todayHeroText}>
+              <div className={styles.todayLabel}>
+                <span className={styles.todayLabelDot} />
+                Today · {todayFormatted}
+              </div>
+              <div className={styles.todayTitle}>No digests yet</div>
+              <div className={styles.todaySubtitle}>
+                Check back once your daily briefing is generated — it’s built from the topics you follow.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.pastDigestsWrap}>
+      {todayDigest && (
       <div className={styles.todayHero}>
         <div className={styles.todayHeroInner}>
           <div className={styles.todayHeroText}>
@@ -97,6 +135,7 @@ export default function PastDigests() {
           )}
         </div>
       </div>
+      )}
 
       <div className={styles.historyHeader}>
         <h2>Past digests</h2>

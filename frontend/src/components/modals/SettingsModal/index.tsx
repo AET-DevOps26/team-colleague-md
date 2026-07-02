@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useSettingsModal } from '../../../contexts/ModalContext';
+import { userService } from '../../../services/user.service';
+import Toast from '../../ui/Toast';
+import type { UserPreferences } from '../../../types';
 import styles from './SettingsModal.module.css';
 
 const ChevronRight = () => (
@@ -20,9 +23,49 @@ const SignOutIcon = () => (
 export default function SettingsModal() {
   const { isOpen, close } = useSettingsModal();
   const { user, logout } = useAuth();
-  const [digestFreq, setDigestFreq] = useState<'Daily' | 'Weekly' | 'Off'>('Daily');
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showLikes, setShowLikes] = useState(false);
+  // The required digestFrequency is read on open and round-tripped untouched on save
+  // (GET-then-passthrough) — the Email-frequency control is intentionally not exposed here.
+  const digestFrequency = useRef<UserPreferences['digestFrequency']>('DAILY');
+  const [toast, setToast] = useState({ show: false, message: '', error: false });
+
+  // Seed the privacy toggles from the user's stored preferences each time the modal opens.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    userService.getPreferences()
+      .then((prefs) => {
+        if (cancelled) return;
+        digestFrequency.current = prefs.digestFrequency;
+        setShowBookmarks(prefs.showBookmarks);
+        setShowLikes(prefs.showLikes);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isOpen]);
+
+  // Auto-save on toggle: passes the unchanged digestFrequency back so the required field round-trips.
+  // Surfaces a bottom-right toast either way; on failure it also rolls the toggle back so the UI
+  // doesn't show a saved-looking state the server never persisted.
+  function persist(next: { showBookmarks: boolean; showLikes: boolean }, revert: () => void) {
+    userService.updatePreferences({ digestFrequency: digestFrequency.current, ...next })
+      .then(() => setToast({ show: true, message: 'Settings saved', error: false }))
+      .catch(() => {
+        revert();
+        setToast({ show: true, message: "Couldn't save settings — please try again", error: true });
+      });
+  }
+
+  function handleBookmarksChange(value: boolean) {
+    setShowBookmarks(value);
+    persist({ showBookmarks: value, showLikes }, () => setShowBookmarks(!value));
+  }
+
+  function handleLikesChange(value: boolean) {
+    setShowLikes(value);
+    persist({ showBookmarks, showLikes: value }, () => setShowLikes(!value));
+  }
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(o) => { if (!o) close(); }}>
@@ -82,19 +125,6 @@ export default function SettingsModal() {
 
             <section className={styles.section}>
               <h3 className={styles.sectionHeading}>Digest</h3>
-              <span className={styles.freqLabel}>Email frequency</span>
-              <div className={styles.freqControl} role="group" aria-label="Digest frequency">
-                {(['Daily', 'Weekly', 'Off'] as const).map((f) => (
-                  <button
-                    key={f}
-                    className={`${styles.freqBtn} ${digestFreq === f ? styles.freqActive : ''}`}
-                    data-testid={`settings-freq-${f.toLowerCase()}`}
-                    onClick={() => setDigestFreq(f)}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
               <Link
                 to="/digest"
                 className={styles.settingsLink}
@@ -121,7 +151,7 @@ export default function SettingsModal() {
                     type="checkbox"
                     data-testid="settings-toggle-bookmarks"
                     checked={showBookmarks}
-                    onChange={(e) => setShowBookmarks(e.target.checked)}
+                    onChange={(e) => handleBookmarksChange(e.target.checked)}
                   />
                   <div className={styles.switchTrack}>
                     <div className={styles.switchThumb} />
@@ -138,7 +168,7 @@ export default function SettingsModal() {
                     type="checkbox"
                     data-testid="settings-toggle-likes"
                     checked={showLikes}
-                    onChange={(e) => setShowLikes(e.target.checked)}
+                    onChange={(e) => handleLikesChange(e.target.checked)}
                   />
                   <div className={styles.switchTrack}>
                     <div className={styles.switchThumb} />
@@ -149,6 +179,17 @@ export default function SettingsModal() {
 
           </div>
         </Dialog.Content>
+
+        {/* The shared Toast (z-index 60) would sit behind the modal overlay (z-index 100/101); a
+            fixed z-200 wrapper lifts it above so the save result is visible while the modal is open. */}
+        <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 200 }}>
+          <Toast
+            message={toast.message}
+            show={toast.show}
+            error={toast.error}
+            onHide={() => setToast((t) => ({ ...t, show: false }))}
+          />
+        </div>
       </Dialog.Portal>
     </Dialog.Root>
   );

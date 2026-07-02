@@ -483,7 +483,6 @@ const _defaultFollowed = new Set<string>([
   'alignment', 'mech-interp', 'openai', 'anthropic', 'open-source', 'agents',
 ]);
 const _followedTopics = new Set<string>(_defaultFollowed);
-let _savedTopics = new Set<string>(_defaultFollowed);
 
 // ── Digest mock data ───────────────────────────────────────
 const DIGEST_LIST_LOGGEDIN: DigestListItem[] = [
@@ -573,6 +572,48 @@ const TOPIC_CATEGORIES: TopicCategory[] = [
     ],
   },
 ];
+
+/** content-service PostResponse → the lightweight feed-card Post (search + digest reuse this). */
+function toFeedPost(r: PostResponse): Post {
+  return {
+    id: r.id,
+    title: r.title,
+    excerpt: r.excerpt ?? '',
+    coverImageUrl: r.coverImageUrl ?? undefined,
+    author: r.author,
+    topics: r.topics,
+    likeCount: r.likeCount,
+    commentCount: r.commentCount,
+    viewCount: r.viewCount,
+    isLikedByMe: r.isLikedByMe,
+    createdAt: r.createdAt,
+    readTimeMinutes: r.readTimeMinutes ?? undefined,
+  };
+}
+
+/** A persisted DIGEST post → the Past Digests list-card shape. */
+function toDigestListItem(r: PostResponse): DigestListItem {
+  return {
+    date: r.createdAt.split('T')[0],
+    displayDate: new Date(r.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+    title: r.title,
+    eventCount: r.sourceUrl?.length ?? r.topics.length,
+    readTimeMinutes: r.readTimeMinutes ?? 5,
+  };
+}
+
+/** A digest dated today → the "today" hero model. */
+function toTodayDigest(r: PostResponse): TodayDigest {
+  return {
+    date: r.createdAt.split('T')[0],
+    title: r.title,
+    topStorySubtitle: r.summary ?? r.excerpt ?? '',
+    eventCount: r.sourceUrl?.length ?? r.topics.length,
+    readTimeMinutes: r.readTimeMinutes ?? 5,
+    generatedAt: new Date(r.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    status: 'generated',
+  };
+}
 
 export const contentService = {
   getPosts(cursor: string | null, topic: string | null): Promise<FeedPage> {
@@ -683,36 +724,69 @@ export const contentService = {
     };
   },
 
-  getDigestList(): DigestListItem[] {
-    return DIGEST_LIST_LOGGEDIN;
-  },
-
-  getTopicCategories(): TopicCategory[] {
-    return TOPIC_CATEGORIES;
-  },
-
-  getFollowedTopics(): Set<string> {
-    return new Set(_followedTopics);
-  },
-
-  toggleTopicFollow(tag: string): void {
-    if (_followedTopics.has(tag)) {
-      _followedTopics.delete(tag);
-    } else {
-      _followedTopics.add(tag);
+  // Past Digests page (ADR-0013): the caller's own DIGEST posts, newest first. Real mode hits
+  // the auth-required per-user endpoint (empty until generation exists); demo serves mock data.
+  // "today" is derived client-side from the newest item dated today.
+  async getDigests(): Promise<{ today: TodayDigest | null; items: DigestListItem[] }> {
+    if (isDemoMode()) {
+      return { today: this.getTodayDigest(), items: DIGEST_LIST_LOGGEDIN };
     }
+    const { data } = await api.get<{ content: PostResponse[] }>('/api/v1/posts/digests', {
+      params: { page: 0, size: 30 },
+    });
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayPost = data.content.find((p) => p.createdAt.split('T')[0] === todayStr) ?? null;
+    return {
+      today: todayPost ? toTodayDigest(todayPost) : null,
+      items: data.content.map(toDigestListItem),
+    };
   },
 
-  saveTopicPreferences(): void {
-    _savedTopics = new Set(_followedTopics);
+  // Manage Topics catalog — category-grouped topics with stats. Real mode pulls from
+  // content-service; demo serves the mock catalog.
+  async getTopicCategories(): Promise<TopicCategory[]> {
+    if (isDemoMode()) return TOPIC_CATEGORIES;
+    const { data } = await api.get<TopicCategory[]>('/api/v1/topics');
+    return data;
   },
 
-  getLastSavedTopics(): Set<string> {
-    return new Set(_savedTopics);
+  // Followed-topic set as topic UUIDs (recommendation-service speaks only UUIDs).
+  async getFollowedTopicIds(): Promise<Set<string>> {
+    if (isDemoMode()) return new Set(_followedTopics);
+    const { data } = await recommendationApi.get<{ id: string; name: string }[]>(
+      '/api/v1/subscriptions/topics',
+    );
+    return new Set(data.map((t) => t.id));
   },
 
-  resetTopicPreferences(): void {
-    _followedTopics.clear();
-    _savedTopics.forEach(tag => _followedTopics.add(tag));
+  async followTopic(topicId: string): Promise<void> {
+    if (isDemoMode()) { _followedTopics.add(topicId); return; }
+    await recommendationApi.post(`/api/v1/subscriptions/topics/${topicId}`);
+  },
+
+  async unfollowTopic(topicId: string): Promise<void> {
+    if (isDemoMode()) { _followedTopics.delete(topicId); return; }
+    await recommendationApi.delete(`/api/v1/subscriptions/topics/${topicId}`);
+  },
+
+  // Keyword search (PRD §3.6). Real mode hits content-service full-text search; demo filters
+  // the mock feed. Page-based so the results page can load more.
+  async searchPosts(q: string, page: number): Promise<{ posts: Post[]; totalElements: number; hasMore: boolean }> {
+    if (isDemoMode()) {
+      const needle = q.toLowerCase();
+      const posts = BASE_POSTS.filter(
+        (p) => p.title.toLowerCase().includes(needle) || p.excerpt.toLowerCase().includes(needle),
+      );
+      return { posts, totalElements: posts.length, hasMore: false };
+    }
+    const { data } = await api.get<{ content: PostResponse[]; totalElements: number; totalPages: number; page: number }>(
+      '/api/v1/posts/search',
+      { params: { q, page, size: 20 } },
+    );
+    return {
+      posts: data.content.map(toFeedPost),
+      totalElements: data.totalElements,
+      hasMore: data.page < data.totalPages - 1,
+    };
   },
 };

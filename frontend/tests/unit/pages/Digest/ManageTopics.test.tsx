@@ -2,35 +2,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ManageTopics from '../../../../src/pages/Digest/ManageTopics';
+import type { TopicCategory } from '../../../../src/types';
 
-// Minimal deterministic topic data
-vi.mock('../../../../src/services/content.service', () => ({
-  contentService: {
-    getTopicCategories: () => [
-      {
-        id: 'cat-a',
-        label: 'Category A',
-        sortOrder: 0,
-        topics: [
-          { id: 'alpha', name: 'alpha', displayName: 'Alpha', sortOrder: 0, totalPostCount: 10, postsThisWeek: 2, postsPrevWeek: 1, activityScore: 0.5, isHot: false, followerCount: 100 },
-          { id: 'beta',  name: 'beta',  displayName: 'Beta',  sortOrder: 1, totalPostCount: 8,  postsThisWeek: 1, postsPrevWeek: 1, activityScore: 0.4, isHot: false, followerCount: 80  },
-          { id: 'gamma', name: 'gamma', displayName: 'Gamma', sortOrder: 2, totalPostCount: 5,  postsThisWeek: 1, postsPrevWeek: 1, activityScore: 0.3, isHot: false, followerCount: 60  },
-        ],
-      },
+// Minimal deterministic topic catalog (id === name for the mock so follow-key assertions read clearly).
+const CATEGORIES: TopicCategory[] = [
+  {
+    id: 'cat-a',
+    label: 'Category A',
+    sortOrder: 0,
+    topics: [
+      { id: 'alpha', name: 'alpha', displayName: 'Alpha', sortOrder: 0, totalPostCount: 10, postsThisWeek: 2, postsPrevWeek: 1, activityScore: 0.5, isHot: false, followerCount: 100 },
+      { id: 'beta',  name: 'beta',  displayName: 'Beta',  sortOrder: 1, totalPostCount: 8,  postsThisWeek: 1, postsPrevWeek: 1, activityScore: 0.4, isHot: false, followerCount: 80  },
+      { id: 'gamma', name: 'gamma', displayName: 'Gamma', sortOrder: 2, totalPostCount: 5,  postsThisWeek: 1, postsPrevWeek: 1, activityScore: 0.3, isHot: false, followerCount: 60  },
     ],
   },
-}));
+];
 
 describe('ManageTopics', () => {
-  let onToggle: (tag: string) => void;
+  let onToggle: (topicId: string) => void;
 
   beforeEach(() => {
-    onToggle = vi.fn<(tag: string) => void>();
+    onToggle = vi.fn<(topicId: string) => void>();
   });
 
   it('(MT-1) renders followed topics before unfollowed on initial load', () => {
     render(
-      <ManageTopics followedTopics={new Set(['gamma'])} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['gamma'])} onToggle={onToggle} />
     );
     const buttons = screen.getAllByRole('button', { name: /Follow|Following/i });
     // gamma is followed — its button text is "Following"
@@ -45,14 +42,14 @@ describe('ManageTopics', () => {
 
   it('(MT-2) follow-pill shows correct followed count', () => {
     render(
-      <ManageTopics followedTopics={new Set(['alpha', 'beta'])} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['alpha', 'beta'])} onToggle={onToggle} />
     );
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
   it('(MT-3) clicking Follow fires onToggle with the correct tag', async () => {
     render(
-      <ManageTopics followedTopics={new Set()} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} />
     );
     const followButton = screen.getAllByRole('button', { name: /Follow Alpha/i })[0];
     await userEvent.click(followButton);
@@ -61,7 +58,7 @@ describe('ManageTopics', () => {
 
   it('(MT-4) clicking Following (unfollow) fires onToggle with the correct tag', async () => {
     render(
-      <ManageTopics followedTopics={new Set(['beta'])} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set(['beta'])} onToggle={onToggle} />
     );
     const unfollowButton = screen.getByRole('button', { name: /Unfollow Beta/i });
     await userEvent.click(unfollowButton);
@@ -70,7 +67,7 @@ describe('ManageTopics', () => {
 
   it('(MT-5) search filters topics by displayName', async () => {
     render(
-      <ManageTopics followedTopics={new Set()} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} />
     );
     const input = screen.getByPlaceholderText('Filter topics…');
     await userEvent.type(input, 'Alph');
@@ -81,7 +78,7 @@ describe('ManageTopics', () => {
 
   it('(MT-6) search matches by slug (name) too', async () => {
     render(
-      <ManageTopics followedTopics={new Set()} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} />
     );
     const input = screen.getByPlaceholderText('Filter topics…');
     await userEvent.type(input, 'gamma');
@@ -91,7 +88,7 @@ describe('ManageTopics', () => {
 
   it('(MT-7) clearing search restores all topics', async () => {
     render(
-      <ManageTopics followedTopics={new Set()} onToggle={onToggle} />
+      <ManageTopics categories={CATEGORIES} followedTopics={new Set()} onToggle={onToggle} />
     );
     const input = screen.getByPlaceholderText('Filter topics…');
     await userEvent.type(input, 'Alph');

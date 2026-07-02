@@ -16,5 +16,7 @@ public interface TopicSubscriptionRepository extends JpaRepository<TopicSubscrip
 
     boolean existsByUserIdAndTopicId(UUID userId, UUID topicId);
 
+    long countByUserId(UUID userId);
+
     void deleteByUserId(UUID userId);
 }

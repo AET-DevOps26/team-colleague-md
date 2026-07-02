@@ -252,6 +252,7 @@ services:
       - ./genai-service/.env
     environment:
       # Peer service URLs (full set for redundancy; genai talks to none of them today).
+      - INTERNAL_SERVICE_TOKEN=dev-only-internal-service-token
       - USER_SERVICE_BASE_URL=http://user-service:8081
       - CONTENT_SERVICE_BASE_URL=http://content-service:8082
       - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083

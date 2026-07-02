@@ -8,9 +8,10 @@ delegates business logic to the summarizer service.
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse
+from app.security import require_internal_service
 from app.services.summarizer import summarize
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/v1/genai",
     tags=["GenAI"],
+    dependencies=[Depends(require_internal_service)],
 )
 
 
