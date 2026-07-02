@@ -125,7 +125,7 @@ export default function PastDigests() {
           {todayDigest.status === 'generated' && (
             <button
               className={styles.todayCta}
-              onClick={() => navigate(`/digest/${todayDigest.date}`, { state: { from: 'Digest' } })}
+              onClick={() => navigate(`/digest/${todayDigest.id}`, { state: { from: 'Digest' } })}
             >
               Read{' '}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -148,9 +148,9 @@ export default function PastDigests() {
           <div className={styles.digestGrid}>
             {group.items.map(item => (
               <DigestCard
-                key={item.date}
+                key={item.id}
                 item={item}
-                onClick={() => navigate(`/digest/${item.date}`, { state: { from: 'Digest' } })}
+                onClick={() => navigate(`/digest/${item.id}`, { state: { from: 'Digest' } })}
               />
             ))}
           </div>

@@ -38,7 +38,7 @@ export default function App() {
                     <Route path="post/:id/edit" element={<PostEditor />} />
                     <Route path="post/:id" element={<PostDetail />} />
                     <Route path="digest" element={<Digest />} />
-                    <Route path="digest/:date" element={<DigestPost />} />
+                    <Route path="digest/:id" element={<DigestPost />} />
                     <Route path="topics" element={<Topic />} />
                     <Route path="search" element={<Search />} />
                     <Route path="profile/:username" element={<UserProfile />} />
