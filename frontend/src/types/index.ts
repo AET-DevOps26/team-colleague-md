@@ -65,6 +65,7 @@ export interface Post {
 }
 
 export interface TodayDigest {
+  id: string;
   date: string;
   title: string;
   topStorySubtitle: string;
@@ -75,6 +76,7 @@ export interface TodayDigest {
 }
 
 export interface DigestListItem {
+  id: string;
   date: string;
   displayDate: string;
   title: string;

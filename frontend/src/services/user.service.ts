@@ -1,7 +1,4 @@
 import type { UserProfile, UpdateUserRequest, DraftPost, Post, PostResponse, UserPreferences } from '../types';
-import { contentService } from './content.service';
-import { isDemoMode } from './demoMode';
-import { MOCK_BOOKMARKS, MOCK_LIKED, MOCK_DRAFTS } from './mocks/userMocks';
 import api from './api';
 import userApi from './userApi';
 
@@ -57,30 +54,23 @@ export const userService = {
     return data;
   },
 
-  // Published posts authored by the user. Demo mode serves seeded fixtures so the
-  // profile and home feed look populated; real mode hits content-service with no fallback.
+  // Published posts authored by the user — content-service, no fallback.
   async getUserPosts(username: string): Promise<Post[]> {
-    if (isDemoMode()) return contentService.getPostsByAuthor(username);
     const userId = await resolveUserId(username);
     return fetchUserPostPage(`/api/v1/users/${userId}/posts`);
   },
 
   async getUserBookmarks(username: string): Promise<Post[]> {
-    if (isDemoMode()) return MOCK_BOOKMARKS[username] ?? [];
     const userId = await resolveUserId(username);
     return fetchUserPostPage(`/api/v1/users/${userId}/bookmarks`);
   },
 
   async getUserLikedPosts(username: string): Promise<Post[]> {
-    if (isDemoMode()) {
-      return (MOCK_LIKED[username] ?? []).map((p) => ({ ...p, isLikedByMe: true }));
-    }
     const userId = await resolveUserId(username);
     return fetchUserPostPage(`/api/v1/users/${userId}/likes`);
   },
 
   async getUserDrafts(_username: string): Promise<DraftPost[]> {
-    if (isDemoMode()) return [...MOCK_DRAFTS];
     const { data } = await api.get<{ content: PostResponse[] }>('/api/v1/me/drafts', {
       params: { page: 0, size: 50 },
     });
