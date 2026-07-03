@@ -331,6 +331,69 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
   }
 }
 
+/**
+ * Purges all seed-owned content: posts authored by a seed user or by the digest
+ * system author, their child rows, plus any votes/bookmarks/comments a seed user
+ * placed on a *non-seed* post. Catches stale rows from earlier fixture versions
+ * because ownership is resolved from live author/user ids, not the current fixtures.
+ * Topics are intentionally left intact (shared, no author; reseed recomputes their
+ * counters). When dryRun, rolls back so nothing is mutated but counts are reported.
+ */
+export async function resetSeedContent(
+  client: ContentDbClient,
+  seedUserIds: string[],
+  { dryRun }: { dryRun: boolean },
+): Promise<{ posts: number; votes: number; bookmarks: number; comments: number }> {
+  const postAuthorIds = [...seedUserIds, DIGEST_SYSTEM_AUTHOR_ID];
+
+  await client.query("BEGIN");
+  try {
+    const seedPostRows = await client.query<{ id: string }>(
+      "SELECT id::text FROM posts WHERE author_id = ANY($1::uuid[])",
+      [postAuthorIds],
+    );
+    const seedPostIds = seedPostRows.rows.map((row) => row.id);
+
+    // Resolve the comments that will be deleted up front so their COMMENT-target
+    // votes can be purged too — otherwise a non-seed user's vote on a seed comment
+    // would be stranded pointing at a missing row (votes are polymorphic, no FK).
+    const seedCommentRows = await client.query<{ id: string }>(
+      "SELECT id::text FROM comments WHERE post_id = ANY($1::uuid[]) OR author_id = ANY($2::uuid[])",
+      [seedPostIds, seedUserIds],
+    );
+    const seedCommentIds = seedCommentRows.rows.map((row) => row.id);
+
+    const votes = await client.query(
+      `DELETE FROM votes WHERE (target_type = 'POST' AND target_id = ANY($1::uuid[]))
+         OR (target_type = 'COMMENT' AND target_id = ANY($2::uuid[]))
+         OR user_id = ANY($3::uuid[])`,
+      [seedPostIds, seedCommentIds, seedUserIds],
+    );
+    const bookmarks = await client.query(
+      "DELETE FROM bookmarks WHERE post_id = ANY($1::uuid[]) OR user_id = ANY($2::uuid[])",
+      [seedPostIds, seedUserIds],
+    );
+    const comments = await client.query(
+      "DELETE FROM comments WHERE id = ANY($1::uuid[])",
+      [seedCommentIds],
+    );
+    await client.query("DELETE FROM post_source_urls WHERE post_id = ANY($1::uuid[])", [seedPostIds]);
+    await client.query("DELETE FROM post_topics WHERE post_id = ANY($1::uuid[])", [seedPostIds]);
+    const posts = await client.query("DELETE FROM posts WHERE id = ANY($1::uuid[])", [seedPostIds]);
+
+    await client.query(dryRun ? "ROLLBACK" : "COMMIT");
+    return {
+      posts: posts.rowCount ?? 0,
+      votes: votes.rowCount ?? 0,
+      bookmarks: bookmarks.rowCount ?? 0,
+      comments: comments.rowCount ?? 0,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  }
+}
+
 export async function getSeedPostIds(client: ContentDbClient): Promise<Set<string>> {
   const ids = SEED_POSTS.map((post) => post.id);
   const result = await client.query<{ id: string }>(

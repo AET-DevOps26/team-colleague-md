@@ -1,5 +1,6 @@
 import { parseSeedOptions } from "./seed/cli.ts";
 import { getSeedConfig } from "./seed/config.ts";
+import { resetSeed } from "./seed/reset.ts";
 import { seedContent } from "./seed/services/content/seedContent.ts";
 import { seedRecommendations } from "./seed/services/recommendations/seedRecommendations.ts";
 import { seedUsers } from "./seed/services/users/seedUsers.ts";
@@ -10,6 +11,11 @@ async function main() {
 
   console.log(`Verita local seed (${options.dryRun ? "dry run" : "write mode"})`);
   console.log(`Domains: ${options.only.join(", ")}`);
+
+  // Purge stale seed rows before re-inserting so removed fixtures don't linger.
+  if (options.reset) {
+    await resetSeed(config, options);
+  }
 
   if (options.only.includes("users")) {
     await seedUsers(config, options);

@@ -3,6 +3,7 @@ export type SeedDomain = "users" | "content" | "recommendations";
 export interface SeedOptions {
   dryRun: boolean;
   only: SeedDomain[];
+  reset: boolean;
 }
 
 const SUPPORTED_DOMAINS: SeedDomain[] = ["users", "content", "recommendations"];
@@ -10,12 +11,18 @@ const SUPPORTED_DOMAINS: SeedDomain[] = ["users", "content", "recommendations"];
 export function parseSeedOptions(args: string[]): SeedOptions {
   let dryRun = false;
   let only: SeedDomain[] = [...SUPPORTED_DOMAINS];
+  let reset = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
 
     if (arg === "--dry-run") {
       dryRun = true;
+      continue;
+    }
+
+    if (arg === "--reset") {
+      reset = true;
       continue;
     }
 
@@ -34,10 +41,10 @@ export function parseSeedOptions(args: string[]): SeedOptions {
       continue;
     }
 
-    throw new Error(`Unknown option "${arg}". Supported options: --dry-run, --only users,content,recommendations.`);
+    throw new Error(`Unknown option "${arg}". Supported options: --dry-run, --reset, --only users,content,recommendations.`);
   }
 
-  return { dryRun, only };
+  return { dryRun, only, reset };
 }
 
 function parseDomains(value: string): SeedDomain[] {

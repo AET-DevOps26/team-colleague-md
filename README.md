@@ -256,7 +256,17 @@ npm run seed:local -- --only users
 npm run seed:local -- --only content
 npm run seed:local -- --only recommendations
 npm run seed:local -- --dry-run --only users,content,recommendations
+npm run seed:local -- --reset            # purge stale seed rows, then re-seed
+npm run seed:local -- --reset --dry-run  # preview what --reset would delete
 ```
+
+The seed **upserts by id**, so fixtures removed in a newer seed would otherwise
+linger. `--reset` deletes seed-owned rows first (users with `@example.com` emails
+and the data they own, plus system digests), resolving ownership from the live DB
+so stale rows from earlier fixtures are caught — while data created by real users
+is preserved. Topics are left intact (shared; their counters are recomputed on
+re-seed). `--reset` honors `--only` and, with `--dry-run`, reports counts without
+mutating anything.
 
 Connection defaults match `docker-compose.yml` and can be overridden:
 
@@ -303,6 +313,12 @@ npm run seed:rancher
 # Azure VM (prod compose): ships the seed over SSH and runs it in a one-off
 # node container on the compose network, reading the VM's Ansible-written .env.
 VM_HOST=<public-ip> ./scripts/seed-vm.sh
+
+# Both wrappers accept SEED_RESET=1 to purge stale seed rows before re-seeding
+# (same semantics as `seed:local -- --reset`), so updated fixtures don't leave
+# old demo data behind:
+SEED_RESET=1 npm run seed:rancher
+VM_HOST=<public-ip> SEED_RESET=1 ./scripts/seed-vm.sh
 ```
 
 `seed:rancher` is guarded to `verita-dev` only. Seeding the real prod namespace is
