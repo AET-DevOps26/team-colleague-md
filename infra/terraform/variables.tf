@@ -1,13 +1,13 @@
 variable "location" {
   description = "Azure region for all resources"
   type        = string
-  default     = "francecentral"
+  default     = "austriaeast"
 }
 
 variable "vm_size" {
   description = "Azure VM size"
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_D2_v2_Promo"
 }
 
 variable "project_name" {
