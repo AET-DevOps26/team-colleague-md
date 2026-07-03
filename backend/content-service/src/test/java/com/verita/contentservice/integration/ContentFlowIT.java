@@ -10,6 +10,7 @@ import com.nimbusds.jwt.SignedJWT;
 import com.verita.contentservice.TestcontainersConfiguration;
 import com.verita.contentservice.client.GenAiClient;
 import com.verita.contentservice.client.UserClient;
+import com.verita.contentservice.filter.InternalAuthFilter;
 import com.verita.contentservice.dto.GenAiSummarizeResponse;
 import com.verita.contentservice.dto.UserProfileDto;
 import java.nio.charset.StandardCharsets;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -57,6 +59,9 @@ class ContentFlowIT {
 
     @Value("${app.jwt-secret}")
     private String jwtSecret;
+
+    @Value("${app.internal-service-token}")
+    private String internalServiceToken;
 
     private MockMvc mockMvc;
     private String bearer;
@@ -128,5 +133,35 @@ class ContentFlowIT {
     void getAllPosts_isPublic_returns200WithoutToken() throws Exception {
         mockMvc.perform(get("/api/v1/posts"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void getMyDigests_withoutToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/posts/digests"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getMyDigests_returnsOnlyCallersPersonalisedDigests() throws Exception {
+        // A digest personalised for the caller (ADR-0013: target_user_id = caller).
+        createDigestForUser("Your daily briefing", userId);
+        // A digest for someone else, and a global (null target) digest — neither should surface.
+        createDigestForUser("Someone else's briefing", UUID.randomUUID());
+        createDigestForUser("Global briefing", null);
+
+        mockMvc.perform(get("/api/v1/posts/digests").header("Authorization", bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Your daily briefing"))
+                .andExpect(jsonPath("$.content[0].type").value("DIGEST"));
+    }
+
+    private void createDigestForUser(String title, UUID targetUserId) throws Exception {
+        String target = targetUserId == null ? "null" : "\"" + targetUserId + "\"";
+        mockMvc.perform(post("/internal/v1/posts/digest")
+                        .header(InternalAuthFilter.HEADER, internalServiceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"" + title + "\",\"content\":\"Digest body content\",\"targetUserId\":" + target + "}"))
+                .andExpect(status().isCreated());
     }
 }

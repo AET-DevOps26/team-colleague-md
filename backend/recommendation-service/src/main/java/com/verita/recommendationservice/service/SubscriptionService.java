@@ -17,6 +17,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SubscriptionService {
 
+    /** Maximum topics a user may follow at once; the Manage Topics UI mirrors this cap. */
+    static final int MAX_FOLLOWED_TOPICS = 10;
+
     private final TopicSubscriptionRepository topicSubscriptionRepository;
     private final UserSubscriptionRepository userSubscriptionRepository;
 
@@ -33,6 +36,10 @@ public class SubscriptionService {
     public boolean subscribeToTopic(UUID userId, UUID topicId) {
         if (topicSubscriptionRepository.existsByUserIdAndTopicId(userId, topicId)) {
             return false;
+        }
+        if (topicSubscriptionRepository.countByUserId(userId) >= MAX_FOLLOWED_TOPICS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "You can follow at most " + MAX_FOLLOWED_TOPICS + " topics");
         }
         TopicSubscription sub = new TopicSubscription();
         sub.setUserId(userId);

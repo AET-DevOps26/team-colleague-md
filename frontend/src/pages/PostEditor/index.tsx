@@ -1,10 +1,11 @@
 import Markdown from '../../components/ui/Markdown';
-import Toast from '../../components/ui/Toast';
 import MarkdownToolbar from './components/MarkdownToolbar';
 import TagInput from './components/TagInput';
 import ImagePasteModal from './components/ImagePasteModal';
 import ExitGuardModal from './components/ExitGuardModal';
 import { usePostEditor } from './usePostEditor';
+import { useNavigationHistory } from '../../contexts/NavigationHistoryContext';
+import { pageNameFromPath } from '../../utils/pageName';
 import styles from './PostEditor.module.css';
 
 export default function PostEditor() {
@@ -24,8 +25,6 @@ export default function PostEditor() {
     inlineImageInputRef,
     coverInputRef,
     uploading,
-    toast,
-    dismissToast,
     setView,
     setTitle,
     setContent,
@@ -50,6 +49,9 @@ export default function PostEditor() {
     searchTopics,
   } = usePostEditor();
 
+  const { previousPath } = useNavigationHistory();
+  const backLabel = previousPath ? pageNameFromPath(previousPath) : 'Explore';
+
   if (loading) {
     return <div className={styles.editorCanvas}>Loading…</div>;
   }
@@ -60,8 +62,11 @@ export default function PostEditor() {
   return (
     <main className={styles.main}>
       <header className={styles.topbar}>
-        <button type="button" className={styles.backBtn} onClick={requestExit} aria-label="Back">
-          ← Explore
+        <button type="button" className={styles.backBtn} onClick={requestExit} aria-label={`Back to ${backLabel}`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          <span>{backLabel}</span>
         </button>
         <div className={styles.spacer} />
         <span className={styles.statPill}>
@@ -212,13 +217,6 @@ export default function PostEditor() {
       </div>
 
       <ImagePasteModal file={pasteFile} onConfirm={confirmInlineImage} onCancel={cancelInlineImage} />
-
-      <Toast
-        message={toast?.message ?? ''}
-        show={toast !== null}
-        error={toast?.error ?? false}
-        onHide={dismissToast}
-      />
 
       <ExitGuardModal
         open={exitOpen}

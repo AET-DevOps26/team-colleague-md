@@ -2,6 +2,7 @@ package com.verita.contentservice.controller;
 
 import com.verita.api.InteractionsApi;
 import com.verita.contentservice.service.InteractionService;
+import com.verita.model.CommentLikeRequest;
 import com.verita.model.CommentLikeResponse;
 import com.verita.model.LikeRequest;
 import com.verita.model.PostLikeResponse;
@@ -36,7 +37,7 @@ public class InteractionController implements InteractionsApi {
     }
 
     @Override
-    public ResponseEntity<CommentLikeResponse> likeComment(UUID id) {
-        return ResponseEntity.ok(interactionService.likeComment(id));
+    public ResponseEntity<CommentLikeResponse> likeComment(UUID id, @Valid CommentLikeRequest commentLikeRequest) {
+        return ResponseEntity.ok(interactionService.likeComment(id, commentLikeRequest.getType()));
     }
 }

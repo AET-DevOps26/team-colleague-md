@@ -65,6 +65,7 @@ export interface Post {
 }
 
 export interface TodayDigest {
+  id: string;
   date: string;
   title: string;
   topStorySubtitle: string;
@@ -75,6 +76,7 @@ export interface TodayDigest {
 }
 
 export interface DigestListItem {
+  id: string;
   date: string;
   displayDate: string;
   title: string;
@@ -107,6 +109,13 @@ export interface TopicCategory {
 export interface FeedPage {
   posts: Post[];
   nextCursor: string | null;
+}
+
+/** Mirrors user-service OpenAPI UserPreferences (GET/PUT /users/me/preferences). */
+export interface UserPreferences {
+  digestFrequency: 'DAILY' | 'WEEKLY' | 'OFF';
+  showBookmarks: boolean;
+  showLikes: boolean;
 }
 
 export interface PostSource {

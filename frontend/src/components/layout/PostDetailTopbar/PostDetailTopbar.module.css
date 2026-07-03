@@ -37,12 +37,19 @@
   color: var(--text-secondary);
   padding: 6px 10px 6px 6px;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: 14.5px;
   font-weight: 500;
   background: none;
   border: none;
   cursor: pointer;
   transition: background 120ms ease-out, color 120ms ease-out;
+}
+
+.backBtn span {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .backBtn:hover {

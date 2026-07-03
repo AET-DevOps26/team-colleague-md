@@ -1,12 +1,11 @@
 # Frontend Testing
 
-Verita's frontend test suite has three layers:
+Verita's frontend test suite has two layers:
 
-| Layer | Tool | Command | When to run |
-|---|---|---|---|
-| **Unit / Component** | Vitest + React Testing Library | `npm run test:unit` | Every commit — fast, no browser |
-| **E2E** | Playwright | `npm test` | Before PR — user flows in real browser |
-| **API Contract** | Playwright + `page.route()` | `npm test` | Before PR — OpenAPI shape compliance |
+| Layer | Tool | Command | When to run | CI |
+|---|---|---|---|---|
+| **Unit / Component** | Vitest + React Testing Library | `npm run test:unit` | Every commit — fast, no browser | ✅ |
+| **E2E** | Playwright | `npm test` | Before PR — real frontend against a live seeded backend | ❌ local-only |
 
 ---
 
@@ -26,14 +25,14 @@ frontend/tests/
 │   └── pages/Digest/
 │       ├── topicSort.test.ts
 │       └── ManageTopics.test.tsx
-├── e2e/                      ← Playwright: critical user flows
-│   ├── auth.spec.ts
-│   ├── digest.spec.ts
-│   ├── home.spec.ts
-│   ├── profile.spec.ts
-│   └── settings.spec.ts
-└── api/                      ← Playwright + page.route(): API contract
-    └── profile.api.spec.ts
+└── e2e/                      ← Playwright: critical user flows (real seeded backend)
+    ├── support.ts               ← shared loginAs() + seed-user fixtures
+    ├── auth.spec.ts
+    ├── digest.spec.ts
+    ├── home.spec.ts
+    ├── profile.spec.ts
+    ├── settings.spec.ts
+    └── topic.spec.ts
 ```
 
 ---
@@ -48,11 +47,14 @@ npm run test:unit
 npm run test:unit:watch   # watch mode
 npm run test:unit:ui      # Vitest browser UI
 
-# E2E + API Contract (slow, requires browser)
-npm test                  # requires: npx playwright install (first time)
+# E2E (slow, requires browser + a live seeded backend)
+docker compose up -d && npm run seed:local   # from the repo root
+cd frontend && npx playwright install         # first time only
+npm test
 ```
 
-E2E tests do **not** require a real backend — they use the in-memory mock service and `page.route()` to mock auth endpoints.
+The E2E suite runs the real frontend against a **live, seeded backend** (no mock layer, no
+route-mocking of data). It is **not run in CI**. Reseed before each run — some specs mutate the DB.
 
 ---
 
@@ -143,7 +145,8 @@ Uses `vi.mock('../../../../src/services/content.service')` with three topics: al
 
 ## E2E tests
 
-All E2E tests mock `**/api/v1/auth/refresh` so they work without a real backend.
+All E2E tests run against the real, seeded backend and log in with a seed user via
+`tests/e2e/support.ts` (`loginAs`) — no route-mocking of data.
 
 ### `tests/e2e/home.spec.ts` — Layout + Interactions + Auth State
 
@@ -185,15 +188,11 @@ All E2E tests mock `**/api/v1/auth/refresh` so they work without a real backend.
 | ID | Test | Type |
 |---|---|---|
 | DIG-1 | Logged-in user sees today hero and past digests | Static render |
-| DIG-2 | Logged-out user sees sign-in prompt on /digest | Auth gate |
-| DIG-3 | Tabs switch between Past Digests and Manage Topics | Navigation |
-| DIG-4 | Logged-in user can access Manage Topics tab and see topic grid | Navigation |
-| DIG-5 | Follow toggle updates following count in the pill | Interaction |
-| DIG-6 | Following a topic shows follow toast | Feedback |
-| DIG-7 | Unfollowing a topic shows unfollow toast | Feedback |
-| DIG-8 | Load more adds more digest cards | Interaction |
-| DIG-9 | Search filters topic list by displayName | Interaction |
-| DIG-10 | Back button navigates away from digest page | Navigation |
+| DIG-2 | Opening the today digest renders the reader (badge, read time, Save/Share, back) | Reader |
+| DIG-3 | Reader shows the personalisation note when logged in | Reader |
+| DIG-4 | Digest is a single past-digests view with no tab bar (ADR-0014) | Navigation |
+| DIG-5 | Logged-out user sees the public today digest + sign-in hero (ADR-0016) | Auth gate |
+| DIG-6 | Logged-out user can open the public digest reader with an auth upsell | Reader |
 
 ### `tests/e2e/profile.spec.ts` — User Profile
 
@@ -244,39 +243,22 @@ All E2E tests mock `**/api/v1/auth/refresh` so they work without a real backend.
 
 ---
 
-## API Contract tests
-
-Tests in `tests/api/` verify that the frontend renders correctly when given **OpenAPI-spec-shaped** responses via `page.route()`. These tests will naturally evolve into true integration tests once the real backend is wired up (remove the `page.route()` mock).
-
-### `tests/api/profile.api.spec.ts`
-
-All tests mock auth refresh + user/profile API responses to match user-service OpenAPI shapes.
-
-| ID | Test | API endpoint |
-|---|---|---|
-| API-1 | GET /api/v1/users/me response renders own profile | `GET /user/api/v1/users/me` |
-| API-2 | GET /api/v1/users/:userId response renders other user profile | `GET /user/api/v1/users/{id}` |
-| API-3 | Profile stats display followerCount, postCount from API shape | `GET /user/api/v1/users/{id}` |
-| API-4 | PATCH /api/v1/users/me returns new profile shape and reflects in UI | `PATCH /user/api/v1/users/me` |
-| API-5 | Visiting profile with unknown username shows a profile page (fallback) | `GET /user/api/v1/users/{id}` |
-| API-6 | UserProfile handles all optional API fields gracefully | `GET /user/api/v1/users/me` |
-| API-7 | PATCH request body contains normalized website URL | `PATCH /user/api/v1/users/me` |
-| API-8 | GET /api/v1/users/{id}/posts PostPage shape renders post cards | `GET /user/api/v1/users/{id}/posts` |
-| API-9 | GET /api/v1/users/{id}/bookmarks PostPage shape renders Saved cards | `GET /user/api/v1/users/{id}/bookmarks` |
-| API-10 | GET /api/v1/users/{id}/likes PostPage shape renders liked cards | `GET /user/api/v1/users/{id}/likes` |
-| API-11 | GET /api/v1/me/drafts PostPage shape — Drafts tab renders draft cards | `GET /user/api/v1/me/drafts` |
-| API-12 | DELETE /api/v1/posts/{id} is called after delete confirmed; post removed | `DELETE /user/api/v1/posts/{id}` |
-| API-13 | PUT /api/v1/posts/{id} body contains status:DRAFT when unpublish confirmed | `PUT /user/api/v1/posts/{id}` |
+> **Removed:** the former `tests/api/profile.api.spec.ts` mock-contract suite (API-1…API-13)
+> verified the frontend against `page.route()`-mocked OpenAPI-shaped responses as a pre-integration
+> stand-in. Now that the backend is integrated, that coverage lives in `e2e/profile.spec.ts`
+> running against the real seeded backend.
 
 ---
 
-## Mock data and demo accounts
+## Seed accounts and the heavy E2E suite
 
-The app uses an in-memory mock service (`src/services/content.service.ts`). E2E tests inject a `verita_user` into `localStorage` and mock the refresh endpoint to simulate a logged-in session without a real backend.
+The app has no in-app mock layer — all data comes from the real backend. The E2E suite is a
+**heavy, local-only** suite (not run in CI): it runs the real frontend against a live, seeded
+backend. Bring up `docker compose up` and `npm run seed:local`, then `npm test`. Identity comes
+from a real login with a seed user via `tests/e2e/support.ts` (`loginAs`); assertions key off the
+seed fixtures. Some specs mutate the DB (profile edits, delete/unpublish), so reseed before each run.
 
-Demo accounts come from the seed (`scripts/seed`) and authenticate against the real backend (all share `Password123!`):
-- `alexchen` (Alex Chen — ADMIN)
-- `sarahjkim` (Sarah Kim — VERIFIED)
-- `marcello_r` (Marcello Rossi — USER)
-
-To preview populated post/bookmark/like/draft tabs before content-service is seeded, run the demo-flag build (`npm run dev:demo`, `VITE_DEMO_MODE`) — auth stays real, only those data-sparse reads use a mock display layer (ADR-0011).
+Seed accounts (`scripts/seed`) authenticate against the real backend (all share `Password123!`):
+- `alexchen` — `alex@example.com` (Alex Chen)
+- `sarahjkim` — `sarah.kim@example.com` (Sarah Kim — VERIFIED)
+- `marcello_r` — `marcello.rossi@example.com` (Marcello Rossi)

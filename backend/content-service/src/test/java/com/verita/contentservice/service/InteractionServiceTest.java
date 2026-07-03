@@ -12,6 +12,7 @@ import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.security.SecurityUtils;
+import com.verita.model.CommentLikeRequest;
 import com.verita.model.LikeRequest;
 import com.verita.model.PostLikeResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -134,15 +135,35 @@ public class InteractionServiceTest {
     // ---- likeComment --------------------------------------------------------
 
     @Test
-    void likeComment_addsUpvote() {
+    void likeComment_like_castsNewUpvote() {
         CommentEntity comment = new CommentEntity();
         comment.setId(UUID.randomUUID());
         when(commentRepository.findByIdAndDeletedFalse(comment.getId())).thenReturn(Optional.of(comment));
+        when(voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, VoteTargetType.COMMENT, comment.getId()))
+                .thenReturn(Optional.empty());
 
-        var response = interactionService.likeComment(comment.getId());
+        var response = interactionService.likeComment(comment.getId(), CommentLikeRequest.TypeEnum.LIKE);
 
         assertTrue(response.getIsLikedByMe());
         verify(voteRepository).save(any(VoteEntity.class));
+        verify(commentRepository).refreshLikeCount(comment.getId());
+    }
+
+    @Test
+    void likeComment_none_removesExistingVote() {
+        CommentEntity comment = new CommentEntity();
+        comment.setId(UUID.randomUUID());
+        VoteEntity existing = new VoteEntity();
+        existing.setVoteType(VoteType.UPVOTE);
+        when(commentRepository.findByIdAndDeletedFalse(comment.getId())).thenReturn(Optional.of(comment));
+        when(voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, VoteTargetType.COMMENT, comment.getId()))
+                .thenReturn(Optional.of(existing));
+
+        var response = interactionService.likeComment(comment.getId(), CommentLikeRequest.TypeEnum.NONE);
+
+        assertFalse(response.getIsLikedByMe());
+        verify(voteRepository).delete(existing);
+        verify(voteRepository, never()).save(any());
         verify(commentRepository).refreshLikeCount(comment.getId());
     }
 
@@ -152,7 +173,7 @@ public class InteractionServiceTest {
         when(commentRepository.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> interactionService.likeComment(id));
+                () -> interactionService.likeComment(id, CommentLikeRequest.TypeEnum.LIKE));
 
         assertEquals(404, ex.getStatusCode().value());
     }

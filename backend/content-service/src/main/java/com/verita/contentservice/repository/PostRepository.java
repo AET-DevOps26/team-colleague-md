@@ -12,10 +12,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.time.OffsetDateTime;
 public interface PostRepository extends JpaRepository<PostEntity, UUID> {
     Page<PostEntity> findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus status, PostType type, Pageable pageable);
     Page<PostEntity> findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, PostType type, String topicName, Pageable pageable);
     Page<PostEntity> findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(UUID authorId, PostStatus status, Pageable pageable);
+    Page<PostEntity> findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(UUID targetUserId, PostType type, Pageable pageable);
+    Optional<PostEntity> findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(PostType type);
+    Optional<PostEntity> findFirstByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
+            UUID targetUserId, PostType type, OffsetDateTime start, OffsetDateTime end);
+    List<PostEntity> findByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+            UUID targetUserId, PostType type, OffsetDateTime start, OffsetDateTime end);
     List<PostEntity> findByAuthorIdAndDeletedFalse(UUID authorId);
     Optional<PostEntity> findByIdAndDeletedFalse(UUID id);
     @Query(value = "SELECT * FROM posts WHERE deleted = false AND status = 'PUBLISHED'" +
@@ -26,10 +33,10 @@ public interface PostRepository extends JpaRepository<PostEntity, UUID> {
            nativeQuery = true)
     Page<PostEntity> searchPublished(@Param("query") String query, Pageable pageable);
     List<PostEntity> findByIdInAndDeletedFalse(Set<UUID> ids);
-    @Query(value = "select p from PostEntity p where p.id in (select b.post.id from BookmarkEntity b where b.userId = :userId) and p.deleted = false and p.status = 'PUBLISHED' order by p.createdAt desc",
+    @Query(value = "select p from PostEntity p, BookmarkEntity b where b.post.id = p.id and b.userId = :userId and p.deleted = false and p.status = 'PUBLISHED' order by b.createdAt desc",
            countQuery = "select count(p) from PostEntity p where p.id in (select b.post.id from BookmarkEntity b where b.userId = :userId) and p.deleted = false and p.status = 'PUBLISHED'")
     Page<PostEntity> findBookmarkedPublishedPostsByUserId(@Param("userId") UUID userId, Pageable pageable);
-    @Query(value = "select p from PostEntity p where p.id in (select v.targetId from VoteEntity v where v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE') and p.deleted = false and p.status = 'PUBLISHED' order by p.createdAt desc",
+    @Query(value = "select p from PostEntity p, VoteEntity v where v.targetId = p.id and v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE' and p.deleted = false and p.status = 'PUBLISHED' order by v.createdAt desc",
            countQuery = "select count(p) from PostEntity p where p.id in (select v.targetId from VoteEntity v where v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE') and p.deleted = false and p.status = 'PUBLISHED'")
     Page<PostEntity> findLikedPublishedPostsByUserId(@Param("userId") UUID userId, Pageable pageable);
     @Modifying(clearAutomatically = true)

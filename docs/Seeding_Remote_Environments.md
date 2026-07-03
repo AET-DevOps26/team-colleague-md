@@ -16,8 +16,14 @@ covers running the **same** script against the two remote demo environments.
   upsert (`ON CONFLICT (name)`) is compatible with them.
 - The DBs are otherwise **empty of users/posts** until seeded, so a freshly
   deployed environment shows an empty home feed. Run the seed to populate it.
-- The seed only deletes the children of **its own** seed post IDs, so it will
-  not clobber real users/posts created through the UI.
+- By default the seed only deletes the children of **its own** seed post IDs, so
+  it will not clobber real users/posts created through the UI.
+- **`SEED_RESET=1` (a.k.a. `--reset`)** additionally purges stale seed rows before
+  re-seeding: everything owned by users with `@example.com` emails (resolved from
+  the live DB, so rows from fixtures dropped in a newer seed are caught too), plus
+  system digests. Real user-created data is still preserved, and topics are left
+  intact. Use it when updated fixtures would otherwise leave old demo data behind.
+  Combine with `SEED_ONLY` to scope it, and preview with `--reset --dry-run`.
 
 ## Scope
 
@@ -44,6 +50,8 @@ the cluster and local `node`/`npm`. **No Secret access required.**
 npm run seed:rancher
 # or a subset:
 SEED_ONLY=users,content npm run seed:rancher
+# purge stale seed rows first, then re-seed:
+SEED_RESET=1 npm run seed:rancher
 ```
 
 Local ports used while it runs: `5432` (user db), `5433` (content db), `5434`
@@ -65,11 +73,14 @@ GitHub secrets) — nothing secret is needed on your machine.
 VM_HOST=<public-ip> ./scripts/seed-vm.sh
 # subset:
 VM_HOST=<public-ip> SEED_ONLY=users ./scripts/seed-vm.sh
+# purge stale seed rows first, then re-seed:
+VM_HOST=<public-ip> SEED_RESET=1 ./scripts/seed-vm.sh
 ```
 
 Defaults (override via env): `VM_USER=azureuser`, `SSH_KEY=~/.ssh/verita_key`,
 `DEPLOY_DIR=/home/azureuser/verita`. The compose network is auto-detected from
-the running `user-db` container (override with `SEED_NETWORK`).
+the running `user-db` container (override with `SEED_NETWORK`). `SEED_RESET`
+purges stale seed rows before seeding (see *What it does / doesn't seed*).
 
 ## Troubleshooting
 

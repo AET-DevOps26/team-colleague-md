@@ -1,0 +1,251 @@
+/* §2.6 — full-viewport, OPAQUE search overlay that fully occludes the page behind it.
+   Open: scale + translate + fade in. Close: opacity-only fade (.closing, no transform). */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base);
+  opacity: 0;
+  transform: scale(0.985) translateY(4px);
+  transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+
+.overlay.open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.overlay.closing {
+  opacity: 0;
+  transform: none;
+  transition: opacity 220ms var(--ease-out);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 28px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  color: var(--text-secondary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 120ms, color 120ms;
+}
+
+.back:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.inputForm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.inputWrap {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  transition: border-color 120ms, background 120ms;
+}
+
+.inputWrap:focus-within {
+  border-color: var(--accent);
+  background: var(--bg-base);
+  box-shadow: 0 0 0 4px rgba(10, 10, 10, 0.06);
+}
+
+.inputWrap svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  outline: 0;
+  font: 400 14px var(--font-sans);
+  color: var(--text-primary);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--border-default);
+  color: var(--text-secondary);
+  border: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 120ms, color 120ms;
+}
+
+.clear:hover {
+  background: var(--text-secondary);
+  color: var(--bg-base);
+}
+
+.clear svg {
+  width: 11px;
+  height: 11px;
+  color: inherit;
+}
+
+.submit {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 120ms, opacity 120ms;
+}
+
+.submit:hover {
+  background: var(--accent-hover);
+}
+
+.submit:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 28px 80px;
+}
+
+.suggestions {
+  padding-top: 24px;
+}
+
+.sectionLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin: 0 0 12px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sectionHead .sectionLabel {
+  margin: 0;
+}
+
+.clearRecent {
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  font: 600 11px var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 120ms, background 120ms;
+}
+
+.clearRecent:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-base);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, transform 120ms;
+}
+
+.chip:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-default);
+  transform: translateY(-1px);
+}
+
+.chip svg {
+  width: 13px;
+  height: 13px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.emptyState {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  color: var(--text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .overlay.open,
+  .overlay.closing {
+    transition: none;
+    transform: none;
+  }
+}

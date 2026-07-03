@@ -161,6 +161,59 @@ paths:
               schema: { $ref: '#/components/schemas/AvailabilityResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
+  # --- INTERNAL (service-to-service) ---
+  /internal/v1/users/{userId}/preferences:
+    get:
+      operationId: getUserPreferencesByUserId
+      summary: Read another user's preferences (internal)
+      description: |
+        Internal endpoint called by content-service to enforce the bookmark/like privacy
+        toggles when serving another user's profile tabs. Gated by the shared
+        X-Internal-Service-Token (ADR-0007), not a user JWT.
+      tags: [Internal]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserPreferences' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /internal/v1/users/digest-recipients:
+    get:
+      operationId: getDigestRecipients
+      summary: List users eligible for digest generation (internal)
+      description: |
+        Internal endpoint called by content-service's scheduled digest job. Returns users whose
+        digest preference matches the requested frequency. Gated by X-Internal-Service-Token
+        (ADR-0007), not a user JWT.
+      tags: [Internal]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: frequency
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/DigestFrequency' }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 100, minimum: 1, maximum: 500 }
+      responses:
+        '200':
+          description: Digest recipients
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedDigestRecipients' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
   # --- CURRENT USER ---
   /api/v1/users/me:
     get:
@@ -554,6 +607,24 @@ components:
         content:
           type: array
           items: { $ref: '#/components/schemas/User' }
+        page: { type: integer }
+        size: { type: integer }
+        totalPages: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        hasNext: { type: boolean }
+
+    DigestRecipient:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+
+    PaginatedDigestRecipients:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/DigestRecipient' }
         page: { type: integer }
         size: { type: integer }
         totalPages: { type: integer }

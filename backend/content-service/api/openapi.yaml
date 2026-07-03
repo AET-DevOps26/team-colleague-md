@@ -161,6 +161,50 @@ paths:
               schema: { $ref: '#/components/schemas/PostPage' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
+  /api/v1/posts/digests:
+    get:
+      operationId: getMyDigests
+      summary: Get the current user's AI Daily Digests
+      description: >
+        Returns the caller's own digests — DIGEST-type posts whose `target_user_id` equals the
+        authenticated user's `userId` claim (ADR-0013), newest first. Auth-required (fails closed).
+        Until the genai generation pipeline exists this returns empty for every user.
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Digests retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/posts/digests/today/public:
+    get:
+      operationId: getPublicTodayDigest
+      summary: Get today's public digest
+      description: >
+        Returns the newest public digest — a DIGEST-type post with `target_user_id = null`
+        (ADR-0016), readable without authentication so the logged-out `/digest` surface has
+        something to show. A valid token additionally personalises the response (ADR-0006).
+        Responds `404` when no public digest exists.
+      tags: [Posts]
+      security: []
+      responses:
+        '200':
+          description: Public digest retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/v1/posts/{id}:
     get:
       operationId: getPostById
@@ -384,7 +428,8 @@ paths:
   /api/v1/comments/{id}/like:
     post:
       operationId: likeComment
-      summary: Like a comment
+      summary: Like or un-like a comment
+      description: Send LIKE to cast a like. Send NONE to remove an existing like.
       tags: [Interactions]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -392,6 +437,11 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommentLikeRequest' }
       responses:
         '200':
           description: Comment like processed successfully
@@ -662,6 +712,34 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /internal/v1/digests/generate/users/{userId}:
+    post:
+      operationId: generateUserDigest
+      summary: Generate one user's AI Daily Digest (internal)
+      description: >
+        Service-only manual trigger for the same generation orchestration used by the scheduled
+        daily digest job. By default, skips generation when the user already has a digest for the
+        current Platform Day. With force=true, soft-deletes visible same-day digests before storing
+        the regenerated one.
+      tags: [Internal]
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: force
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Digest generation result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestGenerationResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -690,6 +768,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
+    BadGateway:
+      description: Downstream service failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
     # --- SHARED ---
@@ -709,6 +792,19 @@ components:
         coverImageUrl: { type: string, format: uri, nullable: true }
         sourceUrl: { type: array, items: { type: string, format: uri } }
         topics: { type: array, items: { type: string } }
+        targetUserId:
+          type: string
+          format: uuid
+          nullable: true
+          description: "User this digest was personalised for (ADR-0013); null = global/system digest belonging to no one."
+
+    DigestGenerationResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status: { type: string, enum: [GENERATED, SKIPPED] }
+        message: { type: string }
+        post: { $ref: '#/components/schemas/PostResponse' }
 
     AuthorSummary:
       type: object
@@ -811,7 +907,7 @@ components:
       type: object
       required: [text]
       properties:
-        text: { type: string, minLength: 1, maxLength: 2000 }
+        text: { type: string, minLength: 1, maxLength: 500 }
         parentId: { type: string, format: uuid, nullable: true, description: "ID of parent comment for replies" }
 
     CommentResponse:
@@ -842,6 +938,15 @@ components:
         dislikeCount: { type: integer }
         isLikedByMe: { type: boolean }
         isDislikedByMe: { type: boolean }
+
+    CommentLikeRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [LIKE, NONE]
+          description: "LIKE to cast a like. NONE to remove an existing like."
 
     CommentLikeResponse:
       type: object

@@ -9,8 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -124,6 +126,23 @@ public class UserService {
 
     public UserPreferences getUserPreferences(String username) {
         UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        return toPreferences(user);
+    }
+
+    /**
+     * Reads another user's preferences by id for the internal cross-service privacy check
+     * (content-service enforces the bookmark/like visibility toggles). Caller is authenticated
+     * as a service via the internal token (ADR-0007), not as the target user.
+     *
+     * @throws UserNotFoundException if no user exists with the given id
+     */
+    public UserPreferences getPreferencesById(UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        return toPreferences(user);
+    }
+
+    private UserPreferences toPreferences(UserEntity user) {
         UserPreferences prefs = new UserPreferences();
         prefs.setDigestFrequency(user.getDigestFrequency());
         prefs.setShowBookmarks(user.getShowBookmarks());
@@ -167,7 +186,21 @@ public class UserService {
         return buildPaginatedUsers(entityPage);
     }
 
-    /**
+    public PaginatedDigestRecipients getDigestRecipients(DigestFrequency frequency, int page, int size) {
+        Page<UserEntity> entityPage = userRepository.findByDigestFrequency(frequency, PageRequest.of(page, size));
+        PaginatedDigestRecipients result = new PaginatedDigestRecipients();
+        result.setContent(entityPage.getContent().stream()
+                .map(user -> new DigestRecipient(user.getId()))
+                .toList());
+        result.setPage(entityPage.getNumber());
+        result.setSize(entityPage.getSize());
+        result.setTotalPages(entityPage.getTotalPages());
+        result.setTotalElements(entityPage.getTotalElements());
+        result.setHasNext(entityPage.hasNext());
+        return result;
+    }
+
+    /** 
      * Updates the role of a user. Only recognised role values are applied;
      * unrecognised values are silently ignored.
      *

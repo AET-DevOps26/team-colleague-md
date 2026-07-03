@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route, useParams } from 'react-router-dom';
 import PostEditor from '../../../../src/pages/PostEditor';
+import { ToastProvider } from '../../../../src/contexts/ToastContext';
 import type { PostResponse } from '../../../../src/types';
 
 const svc = vi.hoisted(() => ({
@@ -36,14 +37,16 @@ function Marker() {
 
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/" element={<div>HOME</div>} />
-        <Route path="/post/new" element={<PostEditor />} />
-        <Route path="/post/:id/edit" element={<PostEditor />} />
-        <Route path="/post/:id" element={<Marker />} />
-      </Routes>
-    </MemoryRouter>,
+    <ToastProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/" element={<div>HOME</div>} />
+          <Route path="/post/new" element={<PostEditor />} />
+          <Route path="/post/:id/edit" element={<PostEditor />} />
+          <Route path="/post/:id" element={<Marker />} />
+        </Routes>
+      </MemoryRouter>
+    </ToastProvider>,
   );
 }
 
@@ -127,7 +130,7 @@ describe('PostEditor (integration)', () => {
   it('(PE-8) leaving with unsaved changes offers to save a draft', async () => {
     renderAt('/post/new');
     await userEvent.type(screen.getByLabelText('Post title'), 'Hello world');
-    await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Back to / }));
     const saveDraft = await screen.findByRole('button', { name: 'Save draft' });
     await userEvent.click(saveDraft);
     await waitFor(() =>

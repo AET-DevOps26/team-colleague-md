@@ -11,8 +11,8 @@ summarization, and personalized recommendations. It is built as four backend mic
 The fastest way to run the full platform.
 
 **First-time setup.** Create `genai-service/.env` from the template (the placeholder values
-are enough to boot; add a real `NVIDIA_NIM_API_KEY` to enable AI summaries and the daily
-digest):
+are enough to boot; add a real LLM API key such as `NVIDIA_NIM_API_KEY` or `LOGOS_API_KEY`
+to enable AI summaries and the daily digest):
 
 ```bash
 cp genai-service/.env.example genai-service/.env
@@ -256,7 +256,17 @@ npm run seed:local -- --only users
 npm run seed:local -- --only content
 npm run seed:local -- --only recommendations
 npm run seed:local -- --dry-run --only users,content,recommendations
+npm run seed:local -- --reset            # purge stale seed rows, then re-seed
+npm run seed:local -- --reset --dry-run  # preview what --reset would delete
 ```
+
+The seed **upserts by id**, so fixtures removed in a newer seed would otherwise
+linger. `--reset` deletes seed-owned rows first (users with `@example.com` emails
+and the data they own, plus system digests), resolving ownership from the live DB
+so stale rows from earlier fixtures are caught — while data created by real users
+is preserved. Topics are left intact (shared; their counters are recomputed on
+re-seed). `--reset` honors `--only` and, with `--dry-run`, reports counts without
+mutating anything.
 
 Connection defaults match `docker-compose.yml` and can be overridden:
 
@@ -303,6 +313,12 @@ npm run seed:rancher
 # Azure VM (prod compose): ships the seed over SSH and runs it in a one-off
 # node container on the compose network, reading the VM's Ansible-written .env.
 VM_HOST=<public-ip> ./scripts/seed-vm.sh
+
+# Both wrappers accept SEED_RESET=1 to purge stale seed rows before re-seeding
+# (same semantics as `seed:local -- --reset`), so updated fixtures don't leave
+# old demo data behind:
+SEED_RESET=1 npm run seed:rancher
+VM_HOST=<public-ip> SEED_RESET=1 ./scripts/seed-vm.sh
 ```
 
 `seed:rancher` is guarded to `verita-dev` only. Seeding the real prod namespace is
@@ -397,7 +413,8 @@ uvicorn app.main:app --reload --port 8000
 Health check: `http://localhost:8000/health`
 
 The service starts without a real API key (health and docs respond), but summarization and
-digest generation need a valid `NVIDIA_NIM_API_KEY` — or another provider selected via
-`LLM_PROVIDER` — in `.env`.
+digest generation need a valid provider key in `.env`. For the TUM Logos endpoint, use
+`LLM_PROVIDER=logos`, `LLM_MODEL=openai/gpt-oss-120b`, and `LOGOS_API_KEY`; the endpoint is
+only reachable from the TUM network or eduVPN.
 
 ---

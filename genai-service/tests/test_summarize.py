@@ -5,18 +5,26 @@ Uses FastAPI TestClient with a mocked LangChain chain so that
 tests run without a real API key or LLM service.
 """
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
 from app.main import app
+
+INTERNAL_TOKEN = "test-internal-token"
+INTERNAL_HEADERS = {"X-Internal-Service-Token": INTERNAL_TOKEN}
 
 
 @pytest.fixture
 def client():
     """Create a FastAPI test client."""
-    return TestClient(app)
+    get_settings().internal_service_token = INTERNAL_TOKEN
+    test_client = TestClient(app)
+    test_client.headers.update(INTERNAL_HEADERS)
+    return test_client
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +57,15 @@ SHORT_CONTENT = "Too short to summarize."  # Under 50 chars
 
 class TestSummarizeEndpoint:
     """Tests for POST /api/v1/genai/summarize."""
+
+    def test_summarize_rejects_missing_internal_token(self, client):
+        """GenAI work endpoints require the internal service token."""
+        response = TestClient(app).post(
+            "/api/v1/genai/summarize",
+            json={"postId": "test-post-id", "content": VALID_CONTENT, "title": "GPT-5 Released"},
+        )
+
+        assert response.status_code == 403
 
     @patch("app.services.summarizer._build_chain")
     def test_summarize_success(self, mock_build_chain, client):
@@ -198,3 +215,29 @@ class TestBulletParsing:
         result = _parse_bullets(raw)
         assert len(result) == 3
         assert result == ["One", "Two", "Three"]
+
+
+class TestLlmFactory:
+    """Tests for LLM provider wiring."""
+
+    @patch("app.services.summarizer.ChatOpenAI")
+    def test_get_llm_supports_logos_openai_compatible_provider(self, mock_chat_openai):
+        from app.services.summarizer import _get_llm
+
+        settings = SimpleNamespace(
+            llm_provider="logos",
+            llm_model="openai/gpt-oss-120b",
+            llm_temperature=0.3,
+            logos_api_key="test-logos-key",
+            logos_base_url="https://logos.aet.cit.tum.de/v1",
+        )
+
+        result = _get_llm(settings)
+
+        assert result == mock_chat_openai.return_value
+        mock_chat_openai.assert_called_once_with(
+            model="openai/gpt-oss-120b",
+            api_key="test-logos-key",
+            base_url="https://logos.aet.cit.tum.de/v1",
+            temperature=0.3,
+        )

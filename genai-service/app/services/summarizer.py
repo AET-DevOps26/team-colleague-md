@@ -90,6 +90,13 @@ def _get_llm(settings):
             base_url="https://openrouter.ai/api/v1",
             temperature=settings.llm_temperature,
         )
+    elif provider == "logos":
+        return ChatOpenAI(
+            model=settings.llm_model,
+            api_key=settings.logos_api_key,
+            base_url=settings.logos_base_url,
+            temperature=settings.llm_temperature,
+        )
     elif provider == "nvidia":
         return ChatNVIDIA(
             model=settings.llm_model,

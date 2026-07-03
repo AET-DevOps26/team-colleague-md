@@ -140,6 +140,8 @@ services:
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required — set to http://<VM_IP>}
       # Shared HS256 secret — all backend services must receive the SAME value (token interop).
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required — must be identical across all services}
+      # ADR-0007 shared service-to-service secret — must be identical across all backend services.
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required — must be identical across all services}
       - DB_HOST=user-db
       - DB_PORT=5432
       - DB_NAME=${USER_DB_NAME:-verita_users}
@@ -172,8 +174,11 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       # Shared HS256 secret — must match user-service / recommendation-service.
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required — must be identical across all services}
+      # ADR-0007 shared service-to-service secret — must be identical across all backend services.
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required — must be identical across all services}
       # Cross-service calls (Clients.java): reach peers by compose service name, not localhost.
       - USER_SERVICE_BASE_URL=http://user-service:8081
+      - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083
       - GENAI_SERVICE_BASE_URL=http://genai-service:8000
       - DB_HOST=content-db
       - DB_PORT=5432
@@ -206,6 +211,8 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       # Shared HS256 secret — must match user-service / content-service.
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required — must be identical across all services}
+      # ADR-0007 shared service-to-service secret — must be identical across all backend services.
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required — must be identical across all services}
       # Cross-service calls (ContentClient): reach content-service by compose service name.
       - CONTENT_SERVICE_BASE_URL=http://content-service:8082
       - DB_HOST=recommendation-db
@@ -226,6 +233,8 @@ services:
 
   genai-service:
     image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
+    environment:
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required — must be identical across all services}
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)" ]

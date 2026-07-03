@@ -70,7 +70,7 @@ public class TopicService {
     @Transactional(readOnly = true)
     public List<Topic> getByIds(List<UUID> ids) {
         return topicRepository.findAllById(ids).stream()
-                .map(t -> new Topic().id(t.getId()).name(t.getName()))
+                .map(t -> new Topic().id(t.getId()).name(t.getDisplayName()))
                 .toList();
     }
 

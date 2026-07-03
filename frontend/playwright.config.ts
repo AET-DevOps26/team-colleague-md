@@ -10,9 +10,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    // Demo build: posts/bookmarks/likes/drafts come from the in-app mock display layer
-    // (ADR-0011), so E2E specs only need to mock the auth + profile endpoints.
-    command: 'npm run dev:demo',
+    // Heavy local-only suite: the real frontend runs against a live, seeded backend
+    // (`docker compose up` + `npm run seed:local`). Assertions key off the seed data — there
+    // is no in-app mock layer. Not run in CI (CI keeps unit/component only).
+    command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

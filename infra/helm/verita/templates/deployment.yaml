@@ -69,8 +69,7 @@ spec:
                   key: secret
             {{- end }}
             {{- if $svc.internalToken }}
-            # ADR-0007 shared service-to-service secret: recommendation-service sends it,
-            # content-service validates it. Same value for both via the shared Secret.
+            # ADR-0007 shared service-to-service secret. Same value for all internal callers/callees.
             - name: INTERNAL_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:

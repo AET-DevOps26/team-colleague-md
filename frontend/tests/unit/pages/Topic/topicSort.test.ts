@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sortTopics } from '../../../../src/pages/Digest/topicSort';
+import { sortTopics } from '../../../../src/pages/Topic/topicSort';
 
 describe('sortTopics', () => {
   it('moves a newly followed tag to end of the followed group', () => {

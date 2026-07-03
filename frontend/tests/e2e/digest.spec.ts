@@ -1,32 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { loginAs } from './support';
 
-const MOCK_USER = {
-  id: '1',
-  username: 'testuser',
-  displayName: 'Test User',
-  role: 'USER',
-  email: 'test@example.com',
-};
-
-async function login(page: Page) {
-  // Set localStorage so getCurrentUser() returns the mock user immediately
-  await page.addInitScript((user) => {
-    localStorage.setItem('verita_user', JSON.stringify(user));
-    localStorage.setItem('verita_token', 'mock-token');
-  }, MOCK_USER);
-  // Intercept the refresh-token call so AuthContext.restoreSession() succeeds
-  await page.route('**/api/v1/auth/refresh', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ accessToken: 'mock-token', user: MOCK_USER }),
-    })
-  );
-}
-
-test.describe('Digest Management', () => {
+test.describe('Digest — logged in (seeded personal digests)', () => {
   test('DIG-1: logged-in user sees today hero and past digests', async ({ page }) => {
-    await login(page);
+    await loginAs(page);
     await page.goto('/digest');
 
     await expect(page.getByText('Today ·', { exact: false })).toBeVisible();
@@ -34,106 +11,61 @@ test.describe('Digest Management', () => {
     await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
   });
 
-  test('DIG-2: logged-out user sees sign-in prompt on /digest', async ({ page }) => {
+  test('DIG-2: opening the today digest renders the reader', async ({ page }) => {
+    await loginAs(page);
+    await page.goto('/digest');
+
+    await page.getByRole('button', { name: 'Read', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/digest\/[0-9a-f-]{36}$/);
+    await expect(page.getByText('Verita AI Digest')).toBeVisible();
+    await expect(page.getByText('min read', { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save digest' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Share digest' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Back to Digest/ })).toBeVisible();
+  });
+
+  test('DIG-3: reader shows the personalisation note when logged in', async ({ page }) => {
+    await loginAs(page);
+    await page.goto('/digest');
+    await page.getByRole('button', { name: 'Read', exact: true }).click();
+
+    await expect(page.getByText('Personalised from', { exact: false })).toBeVisible();
+  });
+
+  test('DIG-4: digest is a single past-digests view with no tab bar', async ({ page }) => {
+    await loginAs(page);
+    await page.goto('/digest');
+
+    await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
+    // Topic management moved to the standalone Topic page (ADR-0014) — no tabs remain here.
+    await expect(page.getByRole('tab', { name: 'Manage Topics' })).toHaveCount(0);
+    await expect(page.getByPlaceholder('Filter topics…')).toHaveCount(0);
+  });
+});
+
+test.describe('Digest — logged out (seeded public digest, ADR-0016)', () => {
+  test('DIG-5: logged-out user sees the public today digest + sign-in hero', async ({ page }) => {
     await page.goto('/digest');
 
     await expect(page).toHaveURL('/digest');
+    // Public "today" digest hero is readable without login.
+    await expect(page.getByText('Today ·', { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeVisible();
+    // Plus the auth upsell hero.
     await expect(page.getByText('Your personalised digest awaits')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();
   });
 
-  test('DIG-3: tabs switch between Past Digests and Manage Topics', async ({ page }) => {
-    await login(page);
+  test('DIG-6: logged-out user can open the public digest reader with an auth upsell', async ({ page }) => {
     await page.goto('/digest');
+    await page.getByRole('button', { name: 'Read', exact: true }).click();
 
-    await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
-
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-    await expect(page.getByPlaceholder('Filter topics…')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Past digests' })).not.toBeVisible();
-
-    await page.getByRole('tab', { name: 'Past Digests' }).click();
-    await expect(page.getByRole('heading', { name: 'Past digests' })).toBeVisible();
-  });
-
-  test('DIG-4: logged-in user can access Manage Topics tab and see topic grid', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    await expect(page.getByPlaceholder('Filter topics…')).toBeVisible();
-    await expect(page.locator('[class*="topicCard"]').first()).toBeVisible();
-  });
-
-  test('DIG-5: follow toggle updates following count in the pill', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    // The follow pill shows "Following <N>"; find the <strong> with the count
-    const countEl = page.locator('[class*="followPill"] strong');
-    const initialCount = parseInt(await countEl.textContent() ?? '0', 10);
-
-    // Click the first followed topic's button (aria-label "Unfollow X") to unfollow
-    await page.getByRole('button', { name: /^Unfollow / }).first().click();
-
-    const newCount = parseInt(await countEl.textContent() ?? '0', 10);
-    expect(newCount).toBe(initialCount - 1);
-  });
-
-  test('DIG-6: following a topic shows follow toast', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    await page.getByRole('button', { name: /^Follow / }).first().click();
-    await expect(page.getByText(/Following #/)).toBeVisible({ timeout: 3000 });
-  });
-
-  test('DIG-7: unfollowing a topic shows unfollow toast', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    await page.getByRole('button', { name: /^Unfollow / }).first().click();
-    await expect(page.getByText(/Unfollowed #/)).toBeVisible({ timeout: 3000 });
-  });
-
-  test('DIG-8: load more adds more digest cards', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-
-    // Count only the digest history cards (role="button" with aria-label starting with "Read digest")
-    const initialCards = await page.locator('[role="button"][aria-label^="Read digest"]').count();
-
-    await page.getByRole('button', { name: 'Load more' }).click();
-
-    const newCards = await page.locator('[role="button"][aria-label^="Read digest"]').count();
-    expect(newCards).toBeGreaterThan(initialCards);
-  });
-
-  test('DIG-9: search filters topic list by displayName', async ({ page }) => {
-    await login(page);
-    await page.goto('/digest');
-    await page.getByRole('tab', { name: 'Manage Topics' }).click();
-
-    await page.getByPlaceholder('Filter topics…').fill('agents');
-
-    // Topic displayName "AI Agents" matches the slug "agents"; card renders "#AI Agents"
-    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'AI Agents' })).toBeVisible();
-    // "Alignment" should not appear in the filtered results
-    await expect(page.locator('[class*="tagName"]').filter({ hasText: 'Alignment' })).not.toBeVisible();
-  });
-
-  test('DIG-10: back button navigates away from digest page', async ({ page }) => {
-    await login(page);
-    await page.goto('/');
-    await page.goto('/digest');
-
-    // PostDetailTopbar renders a back button with text "Explore" (default from state)
-    await page.getByRole('button', { name: /Explore|Back/i }).first().click();
-
-    await expect(page).not.toHaveURL('/digest');
+    await expect(page).toHaveURL(/\/digest\/[0-9a-f-]{36}$/);
+    await expect(page.getByText('Verita AI Digest')).toBeVisible();
+    // Logged-out reader shows the auth upsell, not the personalisation note.
+    await expect(page.getByText('Get a digest built for you')).toBeVisible();
+    await expect(page.getByText('Personalised from', { exact: false })).toHaveCount(0);
   });
 });

@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { PostDetail as PostDetailType } from '../../types';
 import { contentService } from '../../services/content.service';
@@ -7,8 +7,10 @@ import PostDetailTopbar from '../../components/layout/PostDetailTopbar';
 import PostFooter from '../../components/post/PostFooter';
 import EngageRow from '../../components/post/EngageRow';
 import BottomBar from '../../components/post/BottomBar';
+import CommentSection from '../../components/post/CommentSection';
+import { useComments } from '../../hooks/useComments';
 import Markdown from '../../components/ui/Markdown';
-import Toast from '../../components/ui/Toast';
+import { useToast } from '../../hooks/useToast';
 import { timeAgo } from '../../utils/timeAgo';
 import { getInitials } from '../../utils/getInitials';
 import styles from './PostDetail.module.css';
@@ -21,19 +23,14 @@ export default function PostDetail() {
 
   const [post, setPost] = useState<PostDetailType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState({ show: false, message: '' });
+  const { showToast } = useToast();
+  const comments = useComments(post?.id, post?.commentCount ?? 0);
 
   useEffect(() => {
     if (!id) { navigate('/'); return; }
     setLoading(true);
     contentService.getPost(id).then((p) => { setPost(p); setLoading(false); });
   }, [id, navigate]);
-
-  const hideToast = useCallback(() => setToast((t) => ({ ...t, show: false })), []);
-
-  function showToast(message: string) {
-    setToast({ show: true, message });
-  }
 
   function handleLike() {
     if (!post) return;
@@ -47,16 +44,40 @@ export default function PostDetail() {
     const next = !post.isBookmarkedByMe;
     setPost((p) => p && { ...p, isBookmarkedByMe: next, saveCount: p.saveCount + (next ? 1 : -1) });
     contentService.toggleBookmark(post.id, next)
-      .then(() => showToast(next ? 'Saved to bookmarks' : 'Removed from bookmarks'))
+      .then(() => showToast(next
+        ? { variant: 'success', message: 'Saved to bookmarks' }
+        : { variant: 'info', message: 'Removed from bookmarks' }))
       .catch(() => {
         // Revert the optimistic update if the server rejected it.
         setPost((p) => p && { ...p, isBookmarkedByMe: !next, saveCount: p.saveCount + (next ? -1 : 1) });
-        showToast('Could not update bookmark');
+        showToast({ variant: 'error', message: 'Could not update bookmark' });
       });
   }
 
   function handleShare() {
-    navigator.clipboard.writeText(window.location.href).then(() => showToast('Link copied to clipboard'));
+    navigator.clipboard.writeText(window.location.href).then(() => showToast({ variant: 'success', message: 'Link copied to clipboard' }));
+  }
+
+  async function handleComment(text: string) {
+    try {
+      await comments.addComment(text);
+    } catch (e) {
+      showToast({ variant: 'error', message: 'Could not post comment' });
+      throw e;
+    }
+  }
+
+  async function handleReply(parentId: string, text: string) {
+    try {
+      await comments.reply(parentId, text);
+    } catch (e) {
+      showToast({ variant: 'error', message: 'Could not post reply' });
+      throw e;
+    }
+  }
+
+  function handleScrollToComments() {
+    document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   if (loading || !post) {
@@ -120,8 +141,8 @@ export default function PostDetail() {
           {/* Title */}
           <h1 className={styles.postTitle}>{post.title}</h1>
 
-          {/* Article body (real Markdown). AI summary and comments are intentionally
-              hidden until those backends are wired (ADR-0012). */}
+          {/* Article body (real Markdown). The AI summary is intentionally hidden until
+              that backend is wired (ADR-0012); comments are live (ADR-0015). */}
           <Markdown>{post.content}</Markdown>
 
           {/* Footer: tags + sources */}
@@ -130,9 +151,21 @@ export default function PostDetail() {
           {/* Engagement strip */}
           <EngageRow
             likeCount={post.likeCount}
-            commentCount={post.commentCount}
+            commentCount={comments.count}
             saveCount={post.saveCount}
             viewCount={post.viewCount}
+          />
+
+          {/* Comments (ADR-0015) */}
+          <CommentSection
+            comments={comments.comments}
+            count={comments.count}
+            loading={comments.loading}
+            error={comments.error}
+            postAuthorId={post.author.id}
+            onReload={comments.reload}
+            onLike={comments.likeComment}
+            onReply={handleReply}
           />
 
         </article>
@@ -143,15 +176,13 @@ export default function PostDetail() {
         likeCount={post.likeCount}
         isLikedByMe={post.isLikedByMe}
         isBookmarkedByMe={post.isBookmarkedByMe}
-        commentCount={post.commentCount}
+        commentCount={comments.loading ? post.commentCount : comments.count}
         onLike={handleLike}
         onBookmark={handleBookmark}
         onShare={handleShare}
-        onScrollToComments={() => {}}
-        showComments={false}
+        onScrollToComments={handleScrollToComments}
+        onComment={handleComment}
       />
-
-      <Toast message={toast.message} show={toast.show} onHide={hideToast} />
     </>
   );
 }

@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -166,6 +167,13 @@ public class PostService {
         if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
             throw new ResponseStatusException(NOT_FOUND);
         }
+        // A personal digest (DIGEST + target set) is readable only by its target; hide existence
+        // from everyone else with 404, mirroring the DRAFT rule (ADR-0016). Public digests
+        // (target null) and NORMAL posts are unaffected.
+        if (post.getType() == PostType.DIGEST && post.getTargetUserId() != null
+                && !Objects.equals(post.getTargetUserId(), currentUser)) {
+            throw new ResponseStatusException(NOT_FOUND);
+        }
         // Build the response while the entity is still attached: incrementViewCount runs a
         // clearAutomatically update that detaches `post`, after which its lazy topics/sourceUrls
         // collections could no longer be initialised (open-in-view is disabled).
@@ -214,6 +222,44 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
+    public PostPage getMyDigests(int page, int size) {
+        UUID userId = currentUserId();
+        return mapPage(postRepository.findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
+                userId, PostType.DIGEST, PageRequest.of(page, clampPageSize(size))), userId);
+    }
+
+    /** Newest public digest (target null) for the logged-out surface; 404 when none exists (ADR-0016). */
+    @Transactional(readOnly = true)
+    public PostResponse getPublicTodayDigest() {
+        PostEntity post = postRepository
+                .findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(PostType.DIGEST)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        return toPostResponse(post, optionalUserId());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<PostResponse> findPersonalDigest(UUID userId, OffsetDateTime start, OffsetDateTime end) {
+        return postRepository.findFirstByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
+                        userId, PostType.DIGEST, start, end)
+                .map(post -> toPostResponse(post, userId));
+    }
+
+    @Transactional
+    public void softDeletePersonalDigests(UUID userId, OffsetDateTime start, OffsetDateTime end) {
+        OffsetDateTime deletedAt = OffsetDateTime.now();
+        List<PostEntity> posts = postRepository.findByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+                userId, PostType.DIGEST, start, end);
+        for (PostEntity post : posts) {
+            post.setDeleted(true);
+            post.setDeletedAt(deletedAt);
+            if (post.getStatus() == PostStatus.PUBLISHED && post.getTopics() != null) {
+                post.getTopics().forEach(topic -> topicRepository.decrementTotalPostCount(topic.getId()));
+            }
+        }
+        postRepository.saveAll(posts);
+    }
+
+    @Transactional(readOnly = true)
     public List<PostCard> getCards(List<UUID> ids) {
         if (ids.size() > 50) throw new ResponseStatusException(BAD_REQUEST, "max 50 ids");
         Map<UUID, PostEntity> postsMap = postRepository.findByIdInAndDeletedFalse(new LinkedHashSet<>(ids)).stream()
@@ -239,6 +285,9 @@ public class PostService {
         post.setAuthorId(digestSystemAuthorId);
         post.setType(PostType.DIGEST);
         post.setStatus(PostStatus.PUBLISHED);
+        if (request.getTargetUserId() != null && request.getTargetUserId().isPresent()) {
+            post.setTargetUserId(request.getTargetUserId().get());
+        }
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         String summary = request.getSummary() != null && request.getSummary().isPresent()
