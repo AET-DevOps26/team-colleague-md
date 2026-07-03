@@ -1,8 +1,10 @@
 import pg from "pg";
 import type { SeedConfig } from "../../config.ts";
 import {
+  DIGEST_SYSTEM_AUTHOR_ID,
   SEED_BOOKMARKS,
   SEED_COMMENTS,
+  SEED_DIGESTS,
   SEED_POSTS,
   SEED_REFERENCE_TIME,
   SEED_TOPICS,
@@ -10,6 +12,7 @@ import {
   seedUserId,
   type SeedPost,
 } from "./contentData.ts";
+import { SEED_NOW } from "../seedClock.ts";
 import type { SeedUser } from "../users/usersData.ts";
 
 const { Client } = pg;
@@ -75,15 +78,18 @@ export async function assertSeedUsersExist(client: pg.Client, users: SeedUser[])
 }
 
 export async function assertNoContentIdentityConflicts(client: ContentDbClient) {
-  const postIds = SEED_POSTS.map((post) => post.id);
+  const allIds = [...SEED_POSTS.map((post) => post.id), ...SEED_DIGESTS.map((d) => d.id)];
+  const allTitles = new Map([
+    ...SEED_POSTS.map((post) => [post.id, post.title] as const),
+    ...SEED_DIGESTS.map((d) => [d.id, d.title] as const),
+  ]);
   const result = await client.query<{ id: string; title: string }>(
     "SELECT id::text, title FROM posts WHERE id = ANY($1::uuid[])",
-    [postIds],
+    [allIds],
   );
-  const expectedById = new Map(SEED_POSTS.map((post) => [post.id, post.title]));
   const conflicts = result.rows
-    .filter((row) => expectedById.get(row.id) !== row.title)
-    .map((row) => `post "${row.id}" already exists as "${row.title}", expected "${expectedById.get(row.id)}"`);
+    .filter((row) => allTitles.get(row.id) !== row.title)
+    .map((row) => `post "${row.id}" already exists as "${row.title}", expected "${allTitles.get(row.id)}"`);
 
   if (conflicts.length > 0) {
     throw new Error(`Seed content identity conflict(s): ${conflicts.join("; ")}.`);
@@ -91,12 +97,14 @@ export async function assertNoContentIdentityConflicts(client: ContentDbClient) 
 }
 
 export function validateContentFixtures() {
+  // Validate all usernames resolve
   const userNames = new Set(SEED_POSTS.map((post) => post.authorUsername));
   for (const comment of SEED_COMMENTS) userNames.add(comment.authorUsername);
   for (const bookmark of SEED_BOOKMARKS) userNames.add(bookmark.userUsername);
   for (const vote of SEED_VOTES) userNames.add(vote.userUsername);
   for (const username of userNames) seedUserId(username);
 
+  // Validate post references
   const postIds = new Set(SEED_POSTS.map((post) => post.id));
   for (const comment of SEED_COMMENTS) {
     if (!postIds.has(comment.postId)) throw new Error(`Comment "${comment.id}" references unknown post "${comment.postId}".`);
@@ -111,10 +119,36 @@ export function validateContentFixtures() {
     if (!postIds.has(vote.postId)) throw new Error(`Vote "${vote.id}" references unknown post "${vote.postId}".`);
   }
 
+  // Validate post counter invariants
   for (const post of SEED_POSTS) {
     const counters = derivedCounters(post);
     if (counters.likeCount > post.viewCount || counters.commentCount > post.viewCount || counters.saveCount > post.viewCount) {
       throw new Error(`Post "${post.title}" has derived counters greater than view_count.`);
+    }
+  }
+
+  // Validate cover images
+  const validCovers = new Set([
+    "agent-tooling.png", "fine-tuning.png", "inference-optimization.png",
+    "mechanistic-interpretability.png", "model-evaluation.png", "rag-evaluation.png",
+  ]);
+  for (const post of SEED_POSTS) {
+    if (post.coverImageFile && !validCovers.has(post.coverImageFile)) {
+      throw new Error(`Post "${post.title}" references unknown cover image "${post.coverImageFile}".`);
+    }
+  }
+
+  // Validate digests
+  const topicNames = new Set(SEED_TOPICS.map((t) => t.name));
+  for (const digest of SEED_DIGESTS) {
+    if (digest.targetUsername !== null) seedUserId(digest.targetUsername); // personal target must resolve; null = public (ADR-0016)
+    if (digest.coverImageFile && !validCovers.has(digest.coverImageFile)) {
+      throw new Error(`Digest "${digest.title}" references unknown cover image "${digest.coverImageFile}".`);
+    }
+    for (const topicName of digest.topicNames) {
+      if (!topicNames.has(topicName)) {
+        throw new Error(`Digest "${digest.title}" references unknown topic "${topicName}".`);
+      }
     }
   }
 }
@@ -123,15 +157,17 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
   await client.query("BEGIN");
   try {
     await upsertTopics(client);
-    const topicIdsByName = await getTopicIdsByName(client, topicNamesUsedByPosts());
+    const topicIdsByName = await getTopicIdsByName(client, topicNamesUsedByPostsAndDigests());
 
-    const postIds = SEED_POSTS.map((post) => post.id);
-    await client.query("DELETE FROM votes WHERE target_type = 'POST' AND target_id = ANY($1::uuid[])", [postIds]);
-    await client.query("DELETE FROM bookmarks WHERE post_id = ANY($1::uuid[])", [postIds]);
-    await client.query("DELETE FROM comments WHERE post_id = ANY($1::uuid[])", [postIds]);
-    await client.query("DELETE FROM post_source_urls WHERE post_id = ANY($1::uuid[])", [postIds]);
-    await client.query("DELETE FROM post_topics WHERE post_id = ANY($1::uuid[])", [postIds]);
+    // Clean up existing seed data (posts + digests)
+    const allPostIds = [...SEED_POSTS.map((post) => post.id), ...SEED_DIGESTS.map((d) => d.id)];
+    await client.query("DELETE FROM votes WHERE target_type = 'POST' AND target_id = ANY($1::uuid[])", [allPostIds]);
+    await client.query("DELETE FROM bookmarks WHERE post_id = ANY($1::uuid[])", [allPostIds]);
+    await client.query("DELETE FROM comments WHERE post_id = ANY($1::uuid[])", [allPostIds]);
+    await client.query("DELETE FROM post_source_urls WHERE post_id = ANY($1::uuid[])", [allPostIds]);
+    await client.query("DELETE FROM post_topics WHERE post_id = ANY($1::uuid[])", [allPostIds]);
 
+    // Upsert NORMAL posts
     for (const post of SEED_POSTS) {
       const counters = derivedCounters(post);
       await client.query(
@@ -192,6 +228,66 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
       }
     }
 
+    // Upsert DIGEST posts
+    for (const digest of SEED_DIGESTS) {
+      await client.query(
+        `
+        INSERT INTO posts (
+          id, author_id, title, content, excerpt, cover_image_url, content_summary,
+          status, type, like_count, dislike_count, comment_count, view_count, save_count,
+          deleted, deleted_at, target_user_id, created_at, updated_at
+        )
+        VALUES (
+          $1::uuid, $2::uuid, $3, $4, $5, $6, $7,
+          'PUBLISHED', 'DIGEST', 0, 0, 0, $8, 0,
+          false, NULL, $9::uuid, $10::timestamptz, $11::timestamptz
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          author_id = EXCLUDED.author_id,
+          title = EXCLUDED.title,
+          content = EXCLUDED.content,
+          excerpt = EXCLUDED.excerpt,
+          cover_image_url = EXCLUDED.cover_image_url,
+          content_summary = EXCLUDED.content_summary,
+          status = EXCLUDED.status,
+          type = EXCLUDED.type,
+          like_count = 0,
+          dislike_count = 0,
+          comment_count = 0,
+          view_count = EXCLUDED.view_count,
+          save_count = 0,
+          deleted = false,
+          deleted_at = NULL,
+          target_user_id = EXCLUDED.target_user_id,
+          created_at = EXCLUDED.created_at,
+          updated_at = EXCLUDED.updated_at
+        `,
+        [
+          digest.id,
+          DIGEST_SYSTEM_AUTHOR_ID,
+          digest.title,
+          digest.content,
+          digest.summary,
+          coverUrlsByPostId.get(digest.id) ?? null,
+          digest.summary,
+          digest.viewCount,
+          digest.targetUsername === null ? null : seedUserId(digest.targetUsername),
+          digest.createdAt,
+          digest.updatedAt,
+        ],
+      );
+
+      for (const sourceUrl of digest.sourceUrls) {
+        await client.query("INSERT INTO post_source_urls (post_id, source_url) VALUES ($1::uuid, $2)", [digest.id, sourceUrl]);
+      }
+      for (const topicName of digest.topicNames) {
+        const topicId = topicIdsByName.get(topicName);
+        if (!topicId) throw new Error(`Topic "${topicName}" was not found after topic upsert (digest).`);
+        await client.query("INSERT INTO post_topics (post_id, topic_id) VALUES ($1::uuid, $2::uuid)", [digest.id, topicId]);
+      }
+    }
+
+    // Upsert comments
     for (const comment of SEED_COMMENTS) {
       await client.query(
         `
@@ -245,13 +341,13 @@ export async function getSeedPostIds(client: ContentDbClient): Promise<Set<strin
 }
 
 export async function getSeedTopicIdsByName(client: ContentDbClient): Promise<Map<string, string>> {
-  return getTopicIdsByName(client, topicNamesUsedByPosts());
+  return getTopicIdsByName(client, topicNamesUsedByPostsAndDigests());
 }
 
 export async function getExistingSeedTopicIdsByName(client: ContentDbClient): Promise<Map<string, string>> {
   const result = await client.query<{ id: string; name: string }>(
     "SELECT id::text, name FROM topics WHERE name = ANY($1::text[])",
-    [topicNamesUsedByPosts()],
+    [topicNamesUsedByPostsAndDigests()],
   );
   return new Map(result.rows.map((row) => [row.name, row.id]));
 }
@@ -265,6 +361,7 @@ function derivedCounters(post: SeedPost) {
 }
 
 async function upsertTopics(client: ContentDbClient) {
+  const referenceTime = SEED_NOW.toISOString();
   for (const topic of SEED_TOPICS) {
     await client.query(
       `
@@ -273,14 +370,15 @@ async function upsertTopics(client: ContentDbClient) {
         total_post_count, posts_this_week, posts_prev_week, activity_score, is_hot,
         follower_count, created_at, updated_at
       )
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, 0, 0, 0, 0, false, 0, $5::timestamptz, $5::timestamptz)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, 0, 0, 0, 0, false, $5, $6::timestamptz, $6::timestamptz)
       ON CONFLICT (name) DO UPDATE SET
         display_name = EXCLUDED.display_name,
         category_id = EXCLUDED.category_id,
         sort_order = EXCLUDED.sort_order,
+        follower_count = EXCLUDED.follower_count,
         updated_at = EXCLUDED.updated_at
       `,
-      [topic.name, topic.displayName, topic.categoryId, topic.sortOrder, SEED_REFERENCE_TIME],
+      [topic.name, topic.displayName, topic.categoryId, topic.sortOrder, topic.followerBaseline, referenceTime],
     );
   }
 }
@@ -298,11 +396,15 @@ async function getTopicIdsByName(client: ContentDbClient, topicNames: string[]):
   return topicIdsByName;
 }
 
-function topicNamesUsedByPosts(): string[] {
-  return [...new Set(SEED_POSTS.flatMap((post) => post.topicNames))];
+function topicNamesUsedByPostsAndDigests(): string[] {
+  return [...new Set([
+    ...SEED_POSTS.flatMap((post) => post.topicNames),
+    ...SEED_DIGESTS.flatMap((digest) => digest.topicNames),
+  ])];
 }
 
 async function refreshTopicCounters(client: ContentDbClient, topicIdsByName: Map<string, string>) {
+  const referenceTime = SEED_NOW.toISOString();
   const stats = new Map<string, { total: number; thisWeek: number; prevWeek: number }>();
   let maxThisWeek = 0;
 
@@ -324,8 +426,9 @@ async function refreshTopicCounters(client: ContentDbClient, topicIdsByName: Map
       WHERE pt.topic_id = $1::uuid
         AND p.status = 'PUBLISHED'
         AND p.deleted = false
+        AND p.type = 'NORMAL'
       `,
-      [topicId, SEED_REFERENCE_TIME],
+      [topicId, referenceTime],
     );
     const row = result.rows[0];
     const values = {
@@ -352,7 +455,7 @@ async function refreshTopicCounters(client: ContentDbClient, topicIdsByName: Map
           updated_at = $7::timestamptz
       WHERE id = $1::uuid
       `,
-      [topicId, values.total, values.thisWeek, values.prevWeek, activityScore.toFixed(3), isHot, SEED_REFERENCE_TIME],
+      [topicId, values.total, values.thisWeek, values.prevWeek, activityScore.toFixed(3), isHot, referenceTime],
     );
   }
 }

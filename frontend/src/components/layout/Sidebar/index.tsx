@@ -20,6 +20,14 @@ function IconDigest() {
   );
 }
 
+function IconTopic() {
+  return (
+    <svg className={styles.ico} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7.5 7.5h.01M3 3v7.6a2 2 0 0 0 .6 1.4l8 8a2 2 0 0 0 2.8 0l5.6-5.6a2 2 0 0 0 0-2.8l-8-8A2 2 0 0 0 10.6 3H3z" />
+    </svg>
+  );
+}
+
 function IconSettings() {
   return (
     <svg className={styles.ico} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
@@ -85,6 +93,14 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
         >
           <IconDigest />
           <span className={styles.label}>Digest</span>
+        </Link>
+        <Link
+          to="/topics"
+          className={styles.navItem}
+          aria-current={pathname.startsWith('/topics') ? 'page' : undefined}
+        >
+          <IconTopic />
+          <span className={styles.label}>Topic</span>
         </Link>
       </nav>
 

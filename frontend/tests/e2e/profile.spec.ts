@@ -1,75 +1,19 @@
 import { test, expect, type Page } from '@playwright/test';
+import { loginAs, SEED_USERS } from './support';
 
-const MOCK_USER = {
-  id: 'user-1',
-  username: 'alexchen',
-  displayName: 'Alex Chen',
-  role: 'USER',
-  email: 'alex@example.com',
-};
-
-// Profiles are always served by the real backend, even in demo mode (ADR-0011),
-// so E2E mocks them at the network layer. The four post-derived tabs come from the
-// in-app demo mock (VITE_DEMO_MODE) and need no network mocking.
-const PROFILES: Record<string, Record<string, unknown>> = {
-  alexchen: {
-    id: 'user-1', username: 'alexchen', displayName: 'Alex Chen', avatarUrl: null,
-    bio: 'ML engineer building agents and RAG systems.', website: null, organisation: null,
-    expertiseAreas: ['Agents', 'RAG'], role: 'USER', isBanned: false,
-    postCount: 5, followerCount: 342, followingCount: 89, likeReceivedCount: 1840,
-    createdAt: '2024-03-15T10:00:00Z', updatedAt: '2025-05-10T08:00:00Z', email: 'alex@example.com',
-  },
-  sarahjkim: {
-    id: 'u1', username: 'sarahjkim', displayName: 'Sarah Kim', avatarUrl: null,
-    bio: 'Researcher. I summarize papers so you don\'t have to.', website: null, organisation: 'DeepMind',
-    expertiseAreas: ['Interpretability', 'Alignment'], role: 'VERIFIED', isBanned: false,
-    postCount: 2, followerCount: 2100, followingCount: 183, likeReceivedCount: 8400,
-    createdAt: '2024-01-10T00:00:00Z', updatedAt: '2025-05-20T12:00:00Z',
-  },
-};
-
-async function mockProfileRoutes(page: Page) {
-  for (const [username, profile] of Object.entries(PROFILES)) {
-    await page.route(`**/api/v1/users/by-username/${username}`, route =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(profile) }),
-    );
-  }
-  // PATCH /users/me — echo the submitted fields merged over the current user (alexchen).
-  await page.route('**/api/v1/users/me', (route) => {
-    const patch = route.request().method() === 'PATCH'
-      ? (JSON.parse(route.request().postData() || '{}') as Record<string, unknown>)
-      : {};
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ ...PROFILES.alexchen, ...patch }),
-    });
-  });
-}
-
-async function login(page: Page) {
-  await page.addInitScript((user) => {
-    localStorage.setItem('verita_user', JSON.stringify(user));
-  }, MOCK_USER);
-  await page.route('**/api/v1/auth/refresh', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ accessToken: 'mock-token', user: MOCK_USER }),
-    })
-  );
-  await mockProfileRoutes(page);
-}
+// Real, seeded backend (no route-mocking): `alexchen` is the logged-in user; `sarahjkim` is a
+// VERIFIED author. The mutating tests here (delete / unpublish / edit) persist to the seeded DB,
+// so this suite assumes a fresh `npm run seed:local` before each run (see README).
 
 async function goToOwnProfile(page: Page) {
-  await login(page);
-  await page.goto('/profile/alexchen');
+  await loginAs(page);
+  await page.goto(`/profile/${SEED_USERS.alexchen.username}`);
   await page.waitForSelector('[data-testid="profile-page"]');
 }
 
 async function goToOtherProfile(page: Page) {
-  await login(page);
-  await page.goto('/profile/sarahjkim');
+  await loginAs(page);
+  await page.goto(`/profile/${SEED_USERS.sarahjkim.username}`);
   await page.waitForSelector('[data-testid="profile-page"]');
 }
 
@@ -182,7 +126,7 @@ test('UP-14: switching to Drafts tab shows draft cards', async ({ page }) => {
 // ── UP-15: clicking a post card navigates to post detail ───────────────
 // Fixed: cards are now ImageCard/TextCard (data-testid="image-card" or "text-card")
 test('UP-15: clicking a post card navigates to post detail', async ({ page }) => {
-  await login(page);
+  await loginAs(page);
   await page.goto('/profile/sarahjkim');
   await page.waitForSelector('[data-testid="profile-page"]');
   const card = page
@@ -195,7 +139,6 @@ test('UP-15: clicking a post card navigates to post detail', async ({ page }) =>
 
 // ── UP-16: unauthenticated user can view profile ───────────────────────
 test('UP-16: unauthenticated user sees profile without edit or follow buttons', async ({ page }) => {
-  await mockProfileRoutes(page);
   await page.goto('/profile/sarahjkim');
   await page.waitForSelector('[data-testid="profile-page"]');
   await expect(page.getByTestId('avatar-edit-btn')).not.toBeVisible();
@@ -204,7 +147,7 @@ test('UP-16: unauthenticated user sees profile without edit or follow buttons', 
 
 // ── UP-17: profile accessible via Settings link ────────────────────────
 test('UP-17: navigating from Settings Edit Profile link loads own profile', async ({ page }) => {
-  await login(page);
+  await loginAs(page);
   await page.goto('/');
   await page.locator('[data-testid="sidebar-settings"]').click();
   await expect(page.locator('[role="dialog"]')).toBeVisible();

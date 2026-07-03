@@ -2,7 +2,7 @@
 
 React 19 · TypeScript · Vite · CSS Modules
 
-This is the frontend for Verita, an AI-powered academic knowledge-sharing platform. It connects to the backend services (user-service, content-service, recommendation-service) and uses a local mock data layer for development without a running backend.
+This is the frontend for Verita, an AI-powered academic knowledge-sharing platform. It connects to the backend services (user-service, content-service, recommendation-service). All data comes from the real backend — there is no in-app mock layer; run `docker compose up` and seed it (`npm run seed:local`) before using the app.
 
 ---
 
@@ -22,16 +22,15 @@ App runs at `http://localhost:3000`.
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start Vite dev server on port 3000 — pure real backend |
-| `npm run dev:demo` | Start dev server in **demo mode** (`VITE_DEMO_MODE`): real backend + mock display layer for data-sparse reads (ADR-0011) |
+| `npm run dev` | Start Vite dev server on port 3000 (real backend) |
 | `npm run build` | Type-check and build for production |
 | `npm run lint` | Run ESLint |
 | `npm run test:unit` | Run unit + component tests (Vitest, ~5s) |
 | `npm run test:unit:watch` | Vitest watch mode |
-| `npm test` | Run all E2E + API contract tests (Playwright, requires browser) |
+| `npm test` | Run the **heavy, local-only** E2E suite (Playwright) — needs a live seeded backend, see below |
 | `npm run test:ui` | Open Playwright's interactive debug UI |
 
-Authentication is always real: log in with a seed user (e.g. `alexchen` / `Password123!`, see `scripts/seed`). `dev:demo` only adds a mock display layer over the four data-sparse, post-derived reads (posts, bookmarks, likes, drafts) so the UI looks populated before content-service is seeded.
+Log in with a seed user (e.g. `alex@example.com` / `Password123!`, see `scripts/seed`).
 
 ---
 
@@ -70,7 +69,7 @@ frontend/
 │   │   └── Admin/          # Admin dashboard
 │   ├── hooks/              # useAuth, useFeed, useReadingProgress
 │   ├── contexts/           # AuthContext, ModalContext
-│   ├── services/           # Mock data layer (content.service, auth.service)
+│   ├── services/           # Backend API clients (content.service, auth.service)
 │   ├── types/              # Shared TypeScript interfaces (Post, User, Tag…)
 │   ├── utils/              # timeAgo and other helpers
 │   └── styles/
@@ -111,34 +110,54 @@ npx serve .
 
 ---
 
-## Mock Data Layer
+## Data
 
-The app works without a running backend for content browsing. `src/services/content.service.ts` returns in-memory mock posts, comments, and digests.
-
-Auth and user profiles call the real User Service at `http://localhost:8081`; user posts/bookmarks/likes/drafts call the real Content Service. Start the backend (or run `docker compose up`) and seed it (`scripts/seed`) before signing in. Auth session is stored in `localStorage` under the key `verita_user`.
-
-To preview a populated UI before content-service has seeded posts, start in **demo mode** — login is still real (use a seed user, e.g. `alexchen` / `Password123!`), but the four data-sparse reads are served from a mock display layer (ADR-0011):
-
-```bash
-npm run dev:demo
-```
+All data comes from the real backend. Auth and user profiles call the real User Service at
+`http://localhost:8081`; posts/comments/digests/bookmarks/likes/drafts call the real Content
+Service. Start the backend (`docker compose up`) and seed it (`npm run seed:local` from the repo
+root) before signing in. The auth session is stored in `localStorage` under the key `verita_user`.
 
 ---
 
 ## Tests
 
-The suite has three layers. See [docs/Frontend_Testing.md](../docs/Frontend_Testing.md) for the full test case register.
+Two layers. See [docs/Frontend_Testing.md](../docs/Frontend_Testing.md) for the full test case register.
 
-| Layer | Tool | Command | Speed |
-|---|---|---|---|
-| Unit / Component | Vitest + RTL | `npm run test:unit` | ~5 s |
-| E2E | Playwright | `npm test` | ~5 min |
-| API Contract | Playwright + page.route() | `npm test` | included above |
+| Layer | Tool | Command | Speed | CI |
+|---|---|---|---|---|
+| Unit / Component | Vitest + RTL | `npm run test:unit` | ~5 s | ✅ runs in CI |
+| E2E | Playwright | `npm test` | ~5 min | ❌ local-only |
 
-**What goes where:**
-- Pure functions and component logic → `tests/unit/`
-- Critical user flows in a real browser → `tests/e2e/`
-- Frontend renders correctly given OpenAPI-shaped responses → `tests/api/`
+### Unit / component tests (CI)
+
+```bash
+npm run test:unit
+```
+
+Fast, no browser, no backend. These run on every PR.
+
+### E2E — heavy, local-only
+
+The E2E suite runs the **real frontend against a live, seeded backend** — there is no in-app mock
+layer and no route-mocking of data. It is **not run in CI**; run it locally before shipping:
+
+```bash
+# 1. Bring up the whole stack
+docker compose up -d
+
+# 2. Seed it (from the repo root) — includes the public digest (ADR-0016)
+npm run seed:local
+
+# 3. Install the browser once
+cd frontend && npx playwright install chromium
+
+# 4. Run the suite (Playwright starts `npm run dev` and drives it)
+npm test
+```
+
+Some specs mutate the seeded DB (profile edits, post delete/unpublish), so **reseed before each
+run** for a clean baseline. Identity comes from a real login with a seed user via
+`tests/e2e/support.ts` (`loginAs`).
 
 **Test ID prefixes**
 
@@ -148,21 +167,9 @@ The suite has three layers. See [docs/Frontend_Testing.md](../docs/Frontend_Test
 | `I-` | Interactions — clicks, navigation, dynamic behaviour | `e2e/home.spec.ts` |
 | `S-` | Auth state — logged-in vs logged-out rendering | `e2e/home.spec.ts` |
 | `AM-` | Auth modal — sign-in, register, error handling | `e2e/auth.spec.ts` |
-| `DIG-` | Digest page flows | `e2e/digest.spec.ts` |
+| `DIG-` | Digest page flows (personal + public digest) | `e2e/digest.spec.ts` |
 | `UP-` | User profile page | `e2e/profile.spec.ts` |
 | `SM-` | Settings modal | `e2e/settings.spec.ts` |
-| `API-` | API contract (OpenAPI response shape) | `api/profile.api.spec.ts` |
-
-```bash
-# Unit + component tests — no browser needed
-npm run test:unit
-
-# E2E + API contract — requires Playwright browser installed once
-npx playwright install chromium
-npm test
-```
-
-No backend required — E2E tests mock the auth refresh endpoint via `page.route()` and use the in-memory mock service for all other data.
 
 ---
 
@@ -176,5 +183,5 @@ No backend required — E2E tests mock the auth refresh endpoint via `page.route
 | Styling | CSS Modules + CSS custom properties |
 | Routing | React Router v7 |
 | UI primitives | Radix UI (Dialog, DropdownMenu) |
-| HTTP client | Axios (wired to backend; mock layer used in dev) |
+| HTTP client | Axios (wired to the real backend) |
 | E2E tests | Playwright |

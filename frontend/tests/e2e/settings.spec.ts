@@ -1,28 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
-
-const MOCK_USER = {
-  id: '1',
-  username: 'testuser',
-  displayName: 'Test User',
-  role: 'USER',
-  email: 'test@example.com',
-};
-
-async function login(page: Page) {
-  await page.addInitScript((user) => {
-    localStorage.setItem('verita_user', JSON.stringify(user));
-  }, MOCK_USER);
-  await page.route('**/api/v1/auth/refresh', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ accessToken: 'mock-token', user: MOCK_USER }),
-    })
-  );
-}
+import { loginAs, SEED_USERS } from './support';
 
 async function openSettingsModal(page: Page) {
-  await login(page);
+  await loginAs(page);
   await page.goto('/');
   await page.locator('[data-testid="sidebar-settings"]').click();
   await expect(page.locator('[role="dialog"]')).toBeVisible();
@@ -37,8 +17,8 @@ test.describe('Settings Modal', () => {
   test('SM-2: account section shows stacked email and username', async ({ page }) => {
     await openSettingsModal(page);
     const dialog = page.locator('[role="dialog"]');
-    await expect(dialog.getByTestId('settings-email')).toHaveText('test@example.com');
-    await expect(dialog.getByTestId('settings-username')).toHaveText('@testuser');
+    await expect(dialog.getByTestId('settings-email')).toHaveText(SEED_USERS.alexchen.email);
+    await expect(dialog.getByTestId('settings-username')).toHaveText(`@${SEED_USERS.alexchen.username}`);
   });
 
   test('SM-3: edit profile link-row has description text', async ({ page }) => {

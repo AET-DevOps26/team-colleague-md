@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAuthModal } from '../../../contexts/ModalContext';
+import { useNavigationHistory } from '../../../contexts/NavigationHistoryContext';
+import { pageNameFromPath } from '../../../utils/pageName';
 import Avatar from '../../ui/Avatar';
 import styles from './PostDetailTopbar.module.css';
 
@@ -14,8 +16,12 @@ export default function PostDetailTopbar({ tabs }: PostDetailTopbarProps) {
   const location = useLocation();
   const { user, isLoggedIn } = useAuth();
   const { open: openAuth } = useAuthModal();
+  const { previousPath } = useNavigationHistory();
 
-  const from = (location.state as { from?: string } | null)?.from ?? 'Explore';
+  // Prefer an explicit label passed via navigation state; otherwise derive it from the page
+  // the back button actually returns to (navigate(-1)). Defaults to 'Explore' on deep links.
+  const explicitFrom = (location.state as { from?: string } | null)?.from;
+  const from = explicitFrom ?? (previousPath ? pageNameFromPath(previousPath) : 'Explore');
 
   return (
     <header className={styles.topbar}>

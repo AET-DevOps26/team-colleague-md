@@ -12,29 +12,6 @@
   padding: 10px 0;
 }
 
-.avMd {
-  width: 28px;
-  height: 28px;
-  font-size: 10.5px;
-}
-
-.avSm {
-  width: 22px;
-  height: 22px;
-  font-size: 9px;
-}
-
-.avatar {
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ccc, #888);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  flex-shrink: 0;
-}
-
 .body {
   flex: 1;
   min-width: 0;
@@ -64,14 +41,6 @@
   height: 11px;
 }
 
-.role {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-tertiary);
-  background: var(--bg-elevated);
-  padding: 1px 5px;
-  border-radius: 3px;
-}
 
 .opBadge {
   font-size: 9.5px;
@@ -181,6 +150,13 @@
   gap: 6px;
   padding: 4px 8px 6px;
   justify-content: flex-end;
+}
+
+.replyCount {
+  margin-right: auto;
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+  font-variant-numeric: tabular-nums;
 }
 
 .replyCancel {

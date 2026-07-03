@@ -132,6 +132,44 @@ class PostRepositoryIT {
     }
 
     @Test
+    void findBookmarkedPublishedPostsByUserId_ordersByMostRecentBookmark() throws InterruptedException {
+        UUID user = UUID.randomUUID();
+        // older post, newer post — but bookmark the older one last so it must sort first
+        PostEntity older = newPost("Older", "content", PostStatus.PUBLISHED, false);
+        Thread.sleep(5);
+        PostEntity newer = newPost("Newer", "content", PostStatus.PUBLISHED, false);
+        bookmark(newer, user);
+        Thread.sleep(5);
+        bookmark(older, user);
+
+        List<PostEntity> result = postRepository
+                .findBookmarkedPublishedPostsByUserId(user, PageRequest.of(0, 10)).getContent();
+
+        assertEquals(2, result.size());
+        assertEquals(older.getId(), result.get(0).getId());
+        assertEquals(newer.getId(), result.get(1).getId());
+    }
+
+    @Test
+    void findLikedPublishedPostsByUserId_ordersByMostRecentLike() throws InterruptedException {
+        UUID user = UUID.randomUUID();
+        // older post, newer post — but upvote the older one last so it must sort first
+        PostEntity older = newPost("Older", "content", PostStatus.PUBLISHED, false);
+        Thread.sleep(5);
+        PostEntity newer = newPost("Newer", "content", PostStatus.PUBLISHED, false);
+        vote(newer.getId(), user, VoteType.UPVOTE);
+        Thread.sleep(5);
+        vote(older.getId(), user, VoteType.UPVOTE);
+
+        List<PostEntity> result = postRepository
+                .findLikedPublishedPostsByUserId(user, PageRequest.of(0, 10)).getContent();
+
+        assertEquals(2, result.size());
+        assertEquals(older.getId(), result.get(0).getId());
+        assertEquals(newer.getId(), result.get(1).getId());
+    }
+
+    @Test
     void refreshVoteCounts_recomputesLikesAndDislikesFromVotes() {
         PostEntity post = newPost("Counted", "content", PostStatus.PUBLISHED, false);
         vote(post.getId(), UUID.randomUUID(), VoteType.UPVOTE);

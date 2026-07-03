@@ -181,7 +181,7 @@ async function refreshContentTopicFollowerCounts(contentClient: pg.Client, topic
   for (const [topicName, topicId] of topicIdsByName) {
     if (!countsByTopicName.has(topicName)) continue;
     await contentClient.query(
-      "UPDATE topics SET follower_count = $2 WHERE id = $1::uuid",
+      "UPDATE topics SET follower_count = follower_count + $2 WHERE id = $1::uuid",
       [topicId, countsByTopicName.get(topicName)],
     );
   }

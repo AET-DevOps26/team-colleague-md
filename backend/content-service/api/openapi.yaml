@@ -186,6 +186,25 @@ paths:
               schema: { $ref: '#/components/schemas/PostPage' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/v1/posts/digests/today/public:
+    get:
+      operationId: getPublicTodayDigest
+      summary: Get today's public digest
+      description: >
+        Returns the newest public digest — a DIGEST-type post with `target_user_id = null`
+        (ADR-0016), readable without authentication so the logged-out `/digest` surface has
+        something to show. A valid token additionally personalises the response (ADR-0006).
+        Responds `404` when no public digest exists.
+      tags: [Posts]
+      security: []
+      responses:
+        '200':
+          description: Public digest retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/v1/posts/{id}:
     get:
       operationId: getPostById
@@ -409,7 +428,8 @@ paths:
   /api/v1/comments/{id}/like:
     post:
       operationId: likeComment
-      summary: Like a comment
+      summary: Like or un-like a comment
+      description: Send LIKE to cast a like. Send NONE to remove an existing like.
       tags: [Interactions]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -417,6 +437,11 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommentLikeRequest' }
       responses:
         '200':
           description: Comment like processed successfully
@@ -882,7 +907,7 @@ components:
       type: object
       required: [text]
       properties:
-        text: { type: string, minLength: 1, maxLength: 2000 }
+        text: { type: string, minLength: 1, maxLength: 500 }
         parentId: { type: string, format: uuid, nullable: true, description: "ID of parent comment for replies" }
 
     CommentResponse:
@@ -913,6 +938,15 @@ components:
         dislikeCount: { type: integer }
         isLikedByMe: { type: boolean }
         isDislikedByMe: { type: boolean }
+
+    CommentLikeRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [LIKE, NONE]
+          description: "LIKE to cast a like. NONE to remove an existing like."
 
     CommentLikeResponse:
       type: object

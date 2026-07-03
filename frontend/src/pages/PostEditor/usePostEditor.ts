@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { EditorPost } from '../../types';
 import { postEditorService, uploadErrorMessage } from '../../services/postEditor.service';
+import { useToast } from '../../hooks/useToast';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { canPublish } from './validation';
 import { resolveExitScenario } from './exitScenario';
@@ -39,7 +40,7 @@ export function usePostEditor() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
+  const { showToast } = useToast();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -129,17 +130,17 @@ export function usePostEditor() {
       try {
         const url = await postEditorService.uploadFile(file);
         update({ coverImageUrl: url });
-        setToast({ message: 'Cover image uploaded', error: false });
+        showToast({ variant: 'success', message: 'Cover image uploaded' });
       } catch (err) {
-        setToast({
+        showToast({
+          variant: 'error',
           message: uploadErrorMessage(err, 'Cover upload failed — please try again'),
-          error: true,
         });
       } finally {
         setUploading(false);
       }
     },
-    [update],
+    [update, showToast],
   );
 
   const onInlineImageSelected = (file: File | null) => {
@@ -155,17 +156,17 @@ export function usePostEditor() {
       try {
         const url = await postEditorService.uploadFile(file);
         applyEdit((s) => insertImage(s, alt, url));
-        setToast({ message: 'Image uploaded', error: false });
+        showToast({ variant: 'success', message: 'Image uploaded' });
       } catch (err) {
-        setToast({
+        showToast({
+          variant: 'error',
           message: uploadErrorMessage(err, 'Image upload failed — please try again'),
-          error: true,
         });
       } finally {
         setUploading(false);
       }
     },
-    [pasteFile, applyEdit],
+    [pasteFile, applyEdit, showToast],
   );
 
   const onPaste = useCallback((e: React.ClipboardEvent) => {
@@ -242,8 +243,6 @@ export function usePostEditor() {
     exitOpen,
     exitScenario,
     uploading,
-    toast,
-    dismissToast: () => setToast(null),
     textareaRef,
     inlineImageInputRef,
     coverInputRef,
