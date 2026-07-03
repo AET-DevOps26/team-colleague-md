@@ -93,6 +93,7 @@ resource "azurerm_network_interface_security_group_association" "main" {
 }
 
 # Linux Virtual Machine — Ubuntu 22.04, SSH-key-only auth
+# Gen1 image: Standard_D2_v2_Promo (austriaeast) only supports HyperVGeneration V1
 resource "azurerm_linux_virtual_machine" "main" {
   name                = "${var.project_name}-vm"
   resource_group_name = azurerm_resource_group.main.name
@@ -116,7 +117,7 @@ resource "azurerm_linux_virtual_machine" "main" {
   source_image_reference {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts-gen2"
+    sku       = "22_04-lts"
     version   = "latest"
   }
 
