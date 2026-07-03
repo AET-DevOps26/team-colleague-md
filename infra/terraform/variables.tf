@@ -1,7 +1,7 @@
 variable "location" {
   description = "Azure region for all resources"
   type        = string
-  default     = "swedencentral"
+  default     = "francecentral"
 }
 
 variable "vm_size" {
