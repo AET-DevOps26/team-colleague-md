@@ -3,10 +3,10 @@
 set -e
 
 RESOURCE_GROUP="verita-tfstate-rg"
-STORAGE_ACCOUNT="veritaterraformstate"   # globally unique, lowercase, 3-24 chars
+STORAGE_ACCOUNT="veritaterraformarpad"   # globally unique, lowercase, 3-24 chars
 CONTAINER_NAME="tfstate"
-LOCATION="swedencentral"
-SP_NAME="verita-terraform-sp"
+LOCATION="francecentral"
+SP_NAME="verita-terraform-arpad"
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 
 echo ">>> Creating resource group for Terraform state..."
