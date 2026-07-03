@@ -32,9 +32,10 @@ The current demo seed has four problems:
 ## 2. How the seed & the relevant domain work (ground truth)
 
 **Seed entrypoint.** `npm run seed:local` → `scripts/seed-local.ts` → runs `seedUsers`,
-`seedContent`, `seedRecommendations` in order (each idempotent/upsert). Content data lives in
-`scripts/seed/services/content/contentData.ts`; the DB writer is
-`scripts/seed/services/content/contentRepository.ts`.
+`seedContent`, `seedRecommendations` in order (each idempotent/upsert). Passing `--reset` first
+runs `scripts/seed/reset.ts`, which purges seed-owned rows (so fixtures removed here don't linger)
+before re-seeding. Content data lives in `scripts/seed/services/content/contentData.ts`; the DB
+writer is `scripts/seed/services/content/contentRepository.ts`.
 
 **Posts table.** Cross-service refs are free UUIDs (no FK to user-service). A post row has:
 `id, author_id, title, content, excerpt, cover_image_url, content_summary, status ('PUBLISHED'),
