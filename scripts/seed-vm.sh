@@ -13,6 +13,11 @@
 # Usage:
 #   VM_HOST=<public-ip> ./scripts/seed-vm.sh
 #   VM_HOST=<public-ip> SEED_ONLY=users,content ./scripts/seed-vm.sh
+#   VM_HOST=<public-ip> SEED_RESET=1 ./scripts/seed-vm.sh   # purge stale seed rows first
+#
+# SEED_RESET deletes only seed-owned rows (users with @example.com emails and the
+# data they own, plus system digests) before seeding, so fixtures removed in a
+# newer seed no longer linger. Real user-created data is preserved.
 #
 # Env (defaults match infra/ansible/inventory.ini + group_vars/all.yml):
 #   VM_HOST       required — VM public IP (terraform output vm_public_ip)
@@ -20,6 +25,7 @@
 #   SSH_KEY       default: ~/.ssh/verita_key
 #   DEPLOY_DIR    default: /home/azureuser/verita  (holds docker-compose.prod.yml + .env)
 #   SEED_NETWORK  optional — override the compose network (auto-detected otherwise)
+#   SEED_RESET    optional — set to any non-empty value to purge stale seed rows first
 #   NODE_IMAGE    default: node:22-alpine
 set -euo pipefail
 
@@ -29,6 +35,7 @@ SSH_KEY="${SSH_KEY:-$HOME/.ssh/verita_key}"
 DEPLOY_DIR="${DEPLOY_DIR:-/home/azureuser/verita}"
 SEED_ONLY="${SEED_ONLY:-}"
 SEED_NETWORK="${SEED_NETWORK:-}"
+SEED_RESET="${SEED_RESET:-}"
 NODE_IMAGE="${NODE_IMAGE:-node:22-alpine}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -43,11 +50,11 @@ echo "==> Shipping seed code to $VM_USER@$VM_HOST:$REMOTE_SEED_DIR"
 "${SSH[@]}" "mkdir -p '$REMOTE_SEED_DIR'"
 tar -C "$ROOT" -czf - "${PKG_FILES[@]}" | "${SSH[@]}" "tar -C '$REMOTE_SEED_DIR' -xzf -"
 
-echo "==> Running seed inside the prod compose network on the VM (${SEED_ONLY:-all domains})"
+echo "==> Running seed inside the prod compose network on the VM (${SEED_ONLY:-all domains}${SEED_RESET:+, reset})"
 # Local values are passed as env to the remote bash; the heredoc is quoted so the
 # secrets from .env expand on the VM, never on this machine or in this process list.
 "${SSH[@]}" \
-  "DEPLOY_DIR='$DEPLOY_DIR' REMOTE_SEED_DIR='$REMOTE_SEED_DIR' NODE_IMAGE='$NODE_IMAGE' SEED_ONLY='$SEED_ONLY' SEED_NETWORK='$SEED_NETWORK' bash -s" <<'REMOTE'
+  "DEPLOY_DIR='$DEPLOY_DIR' REMOTE_SEED_DIR='$REMOTE_SEED_DIR' NODE_IMAGE='$NODE_IMAGE' SEED_ONLY='$SEED_ONLY' SEED_RESET='$SEED_RESET' SEED_NETWORK='$SEED_NETWORK' bash -s" <<'REMOTE'
 set -euo pipefail
 
 # Resolve the compose network the DB containers live on.
@@ -63,8 +70,10 @@ echo "==> docker network: $NET"
 [ -f "$DEPLOY_DIR/.env" ] || { echo ".env not found at $DEPLOY_DIR/.env" >&2; exit 1; }
 set -a; . "$DEPLOY_DIR/.env"; set +a
 
-ONLY_ARGS=""
-[ -n "$SEED_ONLY" ] && ONLY_ARGS="-- --only $SEED_ONLY"
+SEED_ARGS=""
+[ -n "$SEED_ONLY" ] && SEED_ARGS="$SEED_ARGS --only $SEED_ONLY"
+[ -n "$SEED_RESET" ] && SEED_ARGS="$SEED_ARGS --reset"
+[ -n "$SEED_ARGS" ] && SEED_ARGS="--$SEED_ARGS"
 
 docker run --rm \
   --network "$NET" \
@@ -78,7 +87,7 @@ docker run --rm \
   -e CONTENT_STORAGE_S3_ACCESS_KEY="$CONTENT_SERVICE_S3_ACCESS_KEY" -e CONTENT_STORAGE_S3_SECRET_KEY="$CONTENT_SERVICE_S3_SECRET_KEY" \
   -e CONTENT_POST_PHOTOS_BUCKET="${STORAGE_POST_PHOTOS_BUCKET:-verita-post-photos}" \
   -v "$REMOTE_SEED_DIR":/app -w /app \
-  "$NODE_IMAGE" sh -c "npm ci --no-audit --no-fund && npm run seed:local $ONLY_ARGS"
+  "$NODE_IMAGE" sh -c "npm ci --no-audit --no-fund && npm run seed:local $SEED_ARGS"
 
 echo "==> Done. Azure VM seeded."
 REMOTE

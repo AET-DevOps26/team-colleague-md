@@ -102,6 +102,54 @@ export async function assertNoUserIdentityConflicts(client: UserDbClient, users:
   }
 }
 
+/**
+ * Live ownership marker for seeded users. Every seed fixture uses an `@example.com`
+ * email, and the upsert never deletes, so this query returns *all* rows this seed has
+ * ever written — including users dropped from the current fixtures — while never
+ * matching a real signup. That is what lets --reset purge stale seed rows.
+ */
+export const SEED_USER_EMAIL_SUFFIX = "@example.com";
+
+export interface SeedUserIdentities {
+  ids: string[];
+  usernames: string[];
+}
+
+export async function getSeedUserIdentities(client: UserDbClient): Promise<SeedUserIdentities> {
+  const result = await client.query<{ id: string; username: string }>(
+    "SELECT id::text, username FROM users WHERE email LIKE $1",
+    [`%${SEED_USER_EMAIL_SUFFIX}`],
+  );
+  return {
+    ids: result.rows.map((row) => row.id),
+    usernames: result.rows.map((row) => row.username),
+  };
+}
+
+/**
+ * Deletes seed users and their expertise rows. Run *after* content/recommendation
+ * resets, which need the id set gathered by getSeedUserIdentities() first.
+ * When dryRun, rolls back so nothing is mutated but the row count is still reported.
+ */
+export async function resetSeedUsers(
+  client: UserDbClient,
+  ids: string[],
+  { dryRun }: { dryRun: boolean },
+): Promise<{ users: number }> {
+  if (ids.length === 0) return { users: 0 };
+
+  await client.query("BEGIN");
+  try {
+    await client.query("DELETE FROM user_expertise WHERE user_id = ANY($1::uuid[])", [ids]);
+    const users = await client.query("DELETE FROM users WHERE id = ANY($1::uuid[])", [ids]);
+    await client.query(dryRun ? "ROLLBACK" : "COMMIT");
+    return { users: users.rowCount ?? 0 };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  }
+}
+
 export async function upsertSeedUsers(
   client: UserDbClient,
   users: SeedUser[],

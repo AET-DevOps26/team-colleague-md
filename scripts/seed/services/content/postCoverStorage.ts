@@ -111,6 +111,24 @@ export async function deleteObsoletePostCovers(client: MinioClient, config: Seed
   }
 }
 
+/**
+ * Removes every seed post cover object (all live under the `seed-post-covers/`
+ * prefix, so this touches no user-uploaded content). Returns the count removed.
+ * When dryRun, lists but removes nothing.
+ */
+export async function deleteAllSeedPostCovers(
+  client: MinioClient,
+  config: SeedConfig,
+  { dryRun }: { dryRun: boolean },
+): Promise<number> {
+  const storage = config.storage.content;
+  const existing = await listSeedPostCoverObjects(client, storage.bucket);
+  if (existing.length > 0 && !dryRun) {
+    await client.removeObjects(storage.bucket, existing);
+  }
+  return existing.length;
+}
+
 function listSeedPostCoverObjects(client: MinioClient, bucket: string): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const objectNames: string[] = [];

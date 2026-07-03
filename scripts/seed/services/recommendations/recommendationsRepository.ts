@@ -84,6 +84,42 @@ export function validateRecommendationFixtures(seedPostIds: Set<string>, topicId
   }
 }
 
+/**
+ * Purges recommendation rows owned by seed users (resolved from live seed user ids,
+ * so stale rows from earlier fixtures are caught too). When dryRun, rolls back so
+ * nothing is mutated but counts are reported.
+ */
+export async function resetSeedRecommendations(
+  client: RecommendationDbClient,
+  seedUserIds: string[],
+  { dryRun }: { dryRun: boolean },
+): Promise<{ interactions: number; notifications: number; topicSubscriptions: number; userSubscriptions: number }> {
+  if (seedUserIds.length === 0) {
+    return { interactions: 0, notifications: 0, topicSubscriptions: 0, userSubscriptions: 0 };
+  }
+
+  await client.query("BEGIN");
+  try {
+    const interactions = await client.query("DELETE FROM interactions WHERE user_id = ANY($1::uuid[])", [seedUserIds]);
+    const notifications = await client.query("DELETE FROM notifications WHERE user_id = ANY($1::uuid[])", [seedUserIds]);
+    const topicSubscriptions = await client.query("DELETE FROM topic_subscriptions WHERE user_id = ANY($1::uuid[])", [seedUserIds]);
+    const userSubscriptions = await client.query(
+      "DELETE FROM user_subscriptions WHERE follower_id = ANY($1::uuid[]) OR followed_id = ANY($1::uuid[])",
+      [seedUserIds],
+    );
+    await client.query(dryRun ? "ROLLBACK" : "COMMIT");
+    return {
+      interactions: interactions.rowCount ?? 0,
+      notifications: notifications.rowCount ?? 0,
+      topicSubscriptions: topicSubscriptions.rowCount ?? 0,
+      userSubscriptions: userSubscriptions.rowCount ?? 0,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  }
+}
+
 export async function upsertSeedRecommendations(
   recommendationClient: RecommendationDbClient,
   contentClient: pg.Client,

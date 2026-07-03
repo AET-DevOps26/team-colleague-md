@@ -15,6 +15,11 @@
 # Usage:
 #   ./scripts/seed-rancher.sh                 # seed everything into verita-dev
 #   SEED_ONLY=users,content ./scripts/seed-rancher.sh
+#   SEED_RESET=1 ./scripts/seed-rancher.sh    # purge stale seed rows first, then re-seed
+#
+# SEED_RESET deletes only seed-owned rows (users with @example.com emails and the
+# data they own, plus system digests) before seeding, so fixtures removed in a
+# newer seed no longer linger. Real user-created data is preserved.
 #
 # Requires: kubectl (with a verita-dev context), node + npm.
 set -euo pipefail
@@ -23,6 +28,7 @@ NAMESPACE="${NAMESPACE:-verita-dev}"
 RELEASE="${RELEASE:-verita}"
 INGRESS_HOST="${INGRESS_HOST:-dev.verita.stud.k8s.aet.cit.tum.de}"
 SEED_ONLY="${SEED_ONLY:-}"
+SEED_RESET="${SEED_RESET:-}"   # set to any non-empty value to purge stale seed rows before re-seeding
 
 # --- prod guard: dev defaults won't connect to prod anyway, but fail loud. ---
 case "$NAMESPACE" in
@@ -75,7 +81,11 @@ for hostport in 5432 5433 5434 9000; do
 done
 echo "==> Port-forwards ready."
 
-echo "==> Running seed (${SEED_ONLY:-all domains})"
+SEED_ARGS=()
+[ -n "$SEED_ONLY" ] && SEED_ARGS+=(--only "$SEED_ONLY")
+[ -n "$SEED_RESET" ] && SEED_ARGS+=(--reset)
+
+echo "==> Running seed (${SEED_ONLY:-all domains}${SEED_RESET:+, reset})"
 USER_DB_HOST=127.0.0.1 USER_DB_PORT=5432 USER_DB_NAME=verita_users USER_DB_USER=svc_user USER_DB_PASSWORD="$DEV_DB_PASSWORD" \
 CONTENT_DB_HOST=127.0.0.1 CONTENT_DB_PORT=5433 CONTENT_DB_NAME=verita_contents CONTENT_DB_USER=svc_content CONTENT_DB_PASSWORD="$DEV_DB_PASSWORD" \
 RECOMMENDATION_DB_HOST=127.0.0.1 RECOMMENDATION_DB_PORT=5434 RECOMMENDATION_DB_NAME=verita_recommendations RECOMMENDATION_DB_USER=svc_recommendation RECOMMENDATION_DB_PASSWORD="$DEV_DB_PASSWORD" \
@@ -83,6 +93,6 @@ USER_STORAGE_S3_ENDPOINT="http://127.0.0.1:9000" USER_STORAGE_S3_PUBLIC_ENDPOINT
 USER_STORAGE_S3_ACCESS_KEY=user-service USER_STORAGE_S3_SECRET_KEY=user-service-s3-secret \
 CONTENT_STORAGE_S3_ENDPOINT="http://127.0.0.1:9000" CONTENT_STORAGE_S3_PUBLIC_ENDPOINT="https://$INGRESS_HOST/storage" \
 CONTENT_STORAGE_S3_ACCESS_KEY=content-service CONTENT_STORAGE_S3_SECRET_KEY=content-service-s3-secret \
-  npm --prefix "$ROOT" run seed:local ${SEED_ONLY:+-- --only "$SEED_ONLY"}
+  npm --prefix "$ROOT" run seed:local ${SEED_ARGS[@]:+-- "${SEED_ARGS[@]}"}
 
 echo "==> Done. verita-dev seeded."

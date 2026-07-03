@@ -90,6 +90,26 @@ function formatError(error: unknown): string {
   return String(error);
 }
 
+/**
+ * Removes the `${username}/avatar.png` object for each given seed username. Callers
+ * pass the live seed usernames (from getSeedUserIdentities) so stale avatars from
+ * users dropped from the fixtures are removed too. When dryRun, removes nothing.
+ */
+export async function deleteSeedAvatars(
+  client: MinioClient,
+  config: SeedConfig,
+  usernames: string[],
+  { dryRun }: { dryRun: boolean },
+): Promise<number> {
+  if (usernames.length === 0) return 0;
+  const storage = config.storage.users;
+  const objectNames = usernames.map((username) => `${username}/avatar.png`);
+  if (!dryRun) {
+    await client.removeObjects(storage.bucket, objectNames);
+  }
+  return objectNames.length;
+}
+
 export async function uploadAvatars(client: MinioClient, config: SeedConfig, avatars: AvatarObject[]) {
   const storage = config.storage.users;
   for (const avatar of avatars) {
