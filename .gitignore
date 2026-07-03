@@ -91,6 +91,9 @@ frontend/playwright-report/
 *.pub
 verita_key
 
+# Local-only Brevo SMTP test override (references shell env, holds no secrets itself)
+docker-compose.brevo.local.yml
+
 # CodeGraph data files — local to each machine, not for committing.
 ./codegraph/*
 

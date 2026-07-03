@@ -77,6 +77,30 @@ spec:
                   name: "{{ $.Release.Name }}-internal-token"
                   key: token
             {{- end }}
+            {{- if $svc.mail }}
+            # Password-reset SMTP (Brevo). Host/port/sender are non-secret; the SMTP login and
+            # key come from the {{ $.Release.Name }}-mail Secret (only minted when creds are set).
+            - name: MAIL_HOST
+              value: {{ $svc.mail.host | quote }}
+            - name: MAIL_PORT
+              value: {{ $svc.mail.port | quote }}
+            - name: MAIL_FROM
+              value: {{ $svc.mail.from | quote }}
+            - name: MAIL_SMTP_AUTH
+              value: "true"
+            - name: MAIL_SMTP_STARTTLS
+              value: "true"
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $.Release.Name }}-mail"
+                  key: username
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $.Release.Name }}-mail"
+                  key: password
+            {{- end }}
             {{- range $k, $v := $svc.extraEnv }}
             - name: {{ $k }}
               value: {{ tpl $v $ | quote }}

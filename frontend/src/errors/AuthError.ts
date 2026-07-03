@@ -2,6 +2,7 @@ export type AuthErrorCode =
   | 'INVALID_CREDENTIALS'
   | 'EMAIL_IN_USE'
   | 'USERNAME_IN_USE'
+  | 'INVALID_RESET_CODE'
   | 'NETWORK_ERROR'
   | 'UNKNOWN';
 

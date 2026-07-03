@@ -47,6 +47,12 @@ public class GlobalExceptionHandler {
         return errorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidPasswordResetException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPasswordReset(InvalidPasswordResetException ex) {
+        // Generic 400 — the message intentionally does not reveal which check failed.
+        return errorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     @ExceptionHandler(DeleteUserContentException.class)
     public ResponseEntity<ErrorResponse> handleDeleteUserContent(DeleteUserContentException ex) {
         log.warn(

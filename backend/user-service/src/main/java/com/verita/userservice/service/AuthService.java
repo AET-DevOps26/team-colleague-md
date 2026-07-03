@@ -129,16 +129,6 @@ public class AuthService {
         return !userRepository.existsByEmail(email);
     }
 
-    /** Not yet implemented. TODO: implement password reset email flow. */
-    public Void forgotPassword(com.verita.model.ForgotPasswordRequest request) {
-        return null;
-    }
-
-    /** Not yet implemented. TODO: implement password reset with OTP validation. */
-    public Void resetPassword(com.verita.model.ResetPasswordRequest request) {
-        return null;
-    }
-
     // --- Private helpers ---
 
     private AuthResponse authenticateAndToken(String username, String password) {
