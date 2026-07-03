@@ -354,17 +354,28 @@ export async function resetSeedContent(
     );
     const seedPostIds = seedPostRows.rows.map((row) => row.id);
 
-    const votes = await client.query(
-      "DELETE FROM votes WHERE (target_type = 'POST' AND target_id = ANY($1::uuid[])) OR user_id = ANY($2::uuid[])",
+    // Resolve the comments that will be deleted up front so their COMMENT-target
+    // votes can be purged too — otherwise a non-seed user's vote on a seed comment
+    // would be stranded pointing at a missing row (votes are polymorphic, no FK).
+    const seedCommentRows = await client.query<{ id: string }>(
+      "SELECT id::text FROM comments WHERE post_id = ANY($1::uuid[]) OR author_id = ANY($2::uuid[])",
       [seedPostIds, seedUserIds],
+    );
+    const seedCommentIds = seedCommentRows.rows.map((row) => row.id);
+
+    const votes = await client.query(
+      `DELETE FROM votes WHERE (target_type = 'POST' AND target_id = ANY($1::uuid[]))
+         OR (target_type = 'COMMENT' AND target_id = ANY($2::uuid[]))
+         OR user_id = ANY($3::uuid[])`,
+      [seedPostIds, seedCommentIds, seedUserIds],
     );
     const bookmarks = await client.query(
       "DELETE FROM bookmarks WHERE post_id = ANY($1::uuid[]) OR user_id = ANY($2::uuid[])",
       [seedPostIds, seedUserIds],
     );
     const comments = await client.query(
-      "DELETE FROM comments WHERE post_id = ANY($1::uuid[]) OR author_id = ANY($2::uuid[])",
-      [seedPostIds, seedUserIds],
+      "DELETE FROM comments WHERE id = ANY($1::uuid[])",
+      [seedCommentIds],
     );
     await client.query("DELETE FROM post_source_urls WHERE post_id = ANY($1::uuid[])", [seedPostIds]);
     await client.query("DELETE FROM post_topics WHERE post_id = ANY($1::uuid[])", [seedPostIds]);
