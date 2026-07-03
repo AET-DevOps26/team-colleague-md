@@ -87,6 +87,11 @@ jobs:
               --set recommendation-postgresql.auth.password="${{ secrets.RECOMMENDATION_DB_PASSWORD }}"
               --set minio.users[0].secretKey="${{ secrets.USER_SERVICE_S3_SECRET_KEY }}"
               --set minio.users[1].secretKey="${{ secrets.CONTENT_SERVICE_S3_SECRET_KEY }}"
+              # Brevo SMTP for the user-service password-reset mail. Renders secret-mail.yaml and
+              # the MAIL_* env block (deployment.yaml); overrides the placeholder sender in values-prod.
+              --set global.mailUsername="${{ secrets.MAIL_USERNAME }}"
+              --set global.mailPassword="${{ secrets.MAIL_PASSWORD }}"
+              --set services.user.mail.from="${{ secrets.MAIL_FROM }}"
             )
           fi
 

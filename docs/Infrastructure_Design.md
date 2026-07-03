@@ -397,6 +397,9 @@ container as a sidecar for the `user-service`; the database password is injected
 | Secret   | `VM_SSH_PUBLIC_KEY`   | Terraform — public key written to VM `authorized_keys`     |
 | Secret   | `AZURE_PRIVATE_KEY`   | Ansible — private key for SSH access to the VM             |
 | Secret   | `DB_PASSWORD`         | Ansible — PostgreSQL password written to `.env` on the VM  |
+| Secret   | `MAIL_USERNAME`       | Ansible + Helm — Brevo SMTP login (password-reset mail)    |
+| Secret   | `MAIL_PASSWORD`       | Ansible + Helm — Brevo SMTP key (password-reset mail)      |
+| Secret   | `MAIL_FROM`           | Ansible + Helm — Brevo-verified sender address             |
 | Variable | `AZURE_USER`          | Ansible — VM admin username (`azureuser`)                  |
 | Variable | `AZURE_PUBLIC_IP`     | Ansible — VM public IP (set after first `terraform apply`) |
 
