@@ -64,11 +64,16 @@ export interface Post {
   readTimeMinutes?: number;
 }
 
+/** PERSONAL = built for one subscriber; PUBLIC = shared community digest (ADR-0019). */
+export type DigestType = 'PERSONAL' | 'PUBLIC';
+
 export interface TodayDigest {
   id: string;
   date: string;
+  digestType: DigestType;
   title: string;
   topStorySubtitle: string;
+  previewHeadlines: string[];
   eventCount: number;
   readTimeMinutes: number;
   generatedAt: string;
@@ -79,9 +84,45 @@ export interface DigestListItem {
   id: string;
   date: string;
   displayDate: string;
+  digestType: DigestType;
   title: string;
   eventCount: number;
   readTimeMinutes: number;
+}
+
+/** One external source cited by a digest event (ADR-0019). */
+export interface DigestSource {
+  url: string;
+  sourceName?: string | null;
+  provider?: string | null;
+  publishedAt?: string | null;
+  title?: string | null;
+}
+
+/** One development in the digest event stream. */
+export interface DigestEvent {
+  headline: string;
+  summaryBullets: string[];
+  topicIds: string[];
+  sources: DigestSource[];
+}
+
+/** Full digest with its structured event stream (GET /api/v1/digests/{id}). */
+export interface DigestDetail {
+  id: string;
+  digestType: DigestType;
+  date: string;
+  title: string;
+  subtitle: string;
+  summary: string;
+  eventCount: number;
+  sourceCount: number;
+  readTimeMinutes: number;
+  previewHeadlines: string[];
+  topics: Topic[];
+  events: DigestEvent[];
+  generatedAt?: string | null;
+  createdAt: string;
 }
 
 /** Mirrors content-service OpenAPI TopicResponse */

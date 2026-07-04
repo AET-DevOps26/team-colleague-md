@@ -509,7 +509,7 @@ components:
         One newly observed development in the daily digest. The frontend can render
         each event as a headline with bullets and external source links, while the
         caller can trace which subscribed topics caused the event to appear.
-      required: [headline, summaryBullets, topicIds, sourceUrls]
+      required: [headline, summaryBullets, topicIds, sources]
       properties:
         headline:
           type: string
@@ -529,12 +529,34 @@ components:
           items:
             type: string
             format: uuid
-        sourceUrls:
+        sources:
           type: array
           items:
-            type: string
-            format: uri
-          description: External source URLs used to support this digest event.
+            $ref: '#/components/schemas/DigestSource'
+          description: Structured external sources supporting this digest event.
+
+    DigestSource:
+      type: object
+      description: A single external source cited by a digest event.
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Canonical link to the source.
+        sourceName:
+          type: [string, "null"]
+          description: Human-readable source/domain name (e.g. "TechCrunch").
+        provider:
+          type: [string, "null"]
+          description: Upstream provider (github, gnews, huggingface).
+        publishedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Absolute publish time; the client computes the relative "Xh ago" label.
+        title:
+          type: [string, "null"]
+          description: Source article/item title.
 
     TokenUsage:
       type: object

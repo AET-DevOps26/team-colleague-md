@@ -47,11 +47,13 @@ export default function DigestCard() {
         {digest.eventCount} picks · {digest.readTimeMinutes} min read
       </div>
       <h2 className={styles.title}>{digest.title}</h2>
+      {digest.topStorySubtitle && <p className={styles.summary}>{digest.topStorySubtitle}</p>}
       <div className={styles.divider} />
       <ul className={styles.bullets}>
-        <li>{digest.topStorySubtitle}</li>
-        <li>{digest.eventCount} papers and discussions curated today</li>
-        <li>{isLoggedIn ? 'Personalised to your interests' : 'Platform-wide trending stories'}</li>
+        {(digest.previewHeadlines.length > 0
+          ? digest.previewHeadlines
+          : [isLoggedIn ? 'Personalised to your interests' : 'Platform-wide trending stories']
+        ).map((headline, i) => <li key={i}>{headline}</li>)}
       </ul>
       <span className={styles.cta}>
         {isLoggedIn ? 'Read digest' : "Browse today's digest"}
