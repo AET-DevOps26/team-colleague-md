@@ -1,5 +1,9 @@
 # Digest read access: personal digests are guarded, public digests are open
 
+> **Superseded by [ADR-0019](0019-digest-standalone-entity.md).** Digests moved off `posts`
+> into a standalone `digests` entity; the access rule below (personal → 404 for non-owner,
+> public → open) is preserved on the new `/api/v1/digests` endpoints.
+
 A `DIGEST`-type post's `target_user_id` decides who may read it. A **personal digest**
 (`target_user_id` set) is readable only by that user; **`GET /api/v1/posts/{id}` now enforces
 this** — a request from anyone else (including anonymous) gets `404`. A **public digest**

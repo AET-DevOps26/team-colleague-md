@@ -1,5 +1,10 @@
 # The digest reader renders stored Markdown; structured per-event source attribution is deferred
 
+> **Superseded by [ADR-0019](0019-digest-standalone-entity.md).** The deferred structured
+> `events[]` contract (per-event source domain/timestamp/link) is now landed: the digest stores
+> structured events and the reader renders per-event source chips. The flat-Markdown model
+> below is retired.
+
 The digest reader page (`/digest/:id`) renders the digest's `content` (Markdown) with the shared
 `<Markdown>` component and lists `sourceUrl[]` as a single flat "Sources" section. It does **not**
 reproduce the design mock's per-event source chips (source domain + "3h ago" + a per-event link),

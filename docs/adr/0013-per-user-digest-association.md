@@ -1,5 +1,9 @@
 # A digest is linked to its user via `target_user_id`, not `authorId`
 
+> **Superseded by [ADR-0019](0019-digest-standalone-entity.md).** The digest is now a
+> standalone `digests` entity, not a `DIGEST`-type post; the `target_user_id`/`digest_type`
+> recipient semantics below are preserved on the new table.
+
 An AI Daily Digest is stored in content-service as a `DIGEST`-type post authored by a single
 fixed system user id. To record *which* user a digest was personalised for, we add a nullable
 `target_user_id` column to `posts` (`null` = a global/system digest belonging to no one; set =

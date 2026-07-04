@@ -1,5 +1,10 @@
 # Zero-subscription users receive an assigned public digest instead of no digest
 
+> **Revised by [ADR-0019](0019-digest-standalone-entity.md).** The public-fallback flow below
+> is preserved, but re-based on the standalone `digests` entity: `digest_assignments.post_id`
+> becomes `digest_id`, the `getMyDigests` union returns `DigestSummary` (not `PostResponse`),
+> and the per-item `variant` is replaced by the stored `digest_type` column.
+
 Users who follow no topics used to get nothing from the daily digest run — the generator
 returned `SKIPPED("User has no followed topics.")` and no post was created (see
 `DailyDigestGenerationService.generateForUser`). This ADR gives those users a **public
