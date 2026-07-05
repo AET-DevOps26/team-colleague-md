@@ -47,7 +47,6 @@ export default function DigestCard() {
         {digest.eventCount} picks · {digest.readTimeMinutes} min read
       </div>
       <h2 className={styles.title}>{digest.title}</h2>
-      {digest.topStorySubtitle && <p className={styles.summary}>{digest.topStorySubtitle}</p>}
       <div className={styles.divider} />
       <ul className={styles.bullets}>
         {(digest.previewHeadlines.length > 0
