@@ -9,17 +9,29 @@ ADR-0013, ADR-0016 and ADR-0017**, and **re-bases ADR-0018** onto the new entity
 
 ## Context
 
-Coupling the digest to `posts` had three problems:
+Digests were modelled as `DIGEST`-type posts to reuse the `posts` machinery for free
+(ADR-0013): topics, cover image, excerpt, soft-delete, and the existing list/read endpoints.
+Three costs accumulated:
 
-1. **Most `post` fields are meaningless for a digest** (author profile, comments, likes, cover
-   image, excerpt, bookmark, soft-delete). Every `posts` change risked the digest, and the digest
-   could not evolve independently.
-2. **genai already produced rich structured data we threw away.** `DigestGenerateResponse` carries
-   `events[]` (headline, bullets, topics, cited sources) plus counts, but `_build_event` kept only
-   each source's `.url`, discarding `sourceName` / `provider` / `publishedAt` — so the frontend
-   could not render per-event source chips (domain + "3h ago" + link). ADR-0017 deferred this (#188).
-3. **Public/private digest management was unbuilt.** ADR-0018 specced the daily run but sat on the
-   `posts` model with no dedicated storage.
+- **The `post` shape is mostly dead weight for a digest.** Author profile, comments, likes,
+  cover image, excerpt, bookmark and soft-delete are meaningless for a system-generated daily
+  briefing, yet every `posts` change and every post-access rule now has to reason about the
+  digest special case (the `getPostById` DIGEST branch in ADR-0016, the `type=DIGEST` feed
+  exclusion, the `target_user_id` nullable-only-for-digests column). The coupling runs both
+  ways and blocks the digest from evolving on its own.
+- **genai's structured output is discarded on the way in.** `DigestGenerateResponse` already
+  emits `events[]` — each with a headline, bullets, cited topic ids, and cited sources — plus
+  `eventCount` / `sourceCount` / `readTimeMinutes`. But the source citation is reduced to a
+  flat `sourceUrls: list[str]` in `_build_event`, dropping each source's name, provider and
+  `publishedAt`; and content-service then flattens the whole thing into one Markdown blob with
+  a flat `sourceUrl[]` (ADR-0017). The design's per-event source chips (domain + "3h ago" +
+  link) are therefore impossible to render, a gap ADR-0017 recorded and deferred (#188).
+- **Public/private management (ADR-0018) was specced on `posts`.** Its `digest_assignments`
+  join, `getMyDigests` union and per-item `variant` all assumed `PostResponse` — carrying the
+  post coupling into the new feature.
+
+Making the digest independent resolves all three at once, and is the natural point to also
+land the structured-events contract that ADR-0017 deferred.
 
 ## Decision
 
