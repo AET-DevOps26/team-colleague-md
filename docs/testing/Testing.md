@@ -45,11 +45,11 @@ Two rules shape almost every decision below:
 
 | Service | Language / runtime | Unit | Integration | Coverage gate | CI workflow |
 |---|---|---|---|---|---|
-| `user-service` | Java 25 · Spring Boot 4 · Gradle | JUnit 5 + Mockito | MockMvc + H2 (slices) and Testcontainers Postgres (E2E) | JaCoCo ≥ 0.70 line | [`ci-user-service.yml`](../.github/workflows/ci-user-service.yml) |
-| `content-service` | Java 25 · Spring Boot 4 · Gradle | JUnit 5 + Mockito | MockMvc + Testcontainers Postgres | JaCoCo ≥ 0.70 line | [`ci-content-service.yml`](../.github/workflows/ci-content-service.yml) |
-| `recommendation-service` | Java 25 · Spring Boot 4 · Gradle | JUnit 5 + Mockito | MockMvc + Testcontainers Postgres | JaCoCo ≥ 0.70 line | [`ci-recommendation-service.yml`](../.github/workflows/ci-recommendation-service.yml) |
-| `genai-service` | Python 3.12 · FastAPI | pytest + TestClient (mocked LangChain) | pytest + TestClient; opt-in live tests | pytest-cov `--cov-fail-under=70` | [`ci-genai-service.yml`](../.github/workflows/ci-genai-service.yml) |
-| `frontend` | React 19 · TypeScript · Vite | Vitest + React Testing Library | Playwright + `page.route()` (API contract) | — (lint + type-check gate) | [`ci-frontend.yml`](../.github/workflows/ci-frontend.yml) |
+| `user-service` | Java 25 · Spring Boot 4 · Gradle | JUnit 5 + Mockito | MockMvc + H2 (slices) and Testcontainers Postgres (E2E) | JaCoCo ≥ 0.70 line | [`ci-user-service.yml`](../../.github/workflows/ci-user-service.yml) |
+| `content-service` | Java 25 · Spring Boot 4 · Gradle | JUnit 5 + Mockito | MockMvc + Testcontainers Postgres | JaCoCo ≥ 0.70 line | [`ci-content-service.yml`](../../.github/workflows/ci-content-service.yml) |
+| `recommendation-service` | Java 25 · Spring Boot 4 · Gradle | JUnit 5 + Mockito | MockMvc + Testcontainers Postgres | JaCoCo ≥ 0.70 line | [`ci-recommendation-service.yml`](../../.github/workflows/ci-recommendation-service.yml) |
+| `genai-service` | Python 3.12 · FastAPI | pytest + TestClient (mocked LangChain) | pytest + TestClient; opt-in live tests | pytest-cov `--cov-fail-under=70` | [`ci-genai-service.yml`](../../.github/workflows/ci-genai-service.yml) |
+| `frontend` | React 19 · TypeScript · Vite | Vitest + React Testing Library | Playwright + `page.route()` (API contract) | — (lint + type-check gate) | [`ci-frontend.yml`](../../.github/workflows/ci-frontend.yml) |
 | _cross-service_ | Bruno (`.bru`) | — | — | end-to-end API journeys | manual / headless CLI |
 
 Approximate suite sizes today: ~85 `@Test` (user), ~93 (content), ~56 (recommendation),
@@ -103,7 +103,7 @@ and after deploys.
 
 ### 3.3 Pre-commit hooks
 
-[`.pre-commit-config.yaml`](../.pre-commit-config.yaml) runs lightweight hygiene on every
+[`.pre-commit-config.yaml`](../../.pre-commit-config.yaml) runs lightweight hygiene on every
 commit:
 
 - `trailing-whitespace` and `end-of-file-fixer` — formatting consistency.
@@ -223,7 +223,7 @@ Docker-less machine.
   suite runs with **no API key and no LLM call**.
 - **pytest-cov** for the coverage gate.
 
-Configuration lives entirely in [`pyproject.toml`](../genai-service/pyproject.toml):
+Configuration lives entirely in [`pyproject.toml`](../../genai-service/pyproject.toml):
 
 ```toml
 [tool.pytest.ini_options]
@@ -280,10 +280,10 @@ Three layers; full per-test-case tables are in [Frontend_Testing.md](Frontend_Te
 | E2E | Playwright (Chromium) | `npm test` | ❌ manual, pre-PR |
 | API contract | Playwright + `page.route()` | `npm test` | ❌ manual, pre-PR |
 
-- **Unit / component** ([`vitest.config.ts`](../frontend/vitest.config.ts)) — pure
+- **Unit / component** ([`vitest.config.ts`](../../frontend/vitest.config.ts)) — pure
   functions (`timeAgo`, `getInitials`, `topicSort`), the token store, and component logic
   (`Toast`, `ManageTopics`). Fast (~5 s), no browser. This is the layer CI runs.
-- **E2E** ([`playwright.config.ts`](../frontend/playwright.config.ts)) — critical user
+- **E2E** ([`playwright.config.ts`](../../frontend/playwright.config.ts)) — critical user
   journeys (auth, home, digest, profile, settings) in real Chromium. Playwright boots the
   Vite dev server itself (`webServer`), runs single-worker with one retry, and captures
   screenshots only on failure. **No real backend is needed** — the app's in-memory mock
@@ -303,7 +303,7 @@ static-analysis gate.
 A single repo-level [Bruno](https://www.usebruno.com/) collection (referenced as ADR-0005)
 provides the one thing per-service tests and Swagger UI cannot: **a login token from
 user-service flowing on into content / recommendation / genai calls**. See
-[`bruno/README.md`](../bruno/README.md) for full detail.
+[`bruno/README.md`](../../bruno/README.md) for full detail.
 
 - **`flows/`** — the core deliverable: token-carrying, end-to-end journeys, one folder per
   user story (auth, authoring, engagement, discovery, personalization, profile, moderation,
@@ -354,7 +354,7 @@ What runs, and when, from keystroke to merge:
 2. **Before opening a PR** — run the heavier suites CI does not:
    - frontend E2E: `npx playwright install` (first time) then `npm test`
    - cross-service: boot + seed the stack, then `npx @usebruno/cli run flows --env local`
-     (see [README](../README.md) for `docker compose up --build` and `npm run seed:local`).
+     (see [README](../../README.md) for `docker compose up --build` and `npm run seed:local`).
 3. **On the PR (CI)** — the path-matched workflow(s) run the per-service build: compile,
    unit + integration tests, the coverage gate, lint and type-check. A red gate blocks the
    merge to `dev`.
@@ -373,4 +373,4 @@ What runs, and when, from keystroke to merge:
   wiring is verified by running the real stack and by Bruno's file-upload steps.
 - **Endpoints that do not exist yet** — e.g. the user-verification submit/approve flow and
   admin removal of others' posts have no implementation, so there is nothing to test
-  (tracked as backlog in [`bruno/README.md`](../bruno/README.md)).
+  (tracked as backlog in [`bruno/README.md`](../../bruno/README.md)).

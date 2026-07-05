@@ -1,6 +1,6 @@
 # Seeding Demo Data into Remote Environments
 
-The seed script under [`scripts/seed/`](../scripts/seed) populates demo users,
+The seed script under [`scripts/seed/`](../../scripts/seed) populates demo users,
 posts, comments, votes, bookmarks and avatars. It is fully environment-agnostic
 (everything is driven by env vars) and idempotent (upserts, safe to re-run). Out
 of the box `npm run seed:local` targets a local `docker compose` stack; this doc

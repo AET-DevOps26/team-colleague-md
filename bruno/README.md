@@ -28,7 +28,7 @@ Each flow is **self-contained** (its own Login at step 1), **self-provisions** t
 
 ## Environments
 
-Four environments. The per-service `baseUrl` absorbs the [gateway path-prefix](../docs/API_Gateway_Routing.md) so request files stay environment-agnostic (`{{userBaseUrl}}/api/v1/...`):
+Four environments. The per-service `baseUrl` absorbs the [gateway path-prefix](../docs/infrastructure/API_Gateway_Routing.md) so request files stay environment-agnostic (`{{userBaseUrl}}/api/v1/...`):
 
 | Env | `userBaseUrl` | Prefix |
 |---|---|---|
