@@ -22,7 +22,7 @@ function displayDomain(url: string): string {
 export default function DigestPost() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isRestoring } = useAuth();
   const { open: openAuth } = useAuthModal();
   const { showToast } = useToast();
   const articleRef = useRef<HTMLElement>(null);
@@ -34,6 +34,10 @@ export default function DigestPost() {
 
   useEffect(() => {
     if (!id) { navigate('/digest'); return; }
+    // Wait for session restoration (which re-mints the in-memory access token from the refresh
+    // cookie on a hard reload). Fetching before it completes sends no token, so a personal digest
+    // would 404 as anonymous — and a 404 doesn't trigger api.ts's 401 refresh-and-retry.
+    if (isRestoring) return;
     let cancelled = false;
     setLoading(true);
     setNotFound(false);
@@ -43,7 +47,7 @@ export default function DigestPost() {
       .catch(() => { if (!cancelled) setNotFound(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [id, navigate]);
+  }, [id, navigate, isRestoring]);
 
   function handleShare() {
     navigator.clipboard.writeText(window.location.href)
