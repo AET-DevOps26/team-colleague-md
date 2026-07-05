@@ -3201,8 +3201,10 @@ Combining grouped-query attention, int8 KV cache, and prefix sharing reduces per
     viewCount: 512,
     coverImageFile: "mechanistic-interpretability.png",
     targetUsername: null,
-    createdAt: hoursAgo(1),
-    updatedAt: hoursAgo(1),
+    // Dated on a day alexchen has no PERSONAL digest (his days: 0,1,2,3,5,7,9,11,13) so the
+    // public-fallback assignment below can go to him too — exercising a mixed personal+public history.
+    createdAt: daysAgo(4),
+    updatedAt: daysAgo(4),
   },
   // ── Today's hero digest ───────────────────────────────────────────────────
   {

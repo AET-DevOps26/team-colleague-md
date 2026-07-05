@@ -20,9 +20,9 @@ test.describe('Digest — logged in (seeded personal digests)', () => {
     await expect(page).toHaveURL(/\/digest\/[0-9a-f-]{36}$/);
     await expect(page.getByText('Verita AI Digest')).toBeVisible();
     await expect(page.getByText('min read', { exact: false })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save digest' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Share digest' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Back to Digest/ })).toBeVisible();
+    // Save was removed (ADR-0019); a PERSONAL digest renders no bottom action bar.
+    await expect(page.getByRole('button', { name: 'Save digest' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Share digest' })).toHaveCount(0);
   });
 
   test('DIG-3: reader shows the personalisation note when logged in', async ({ page }) => {
@@ -44,7 +44,7 @@ test.describe('Digest — logged in (seeded personal digests)', () => {
   });
 });
 
-test.describe('Digest — logged out (seeded public digest, ADR-0016)', () => {
+test.describe('Digest — logged out (seeded public digest, ADR-0019)', () => {
   test('DIG-5: logged-out user sees the public today digest + sign-in hero', async ({ page }) => {
     await page.goto('/digest');
 
@@ -63,7 +63,10 @@ test.describe('Digest — logged out (seeded public digest, ADR-0016)', () => {
     await page.getByRole('button', { name: 'Read', exact: true }).click();
 
     await expect(page).toHaveURL(/\/digest\/[0-9a-f-]{36}$/);
-    await expect(page.getByText('Verita AI Digest')).toBeVisible();
+    // A PUBLIC digest reader is badged as the community digest (ADR-0019).
+    await expect(page.getByText('Verita Community Digest')).toBeVisible();
+    // Share is available on public digests; Save was removed.
+    await expect(page.getByRole('button', { name: 'Share digest' })).toBeVisible();
     // Logged-out reader shows the auth upsell, not the personalisation note.
     await expect(page.getByText('Get a digest built for you')).toBeVisible();
     await expect(page.getByText('Personalised from', { exact: false })).toHaveCount(0);

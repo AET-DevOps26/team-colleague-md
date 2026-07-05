@@ -65,8 +65,8 @@ paths:
           schema: { type: string }
         - name: type
           in: query
-          description: "Post type filter; defaults to NORMAL (digests are excluded from the main list unless requested)"
-          schema: { type: string, enum: [NORMAL, DIGEST] }
+          description: "Reserved post type filter; only NORMAL posts exist here (digests are a standalone resource, ADR-0019)."
+          schema: { type: string, enum: [NORMAL] }
       responses:
         '200':
           description: A paginated list of posts retrieved successfully
@@ -161,15 +161,16 @@ paths:
               schema: { $ref: '#/components/schemas/PostPage' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
-  /api/v1/posts/digests:
+  # --- DIGESTS (standalone entity, ADR-0019) ---
+  /api/v1/digests:
     get:
       operationId: getMyDigests
-      summary: Get the current user's AI Daily Digests
+      summary: Get the current user's digest history
       description: >
-        Returns the caller's own digests — DIGEST-type posts whose `target_user_id` equals the
-        authenticated user's `userId` claim (ADR-0013), newest first. Auth-required (fails closed).
-        Until the genai generation pipeline exists this returns empty for every user.
-      tags: [Posts]
+        Union of the caller's personal digests (`digest_type = PERSONAL`, `target_user_id = me`)
+        and the public digests assigned to the caller on days they had no subscriptions, newest
+        first, paginated. Auth-required (fails closed).
+      tags: [Digests]
       security: [{ bearerAuth: [] }]
       parameters:
         - name: page
@@ -183,26 +184,46 @@ paths:
           description: Digests retrieved successfully
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PostPage' }
+              schema: { $ref: '#/components/schemas/DigestSummaryPage' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /api/v1/posts/digests/today/public:
+  /api/v1/digests/public/today:
     get:
       operationId: getPublicTodayDigest
       summary: Get today's public digest
       description: >
-        Returns the newest public digest — a DIGEST-type post with `target_user_id = null`
-        (ADR-0016), readable without authentication so the logged-out `/digest` surface has
-        something to show. A valid token additionally personalises the response (ADR-0006).
-        Responds `404` when no public digest exists.
-      tags: [Posts]
+        Returns the newest `PUBLIC` digest, readable without authentication so the logged-out
+        `/digest` surface has something to show (ADR-0018/0019). Responds `404` when none exists.
+      tags: [Digests]
       security: []
       responses:
         '200':
           description: Public digest retrieved successfully
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PostResponse' }
+              schema: { $ref: '#/components/schemas/DigestSummary' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/digests/{id}:
+    get:
+      operationId: getDigestById
+      summary: Get one digest with its full event stream
+      description: >
+        Optional authentication (ADR-0006/0016). A `PERSONAL` digest whose `target_user_id` is not
+        the caller responds `404`; a `PUBLIC` digest is open (including logged-out).
+      tags: [Digests]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Digest retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestDetail' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /api/v1/posts/{id}:
@@ -688,27 +709,27 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /internal/v1/posts/digest:
+  /internal/v1/digests:
     post:
-      operationId: createDigestPost
-      summary: Create an AI Daily Digest post (internal, service-authenticated)
+      operationId: createDigest
+      summary: Create a digest (internal, service-authenticated)
       description: >
-        Service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Stores an
-        already-generated digest payload as a published DIGEST-type post. The digest generation
-        (genai) and daily scheduling are performed by the caller.
-      tags: [Posts]
+        Service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Persists an
+        already-generated digest (personal or public) as a standalone `digests` row, computing
+        `preview_headlines` at write time. The generation (genai) and scheduling are the caller's.
+      tags: [Digests]
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/DigestPostRequest' }
+            schema: { $ref: '#/components/schemas/CreateDigestRequest' }
       responses:
         '201':
-          description: Digest post created
+          description: Digest created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PostResponse' }
+              schema: { $ref: '#/components/schemas/DigestDetail' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -718,10 +739,11 @@ paths:
       summary: Generate one user's AI Daily Digest (internal)
       description: >
         Service-only manual trigger for the same generation orchestration used by the scheduled
-        daily digest job. By default, skips generation when the user already has a digest for the
-        current Platform Day. With force=true, soft-deletes visible same-day digests before storing
-        the regenerated one.
-      tags: [Internal]
+        daily digest job. Branches on whether the user has topic subscriptions: subscribers get a
+        freshly generated `PERSONAL` digest; zero-subscription users are assigned the day's `PUBLIC`
+        digest (ADR-0018/0019). By default, skips when the user already has a digest for the current
+        Platform Day; force=true regenerates.
+      tags: [Digests]
       security: []
       parameters:
         - name: userId
@@ -782,29 +804,118 @@ components:
       properties:
         url: { type: string, format: uri, description: "Public URL of the stored file" }
 
-    DigestPostRequest:
+    DigestType:
+      type: string
+      enum: [PERSONAL, PUBLIC]
+      description: "PERSONAL = generated for one subscriber (target set); PUBLIC = shared platform digest (target null)."
+
+    DigestSource:
       type: object
-      required: [title, content]
+      required: [url]
+      description: A single external source cited by a digest event.
       properties:
+        url: { type: string, format: uri }
+        sourceName: { type: string, nullable: true, description: "Human-readable source/domain name" }
+        provider: { type: string, nullable: true, description: "Upstream provider (github, gnews, huggingface)" }
+        publishedAt: { type: string, format: date-time, nullable: true, description: "Absolute publish time; the client computes the relative label" }
+        title: { type: string, nullable: true, description: "Source article/item title" }
+
+    DigestEvent:
+      type: object
+      required: [headline, summaryBullets, topicIds, sources]
+      description: One newly observed development in the digest, with its structured sources.
+      properties:
+        headline: { type: string }
+        summaryBullets: { type: array, items: { type: string } }
+        topicIds: { type: array, items: { type: string, format: uuid } }
+        sources: { type: array, items: { $ref: '#/components/schemas/DigestSource' } }
+
+    DigestSummary:
+      type: object
+      description: Lightweight digest projection for list/card reads — no events JSONB loaded.
+      required: [id, digestType, digestDate, title]
+      properties:
+        id: { type: string, format: uuid }
+        digestType: { $ref: '#/components/schemas/DigestType' }
+        digestDate: { type: string, format: date }
         title: { type: string }
-        content: { type: string, description: "Markdown body of the digest" }
-        summary: { type: string, nullable: true, description: "Short AI summary / top-story subtitle" }
-        coverImageUrl: { type: string, format: uri, nullable: true }
-        sourceUrl: { type: array, items: { type: string, format: uri } }
-        topics: { type: array, items: { type: string } }
+        subtitle: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        eventCount: { type: integer }
+        sourceCount: { type: integer }
+        readTimeMinutes: { type: integer }
+        previewHeadlines: { type: array, items: { type: string }, description: "First 3 event headlines, denormalized at write time" }
+        topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
+        generatedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    DigestDetail:
+      type: object
+      description: Full digest including the event stream.
+      required: [id, digestType, digestDate, title, events]
+      properties:
+        id: { type: string, format: uuid }
+        digestType: { $ref: '#/components/schemas/DigestType' }
+        digestDate: { type: string, format: date }
+        title: { type: string }
+        subtitle: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        eventCount: { type: integer }
+        sourceCount: { type: integer }
+        readTimeMinutes: { type: integer }
+        previewHeadlines: { type: array, items: { type: string } }
+        topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
+        events: { type: array, items: { $ref: '#/components/schemas/DigestEvent' } }
+        model: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    DigestSummaryPage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/DigestSummary' } }
+        page: { type: integer }
+        size: { type: integer }
+        totalPages: { type: integer }
+        totalElements: { type: integer }
+
+    CreateDigestRequest:
+      type: object
+      required: [digestType, digestDate, title, events]
+      description: Persist an already-generated digest. topicIds live inside events; topics carries names for display.
+      properties:
+        digestType: { $ref: '#/components/schemas/DigestType' }
         targetUserId:
           type: string
           format: uuid
           nullable: true
-          description: "User this digest was personalised for (ADR-0013); null = global/system digest belonging to no one."
+          description: "Required when digestType=PERSONAL; must be null when PUBLIC."
+        digestDate: { type: string, format: date }
+        title: { type: string }
+        subtitle: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        events: { type: array, items: { $ref: '#/components/schemas/DigestEvent' } }
+        topics: { type: array, items: { $ref: '#/components/schemas/DigestTopicRef' } }
+        eventCount: { type: integer, nullable: true }
+        sourceCount: { type: integer, nullable: true }
+        readTimeMinutes: { type: integer, nullable: true }
+        model: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time, nullable: true }
+
+    DigestTopicRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
 
     DigestGenerationResponse:
       type: object
       required: [status, message]
       properties:
-        status: { type: string, enum: [GENERATED, SKIPPED] }
+        status: { type: string, enum: [GENERATED, ASSIGNED_PUBLIC, SKIPPED] }
         message: { type: string }
-        post: { $ref: '#/components/schemas/PostResponse' }
+        digest: { $ref: '#/components/schemas/DigestDetail' }
 
     AuthorSummary:
       type: object
@@ -873,7 +984,7 @@ components:
         id: { type: string, format: uuid }
         author: { $ref: '#/components/schemas/AuthorSummary' }
         status: { type: string, enum: [DRAFT, PUBLISHED] }
-        type: { type: string, enum: [NORMAL, DIGEST], description: "NORMAL user post or system-generated DIGEST" }
+        type: { type: string, enum: [NORMAL], description: "Post type; digests are a standalone resource (ADR-0019)" }
         title: { type: string }
         excerpt: { type: string, description: "Short preview text for feed cards" }
         summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets); null until generated" }

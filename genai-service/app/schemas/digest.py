@@ -45,13 +45,23 @@ class DigestGenerateRequest(BaseModel):
         return self
 
 
+class DigestSource(BaseModel):
+    """A single external source cited by a digest event."""
+
+    url: str
+    sourceName: str | None = Field(default=None, description="Human-readable source/domain name")
+    provider: str | None = Field(default=None, description="Upstream provider (github, gnews, huggingface)")
+    publishedAt: datetime | None = Field(default=None, description="Absolute publish time; the client computes the relative label")
+    title: str | None = Field(default=None, description="Source article/item title")
+
+
 class DigestEvent(BaseModel):
     """One digest-worthy development synthesized from one or more sources."""
 
     headline: str
     summaryBullets: list[str] = Field(..., min_length=1, max_length=3)
     topicIds: list[str]
-    sourceUrls: list[str]
+    sources: list[DigestSource]
 
 
 class DigestGenerateResponse(BaseModel):

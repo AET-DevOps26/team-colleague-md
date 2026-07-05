@@ -149,38 +149,61 @@
   border-radius: 4px;
 }
 
-/* Personalisation note (logged-in) */
-.personalizationNote {
+/* Source-topics row (logged-in): editorial, no surrounding box.
+   A label + manage link sit on one line; topic pills wrap below (up to 10). */
+.topicSource {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 10px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  padding: 12px 16px;
   margin-bottom: 32px;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.personalizationNote svg {
+.topicSourceHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.topicSourceLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.topicSourceLabel svg {
   flex-shrink: 0;
   color: var(--text-tertiary);
-  margin-top: 1px;
 }
 
-.personalizationNote strong { color: var(--text-primary); font-weight: 600; }
-
-.personalizationNote a {
-  color: var(--text-primary);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-color: var(--border-default);
+.topicSourceManage {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  padding: 5px 11px;
   cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
 }
 
-.personalizationNote a:hover { text-decoration-color: var(--text-primary); }
+.topicSourceManage:hover {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+  background: var(--bg-elevated);
+}
 
 /* Auth upsell banner (logged-out) */
 .authUpsell {
@@ -349,3 +372,76 @@
 .cact svg { width: 14px; height: 14px; flex-shrink: 0; }
 .cactOn { color: var(--text-primary); font-weight: 600; }
 .cactSep { width: 1px; height: 18px; background: var(--border-subtle); margin: 0 2px; flex-shrink: 0; }
+
+/* ── Structured event stream (ADR-0019) ─────────────────────────── */
+.subtitle {
+  margin: 10px 0 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.summaryIntro {
+  margin: 24px 0 8px;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.eventStream {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-top: 24px;
+}
+
+.event {
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.event:last-child { border-bottom: none; }
+
+.eventHeadline {
+  margin: 0 0 12px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.eventBullets {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.eventBullets li {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.sourceChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sourceChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.sourceChip:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.sourceChipName { font-weight: 600; }
+.sourceChipTime { color: var(--text-tertiary); }
+.sourceChip svg { opacity: 0.6; flex-shrink: 0; }

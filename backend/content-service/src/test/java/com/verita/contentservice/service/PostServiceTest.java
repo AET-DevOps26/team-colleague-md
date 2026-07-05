@@ -117,51 +117,6 @@ public class PostServiceTest {
         assertEquals(240, response.getExcerpt().length());
     }
 
-    @Test
-    void createDigest_savesPublishedDigestTypePostBySystemAuthor() {
-        UUID systemAuthor = UUID.randomUUID();
-        org.springframework.test.util.ReflectionTestUtils.setField(postService, "digestSystemAuthorId", systemAuthor);
-        com.verita.model.DigestPostRequest req =
-                new com.verita.model.DigestPostRequest("Daily AI Digest", "## Top stories\nbody");
-
-        PostResponse resp = postService.createDigest(req);
-
-        assertEquals(PostResponse.TypeEnum.DIGEST, resp.getType());
-        ArgumentCaptor<PostEntity> captor = ArgumentCaptor.forClass(PostEntity.class);
-        verify(postRepository).save(captor.capture());
-        assertEquals(PostType.DIGEST, captor.getValue().getType());
-        assertEquals(PostStatus.PUBLISHED, captor.getValue().getStatus());
-        assertEquals(systemAuthor, captor.getValue().getAuthorId());
-        // No targetUserId supplied → global digest (ADR-0013).
-        assertNull(captor.getValue().getTargetUserId());
-    }
-
-    @Test
-    void createDigest_withTargetUserId_persistsPerUserAssociation() {
-        org.springframework.test.util.ReflectionTestUtils.setField(postService, "digestSystemAuthorId", UUID.randomUUID());
-        UUID target = UUID.randomUUID();
-        com.verita.model.DigestPostRequest req =
-                new com.verita.model.DigestPostRequest("Daily AI Digest", "## Top stories\nbody")
-                        .targetUserId(target);
-
-        postService.createDigest(req);
-
-        ArgumentCaptor<PostEntity> captor = ArgumentCaptor.forClass(PostEntity.class);
-        verify(postRepository).save(captor.capture());
-        assertEquals(target, captor.getValue().getTargetUserId());
-    }
-
-    @Test
-    void getMyDigests_queriesCallersDigestsByTargetUser() {
-        when(postRepository.findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
-                eq(userId), eq(PostType.DIGEST), any())).thenReturn(Page.empty());
-
-        postService.getMyDigests(0, 10);
-
-        verify(postRepository).findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
-                eq(userId), eq(PostType.DIGEST), any());
-    }
-
     // ---- update / patch ownership ------------------------------------------
 
     @Test
@@ -259,84 +214,6 @@ public class PostServiceTest {
 
         assertNotNull(response);
         verify(postRepository).incrementViewCount(draft.getId());
-    }
-
-    // ---- digest access model (ADR-0016) ------------------------------------
-
-    private PostEntity digest(UUID target) {
-        PostEntity p = post(UUID.randomUUID(), PostStatus.PUBLISHED);
-        p.setType(PostType.DIGEST);
-        p.setTargetUserId(target);
-        return p;
-    }
-
-    @Test
-    void getPost_personalDigestByNonTarget_throwsNotFound() {
-        PostEntity d = digest(UUID.randomUUID()); // targeted at someone else
-        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getPost(d.getId()));
-
-        assertEquals(404, ex.getStatusCode().value());
-        verify(postRepository, never()).incrementViewCount(any());
-    }
-
-    @Test
-    void getPost_personalDigestByAnonymous_throwsNotFound() {
-        when(securityUtils.getCurrentUserIdOptional()).thenReturn(Optional.empty());
-        PostEntity d = digest(UUID.randomUUID());
-        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getPost(d.getId()));
-
-        assertEquals(404, ex.getStatusCode().value());
-    }
-
-    @Test
-    void getPost_personalDigestByTarget_isVisible() {
-        PostEntity d = digest(userId); // targeted at me
-        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
-
-        PostResponse response = postService.getPost(d.getId());
-
-        assertNotNull(response);
-        verify(postRepository).incrementViewCount(d.getId());
-    }
-
-    @Test
-    void getPost_publicDigestByAnonymous_isVisible() {
-        when(securityUtils.getCurrentUserIdOptional()).thenReturn(Optional.empty());
-        PostEntity d = digest(null); // public digest
-        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
-
-        PostResponse response = postService.getPost(d.getId());
-
-        assertNotNull(response);
-        verify(postRepository).incrementViewCount(d.getId());
-    }
-
-    @Test
-    void getPublicTodayDigest_returnsNewestNullTargetDigest() {
-        PostEntity d = digest(null);
-        when(postRepository.findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(
-                PostType.DIGEST)).thenReturn(Optional.of(d));
-
-        PostResponse response = postService.getPublicTodayDigest();
-
-        assertEquals(d.getId(), response.getId());
-    }
-
-    @Test
-    void getPublicTodayDigest_noneExists_throwsNotFound() {
-        when(postRepository.findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(
-                PostType.DIGEST)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getPublicTodayDigest());
-
-        assertEquals(404, ex.getStatusCode().value());
     }
 
     // ---- delete + topic counters -------------------------------------------
@@ -473,12 +350,12 @@ public class PostServiceTest {
     @Test
     void getAllPosts_withTopicAndType_usesTopicAndTypeFilteredQuery() {
         when(postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.DIGEST), eq("java"), any())).thenReturn(Page.empty());
+                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), eq("java"), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, "java", "DIGEST");
+        postService.getAllPosts(0, 10, "java", "NORMAL");
 
         verify(postRepository).findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.DIGEST), eq("java"), any());
+                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), eq("java"), any());
     }
 
     // ---- pure helpers / author summary -------------------------------------

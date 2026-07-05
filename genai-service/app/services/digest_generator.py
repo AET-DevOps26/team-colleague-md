@@ -13,7 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field, ValidationError
 
 from app.config import get_settings
-from app.schemas.digest import DigestEvent, DigestGenerateRequest, DigestGenerateResponse
+from app.schemas.digest import DigestEvent, DigestGenerateRequest, DigestGenerateResponse, DigestSource
 from app.schemas.summarize import TokenUsage
 from app.services.external_sources import ExternalSourceItem
 from app.services.summarizer import _get_llm
@@ -106,7 +106,7 @@ async def generate_digest(
     except ValidationError as exc:
         raise DigestJsonParseError(str(exc)) from exc
 
-    cited_source_count = len({url for event in events for url in event.sourceUrls})
+    cited_source_count = len({source.url for event in events for source in event.sources})
     logger.info(
         "Digest LLM structured output accepted generatedEventCount=%d acceptedEventCount=%d sourceCount=%d citedSourceCount=%d",
         len(payload.events),
@@ -213,14 +213,24 @@ def _build_event(
     topic_id_by_key: dict[str, str],
 ) -> DigestEvent:
     topic_ids = [topic_id_by_key[topic_key] for topic_key in payload.topicKeys if topic_key in topic_id_by_key]
-    source_urls = [source_by_id[source_id].url for source_id in payload.sourceIds if source_id in source_by_id]
-    if not topic_ids or not source_urls:
+    sources = [
+        DigestSource(
+            url=item.url,
+            sourceName=item.sourceName,
+            provider=item.provider,
+            publishedAt=item.publishedAt,
+            title=item.title,
+        )
+        for source_id in payload.sourceIds
+        if (item := source_by_id.get(source_id)) is not None
+    ]
+    if not topic_ids or not sources:
         raise DigestJsonParseError("Digest event contains invalid topicKeys or sourceIds")
     return DigestEvent(
         headline=payload.headline,
         summaryBullets=[bullet for bullet in payload.summaryBullets if bullet.strip()],
         topicIds=topic_ids,
-        sourceUrls=source_urls,
+        sources=sources,
     )
 
 

@@ -1,13 +1,13 @@
 import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { PostDetail as PostDetailType } from '../../types';
+import type { DigestDetail } from '../../types';
 import { contentService } from '../../services/content.service';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthModal } from '../../contexts/ModalContext';
 import { useToast } from '../../hooks/useToast';
+import { timeAgo } from '../../utils/timeAgo';
 import PostDetailTopbar from '../../components/layout/PostDetailTopbar';
-import Markdown from '../../components/ui/Markdown';
 import styles from './DigestPost.module.css';
 
 /** Best-effort display domain from a source URL (e.g. `https://arxiv.org/abs/…` → `arxiv.org`). */
@@ -22,57 +22,32 @@ function displayDomain(url: string): string {
 export default function DigestPost() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isRestoring } = useAuth();
   const { open: openAuth } = useAuthModal();
   const { showToast } = useToast();
   const articleRef = useRef<HTMLElement>(null);
   const progress = useReadingProgress(articleRef);
 
-  const [post, setPost] = useState<PostDetailType | null>(null);
+  const [digest, setDigest] = useState<DigestDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [followedCount, setFollowedCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) { navigate('/digest'); return; }
+    // Wait for session restoration (which re-mints the in-memory access token from the refresh
+    // cookie on a hard reload). Fetching before it completes sends no token, so a personal digest
+    // would 404 as anonymous — and a 404 doesn't trigger api.ts's 401 refresh-and-retry.
+    if (isRestoring) return;
     let cancelled = false;
     setLoading(true);
     setNotFound(false);
-    contentService.getPost(id)
-      .then((p) => { if (!cancelled) setPost(p); })
-      // A personal digest fetched by a non-target caller (or anonymous) 404s (ADR-0016).
+    contentService.getDigest(id)
+      .then((d) => { if (!cancelled) setDigest(d); })
+      // A personal digest fetched by a non-target caller (or anonymous) 404s (ADR-0016/0019).
       .catch(() => { if (!cancelled) setNotFound(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [id, navigate]);
-
-  // Personalisation note count — only relevant when logged in.
-  useEffect(() => {
-    if (!isLoggedIn) { setFollowedCount(null); return; }
-    let cancelled = false;
-    contentService.getFollowedTopicIds()
-      .then((ids) => { if (!cancelled) setFollowedCount(ids.size); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [isLoggedIn]);
-
-  const [saved, setSaved] = useState(false);
-  useEffect(() => { if (post) setSaved(post.isBookmarkedByMe); }, [post]);
-
-  function handleSave() {
-    if (!post) return;
-    if (!isLoggedIn) { openAuth('login'); return; }
-    const next = !saved;
-    setSaved(next);
-    contentService.toggleBookmark(post.id, next)
-      .then(() => showToast(next
-        ? { variant: 'success', message: 'Digest saved' }
-        : { variant: 'info', message: 'Removed from saved' }))
-      .catch(() => {
-        setSaved(!next);
-        showToast({ variant: 'error', message: 'Could not update bookmark' });
-      });
-  }
+  }, [id, navigate, isRestoring]);
 
   function handleShare() {
     navigator.clipboard.writeText(window.location.href)
@@ -88,7 +63,7 @@ export default function DigestPost() {
     );
   }
 
-  if (notFound || !post) {
+  if (notFound || !digest) {
     return (
       <>
         <PostDetailTopbar />
@@ -103,9 +78,10 @@ export default function DigestPost() {
     );
   }
 
-  const dateStr = new Date(post.createdAt).toLocaleDateString('en-US', {
+  const dateStr = new Date(digest.date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   });
+  const isPublic = digest.digestType === 'PUBLIC';
 
   return (
     <>
@@ -126,37 +102,54 @@ export default function DigestPost() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
                 </svg>
-                Verita AI Digest
+                {isPublic ? 'Verita Community Digest' : 'Verita AI Digest'}
               </div>
               <div className={styles.date}>
                 <span>{dateStr}</span>
                 <span className={styles.dotSep}>·</span>
-                <span className={styles.readTime}>~{post.readTimeMinutes} min read</span>
+                <span className={styles.readTime}>~{digest.readTimeMinutes} min read</span>
+                <span className={styles.dotSep}>·</span>
+                <span>{digest.eventCount} {digest.eventCount === 1 ? 'event' : 'events'}</span>
               </div>
             </div>
 
-            <h1 className={styles.title}>{post.title}</h1>
+            <h1 className={styles.title}>{digest.title}</h1>
+            {/* Guard against seed/legacy digests that mirrored summary into subtitle,
+                which rendered the same blurb twice (subtitle here + intro below). */}
+            {digest.subtitle && digest.subtitle !== digest.summary && (
+              <p className={styles.subtitle}>{digest.subtitle}</p>
+            )}
 
-            {post.topics.length > 0 && (
+            {/* Topic pills move into the personalisation note for logged-in readers. */}
+            {!isLoggedIn && digest.topics.length > 0 && (
               <div className={styles.topicPills}>
                 <span className={styles.topicPillsLabel}>Topics</span>
-                {post.topics.map((t) => (
+                {digest.topics.slice(0, 10).map((t) => (
                   <span key={t.id} className={styles.topicPill}>#{t.name}</span>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Personalisation note (logged-in) / auth upsell (logged-out) */}
+          {/* Source-topics row (logged-in) / auth upsell (logged-out) */}
           {isLoggedIn ? (
-            <div className={styles.personalizationNote}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
-              </svg>
-              <span>
-                Personalised from <strong>{followedCount ?? 0} subscribed {followedCount === 1 ? 'topic' : 'topics'}</strong>.{' '}
-                <a onClick={() => navigate('/topics')}>Manage subscriptions →</a>
-              </span>
+            <div className={styles.topicSource}>
+              <div className={styles.topicSourceHead}>
+                <span className={styles.topicSourceLabel}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+                  </svg>
+                  Generated from your topics
+                </span>
+                <a className={styles.topicSourceManage} onClick={() => navigate('/topics')}>Manage →</a>
+              </div>
+              {digest.topics.length > 0 && (
+                <div className={styles.topicPills}>
+                  {digest.topics.slice(0, 10).map((t) => (
+                    <span key={t.id} className={styles.topicPill}>#{t.name}</span>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className={styles.authUpsell}>
@@ -171,29 +164,44 @@ export default function DigestPost() {
             </div>
           )}
 
-          {/* Body (Markdown, ADR-0017) */}
-          <Markdown>{post.content}</Markdown>
+          {/* Intro summary */}
+          {digest.summary && <p className={styles.summaryIntro}>{digest.summary}</p>}
 
-          {/* Sources — flat list (ADR-0017) */}
-          {post.sources.length > 0 && (
-            <div className={styles.sources}>
-              <div className={styles.sourcesLabel}>Sources</div>
-              <ul className={styles.sourcesList}>
-                {post.sources.map((s, i) => (
-                  <li key={i}>
-                    <a href={s.url} target="_blank" rel="noopener noreferrer" className={styles.sourceLink}>
-                      {displayDomain(s.url)}
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="10" y1="14" x2="21" y2="3" />
-                      </svg>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* Structured event stream (ADR-0019) */}
+          <div className={styles.eventStream}>
+            {digest.events.map((event, i) => (
+              <section key={i} className={styles.event}>
+                <h2 className={styles.eventHeadline}>{event.headline}</h2>
+                {event.summaryBullets.length > 0 && (
+                  <ul className={styles.eventBullets}>
+                    {event.summaryBullets.map((bullet, j) => <li key={j}>{bullet}</li>)}
+                  </ul>
+                )}
+                {event.sources.length > 0 && (
+                  <div className={styles.sourceChips}>
+                    {event.sources.map((s, k) => (
+                      <a
+                        key={k}
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.sourceChip}
+                        title={s.title ?? undefined}
+                      >
+                        <span className={styles.sourceChipName}>{s.sourceName || displayDomain(s.url)}</span>
+                        {s.publishedAt && <span className={styles.sourceChipTime}>· {timeAgo(s.publishedAt)}</span>}
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
 
           {/* Footer */}
           <div className={styles.footer}>
@@ -201,7 +209,11 @@ export default function DigestPost() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
               </svg>
-              <span>Generated by Verita AI from posts across your subscribed topics.</span>
+              <span>
+                {isPublic
+                  ? 'Generated by Verita AI from platform-wide trending topics.'
+                  : 'Generated by Verita AI from posts across your subscribed topics.'}
+              </span>
             </div>
             {isLoggedIn && (
               <button className={styles.manageLink} onClick={() => navigate('/topics')}>
@@ -217,31 +229,22 @@ export default function DigestPost() {
         </article>
       </div>
 
-      {/* Floating bottom bar — Save + Share (per digest design mock) */}
-      <div className={styles.bottomBar}>
-        <div className={styles.actionsPill}>
-          <button
-            className={`${styles.cact} ${saved ? styles.cactOn : ''}`}
-            onClick={handleSave}
-            type="button"
-            aria-label="Save digest"
-          >
-            <svg viewBox="0 0 24 24" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-            <span>{isLoggedIn ? 'Save' : 'Sign in to save'}</span>
-          </button>
-          <span className={styles.cactSep} />
-          <button className={styles.cact} onClick={handleShare} type="button" aria-label="Share digest">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <path d="m16 6-4-4-4 4" />
-              <path d="M12 2v14" />
-            </svg>
-            <span>Share</span>
-          </button>
+      {/* Floating bottom bar — Share only, for PUBLIC digests (a personal-digest link 404s for
+          anyone else, so sharing is hidden there; ADR-0019). Save removed entirely. */}
+      {isPublic && (
+        <div className={styles.bottomBar}>
+          <div className={styles.actionsPill}>
+            <button className={styles.cact} onClick={handleShare} type="button" aria-label="Share digest">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <path d="m16 6-4-4-4 4" />
+                <path d="M12 2v14" />
+              </svg>
+              <span>Share</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
