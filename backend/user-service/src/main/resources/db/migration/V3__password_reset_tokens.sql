@@ -7,7 +7,7 @@
 
 CREATE TABLE password_reset_tokens (
     id          uuid         NOT NULL,
-    user_id     uuid         NOT NULL,
+    user_id     uuid         NOT NULL UNIQUE,
     code_hash   varchar(255) NOT NULL,
     reset_token varchar(255) UNIQUE,
     attempts    integer      NOT NULL DEFAULT 0,
@@ -16,5 +16,5 @@ CREATE TABLE password_reset_tokens (
     PRIMARY KEY (id),
     CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
-
-CREATE INDEX idx_password_reset_user ON password_reset_tokens (user_id);
+-- The UNIQUE(user_id) constraint enforces one active reset row per user (even under concurrent
+-- forgot-password requests) and already provides the index for user_id lookups.

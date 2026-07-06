@@ -186,6 +186,19 @@ public class PasswordResetServiceTests {
     }
 
     @Test
+    void resetPassword_blankToken_throwsWithoutRepositoryLookup() {
+        // A missing/blank token must never reach the repository: findByResetToken(null) would become
+        // `reset_token IS NULL` and could match an unverified row, bypassing code verification.
+        assertThrows(InvalidPasswordResetException.class,
+                () -> service.resetPassword(resetRequest("  ", "New-Pass-123")));
+        assertThrows(InvalidPasswordResetException.class,
+                () -> service.resetPassword(resetRequest(null, "New-Pass-123")));
+
+        verify(tokenRepository, never()).findByResetToken(any());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void resetPassword_expiredToken_throws() {
         PasswordResetTokenEntity entity = tokenFor(user);
         entity.setResetToken("reset-token");

@@ -257,6 +257,7 @@ export default function AuthModal() {
     const code = otpDigits.join('');
     if (code.length < 6 || loading) return;
     setError('');
+    setResendNotice(''); // Restore the Resend affordance if a prior resend notice is showing.
     setLoading(true);
     try {
       const token = await authService.verifyResetCode(forgotEmail, code);

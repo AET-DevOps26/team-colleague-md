@@ -544,7 +544,7 @@ components:
       required: [token, newPassword]
       properties:
         token: { type: string, description: The reset token returned by /verify-reset-code. }
-        newPassword: { type: string, minLength: 8 }
+        newPassword: { type: string, minLength: 8, pattern: '^(?=.*[a-zA-Z])(?=.*\d).+$' }
 
     UpdateUserRequest:
       type: object

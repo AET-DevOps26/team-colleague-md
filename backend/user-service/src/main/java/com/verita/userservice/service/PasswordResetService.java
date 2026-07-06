@@ -118,7 +118,15 @@ public class PasswordResetService {
      */
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        PasswordResetTokenEntity entity = tokenRepository.findByResetToken(request.getToken())
+        // Bean validation is not enforced on this endpoint, so a missing/blank token would otherwise
+        // reach the repository. Spring Data turns a null equality parameter into `reset_token IS NULL`,
+        // which matches unverified rows — guard here so only a real token can consume a reset.
+        String token = request.getToken();
+        if (token == null || token.isBlank()) {
+            throw new InvalidPasswordResetException();
+        }
+
+        PasswordResetTokenEntity entity = tokenRepository.findByResetToken(token)
                 .orElseThrow(InvalidPasswordResetException::new);
 
         if (isExpired(entity)) {

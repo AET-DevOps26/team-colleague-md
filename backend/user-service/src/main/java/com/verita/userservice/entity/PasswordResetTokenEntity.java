@@ -26,8 +26,9 @@ public class PasswordResetTokenEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    /** Owning user. No JPA relationship is mapped; the FK lives at the DB level (see V3 migration). */
-    @Column(name = "user_id", nullable = false)
+    /** Owning user. No JPA relationship is mapped; the FK lives at the DB level (see V3 migration).
+     *  Unique so at most one active reset row exists per user, even under concurrent requests. */
+    @Column(name = "user_id", nullable = false, unique = true)
     private UUID userId;
 
     /** Bcrypt hash of the 6-digit code — never stored in plaintext. */
