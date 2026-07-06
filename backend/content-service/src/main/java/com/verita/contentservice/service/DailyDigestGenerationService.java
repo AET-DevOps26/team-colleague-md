@@ -272,7 +272,7 @@ public class DailyDigestGenerationService {
 
     private DigestSource toApiSource(DigestSourceDto s) {
         return new DigestSource()
-                .url(s.url() == null ? null : URI.create(s.url()))
+                .url(parseUri(s.url()))
                 .sourceName(s.sourceName())
                 .provider(s.provider())
                 .publishedAt(s.publishedAt())
@@ -295,6 +295,18 @@ public class DailyDigestGenerationService {
             return UUID.fromString(value);
         } catch (IllegalArgumentException e) {
             log.warn("Skipping unparseable topic UUID from genai: {}", value);
+            return null;
+        }
+    }
+
+    private URI parseUri(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return URI.create(value);
+        } catch (IllegalArgumentException e) {
+            log.warn("Skipping unparseable source url from genai: {}", value);
             return null;
         }
     }

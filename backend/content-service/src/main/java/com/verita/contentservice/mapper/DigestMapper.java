@@ -89,11 +89,23 @@ public class DigestMapper {
 
     private DigestSource toApiSource(DigestSourceData s) {
         return new DigestSource()
-                .url(s.getUrl() == null ? null : URI.create(s.getUrl()))
+                .url(parseUri(s.getUrl()))
                 .sourceName(s.getSourceName())
                 .provider(s.getProvider())
                 .publishedAt(parseTime(s.getPublishedAt()))
                 .title(s.getTitle());
+    }
+
+    private URI parseUri(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return URI.create(value);
+        } catch (IllegalArgumentException e) {
+            log.warn("Skipping unparseable url in digest payload: {}", value);
+            return null;
+        }
     }
 
     private List<Topic> toTopics(List<DigestTopicData> topics) {

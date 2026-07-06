@@ -141,7 +141,7 @@ export default function DigestPost() {
                   </svg>
                   Generated from your topics
                 </span>
-                <a className={styles.topicSourceManage} onClick={() => navigate('/topics')}>Manage →</a>
+                <button type="button" className={styles.topicSourceManage} onClick={() => navigate('/topics')}>Manage →</button>
               </div>
               {digest.topics.length > 0 && (
                 <div className={styles.topicPills}>

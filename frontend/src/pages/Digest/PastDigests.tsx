@@ -106,7 +106,7 @@ export default function PastDigests() {
                 {todayDigest.digestType === 'PUBLIC' && (
                   <div className={styles.zeroSubHint}>
                     You follow no topics — you’ll only get the public digest.{' '}
-                    <a onClick={() => navigate('/topics')}>Follow topics →</a>
+                    <button type="button" onClick={() => navigate('/topics')}>Follow topics →</button>
                   </div>
                 )}
                 <div className={styles.todayMeta}>

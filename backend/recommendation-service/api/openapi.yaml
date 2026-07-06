@@ -72,7 +72,9 @@ paths:
         (ADR-0018/0019). Returns the most-subscribed topic IDs across the platform, most popular
         first. Gated by X-Internal-Service-Token (ADR-0007), not a user JWT.
       tags: [Internal]
-      security: [{ bearerAuth: [] }]
+      # Gated by X-Internal-Service-Token, not a user JWT — no bearerAuth advertised (matches the
+      # other internal endpoints in this collection).
+      security: []
       parameters:
         - name: limit
           in: query

@@ -30,7 +30,7 @@ test.describe('Digest — logged in (seeded personal digests)', () => {
     await page.goto('/digest');
     await page.getByRole('button', { name: 'Read', exact: true }).click();
 
-    await expect(page.getByText('Personalised from', { exact: false })).toBeVisible();
+    await expect(page.getByText('Generated from your topics', { exact: false })).toBeVisible();
   });
 
   test('DIG-4: digest is a single past-digests view with no tab bar', async ({ page }) => {
@@ -69,6 +69,6 @@ test.describe('Digest — logged out (seeded public digest, ADR-0019)', () => {
     await expect(page.getByRole('button', { name: 'Share digest' })).toBeVisible();
     // Logged-out reader shows the auth upsell, not the personalisation note.
     await expect(page.getByText('Get a digest built for you')).toBeVisible();
-    await expect(page.getByText('Personalised from', { exact: false })).toHaveCount(0);
+    await expect(page.getByText('Generated from your topics', { exact: false })).toHaveCount(0);
   });
 });

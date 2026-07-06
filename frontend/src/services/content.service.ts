@@ -284,7 +284,9 @@ export const contentService = {
     const { data } = await api.get<{ content: DigestSummaryResponse[] }>('/api/v1/digests', {
       params: { page: 0, size: 30 },
     });
-    const todayStr = new Date().toISOString().split('T')[0];
+    // digestDate is generated in the digest timezone (Europe/Berlin), so derive "today" there too —
+    // a browser-local/UTC date drifts a day for users outside Berlin near midnight. en-CA yields YYYY-MM-DD.
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
     const todaySummary = data.content.find((d) => d.digestDate === todayStr) ?? null;
     return {
       today: todaySummary ? toTodayDigest(todaySummary) : null,
