@@ -5,9 +5,10 @@ import { useWelcome } from '../../../hooks/useWelcome';
 import { useAuthModal } from '../../../contexts/ModalContext';
 import { AuthError } from '../../../errors/AuthError';
 import { checkUsernameAvailable, checkEmailAvailable } from '../../../services/userApi';
+import { authService } from '../../../services/auth.service';
 import styles from './AuthModal.module.css';
 
-type AuthScreen = 'login' | 'signup' | 'forgot' | 'otp';
+type AuthScreen = 'login' | 'signup' | 'forgot' | 'otp' | 'reset';
 type AvailStatus = 'idle' | 'checking' | 'available' | 'taken';
 
 const USERNAME_RE = /^[a-zA-Z0-9_]+$/;
@@ -95,6 +96,15 @@ export default function AuthModal() {
   const [passwordFieldError, setPasswordFieldError] = useState('');
   const [otpFocus, setOtpFocus] = useState(-1);
   const otpRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null));
+  // Password-reset flow: token from verify-reset-code, the new-password screen fields, and
+  // the transient "code resent" / "password reset" notices.
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [newPasswordError, setNewPasswordError] = useState('');
+  const [resendNotice, setResendNotice] = useState('');
+  const [successNotice, setSuccessNotice] = useState('');
 
   // Only check availability when format is already valid — avoids API calls for "用户名" or "ab"
   useEffect(() => {
@@ -144,6 +154,13 @@ export default function AuthModal() {
     setUsernameFieldError('');
     setEmailFieldError('');
     setPasswordFieldError('');
+    setResetToken('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowNewPassword(false);
+    setNewPasswordError('');
+    setResendNotice('');
+    setSuccessNotice('');
   }
 
   function handleOpenChange(o: boolean) {
@@ -161,6 +178,12 @@ export default function AuthModal() {
     setPassword('');
     setShowPassword(false);
     setShowSignupPassword(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowNewPassword(false);
+    setNewPasswordError('');
+    setResendNotice('');
+    setSuccessNotice('');
     setScreen(s);
   }
 
@@ -219,6 +242,99 @@ export default function AuthModal() {
     }
   }
 
+  // Step 1 — email → request a code, then advance to the OTP screen. We always advance on a
+  // resolved request (the backend 204s even for unknown emails) so the UI can't be used to
+  // probe which addresses exist.
+  async function handleRequestReset(e: FormEvent) {
+    e.preventDefault();
+    const eErr = validateEmail(forgotEmail);
+    if (eErr) { setError(eErr); return; }
+    setError('');
+    setResendNotice('');
+    setLoading(true);
+    try {
+      await authService.requestPasswordReset(forgotEmail);
+      setOtpDigits(Array(6).fill(''));
+      setScreen('otp');
+    } catch (err) {
+      if (err instanceof AuthError && err.code === 'NETWORK_ERROR') {
+        setError('Cannot reach the server. Check your connection.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Step 2 — verify the 6 digits, stash the returned reset token, advance to the new-password screen.
+  async function handleVerify() {
+    const code = otpDigits.join('');
+    if (code.length < 6 || loading) return;
+    setError('');
+    setResendNotice(''); // Restore the Resend affordance if a prior resend notice is showing.
+    setLoading(true);
+    try {
+      const token = await authService.verifyResetCode(forgotEmail, code);
+      setResetToken(token);
+      setScreen('reset');
+    } catch (err) {
+      if (err instanceof AuthError && err.code === 'NETWORK_ERROR') {
+        setError('Cannot reach the server. Check your connection.');
+      } else {
+        setError('That code is invalid or expired. Try again or resend.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    if (loading) return;
+    setError('');
+    setResendNotice('');
+    setLoading(true);
+    try {
+      await authService.requestPasswordReset(forgotEmail);
+      setOtpDigits(Array(6).fill(''));
+      otpRefs.current[0]?.focus();
+      setResendNotice('A new code is on its way.');
+    } catch {
+      setError('Could not resend the code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Step 3 — set the new password using the reset token, then drop back to login with the email
+  // prefilled and a success note.
+  async function handleResetPassword(e: FormEvent) {
+    e.preventDefault();
+    const pErr = validatePassword(newPassword);
+    if (pErr) { setNewPasswordError(pErr); return; }
+    if (newPassword !== confirmPassword) {
+      setNewPasswordError('Passwords do not match');
+      return;
+    }
+    setNewPasswordError('');
+    setError('');
+    setLoading(true);
+    try {
+      await authService.resetPassword(resetToken, newPassword);
+      switchTo('login');
+      setEmail(forgotEmail);
+      setSuccessNotice('Password reset. Log in with your new password.');
+    } catch (err) {
+      if (err instanceof AuthError && err.code === 'NETWORK_ERROR') {
+        setError('Cannot reach the server. Check your connection.');
+      } else {
+        setError('Your reset session expired. Please request a new code.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleOtpInput(i: number, e: React.ChangeEvent<HTMLInputElement>) {
     const char = e.target.value.replace(/\D/g, '').slice(-1);
     if (!char) return;
@@ -269,6 +385,11 @@ export default function AuthModal() {
       <div data-testid="login-screen">
         <Wordmark />
         {renderTabs('login')}
+        {successNotice && (
+          <div className={styles.fieldAvailable} data-testid="reset-success" style={{ marginTop: '16px' }}>
+            <CheckIcon /><span>{successNotice}</span>
+          </div>
+        )}
         <form onSubmit={handleLogin} className={styles.formBody}>
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Email</span></div>
@@ -496,30 +617,33 @@ export default function AuthModal() {
         <Wordmark />
         <div className={styles.forgotTitle}>Reset your password</div>
         <div className={styles.forgotDesc}>
-          Enter your account email and we'll send a link to reset your password.
+          Enter your account email and we'll send a 6-digit code to reset your password.
         </div>
-        <form style={{ marginTop: '20px' }} onSubmit={(e) => { e.preventDefault(); switchTo('otp'); }}>
+        <form style={{ marginTop: '20px' }} onSubmit={handleRequestReset}>
           <div className={styles.field}>
             <div className={styles.fieldHeader}><span>Email</span></div>
-            <div className={styles.fieldBox}>
+            <div className={`${styles.fieldBox} ${error ? styles.fieldBoxError : ''}`}>
               <input
                 className={styles.fieldInput}
                 type="email"
                 placeholder="you@domain.com"
                 value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
+                onChange={(e) => { setForgotEmail(e.target.value); if (error) setError(''); }}
                 required
                 autoComplete="email"
               />
             </div>
+            {error && (
+              <div className={styles.fieldError}><WarnIcon /><span>{error}</span></div>
+            )}
           </div>
           <button
             className={styles.cta}
             type="submit"
             data-testid="send-reset-btn"
-            disabled={!forgotEmail}
+            disabled={!forgotEmail || loading}
           >
-            Send reset link
+            {loading ? 'Sending…' : 'Send reset code'}
           </button>
         </form>
       </div>
@@ -529,6 +653,14 @@ export default function AuthModal() {
   function renderOtp() {
     return (
       <div data-testid="otp-screen">
+        <button
+          className={styles.backLink}
+          data-testid="otp-back"
+          onClick={() => switchTo('forgot')}
+        >
+          <BackArrow />
+          Use a different email
+        </button>
         <Wordmark />
         <div className={styles.otpTitle}>Verify your email</div>
         <div className={styles.otpDesc}>
@@ -559,18 +691,123 @@ export default function AuthModal() {
             </div>
           ))}
         </div>
+        {error && (
+          <div className={styles.fieldError} style={{ marginTop: '14px' }}>
+            <WarnIcon /><span>{error}</span>
+          </div>
+        )}
         <div className={styles.otpActions}>
           <button
             className={styles.cta}
-            onClick={() => { close(); resetAll(); }}
+            type="button"
+            data-testid="otp-verify-btn"
+            onClick={handleVerify}
+            disabled={loading || otpDigits.join('').length < 6}
           >
-            Verify
+            {loading ? 'Verifying…' : 'Verify'}
           </button>
         </div>
         <div className={styles.otpResend}>
-          Didn't get a code?{' '}
-          <button className={styles.switchLinkBtn}>Resend</button>
+          {resendNotice ? (
+            <span data-testid="otp-resend-notice">{resendNotice}</span>
+          ) : (
+            <>
+              Didn't get a code?{' '}
+              <button
+                type="button"
+                className={styles.switchLinkBtn}
+                data-testid="otp-resend-btn"
+                onClick={handleResend}
+                disabled={loading}
+              >
+                Resend
+              </button>
+            </>
+          )}
         </div>
+      </div>
+    );
+  }
+
+  function renderReset() {
+    return (
+      <div data-testid="reset-screen">
+        <button
+          className={styles.backLink}
+          data-testid="reset-back"
+          onClick={() => switchTo('otp')}
+        >
+          <BackArrow />
+          Back
+        </button>
+        <Wordmark />
+        <div className={styles.forgotTitle}>Set a new password</div>
+        <div className={styles.forgotDesc}>
+          Choose a new password for{' '}
+          <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{forgotEmail}</span>.
+        </div>
+        <form style={{ marginTop: '20px' }} onSubmit={handleResetPassword}>
+          <div className={styles.field}>
+            <div className={styles.fieldHeader}><span>New password</span></div>
+            <div className={`${styles.fieldBox} ${newPasswordError ? styles.fieldBoxError : ''}`}>
+              <input
+                className={styles.fieldInput}
+                type={showNewPassword ? 'text' : 'password'}
+                data-testid="new-password-input"
+                placeholder="At least 8 characters"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  if (newPasswordError) setNewPasswordError(validatePassword(e.target.value));
+                }}
+                onBlur={() => setNewPasswordError(validatePassword(newPassword))}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className={styles.fieldEye}
+                tabIndex={-1}
+                onClick={() => setShowNewPassword((p) => !p)}
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+              >
+                {showNewPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <div className={styles.fieldHeader}><span>Confirm password</span></div>
+            <div className={`${styles.fieldBox} ${newPasswordError ? styles.fieldBoxError : ''}`}>
+              <input
+                className={styles.fieldInput}
+                type={showNewPassword ? 'text' : 'password'}
+                data-testid="confirm-password-input"
+                placeholder="Re-enter your new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            {newPasswordError ? (
+              <div className={styles.fieldError}><WarnIcon /><span>{newPasswordError}</span></div>
+            ) : (
+              <div className={styles.fieldHint}>Use 8+ characters with a mix of letters and numbers.</div>
+            )}
+          </div>
+
+          {error && (
+            <div className={styles.fieldError}><WarnIcon /><span>{error}</span></div>
+          )}
+
+          <button
+            className={styles.cta}
+            type="submit"
+            data-testid="reset-submit-btn"
+            disabled={loading || !newPassword || !confirmPassword}
+          >
+            {loading ? 'Resetting…' : 'Reset password'}
+          </button>
+        </form>
       </div>
     );
   }
@@ -580,6 +817,7 @@ export default function AuthModal() {
     signup: renderSignup,
     forgot: renderForgot,
     otp: renderOtp,
+    reset: renderReset,
   };
 
   return (
@@ -591,6 +829,7 @@ export default function AuthModal() {
             {screen === 'login' ? 'Log in to Verita' :
              screen === 'signup' ? 'Create a Verita account' :
              screen === 'forgot' ? 'Forgot password' :
+             screen === 'reset' ? 'Set a new password' :
              'Email verification'}
           </Dialog.Title>
 

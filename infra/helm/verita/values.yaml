@@ -7,6 +7,11 @@ global:
   # Shared service-to-service secret (ADR-0007) consumed by backend internal endpoints.
   # DEV DEFAULT ONLY — override via --set global.internalServiceToken=... for real deployments.
   internalServiceToken: "dev-only-internal-service-token"
+  # Brevo SMTP credentials for the user-service password-reset mail. Empty by default so dev
+  # installs run mail-less (secret-mail.yaml and the user-service mail env are skipped). Set both
+  # in prod via --set global.mailUsername=... --set global.mailPassword=... (see values-prod.yaml).
+  mailUsername: ""
+  mailPassword: ""
 
 services:
   user:

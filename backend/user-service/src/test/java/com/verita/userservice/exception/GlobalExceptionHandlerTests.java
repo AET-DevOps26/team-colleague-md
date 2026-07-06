@@ -68,6 +68,16 @@ public class GlobalExceptionHandlerTests {
     }
 
     @Test
+    void invalidPasswordReset_mapsTo400WithGenericMessage() {
+        // Generic 400 — never reveals whether the code was wrong, expired, or attempt-exhausted.
+        ResponseEntity<ErrorResponse> response =
+                handler.handleInvalidPasswordReset(new InvalidPasswordResetException());
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("Invalid or expired reset code", response.getBody().getMessage());
+    }
+
+    @Test
     void deleteUserRecommendation_mapsTo503() {
         DeleteUserRecommendationException exception = new DeleteUserRecommendationException(
                 UUID.randomUUID(),

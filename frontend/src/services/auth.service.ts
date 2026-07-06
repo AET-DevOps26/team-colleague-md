@@ -79,6 +79,46 @@ export const authService = {
     }
   },
 
+  // --- Password reset (two-step OTP) ---
+
+  // Step 1: request a 6-digit code. The backend always responds 204 (even for unknown emails,
+  // to avoid account enumeration), so a resolved promise just means "request accepted".
+  async requestPasswordReset(email: string): Promise<void> {
+    try {
+      await userApi.post('/api/v1/auth/forgot-password', { email });
+    } catch (error) {
+      if (axios.isAxiosError(error) && !error.response) throw new AuthError('NETWORK_ERROR');
+      throw new AuthError('UNKNOWN');
+    }
+  },
+
+  // Step 2: exchange the emailed code for a single-use reset token. 400 = wrong/expired/too many tries.
+  async verifyResetCode(email: string, code: string): Promise<string> {
+    try {
+      const { data } = await userApi.post<{ resetToken: string }>('/api/v1/auth/verify-reset-code', { email, code });
+      return data.resetToken;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 400) throw new AuthError('INVALID_RESET_CODE');
+        if (!error.response) throw new AuthError('NETWORK_ERROR');
+      }
+      throw new AuthError('UNKNOWN');
+    }
+  },
+
+  // Step 3: set the new password using the reset token. 400 = token invalid/expired between steps.
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    try {
+      await userApi.post('/api/v1/auth/reset-password', { token, newPassword });
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 400) throw new AuthError('INVALID_RESET_CODE');
+        if (!error.response) throw new AuthError('NETWORK_ERROR');
+      }
+      throw new AuthError('UNKNOWN');
+    }
+  },
+
   // Attempts to restore a session using the httpOnly refresh-token cookie.
   // Called on app mount. Returns the user if the cookie is still valid, null otherwise.
   async restoreSession(): Promise<AuthUser | null> {
