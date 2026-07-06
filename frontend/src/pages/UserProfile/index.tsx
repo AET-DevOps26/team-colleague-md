@@ -442,14 +442,9 @@ export default function UserProfile() {
                 <span className={styles.statCount}>{formatCount(profile.postCount)}</span>
                 <span className={styles.statLabel}>Posts</span>
               </div>
-              <div className={styles.stat}>
-                <span className={styles.statCount}>{formatCount(profile.followerCount)}</span>
-                <span className={styles.statLabel}>Followers</span>
-              </div>
-              <div className={styles.stat}>
-                <span className={styles.statCount}>{formatCount(profile.followingCount)}</span>
-                <span className={styles.statLabel}>Following</span>
-              </div>
+              {/* TODO(#178): Followers/Following are hidden until the follow-graph aggregate is
+                  maintained. followerCount/followingCount still come back as 0 from the API — do
+                  not surface them until they are populated. */}
               <div className={styles.stat}>
                 <span className={styles.statCount}>{formatCount(profile.likeReceivedCount)}</span>
                 <span className={styles.statLabel}>Likes received</span>

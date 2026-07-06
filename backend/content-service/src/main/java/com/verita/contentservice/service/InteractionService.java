@@ -10,6 +10,7 @@ import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.VoteRepository;
+import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.CommentLikeRequest;
 import com.verita.model.CommentLikeResponse;
@@ -33,6 +34,7 @@ public class InteractionService {
     private final VoteRepository voteRepository;
     private final BookmarkRepository bookmarkRepository;
     private final SecurityUtils securityUtils;
+    private final UserClient userClient;
 
     public PostLikeResponse likePost(UUID id, LikeRequest.TypeEnum type) {
         UUID userId = securityUtils.getCurrentUserId();
@@ -45,9 +47,13 @@ public class InteractionService {
             case DISLIKE -> VoteType.DOWNVOTE;
             case NONE -> null;
         };
+        long likesBefore = post.getLikeCount();
         applyVote(userId, VoteTargetType.POST, post.getId(), newType);
         postRepository.refreshVoteCounts(post.getId());
         PostEntity updated = postRepository.findByIdAndDeletedFalse(post.getId()).orElseThrow();
+        // The change in the post's like tally is exactly the change in likes the author has received
+        // (issue #178). Best-effort write-back to user-service; drift is tolerated (ADR-0007).
+        userClient.applyUserStatsDelta(post.getAuthorId(), 0, (int) (updated.getLikeCount() - likesBefore));
         return new PostLikeResponse()
                 .likeCount((int) updated.getLikeCount())
                 .dislikeCount((int) updated.getDislikeCount())

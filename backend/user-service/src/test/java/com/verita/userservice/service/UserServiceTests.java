@@ -247,4 +247,19 @@ public class UserServiceTests {
         assertEquals(1, result.getTotalElements());
         assertEquals(1, result.getContent().size());
     }
+
+    @Test
+    void applyStatsDelta_nonZeroDeltas_appliesEach() {
+        UUID id = userEntity.getId();
+        userService.applyStatsDelta(id, 1, -2);
+        verify(userRepository).applyPostCountDelta(id, 1);
+        verify(userRepository).applyLikeReceivedCountDelta(id, -2);
+    }
+
+    @Test
+    void applyStatsDelta_zeroDeltas_areNoOps() {
+        userService.applyStatsDelta(userEntity.getId(), 0, 0);
+        verify(userRepository, never()).applyPostCountDelta(any(), anyInt());
+        verify(userRepository, never()).applyLikeReceivedCountDelta(any(), anyInt());
+    }
 }

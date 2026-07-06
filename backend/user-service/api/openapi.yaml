@@ -214,6 +214,32 @@ paths:
               schema: { $ref: '#/components/schemas/PaginatedDigestRecipients' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
+  /internal/v1/users/{userId}/stats/deltas:
+    post:
+      operationId: applyUserStatsDelta
+      summary: Apply deltas to a user's profile stat counts (internal)
+      description: |
+        Internal endpoint called by content-service to keep an author's profile aggregate counts
+        (postCount, likeReceivedCount) in sync as posts are published/unpublished and likes are
+        added/removed. Gated by the shared X-Internal-Service-Token (ADR-0007), not a user JWT.
+        Counts are clamped at zero; unknown user IDs are a no-op.
+        TODO(#178): followerCount/followingCount deltas are intentionally not handled yet — the
+        follow graph aggregate is not maintained (those two counts stay hidden in the UI).
+      tags: [Internal]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserStatsDelta' }
+      responses:
+        '204': { description: Deltas applied }
+
   # --- CURRENT USER ---
   /api/v1/users/me:
     get:
@@ -511,11 +537,22 @@ components:
         role: { $ref: '#/components/schemas/UserRole' }
         isBanned: { type: boolean }
         postCount: { type: integer }
+        # TODO(#178): followerCount/followingCount are not yet maintained (no follow-graph
+        # aggregate) and are hidden in the UI. Kept in the contract so re-enabling is additive.
         followerCount: { type: integer }
         followingCount: { type: integer }
         likeReceivedCount: { type: integer }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+    UserStatsDelta:
+      type: object
+      description: |
+        Signed deltas to apply to a user's profile stat counts. Omitted or zero fields are no-ops.
+        Only the counts maintained via write-back (ADR-0007 internal call) are represented.
+      properties:
+        postCountDelta: { type: integer, default: 0 }
+        likeReceivedCountDelta: { type: integer, default: 0 }
 
     RegisterRequest:
       type: object

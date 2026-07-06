@@ -75,6 +75,7 @@ public class PostService {
         post.setAuthorId(userId);
         applyPostRequest(post, request);
         post = postRepository.save(post);
+        applyAuthorPostCountDelta(userId, false, post.getStatus() == PostStatus.PUBLISHED);
         publishSummaryRequest(post);
         return toPostResponse(post, userId);
     }
@@ -82,8 +83,10 @@ public class PostService {
     public PostResponse updatePost(UUID id, @Valid PostRequest request) {
         UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
+        boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
         applyPostRequest(post, request);
         post = postRepository.save(post);
+        applyAuthorPostCountDelta(userId, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
         publishSummaryRequest(post);
         return toPostResponse(post, userId);
     }
@@ -91,6 +94,7 @@ public class PostService {
     public PostResponse patchPost(UUID id, @Valid PostPatchRequest request) {
         UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
+        boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
         boolean summaryInputChanged = false;
         if (request.getTitle() != null) {
             post.setTitle(request.getTitle());
@@ -118,6 +122,7 @@ public class PostService {
             applyTopics(post, request.getTopics());
         }
         post = postRepository.save(post);
+        applyAuthorPostCountDelta(userId, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
         if (summaryInputChanged) {
             publishSummaryRequest(post);
         }
@@ -127,12 +132,14 @@ public class PostService {
     public void deletePost(UUID id) {
         UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
+        boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
         post.setDeleted(true);
         post.setDeletedAt(OffsetDateTime.now());
         postRepository.save(post);
-        if (post.getStatus() == PostStatus.PUBLISHED && post.getTopics() != null) {
+        if (wasPublished && post.getTopics() != null) {
             post.getTopics().forEach(t -> topicRepository.decrementTotalPostCount(t.getId()));
         }
+        applyAuthorPostCountDelta(userId, wasPublished, false);
     }
 
     @Transactional(readOnly = true)
@@ -346,6 +353,16 @@ public class PostService {
                 if (!oldTopicIds.contains(topic.getId())) topicRepository.incrementTotalPostCount(topic.getId());
             }
         }
+    }
+
+    /**
+     * Write-back of the author's published-post count to user-service (issue #178). Emits the signed
+     * change implied by a publish-state transition so drafts and soft-deletes are excluded; a no-op
+     * when the state is unchanged. Best-effort — {@link UserClient} swallows downstream failures.
+     */
+    private void applyAuthorPostCountDelta(UUID authorId, boolean wasPublished, boolean isPublished) {
+        int delta = (isPublished ? 1 : 0) - (wasPublished ? 1 : 0);
+        if (delta != 0) userClient.applyUserStatsDelta(authorId, delta, 0);
     }
 
     private String summarizeLocally(String content) {
