@@ -140,7 +140,10 @@ async def test_generate_digest_only_mocks_llm_api(mock_build_chain):
     assert result.sourceCount == 1
     assert result.eventCount == 1
     assert result.events[0].topicIds == ["topic-llms"]
-    assert result.events[0].sourceUrls == ["https://example.com/llm-benchmark"]
+    assert [s.url for s in result.events[0].sources] == ["https://example.com/llm-benchmark"]
+    assert result.events[0].sources[0].sourceName == "Example News"
+    assert result.events[0].sources[0].provider == "gnews"
+    assert result.events[0].sources[0].publishedAt == datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc)
     assert result.usage is not None
     assert result.usage.total_tokens == 200
 

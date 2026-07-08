@@ -1,4 +1,4 @@
-import type { Comment, FeedPage, Post, PostDetail, DigestListItem, TopicCategory, TodayDigest, User, PostResponse } from '../types';
+import type { Comment, FeedPage, Post, PostDetail, DigestListItem, DigestDetail, DigestType, TopicCategory, TodayDigest, User, PostResponse } from '../types';
 import api from './api';
 import recommendationApi from './recommendationApi';
 import { getUser } from './tokenStore';
@@ -136,29 +136,91 @@ function toFeedPost(r: PostResponse): Post {
   };
 }
 
-/** A persisted DIGEST post → the Past Digests list-card shape. */
-function toDigestListItem(r: PostResponse): DigestListItem {
+/** content-service DigestSummary (list/card projection, no events). */
+interface DigestSummaryResponse {
+  id: string;
+  digestType: DigestType;
+  digestDate: string;
+  title: string;
+  subtitle?: string | null;
+  summary?: string | null;
+  eventCount?: number;
+  sourceCount?: number;
+  readTimeMinutes?: number;
+  previewHeadlines?: string[];
+  topics?: { id: string; name: string }[];
+  generatedAt?: string | null;
+  createdAt: string;
+}
+
+/** content-service DigestDetail (summary fields + full event stream). */
+interface DigestDetailResponse extends DigestSummaryResponse {
+  events?: {
+    headline: string;
+    summaryBullets?: string[];
+    topicIds?: string[];
+    sources?: { url: string; sourceName?: string | null; provider?: string | null; publishedAt?: string | null; title?: string | null }[];
+  }[];
+}
+
+/** DigestSummary → the Past Digests list-card shape. */
+function toDigestListItem(r: DigestSummaryResponse): DigestListItem {
   return {
     id: r.id,
-    date: r.createdAt.split('T')[0],
-    displayDate: new Date(r.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+    date: r.digestDate,
+    displayDate: new Date(r.digestDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+    digestType: r.digestType,
     title: r.title,
-    eventCount: r.sourceUrl?.length ?? r.topics.length,
+    eventCount: r.eventCount ?? 0,
     readTimeMinutes: r.readTimeMinutes ?? 5,
   };
 }
 
-/** A digest dated today → the "today" hero model. */
-function toTodayDigest(r: PostResponse): TodayDigest {
+/** DigestSummary → the "today" hero model. */
+function toTodayDigest(r: DigestSummaryResponse): TodayDigest {
+  const ts = r.generatedAt ?? r.createdAt;
   return {
     id: r.id,
-    date: r.createdAt.split('T')[0],
+    date: r.digestDate,
+    digestType: r.digestType,
     title: r.title,
-    topStorySubtitle: r.summary ?? r.excerpt ?? '',
-    eventCount: r.sourceUrl?.length ?? r.topics.length,
+    topStorySubtitle: r.subtitle ?? r.summary ?? '',
+    previewHeadlines: r.previewHeadlines ?? [],
+    eventCount: r.eventCount ?? 0,
     readTimeMinutes: r.readTimeMinutes ?? 5,
-    generatedAt: new Date(r.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    generatedAt: new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     status: 'generated',
+  };
+}
+
+/** DigestDetail response → the reader model with a structured event stream. */
+function toDigestDetail(r: DigestDetailResponse): DigestDetail {
+  return {
+    id: r.id,
+    digestType: r.digestType,
+    date: r.digestDate,
+    title: r.title,
+    subtitle: r.subtitle ?? '',
+    summary: r.summary ?? '',
+    eventCount: r.eventCount ?? (r.events?.length ?? 0),
+    sourceCount: r.sourceCount ?? 0,
+    readTimeMinutes: r.readTimeMinutes ?? 5,
+    previewHeadlines: r.previewHeadlines ?? [],
+    topics: (r.topics ?? []).map((t) => ({ id: t.id, name: t.name })),
+    events: (r.events ?? []).map((e) => ({
+      headline: e.headline,
+      summaryBullets: e.summaryBullets ?? [],
+      topicIds: e.topicIds ?? [],
+      sources: (e.sources ?? []).map((s) => ({
+        url: s.url,
+        sourceName: s.sourceName ?? null,
+        provider: s.provider ?? null,
+        publishedAt: s.publishedAt ?? null,
+        title: s.title ?? null,
+      })),
+    })),
+    generatedAt: r.generatedAt ?? null,
+    createdAt: r.createdAt,
   };
 }
 
@@ -215,31 +277,40 @@ export const contentService = {
     else await api.delete(`/api/v1/posts/${postId}/bookmark`);
   },
 
-  // Past Digests page (ADR-0013): the caller's own DIGEST posts, newest first. Hits the
-  // auth-required per-user endpoint (empty until generation exists). "today" is derived
-  // client-side from the newest item dated today.
+  // Past Digests page (ADR-0019): the caller's digest history — personal digests plus assigned
+  // public digests, newest first. Auth-required. "today" is derived client-side from the newest
+  // item dated today.
   async getDigests(): Promise<{ today: TodayDigest | null; items: DigestListItem[] }> {
-    const { data } = await api.get<{ content: PostResponse[] }>('/api/v1/posts/digests', {
+    const { data } = await api.get<{ content: DigestSummaryResponse[] }>('/api/v1/digests', {
       params: { page: 0, size: 30 },
     });
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayPost = data.content.find((p) => p.createdAt.split('T')[0] === todayStr) ?? null;
+    // digestDate is generated in the digest timezone (Europe/Berlin), so derive "today" there too —
+    // a browser-local/UTC date drifts a day for users outside Berlin near midnight. en-CA yields YYYY-MM-DD.
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
+    const todaySummary = data.content.find((d) => d.digestDate === todayStr) ?? null;
     return {
-      today: todayPost ? toTodayDigest(todayPost) : null,
+      today: todaySummary ? toTodayDigest(todaySummary) : null,
       items: data.content.map(toDigestListItem),
     };
   },
 
-  // Today's public digest (ADR-0016): the newest null-target digest, readable without login.
+  // Today's public digest (ADR-0018/0019): the newest PUBLIC digest, readable without login.
   // Powers the logged-out `/digest` surface. Returns null when no public digest exists (404).
   async getPublicTodayDigest(): Promise<TodayDigest | null> {
     try {
-      const { data } = await api.get<PostResponse>('/api/v1/posts/digests/today/public');
+      const { data } = await api.get<DigestSummaryResponse>('/api/v1/digests/public/today');
       return toTodayDigest(data);
     } catch (e) {
       if (axios.isAxiosError(e) && e.response?.status === 404) return null;
       throw e;
     }
+  },
+
+  // One digest with its full event stream (ADR-0019). Optional auth: a personal digest fetched
+  // by a non-target caller 404s; public digests are open.
+  async getDigest(id: string): Promise<DigestDetail> {
+    const { data } = await api.get<DigestDetailResponse>(`/api/v1/digests/${id}`);
+    return toDigestDetail(data);
   },
 
   // Manage Topics catalog — category-grouped topics with stats from content-service.

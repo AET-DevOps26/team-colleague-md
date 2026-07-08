@@ -54,7 +54,6 @@ const RESPONSE: PostResponse = {
   id: 'p1',
   author: { id: 'u1', username: 'a', displayName: 'A', role: 'USER' },
   status: 'PUBLISHED',
-  type: 'NORMAL',
   title: 'Existing title',
   excerpt: '',
   summary: null,

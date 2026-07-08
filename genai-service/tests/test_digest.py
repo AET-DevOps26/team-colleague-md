@@ -10,7 +10,13 @@ from fastapi.testclient import TestClient
 
 from app.config import get_settings
 from app.main import app
-from app.schemas.digest import DigestEvent, DigestGenerateResponse, DigestJobWarning, DigestTopic
+from app.schemas.digest import (
+    DigestEvent,
+    DigestGenerateResponse,
+    DigestJobWarning,
+    DigestSource,
+    DigestTopic,
+)
 from app.services.digest_generator import DigestJsonParseError
 from app.services.digest_jobs import clear_jobs
 from app.services.external_sources import ExternalSourceItem
@@ -83,7 +89,15 @@ def _digest_result() -> DigestGenerateResponse:
                 headline="New LLM benchmark compares long-context behavior",
                 summaryBullets=["The benchmark highlights differences in retrieval quality."],
                 topicIds=[topics[0].id],
-                sourceUrls=["https://example.com/llm-benchmark"],
+                sources=[
+                    DigestSource(
+                        url="https://example.com/llm-benchmark",
+                        sourceName="Example News",
+                        provider="gnews",
+                        publishedAt=datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc),
+                        title="New LLM benchmark",
+                    )
+                ],
             )
         ],
         eventCount=1,

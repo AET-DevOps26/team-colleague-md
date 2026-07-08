@@ -6,7 +6,6 @@ const RESPONSE: PostResponse = {
   id: 'post-1',
   author: { id: 'u1', username: 'a', displayName: 'A', role: 'USER' },
   status: 'PUBLISHED',
-  type: 'NORMAL',
   title: 'My Post',
   excerpt: 'Preview',
   summary: null,

@@ -8,24 +8,29 @@ import com.verita.contentservice.dto.DigestGenerateRequestDto;
 import com.verita.contentservice.dto.DigestGenerateResponseDto;
 import com.verita.contentservice.dto.DigestJobAcceptedDto;
 import com.verita.contentservice.dto.DigestJobStatusDto;
+import com.verita.contentservice.dto.DigestSourceDto;
 import com.verita.contentservice.dto.DigestTopicDto;
 import com.verita.contentservice.dto.TopicSubscriptionDto;
 import com.verita.contentservice.dto.UserDigestRecipientDto;
 import com.verita.contentservice.dto.UserDigestRecipientPageDto;
+import com.verita.contentservice.entity.DigestEntity;
+import com.verita.contentservice.service.digest.DigestService;
+import com.verita.model.CreateDigestRequest;
+import com.verita.model.DigestDetail;
+import com.verita.model.DigestEvent;
 import com.verita.model.DigestGenerationResponse;
-import com.verita.model.DigestPostRequest;
-import com.verita.model.PostResponse;
+import com.verita.model.DigestSource;
+import com.verita.model.DigestTopicRef;
+import com.verita.model.DigestType;
 import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,20 +38,26 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Orchestrates the daily digest run (ADR-0018/0019): one PUBLIC digest per day from platform
+ * trending topics, then per recipient a freshly generated PERSONAL digest (subscribers) or an
+ * assignment of the day's PUBLIC digest (zero-subscription users).
+ */
 @Slf4j
 @Service
 public class DailyDigestGenerationService {
     private static final int RECIPIENT_PAGE_SIZE = 100;
     private static final int MAX_SOURCES_PER_TOPIC = 5;
     private static final int MAX_EVENTS = 8;
+    private static final int PUBLIC_DIGEST_TOPIC_LIMIT = 8;
     private static final String TONE = "technical";
-    private static final int Free_News_Api_Delay_Hours = 12;
+    private static final int FREE_NEWS_API_DELAY_HOURS = 12;
 
     private final UserClient userClient;
     private final RecommendationClient recommendationClient;
     private final GenAiClient genAiClient;
     private final TopicService topicService;
-    private final PostService postService;
+    private final DigestService digestService;
     private final ZoneId digestZone;
     private final long pollIntervalMs;
     private final long maxWaitMs;
@@ -55,7 +66,7 @@ public class DailyDigestGenerationService {
                                         RecommendationClient recommendationClient,
                                         GenAiClient genAiClient,
                                         TopicService topicService,
-                                        PostService postService,
+                                        DigestService digestService,
                                         @Value("${app.digest.timezone}") String digestTimezone,
                                         @Value("${app.digest.poll-interval-ms}") long pollIntervalMs,
                                         @Value("${app.digest.max-wait-ms}") long maxWaitMs) {
@@ -63,13 +74,19 @@ public class DailyDigestGenerationService {
         this.recommendationClient = recommendationClient;
         this.genAiClient = genAiClient;
         this.topicService = topicService;
-        this.postService = postService;
+        this.digestService = digestService;
         this.digestZone = ZoneId.of(digestTimezone);
         this.pollIntervalMs = pollIntervalMs;
         this.maxWaitMs = maxWaitMs;
     }
 
     public void generateDueDigests() {
+        DigestWindow window = currentWindow();
+        try {
+            ensurePublicDigest(window);
+        } catch (Exception e) {
+            log.warn("Public digest generation failed for {}: {}", window.date(), e.getMessage());
+        }
         int page = 0;
         while (true) {
             UserDigestRecipientPageDto recipients = userClient.getDigestRecipients("DAILY", page, RECIPIENT_PAGE_SIZE);
@@ -95,37 +112,67 @@ public class DailyDigestGenerationService {
     public DigestGenerationResponse generateForUser(UUID userId, boolean force) {
         DigestWindow window = currentWindow();
         if (!force) {
-            Optional<DigestGenerationResponse> existing = skipIfDigestExists(userId, window);
-            if (existing.isPresent()) {
-                return existing.get();
+            Optional<DigestEntity> existingPersonal = digestService.findPersonalForDate(userId, window.date());
+            if (existingPersonal.isPresent()) {
+                return skipped("Digest already exists for the current Platform Day.",
+                        digestService.toDetail(existingPersonal.get()));
             }
         }
 
         List<DigestTopicDto> topics = resolveTopics(userId);
         if (topics.isEmpty()) {
-            return skipped("User has no followed topics.", null);
+            // Zero-subscription user: assign the day's public digest (ADR-0018).
+            Optional<DigestEntity> publicDigest = ensurePublicDigest(window);
+            if (publicDigest.isEmpty()) {
+                return skipped("No public digest available to assign.", null);
+            }
+            digestService.assignPublicDigest(userId, window.date(), publicDigest.get().getId());
+            return new DigestGenerationResponse(DigestGenerationResponse.StatusEnum.ASSIGNED_PUBLIC,
+                    "Assigned the public digest.").digest(digestService.toDetail(publicDigest.get()));
         }
 
         DigestGenerateResponseDto result = runGenAiJob(userId, window, topics);
         if (!force) {
-            // Re-check after the genai wait: another scheduler/manual run may have created it meanwhile.
-            Optional<DigestGenerationResponse> existing = skipIfDigestExists(userId, window);
-            if (existing.isPresent()) {
-                return existing.get();
+            Optional<DigestEntity> existingPersonal = digestService.findPersonalForDate(userId, window.date());
+            if (existingPersonal.isPresent()) {
+                return skipped("Digest already exists for the current Platform Day.",
+                        digestService.toDetail(existingPersonal.get()));
             }
         } else {
-            postService.softDeletePersonalDigests(userId, window.start(), window.end());
+            digestService.deletePersonalForDate(userId, window.date());
         }
 
-        PostResponse post = postService.createDigest(toDigestPostRequest(userId, result));
+        DigestDetail digest = digestService.createDigest(
+                toCreateRequest(DigestType.PERSONAL, userId, result));
         return new DigestGenerationResponse(DigestGenerationResponse.StatusEnum.GENERATED, "Digest generated.")
-                .post(post);
+                .digest(digest);
+    }
+
+    /** Idempotently ensures exactly one PUBLIC digest exists for the window's day (ADR-0018). */
+    public Optional<DigestEntity> ensurePublicDigest(DigestWindow window) {
+        Optional<DigestEntity> existing = digestService.findPublicForDate(window.date());
+        if (existing.isPresent()) {
+            return existing;
+        }
+        List<DigestTopicDto> topics = resolveTrendingTopics();
+        if (topics.isEmpty()) {
+            log.warn("No trending topics available; skipping public digest for {}", window.date());
+            return Optional.empty();
+        }
+        DigestGenerateResponseDto result = runGenAiJob(null, window, topics);
+        // Re-check after the genai wait: a concurrent run may have created it meanwhile.
+        Optional<DigestEntity> raced = digestService.findPublicForDate(window.date());
+        if (raced.isPresent()) {
+            return raced;
+        }
+        digestService.createDigest(toCreateRequest(DigestType.PUBLIC, null, result));
+        return digestService.findPublicForDate(window.date());
     }
 
     private DigestGenerateResponseDto runGenAiJob(UUID userId, DigestWindow window, List<DigestTopicDto> topics) {
         DigestGenerateRequestDto request = new DigestGenerateRequestDto(
-                "content-daily-digest-" + window.date() + "-" + userId,
-                userId.toString(),
+                "content-daily-digest-" + window.date() + "-" + (userId == null ? "public" : userId),
+                userId == null ? null : userId.toString(),
                 window.date(),
                 window.start(),
                 window.end(),
@@ -169,6 +216,18 @@ public class DailyDigestGenerationService {
                 .map(TopicSubscriptionDto::id)
                 .filter(Objects::nonNull)
                 .toList();
+        return toTopicDtos(topicIds);
+    }
+
+    private List<DigestTopicDto> resolveTrendingTopics() {
+        List<UUID> topicIds = recommendationClient.getTrendingTopics(PUBLIC_DIGEST_TOPIC_LIMIT).stream()
+                .map(TopicSubscriptionDto::id)
+                .filter(Objects::nonNull)
+                .toList();
+        return toTopicDtos(topicIds);
+    }
+
+    private List<DigestTopicDto> toTopicDtos(List<UUID> topicIds) {
         if (topicIds.isEmpty()) {
             return List.of();
         }
@@ -178,56 +237,78 @@ public class DailyDigestGenerationService {
                 .toList();
     }
 
-    private DigestPostRequest toDigestPostRequest(UUID userId, DigestGenerateResponseDto result) {
-        return new DigestPostRequest(result.title(), renderMarkdown(result))
-                .summary(result.topStorySubtitle())
-                .sourceUrl(sourceUrls(result))
-                .topics(topicNames(result))
-                .targetUserId(userId);
+    private CreateDigestRequest toCreateRequest(DigestType type, UUID targetUserId, DigestGenerateResponseDto result) {
+        return new CreateDigestRequest()
+                .digestType(type)
+                .targetUserId(targetUserId)
+                .digestDate(result.digestDate())
+                .title(result.title())
+                .subtitle(result.topStorySubtitle())
+                .summary(result.summary())
+                .events(toApiEvents(result))
+                .topics(toTopicRefs(result))
+                .eventCount(result.eventCount())
+                .sourceCount(result.sourceCount())
+                .readTimeMinutes(result.readTimeMinutes())
+                .model(result.model())
+                .generatedAt(result.generatedAt());
     }
 
-    private List<String> topicNames(DigestGenerateResponseDto result) {
+    private List<DigestEvent> toApiEvents(DigestGenerateResponseDto result) {
+        return safeEvents(result).stream()
+                .map(this::toApiEvent)
+                .toList();
+    }
+
+    private DigestEvent toApiEvent(DigestEventDto event) {
+        return new DigestEvent()
+                .headline(event.headline())
+                .summaryBullets(event.summaryBullets() == null ? List.of() : event.summaryBullets())
+                .topicIds(event.topicIds() == null ? List.of()
+                        : event.topicIds().stream().map(this::parseUuid).filter(Objects::nonNull).toList())
+                .sources(event.sources() == null ? List.of()
+                        : event.sources().stream().map(this::toApiSource).toList());
+    }
+
+    private DigestSource toApiSource(DigestSourceDto s) {
+        return new DigestSource()
+                .url(parseUri(s.url()))
+                .sourceName(s.sourceName())
+                .provider(s.provider())
+                .publishedAt(s.publishedAt())
+                .title(s.title());
+    }
+
+    private List<DigestTopicRef> toTopicRefs(DigestGenerateResponseDto result) {
         return safeTopics(result).stream()
-                .map(DigestTopicDto::name)
-                .filter(name -> name != null && !name.isBlank())
+                .filter(t -> t.id() != null && t.name() != null && !t.name().isBlank())
+                .map(t -> new DigestTopicRef().id(parseUuid(t.id())).name(t.name()))
+                .filter(ref -> ref.getId() != null)
                 .toList();
     }
 
-    private List<URI> sourceUrls(DigestGenerateResponseDto result) {
-        Set<String> urls = new LinkedHashSet<>();
-        for (DigestEventDto event : safeEvents(result)) {
-            if (event.sourceUrls() != null) {
-                urls.addAll(event.sourceUrls());
-            }
+    private UUID parseUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
         }
-        return urls.stream()
-                .filter(url -> url != null && !url.isBlank())
-                .map(URI::create)
-                .toList();
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException e) {
+            log.warn("Skipping unparseable topic UUID from genai: {}", value);
+            return null;
+        }
     }
 
-    private String renderMarkdown(DigestGenerateResponseDto result) {
-        StringBuilder markdown = new StringBuilder();
-        if (result.summary() != null && !result.summary().isBlank()) {
-            markdown.append(result.summary()).append("\n\n");
+    private URI parseUri(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
         }
-        for (DigestEventDto event : safeEvents(result)) {
-            markdown.append("## ").append(event.headline()).append("\n\n");
-            if (event.summaryBullets() != null) {
-                for (String bullet : event.summaryBullets()) {
-                    markdown.append("- ").append(bullet).append("\n");
-                }
-                markdown.append("\n");
-            }
-            if (event.sourceUrls() != null && !event.sourceUrls().isEmpty()) {
-                markdown.append("Sources:\n");
-                for (String url : event.sourceUrls()) {
-                    markdown.append("- ").append(url).append("\n");
-                }
-                markdown.append("\n");
-            }
+        try {
+            return URI.create(value);
+        } catch (IllegalArgumentException e) {
+            log.warn("Skipping unparseable source url from genai: {}", value);
+            return null;
         }
-        return markdown.toString().trim();
     }
 
     private List<DigestEventDto> safeEvents(DigestGenerateResponseDto result) {
@@ -238,18 +319,14 @@ public class DailyDigestGenerationService {
         return result.topics() == null ? List.of() : result.topics();
     }
 
-    private DigestGenerationResponse skipped(String message, PostResponse post) {
-        return new DigestGenerationResponse(DigestGenerationResponse.StatusEnum.SKIPPED, message).post(post);
-    }
-
-    private Optional<DigestGenerationResponse> skipIfDigestExists(UUID userId, DigestWindow window) {
-        return postService.findPersonalDigest(userId, window.start().plusHours(Free_News_Api_Delay_Hours), window.end().plusHours(Free_News_Api_Delay_Hours))
-                .map(existing -> skipped("Digest already exists for the current Platform Day.", existing));
+    private DigestGenerationResponse skipped(String message, DigestDetail digest) {
+        return new DigestGenerationResponse(DigestGenerationResponse.StatusEnum.SKIPPED, message).digest(digest);
     }
 
     private DigestWindow currentWindow() {
         LocalDate date = LocalDate.now(digestZone);
-        ZonedDateTime start = date.atStartOfDay(digestZone).minusHours(Free_News_Api_Delay_Hours); // Free News API have news delayed for 12 hours, so we need to adjust the start time accordingly to avoid the time period in which the news is not available yet. This is a temporary solution until we can switch to a paid plan that provides real-time news.
+        // Free News API delays news ~12h; shift the window back so the period has available news.
+        ZonedDateTime start = date.atStartOfDay(digestZone).minusHours(FREE_NEWS_API_DELAY_HOURS);
         return new DigestWindow(date, start.toOffsetDateTime(), start.plusDays(1).toOffsetDateTime());
     }
 
@@ -266,5 +343,5 @@ public class DailyDigestGenerationService {
         return new ResponseStatusException(HttpStatus.BAD_GATEWAY, message);
     }
 
-    private record DigestWindow(LocalDate date, OffsetDateTime start, OffsetDateTime end) {}
+    public record DigestWindow(LocalDate date, OffsetDateTime start, OffsetDateTime end) {}
 }

@@ -32,11 +32,6 @@ public class PostEntity extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PostStatus status = PostStatus.PUBLISHED;
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PostType type = PostType.NORMAL;
-    @Column(name = "target_user_id")
-    private UUID targetUserId;
     @Column(nullable = false)
     private long likeCount = 0;
     @Column(nullable = false)
@@ -74,10 +69,6 @@ public class PostEntity extends BaseTimeEntity {
     public void setContentSummary(String contentSummary) { this.contentSummary = contentSummary; }
     public PostStatus getStatus() { return status; }
     public void setStatus(PostStatus status) { this.status = status; }
-    public PostType getType() { return type; }
-    public void setType(PostType type) { this.type = type; }
-    public UUID getTargetUserId() { return targetUserId; }
-    public void setTargetUserId(UUID targetUserId) { this.targetUserId = targetUserId; }
     public long getLikeCount() { return likeCount; }
     public void setLikeCount(long likeCount) { this.likeCount = likeCount; }
     public long getDislikeCount() { return dislikeCount; }

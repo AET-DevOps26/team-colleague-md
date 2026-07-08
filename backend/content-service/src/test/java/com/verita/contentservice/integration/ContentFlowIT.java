@@ -137,31 +137,55 @@ class ContentFlowIT {
 
     @Test
     void getMyDigests_withoutToken_returns401() throws Exception {
-        mockMvc.perform(get("/api/v1/posts/digests"))
+        mockMvc.perform(get("/api/v1/digests"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void getMyDigests_returnsOnlyCallersPersonalisedDigests() throws Exception {
-        // A digest personalised for the caller (ADR-0013: target_user_id = caller).
-        createDigestForUser("Your daily briefing", userId);
-        // A digest for someone else, and a global (null target) digest — neither should surface.
-        createDigestForUser("Someone else's briefing", UUID.randomUUID());
-        createDigestForUser("Global briefing", null);
+    void getMyDigests_returnsOnlyCallersPersonalDigests() throws Exception {
+        // A PERSONAL digest for the caller and one for someone else (ADR-0019).
+        createPersonalDigest("Your daily briefing", userId);
+        createPersonalDigest("Someone else's briefing", UUID.randomUUID());
+        // A PUBLIC digest exists but is not assigned to the caller, so it must not surface.
+        createPublicDigest("Community briefing");
 
-        mockMvc.perform(get("/api/v1/posts/digests").header("Authorization", bearer))
+        mockMvc.perform(get("/api/v1/digests").header("Authorization", bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].title").value("Your daily briefing"))
-                .andExpect(jsonPath("$.content[0].type").value("DIGEST"));
+                .andExpect(jsonPath("$.content[0].digestType").value("PERSONAL"));
     }
 
-    private void createDigestForUser(String title, UUID targetUserId) throws Exception {
-        String target = targetUserId == null ? "null" : "\"" + targetUserId + "\"";
-        mockMvc.perform(post("/internal/v1/posts/digest")
+    @Test
+    void getPublicTodayDigest_isReadableWithoutToken() throws Exception {
+        createPublicDigest("Community briefing");
+
+        mockMvc.perform(get("/api/v1/digests/public/today"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.digestType").value("PUBLIC"))
+                .andExpect(jsonPath("$.title").value("Community briefing"));
+    }
+
+    private void createPersonalDigest(String title, UUID targetUserId) throws Exception {
+        String body = "{\"digestType\":\"PERSONAL\",\"targetUserId\":\"" + targetUserId + "\","
+                + "\"digestDate\":\"2026-07-04\",\"title\":\"" + title + "\","
+                + "\"events\":[{\"headline\":\"Headline\",\"summaryBullets\":[\"A bullet\"],"
+                + "\"topicIds\":[],\"sources\":[{\"url\":\"https://example.com/a\"}]}]}";
+        mockMvc.perform(post("/internal/v1/digests")
                         .header(InternalAuthFilter.HEADER, internalServiceToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"" + title + "\",\"content\":\"Digest body content\",\"targetUserId\":" + target + "}"))
+                        .content(body))
+                .andExpect(status().isCreated());
+    }
+
+    private void createPublicDigest(String title) throws Exception {
+        String body = "{\"digestType\":\"PUBLIC\",\"digestDate\":\"2026-07-04\",\"title\":\"" + title + "\","
+                + "\"events\":[{\"headline\":\"Headline\",\"summaryBullets\":[\"A bullet\"],"
+                + "\"topicIds\":[],\"sources\":[{\"url\":\"https://example.com/a\"}]}]}";
+        mockMvc.perform(post("/internal/v1/digests")
+                        .header(InternalAuthFilter.HEADER, internalServiceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isCreated());
     }
 }

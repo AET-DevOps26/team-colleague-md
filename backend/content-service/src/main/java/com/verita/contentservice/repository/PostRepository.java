@@ -1,7 +1,6 @@
 package com.verita.contentservice.repository;
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
-import com.verita.contentservice.entity.PostType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,17 +11,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.time.OffsetDateTime;
 public interface PostRepository extends JpaRepository<PostEntity, UUID> {
-    Page<PostEntity> findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus status, PostType type, Pageable pageable);
-    Page<PostEntity> findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, PostType type, String topicName, Pageable pageable);
+    Page<PostEntity> findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus status, Pageable pageable);
+    Page<PostEntity> findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus status, String topicName, Pageable pageable);
     Page<PostEntity> findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(UUID authorId, PostStatus status, Pageable pageable);
-    Page<PostEntity> findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(UUID targetUserId, PostType type, Pageable pageable);
-    Optional<PostEntity> findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(PostType type);
-    Optional<PostEntity> findFirstByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
-            UUID targetUserId, PostType type, OffsetDateTime start, OffsetDateTime end);
-    List<PostEntity> findByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
-            UUID targetUserId, PostType type, OffsetDateTime start, OffsetDateTime end);
     List<PostEntity> findByAuthorIdAndDeletedFalse(UUID authorId);
     Optional<PostEntity> findByIdAndDeletedFalse(UUID id);
     @Query(value = "SELECT * FROM posts WHERE deleted = false AND status = 'PUBLISHED'" +

@@ -10,10 +10,11 @@ import {
   SEED_TOPICS,
   SEED_VOTES,
   seedUserId,
+  type SeedDigest,
   type SeedPost,
 } from "./contentData.ts";
 import { SEED_NOW } from "../seedClock.ts";
-import type { SeedUser } from "../users/usersData.ts";
+import { SEED_USERS, type SeedUser } from "../users/usersData.ts";
 
 const { Client } = pg;
 
@@ -153,33 +154,106 @@ export function validateContentFixtures() {
   }
 }
 
+interface SeedDigestEventData {
+  headline: string;
+  summaryBullets: string[];
+  topicIds: string[];
+  sources: { url: string; sourceName: string | null; provider: string | null; publishedAt: string | null; title: string | null }[];
+}
+
+function sourceNameFromUrl(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/** Derive a structured event stream (ADR-0019) from a fixture's Markdown body and flat sources. */
+function buildDigestEvents(digest: SeedDigest, topicIds: string[]): SeedDigestEventData[] {
+  const sections = digest.content.split(/\n(?=### )/).filter((s) => s.includes("### "));
+  const urls = digest.sourceUrls;
+  const events: SeedDigestEventData[] = sections.map((section, idx) => {
+    const lines = section.split("\n");
+    const headingLine = lines.find((l) => l.startsWith("### ")) ?? "";
+    const headline = headingLine.replace(/^###\s*/, "").trim();
+    const bullets = lines
+      .filter((l) => l.trim().startsWith("- "))
+      .map((l) => l.replace(/^\s*-\s*/, "").trim())
+      .slice(0, 3);
+    if (bullets.length === 0) {
+      const prose = lines.filter((l) => l.trim() && !l.startsWith("#")).join(" ").trim();
+      if (prose) bullets.push(prose.length > 200 ? prose.slice(0, 197) + "…" : prose);
+    }
+    // Round-robin the flat sources across events so each cites at least one when available.
+    const eventUrls = urls.filter((_, i) => (urls.length ? i % sections.length === idx : false));
+    const chosen = eventUrls.length ? eventUrls : urls.slice(0, 1);
+    return {
+      headline,
+      summaryBullets: bullets.length ? bullets : [headline],
+      topicIds,
+      sources: chosen.map((url) => ({
+        url,
+        sourceName: sourceNameFromUrl(url),
+        provider: null,
+        publishedAt: digest.createdAt,
+        title: null,
+      })),
+    };
+  });
+  if (events.length === 0) {
+    events.push({
+      headline: digest.title,
+      summaryBullets: [digest.summary],
+      topicIds,
+      sources: urls.map((url) => ({
+        url,
+        sourceName: sourceNameFromUrl(url),
+        provider: null,
+        publishedAt: digest.createdAt,
+        title: null,
+      })),
+    });
+  }
+  return events;
+}
+
+function estimateReadTime(digest: SeedDigest): number {
+  const words = digest.content.split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 220));
+}
+
 export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPostId: Map<string, string> = new Map()) {
   await client.query("BEGIN");
   try {
     await upsertTopics(client);
     const topicIdsByName = await getTopicIdsByName(client, topicNamesUsedByPostsAndDigests());
 
-    // Clean up existing seed data (posts + digests)
-    const allPostIds = [...SEED_POSTS.map((post) => post.id), ...SEED_DIGESTS.map((d) => d.id)];
+    // Clean up existing seed data. Digests are a standalone entity now (ADR-0019), so only
+    // NORMAL posts live in `posts`; digests are cleaned from `digests` / `digest_assignments`.
+    const allPostIds = SEED_POSTS.map((post) => post.id);
+    const allDigestIds = SEED_DIGESTS.map((d) => d.id);
     await client.query("DELETE FROM votes WHERE target_type = 'POST' AND target_id = ANY($1::uuid[])", [allPostIds]);
     await client.query("DELETE FROM bookmarks WHERE post_id = ANY($1::uuid[])", [allPostIds]);
     await client.query("DELETE FROM comments WHERE post_id = ANY($1::uuid[])", [allPostIds]);
     await client.query("DELETE FROM post_source_urls WHERE post_id = ANY($1::uuid[])", [allPostIds]);
     await client.query("DELETE FROM post_topics WHERE post_id = ANY($1::uuid[])", [allPostIds]);
+    await client.query("DELETE FROM digest_assignments WHERE digest_id = ANY($1::uuid[])", [allDigestIds]);
+    await client.query("DELETE FROM digests WHERE id = ANY($1::uuid[])", [allDigestIds]);
 
-    // Upsert NORMAL posts
+    // Upsert posts
     for (const post of SEED_POSTS) {
       const counters = derivedCounters(post);
       await client.query(
         `
         INSERT INTO posts (
           id, author_id, title, content, excerpt, cover_image_url, content_summary,
-          status, type, like_count, dislike_count, comment_count, view_count, save_count,
+          status, like_count, dislike_count, comment_count, view_count, save_count,
           deleted, deleted_at, created_at, updated_at
         )
         VALUES (
           $1::uuid, $2::uuid, $3, $4, $5, $6, $7,
-          'PUBLISHED', 'NORMAL', $8, 0, $9, $10, $11,
+          'PUBLISHED', $8, 0, $9, $10, $11,
           false, NULL, $12::timestamptz, $13::timestamptz
         )
         ON CONFLICT (id) DO UPDATE SET
@@ -190,7 +264,6 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
           cover_image_url = EXCLUDED.cover_image_url,
           content_summary = EXCLUDED.content_summary,
           status = EXCLUDED.status,
-          type = EXCLUDED.type,
           like_count = EXCLUDED.like_count,
           dislike_count = 0,
           comment_count = EXCLUDED.comment_count,
@@ -228,62 +301,99 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
       }
     }
 
-    // Upsert DIGEST posts
+    // Upsert digests into the standalone `digests` table (ADR-0019). Events are derived from the
+    // fixture Markdown so existing fixtures need no restructuring.
     for (const digest of SEED_DIGESTS) {
+      const topicIds = digest.topicNames.map((name) => {
+        const topicId = topicIdsByName.get(name);
+        if (!topicId) throw new Error(`Topic "${name}" was not found after topic upsert (digest).`);
+        return topicId;
+      });
+      const topicsJson = digest.topicNames.map((name) => ({ id: topicIdsByName.get(name)!, name }));
+      const events = buildDigestEvents(digest, topicIds);
+      const previewHeadlines = events.slice(0, 3).map((e) => e.headline);
+      const sourceCount = new Set(digest.sourceUrls).size;
+      const readTimeMin = estimateReadTime(digest);
+      const digestType = digest.targetUsername === null ? "PUBLIC" : "PERSONAL";
+      const targetUserId = digest.targetUsername === null ? null : seedUserId(digest.targetUsername);
+      const digestDate = digest.createdAt.slice(0, 10);
+
       await client.query(
         `
-        INSERT INTO posts (
-          id, author_id, title, content, excerpt, cover_image_url, content_summary,
-          status, type, like_count, dislike_count, comment_count, view_count, save_count,
-          deleted, deleted_at, target_user_id, created_at, updated_at
+        INSERT INTO digests (
+          id, digest_type, target_user_id, digest_date, title, subtitle, summary,
+          events, topics, event_count, source_count, read_time_min, preview_headlines,
+          model, generated_at, created_at
         )
         VALUES (
-          $1::uuid, $2::uuid, $3, $4, $5, $6, $7,
-          'PUBLISHED', 'DIGEST', 0, 0, 0, $8, 0,
-          false, NULL, $9::uuid, $10::timestamptz, $11::timestamptz
+          $1::uuid, $2, $3::uuid, $4::date, $5, $6, $7,
+          $8::jsonb, $9::jsonb, $10, $11, $12, $13::text[],
+          $14, $15::timestamptz, $16::timestamptz
         )
         ON CONFLICT (id) DO UPDATE SET
-          author_id = EXCLUDED.author_id,
-          title = EXCLUDED.title,
-          content = EXCLUDED.content,
-          excerpt = EXCLUDED.excerpt,
-          cover_image_url = EXCLUDED.cover_image_url,
-          content_summary = EXCLUDED.content_summary,
-          status = EXCLUDED.status,
-          type = EXCLUDED.type,
-          like_count = 0,
-          dislike_count = 0,
-          comment_count = 0,
-          view_count = EXCLUDED.view_count,
-          save_count = 0,
-          deleted = false,
-          deleted_at = NULL,
+          digest_type = EXCLUDED.digest_type,
           target_user_id = EXCLUDED.target_user_id,
-          created_at = EXCLUDED.created_at,
-          updated_at = EXCLUDED.updated_at
+          digest_date = EXCLUDED.digest_date,
+          title = EXCLUDED.title,
+          subtitle = EXCLUDED.subtitle,
+          summary = EXCLUDED.summary,
+          events = EXCLUDED.events,
+          topics = EXCLUDED.topics,
+          event_count = EXCLUDED.event_count,
+          source_count = EXCLUDED.source_count,
+          read_time_min = EXCLUDED.read_time_min,
+          preview_headlines = EXCLUDED.preview_headlines,
+          model = EXCLUDED.model,
+          generated_at = EXCLUDED.generated_at,
+          created_at = EXCLUDED.created_at
         `,
         [
           digest.id,
-          DIGEST_SYSTEM_AUTHOR_ID,
+          digestType,
+          targetUserId,
+          digestDate,
           digest.title,
-          digest.content,
+          // No distinct subtitle in seed fixtures — leave null so the reader does not
+          // render the summary twice (subtitle above the fold + intro below). Real
+          // generated digests supply a distinct topStorySubtitle.
+          null,
           digest.summary,
-          coverUrlsByPostId.get(digest.id) ?? null,
-          digest.summary,
-          digest.viewCount,
-          digest.targetUsername === null ? null : seedUserId(digest.targetUsername),
+          JSON.stringify(events),
+          JSON.stringify(topicsJson),
+          events.length,
+          sourceCount,
+          readTimeMin,
+          previewHeadlines,
+          "seed-fixture",
           digest.createdAt,
-          digest.updatedAt,
+          digest.createdAt,
         ],
       );
+    }
 
-      for (const sourceUrl of digest.sourceUrls) {
-        await client.query("INSERT INTO post_source_urls (post_id, source_url) VALUES ($1::uuid, $2)", [digest.id, sourceUrl]);
-      }
-      for (const topicName of digest.topicNames) {
-        const topicId = topicIdsByName.get(topicName);
-        if (!topicId) throw new Error(`Topic "${topicName}" was not found after topic upsert (digest).`);
-        await client.query("INSERT INTO post_topics (post_id, topic_id) VALUES ($1::uuid, $2::uuid)", [digest.id, topicId]);
+    // Assign each PUBLIC digest to seeded users as a zero-subscription fallback (ADR-0018/0019).
+    // A user gets the public digest only on a day they have no PERSONAL digest — the
+    // (user_id, digest_date) primary key enforces personal/public mutual exclusivity per day.
+    const personalDigestDays = new Set(
+      SEED_DIGESTS.filter((d) => d.targetUsername !== null).map(
+        (d) => `${d.targetUsername}|${d.createdAt.slice(0, 10)}`,
+      ),
+    );
+    for (const digest of SEED_DIGESTS) {
+      if (digest.targetUsername !== null) continue; // personal digests aren't assigned
+      const digestDate = digest.createdAt.slice(0, 10);
+      for (const user of SEED_USERS) {
+        if (personalDigestDays.has(`${user.username}|${digestDate}`)) continue;
+        await client.query(
+          `
+          INSERT INTO digest_assignments (user_id, digest_date, digest_id, created_at)
+          VALUES ($1::uuid, $2::date, $3::uuid, $4::timestamptz)
+          ON CONFLICT (user_id, digest_date) DO UPDATE SET
+            digest_id = EXCLUDED.digest_id,
+            created_at = EXCLUDED.created_at
+          `,
+          [user.id, digestDate, digest.id, digest.createdAt],
+        );
       }
     }
 
@@ -489,7 +599,6 @@ async function refreshTopicCounters(client: ContentDbClient, topicIdsByName: Map
       WHERE pt.topic_id = $1::uuid
         AND p.status = 'PUBLISHED'
         AND p.deleted = false
-        AND p.type = 'NORMAL'
       `,
       [topicId, referenceTime],
     );

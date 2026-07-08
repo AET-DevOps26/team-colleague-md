@@ -1,5 +1,9 @@
 # Digest read access: personal digests are guarded, public digests are open
 
+> **Storage superseded by [ADR-0019](0019-standalone-digest-entity.md).** The access rule
+> (personal ⇒ 404 for non-owner, public ⇒ open) is preserved, now enforced on `DigestService` /
+> `GET /api/v1/digests/{id}` against the standalone `digests` table.
+
 A `DIGEST`-type post's `target_user_id` decides who may read it. A **personal digest**
 (`target_user_id` set) is readable only by that user; **`GET /api/v1/posts/{id}` now enforces
 this** — a request from anyone else (including anonymous) gets `404`. A **public digest**
