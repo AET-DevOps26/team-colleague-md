@@ -11,7 +11,6 @@ import com.verita.contentservice.repository.BookmarkRepository;
 import com.verita.contentservice.repository.CommentRepository;
 import com.verita.contentservice.repository.PostRepository;
 import com.verita.contentservice.repository.VoteRepository;
-import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.CommentLikeRequest;
 import com.verita.model.LikeRequest;
@@ -21,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
@@ -42,7 +42,7 @@ public class InteractionServiceTest {
     @Mock private VoteRepository voteRepository;
     @Mock private BookmarkRepository bookmarkRepository;
     @Mock private SecurityUtils securityUtils;
-    @Mock private UserClient userClient;
+    @Mock private ApplicationEventPublisher eventPublisher;
     @InjectMocks private InteractionService interactionService;
 
     private UUID userId;
@@ -94,7 +94,7 @@ public class InteractionServiceTest {
 
         interactionService.likePost(post.getId(), LikeRequest.TypeEnum.LIKE);
 
-        verify(userClient).applyUserStatsDelta(post.getAuthorId(), 0, 1);
+        verify(eventPublisher).publishEvent(new UserStatsDeltaEvent(post.getAuthorId(), 0, 1));
     }
 
     @Test

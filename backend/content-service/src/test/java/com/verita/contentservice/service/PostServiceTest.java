@@ -358,6 +358,18 @@ public class PostServiceTest {
     }
 
     @Test
+    void deletePost_published_reversesAccruedLikesFromAuthorStats() {
+        PostEntity owned = post(userId, PostStatus.PUBLISHED);
+        owned.setLikeCount(3);
+        when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
+
+        postService.deletePost(owned.getId());
+
+        // postCount -1 for the unpublish, and the 3 likes it had accrued are reversed (#178)
+        verify(eventPublisher).publishEvent(new UserStatsDeltaEvent(userId, -1, -3));
+    }
+
+    @Test
     void deletePost_draft_doesNotTouchTopicCounts() {
         PostEntity owned = post(userId, PostStatus.DRAFT);
         TopicEntity topic = new TopicEntity();

@@ -75,7 +75,7 @@ public class PostService {
         post.setAuthorId(userId);
         applyPostRequest(post, request);
         post = postRepository.save(post);
-        applyAuthorPostCountDelta(userId, false, post.getStatus() == PostStatus.PUBLISHED);
+        applyAuthorStatsDelta(post, false, post.getStatus() == PostStatus.PUBLISHED);
         publishSummaryRequest(post);
         return toPostResponse(post, userId);
     }
@@ -86,7 +86,7 @@ public class PostService {
         boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
         applyPostRequest(post, request);
         post = postRepository.save(post);
-        applyAuthorPostCountDelta(userId, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
+        applyAuthorStatsDelta(post, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
         publishSummaryRequest(post);
         return toPostResponse(post, userId);
     }
@@ -122,7 +122,7 @@ public class PostService {
             applyTopics(post, request.getTopics());
         }
         post = postRepository.save(post);
-        applyAuthorPostCountDelta(userId, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
+        applyAuthorStatsDelta(post, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
         if (summaryInputChanged) {
             publishSummaryRequest(post);
         }
@@ -139,7 +139,7 @@ public class PostService {
         if (wasPublished && post.getTopics() != null) {
             post.getTopics().forEach(t -> topicRepository.decrementTotalPostCount(t.getId()));
         }
-        applyAuthorPostCountDelta(userId, wasPublished, false);
+        applyAuthorStatsDelta(post, wasPublished, false);
     }
 
     @Transactional(readOnly = true)
@@ -356,13 +356,19 @@ public class PostService {
     }
 
     /**
-     * Write-back of the author's published-post count to user-service (issue #178). Emits the signed
-     * change implied by a publish-state transition so drafts and soft-deletes are excluded; a no-op
-     * when the state is unchanged. Best-effort — {@link UserClient} swallows downstream failures.
+     * Write-back of the author's aggregate profile counts on a publish-state transition (issue #178).
+     * Emits the signed change in postCount so drafts and soft-deletes are excluded. Likes are tallied
+     * into likeReceivedCount at like-time ({@link InteractionService}); when a published post is
+     * unpublished or soft-deleted, its accrued likes must be reversed here or the count inflates
+     * permanently. A no-op when the state is unchanged. The event is forwarded to user-service after
+     * commit ({@link UserStatsDeltaEventListener}), keeping the HTTP call out of this transaction.
      */
-    private void applyAuthorPostCountDelta(UUID authorId, boolean wasPublished, boolean isPublished) {
-        int delta = (isPublished ? 1 : 0) - (wasPublished ? 1 : 0);
-        if (delta != 0) userClient.applyUserStatsDelta(authorId, delta, 0);
+    private void applyAuthorStatsDelta(PostEntity post, boolean wasPublished, boolean isPublished) {
+        int postDelta = (isPublished ? 1 : 0) - (wasPublished ? 1 : 0);
+        int likeDelta = (wasPublished && !isPublished) ? -(int) post.getLikeCount() : 0;
+        if (postDelta != 0 || likeDelta != 0) {
+            eventPublisher.publishEvent(new UserStatsDeltaEvent(post.getAuthorId(), postDelta, likeDelta));
+        }
     }
 
     private String summarizeLocally(String content) {
