@@ -241,19 +241,19 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
     await client.query("DELETE FROM digest_assignments WHERE digest_id = ANY($1::uuid[])", [allDigestIds]);
     await client.query("DELETE FROM digests WHERE id = ANY($1::uuid[])", [allDigestIds]);
 
-    // Upsert NORMAL posts
+    // Upsert posts
     for (const post of SEED_POSTS) {
       const counters = derivedCounters(post);
       await client.query(
         `
         INSERT INTO posts (
           id, author_id, title, content, excerpt, cover_image_url, content_summary,
-          status, type, like_count, dislike_count, comment_count, view_count, save_count,
+          status, like_count, dislike_count, comment_count, view_count, save_count,
           deleted, deleted_at, created_at, updated_at
         )
         VALUES (
           $1::uuid, $2::uuid, $3, $4, $5, $6, $7,
-          'PUBLISHED', 'NORMAL', $8, 0, $9, $10, $11,
+          'PUBLISHED', $8, 0, $9, $10, $11,
           false, NULL, $12::timestamptz, $13::timestamptz
         )
         ON CONFLICT (id) DO UPDATE SET
@@ -264,7 +264,6 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
           cover_image_url = EXCLUDED.cover_image_url,
           content_summary = EXCLUDED.content_summary,
           status = EXCLUDED.status,
-          type = EXCLUDED.type,
           like_count = EXCLUDED.like_count,
           dislike_count = 0,
           comment_count = EXCLUDED.comment_count,
@@ -600,7 +599,6 @@ async function refreshTopicCounters(client: ContentDbClient, topicIdsByName: Map
       WHERE pt.topic_id = $1::uuid
         AND p.status = 'PUBLISHED'
         AND p.deleted = false
-        AND p.type = 'NORMAL'
       `,
       [topicId, referenceTime],
     );

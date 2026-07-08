@@ -80,7 +80,7 @@ class PostControllerTest {
 
     @Test
     void getAllPosts_publicNoToken_returns200() throws Exception {
-        when(postService.getAllPosts(anyInt(), anyInt(), any(), any())).thenReturn(new PostPage());
+        when(postService.getAllPosts(anyInt(), anyInt(), any())).thenReturn(new PostPage());
         mockMvc.perform(get("/api/v1/posts"))
                 .andExpect(status().isOk());
     }

@@ -63,10 +63,6 @@ paths:
         - name: topic
           in: query
           schema: { type: string }
-        - name: type
-          in: query
-          description: "Reserved post type filter; only NORMAL posts exist here (digests are a standalone resource, ADR-0019)."
-          schema: { type: string, enum: [NORMAL] }
       responses:
         '200':
           description: A paginated list of posts retrieved successfully
@@ -984,7 +980,6 @@ components:
         id: { type: string, format: uuid }
         author: { $ref: '#/components/schemas/AuthorSummary' }
         status: { type: string, enum: [DRAFT, PUBLISHED] }
-        type: { type: string, enum: [NORMAL], description: "Post type; digests are a standalone resource (ADR-0019)" }
         title: { type: string }
         excerpt: { type: string, description: "Short preview text for feed cards" }
         summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets); null until generated" }

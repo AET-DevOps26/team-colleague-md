@@ -5,7 +5,6 @@ import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
-import com.verita.contentservice.entity.PostType;
 import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.entity.VoteEntity;
 import com.verita.contentservice.entity.VoteTargetType;
@@ -132,23 +131,13 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostPage getAllPosts(int page, int size, String topic, String typeStr) {
+    public PostPage getAllPosts(int page, int size, String topic) {
         PageRequest pageable = PageRequest.of(page, clampPageSize(size));
-        PostType type = parsePostType(typeStr);
         UUID currentUser = optionalUserId();
         Page<PostEntity> result = (topic == null || topic.isBlank())
-                ? postRepository.findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus.PUBLISHED, type, pageable)
-                : postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, type, topic, pageable);
+                ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
+                : postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, topic, pageable);
         return mapPage(result, currentUser);
-    }
-
-    private PostType parsePostType(String typeStr) {
-        if (typeStr == null || typeStr.isBlank()) return PostType.NORMAL;
-        try {
-            return PostType.valueOf(typeStr);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(BAD_REQUEST, "Invalid post type: " + typeStr);
-        }
     }
 
     @Transactional(readOnly = true)
@@ -322,7 +311,6 @@ public class PostService {
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId()))
                 .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
-                .type(post.getType() == null ? null : PostResponse.TypeEnum.fromValue(post.getType().name()))
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .summary(post.getContentSummary())
@@ -354,7 +342,6 @@ public class PostService {
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId(), author))
                 .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
-                .type(post.getType() == null ? null : PostResponse.TypeEnum.fromValue(post.getType().name()))
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .summary(post.getContentSummary())

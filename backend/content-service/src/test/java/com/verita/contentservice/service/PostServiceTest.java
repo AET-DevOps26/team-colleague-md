@@ -2,7 +2,6 @@ package com.verita.contentservice.service;
 
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
-import com.verita.contentservice.entity.PostType;
 import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
@@ -337,25 +336,25 @@ public class PostServiceTest {
     // ---- listing routes the right query ------------------------------------
 
     @Test
-    void getAllPosts_noTopic_defaultsToNormalTypeQuery() {
-        when(postRepository.findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), any())).thenReturn(Page.empty());
+    void getAllPosts_noTopic_usesPublishedQuery() {
+        when(postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, null, null);
+        postService.getAllPosts(0, 10, null);
 
-        verify(postRepository).findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), any());
+        verify(postRepository).findByDeletedFalseAndStatusOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), any());
     }
 
     @Test
-    void getAllPosts_withTopicAndType_usesTopicAndTypeFilteredQuery() {
-        when(postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), eq("java"), any())).thenReturn(Page.empty());
+    void getAllPosts_withTopic_usesTopicFilteredQuery() {
+        when(postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq("java"), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, "java", "NORMAL");
+        postService.getAllPosts(0, 10, "java");
 
-        verify(postRepository).findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), eq("java"), any());
+        verify(postRepository).findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq("java"), any());
     }
 
     // ---- pure helpers / author summary -------------------------------------

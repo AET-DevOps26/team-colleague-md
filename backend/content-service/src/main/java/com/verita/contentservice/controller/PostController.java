@@ -43,10 +43,10 @@ public class PostController implements PostsApi {
     }
 
     @Override
-    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String topic, String type) {
+    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String topic) {
         int p = page == null ? 0 : page;
         int s = size == null ? 10 : size;
-        return ResponseEntity.ok(postService.getAllPosts(p, s, topic, type));
+        return ResponseEntity.ok(postService.getAllPosts(p, s, topic));
     }
 
     @Override

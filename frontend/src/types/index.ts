@@ -222,7 +222,6 @@ export interface PostResponse {
   id: string;
   author: User;
   status: PostStatus;
-  type: 'NORMAL' | 'DIGEST';
   title: string;
   excerpt: string;
   summary?: string | null;
