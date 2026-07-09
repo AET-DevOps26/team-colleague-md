@@ -75,7 +75,7 @@ class ContentFlowIT {
         UserProfileDto profile = new UserProfileDto(userId, "alice", "Alice", null, "USER", null);
         when(userClient.getUserById(any())).thenReturn(profile);
         when(userClient.getUsersByIds(any())).thenReturn(Map.of(userId, profile));
-        when(genAiClient.summarize(any(), any(), any(), any()))
+        when(genAiClient.summarize(any(), any(), any()))
                 .thenReturn(new GenAiSummarizeResponse(UUID.randomUUID().toString(), List.of("summary"), "model", null));
     }
 
