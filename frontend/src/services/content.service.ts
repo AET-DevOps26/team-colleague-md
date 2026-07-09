@@ -1,4 +1,4 @@
-import type { Comment, FeedPage, Post, PostDetail, DigestListItem, DigestDetail, DigestType, TopicCategory, TodayDigest, User, PostResponse } from '../types';
+import type { Comment, FeedPage, Post, PostDetail, DigestListItem, DigestDetail, DigestType, TopicCategory, TodayDigest, User, PostResponse, PostSummaryResponse } from '../types';
 import api from './api';
 import recommendationApi from './recommendationApi';
 import { getUser } from './tokenStore';
@@ -80,6 +80,10 @@ function toPostDetail(r: PostResponse): PostDetail {
     isLikedByMe: r.isLikedByMe,
     createdAt: r.createdAt,
     content: r.content,
+    summary: r.summary ?? null,
+    summaryStatus: r.summaryStatus,
+    summaryGeneratedAt: r.summaryGeneratedAt ?? null,
+    summaryModel: r.summaryModel ?? null,
     saveCount: r.saveCount,
     isBookmarkedByMe: r.isBookmarkedByMe,
     readTimeMinutes: r.readTimeMinutes,
@@ -249,6 +253,11 @@ export const contentService = {
   async getPost(id: string): Promise<PostDetail> {
     const { data } = await api.get<PostResponse>(`/api/v1/posts/${id}`);
     return toPostDetail(data);
+  },
+
+  async getPostSummary(id: string): Promise<PostSummaryResponse> {
+    const { data } = await api.get<PostSummaryResponse>(`/api/v1/posts/${id}/summary`);
+    return data;
   },
 
   async getComments(postId: string): Promise<Comment[]> {
