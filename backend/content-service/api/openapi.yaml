@@ -317,6 +317,29 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /api/v1/posts/{id}/summary:
+    get:
+      operationId: getPostSummary
+      summary: Get post AI summary status
+      description: |
+        Returns the AI summary state for a single post. Uses the same visibility
+        rules as post detail: published posts are public, drafts are visible only
+        to their author, and non-visible posts return 404.
+      tags: [Posts]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Post summary state retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostSummaryResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # --- LIKES ---
   /api/v1/posts/{id}/like:
     post:
@@ -931,6 +954,11 @@ components:
         name: { type: string }
 
     # --- POSTS ---
+    SummaryStatus:
+      type: string
+      enum: [PENDING, COMPLETED, FAILED, NONE]
+      description: Current lifecycle state of a post's AI summary.
+
     PostCard:
       type: object
       description: Lightweight post shape for feed cards. Omits full body content.
@@ -983,6 +1011,9 @@ components:
         title: { type: string }
         excerpt: { type: string, description: "Short preview text for feed cards" }
         summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets); null until generated" }
+        summaryStatus: { $ref: '#/components/schemas/SummaryStatus' }
+        summaryGeneratedAt: { type: string, format: date-time, nullable: true, description: "When the current summary was generated; null for historical or not-yet-generated summaries" }
+        summaryModel: { type: string, nullable: true, description: "LLM model used for the current summary; null when unknown or not generated" }
         content: { type: string, description: "Full post body (Markdown)" }
         coverImageUrl: { type: string, format: uri, nullable: true }
         topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
@@ -998,6 +1029,14 @@ components:
         isBookmarkedByMe: { type: boolean, description: "True if the authenticated user bookmarked this post" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+    PostSummaryResponse:
+      type: object
+      properties:
+        status: { $ref: '#/components/schemas/SummaryStatus' }
+        summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets), if available" }
+        generatedAt: { type: string, format: date-time, nullable: true }
+        model: { type: string, nullable: true }
 
     PostPage:
       type: object
