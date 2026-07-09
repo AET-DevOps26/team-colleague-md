@@ -4,6 +4,7 @@ import com.verita.api.InternalApi;
 import com.verita.model.DigestFrequency;
 import com.verita.model.PaginatedDigestRecipients;
 import com.verita.model.UserPreferences;
+import com.verita.model.UserStatsDelta;
 import com.verita.userservice.service.UserService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,5 +24,14 @@ public class InternalController implements InternalApi {
     @Override
     public ResponseEntity<UserPreferences> getUserPreferencesByUserId(UUID userId) {
         return ResponseEntity.ok(userService.getPreferencesById(userId));
+    }
+
+    @Override
+    public ResponseEntity<Void> applyUserStatsDelta(UUID userId, UserStatsDelta userStatsDelta) {
+        userService.applyStatsDelta(
+                userId,
+                userStatsDelta.getPostCountDelta() == null ? 0 : userStatsDelta.getPostCountDelta(),
+                userStatsDelta.getLikeReceivedCountDelta() == null ? 0 : userStatsDelta.getLikeReceivedCountDelta());
+        return ResponseEntity.noContent().build();
     }
 }

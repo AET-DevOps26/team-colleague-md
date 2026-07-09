@@ -200,7 +200,7 @@ public class UserService {
         return result;
     }
 
-    /** 
+    /**
      * Updates the role of a user. Only recognised role values are applied;
      * unrecognised values are silently ignored.
      *
@@ -225,6 +225,19 @@ public class UserService {
         }
 
         userRepository.save(entity);
+    }
+
+    /**
+     * Applies signed deltas to an author's cached aggregate counts, called by content-service on
+     * publish/unpublish and like/unlike events (ADR-0007 write-back). Zero deltas are skipped and an
+     * unknown user ID is a silent no-op — the caller treats this as best-effort so a lost update only
+     * causes count drift, never a failed post/like. Counts are clamped at zero in the repository.
+     * TODO(#178): follower/following deltas are intentionally not accepted yet.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void applyStatsDelta(UUID userId, int postCountDelta, int likeReceivedCountDelta) {
+        if (postCountDelta != 0) userRepository.applyPostCountDelta(userId, postCountDelta);
+        if (likeReceivedCountDelta != 0) userRepository.applyLikeReceivedCountDelta(userId, likeReceivedCountDelta);
     }
 
     public void updateUserBanStatus(UUID userId, UpdateBanStatusRequest updateBanStatusRequest) {

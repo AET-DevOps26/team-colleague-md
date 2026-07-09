@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -64,6 +65,28 @@ public class UserClient {
                 .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
                 .retrieve()
                 .body(UserDigestRecipientPageDto.class);
+    }
+
+    /**
+     * Best-effort write-back of an author's aggregate profile counts (postCount, likeReceivedCount)
+     * as posts are published/unpublished and likes come and go (issue #178, ADR-0007). Failures are
+     * swallowed with a warning: count drift is acceptable, a broken post/like flow is not. A no-op
+     * when both deltas are zero. TODO(#178): follower/following counts are not maintained yet.
+     */
+    public void applyUserStatsDelta(UUID authorId, int postCountDelta, int likeReceivedCountDelta) {
+        if (postCountDelta == 0 && likeReceivedCountDelta == 0) return;
+        try {
+            userClient.post()
+                    .uri("/internal/v1/users/{id}/stats/deltas", authorId)
+                    .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("postCountDelta", postCountDelta, "likeReceivedCountDelta", likeReceivedCountDelta))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.warn("Failed to apply stats delta (post={}, like={}) to author {}: {}",
+                    postCountDelta, likeReceivedCountDelta, authorId, e.getMessage());
+        }
     }
 
     public Map<UUID, UserProfileDto> getUsersByIds(Collection<UUID> ids) {

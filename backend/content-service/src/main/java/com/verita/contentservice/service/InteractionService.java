@@ -18,6 +18,7 @@ import com.verita.model.PostLikeResponse;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,6 +34,7 @@ public class InteractionService {
     private final VoteRepository voteRepository;
     private final BookmarkRepository bookmarkRepository;
     private final SecurityUtils securityUtils;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PostLikeResponse likePost(UUID id, LikeRequest.TypeEnum type) {
         UUID userId = securityUtils.getCurrentUserId();
@@ -45,9 +47,17 @@ public class InteractionService {
             case DISLIKE -> VoteType.DOWNVOTE;
             case NONE -> null;
         };
+        long likesBefore = post.getLikeCount();
         applyVote(userId, VoteTargetType.POST, post.getId(), newType);
         postRepository.refreshVoteCounts(post.getId());
         PostEntity updated = postRepository.findByIdAndDeletedFalse(post.getId()).orElseThrow();
+        // The change in the post's like tally is exactly the change in likes the author has received
+        // (issue #178). Forwarded to user-service after commit, off this transaction; drift is tolerated
+        // (ADR-0007).
+        int likeReceivedDelta = (int) (updated.getLikeCount() - likesBefore);
+        if (likeReceivedDelta != 0) {
+            eventPublisher.publishEvent(new UserStatsDeltaEvent(post.getAuthorId(), 0, likeReceivedDelta));
+        }
         return new PostLikeResponse()
                 .likeCount((int) updated.getLikeCount())
                 .dislikeCount((int) updated.getDislikeCount())
