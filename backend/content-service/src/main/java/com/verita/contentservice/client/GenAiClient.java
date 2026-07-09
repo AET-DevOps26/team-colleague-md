@@ -31,7 +31,7 @@ public class GenAiClient {
     }
 
     /** Fired from an async best-effort listener; genai work endpoints authenticate by service token. */
-    public GenAiSummarizeResponse summarize(String authorization, UUID postId, String title, String content) {
+    public GenAiSummarizeResponse summarize(UUID postId, String title, String content) {
         return genaiClient.post()
                 .uri("/api/v1/genai/summarize")
                 .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
