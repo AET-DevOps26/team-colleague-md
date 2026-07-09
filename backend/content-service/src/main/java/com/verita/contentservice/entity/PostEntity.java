@@ -31,6 +31,11 @@ public class PostEntity extends BaseTimeEntity {
     private String contentSummary;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private SummaryStatus summaryStatus = SummaryStatus.NONE;
+    private OffsetDateTime summaryGeneratedAt;
+    private String summaryModel;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private PostStatus status = PostStatus.PUBLISHED;
     @Column(nullable = false)
     private long likeCount = 0;
@@ -67,6 +72,12 @@ public class PostEntity extends BaseTimeEntity {
     public void setSourceUrls(List<String> sourceUrls) { this.sourceUrls = sourceUrls == null ? new ArrayList<>() : new ArrayList<>(sourceUrls); }
     public String getContentSummary() { return contentSummary; }
     public void setContentSummary(String contentSummary) { this.contentSummary = contentSummary; }
+    public SummaryStatus getSummaryStatus() { return summaryStatus; }
+    public void setSummaryStatus(SummaryStatus summaryStatus) { this.summaryStatus = summaryStatus == null ? SummaryStatus.NONE : summaryStatus; }
+    public OffsetDateTime getSummaryGeneratedAt() { return summaryGeneratedAt; }
+    public void setSummaryGeneratedAt(OffsetDateTime summaryGeneratedAt) { this.summaryGeneratedAt = summaryGeneratedAt; }
+    public String getSummaryModel() { return summaryModel; }
+    public void setSummaryModel(String summaryModel) { this.summaryModel = summaryModel; }
     public PostStatus getStatus() { return status; }
     public void setStatus(PostStatus status) { this.status = status; }
     public long getLikeCount() { return likeCount; }
