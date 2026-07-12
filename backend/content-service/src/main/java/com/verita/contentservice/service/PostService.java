@@ -5,6 +5,7 @@ import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.SummaryStatus;
 import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.entity.VoteEntity;
 import com.verita.contentservice.entity.VoteTargetType;
@@ -20,6 +21,7 @@ import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
+import com.verita.model.PostSummaryResponse;
 import com.verita.model.Topic;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -56,6 +58,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @RequiredArgsConstructor
 public class PostService {
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MIN_SUMMARY_CONTENT_LENGTH = 50;
     private final PostRepository postRepository;
     private final TopicRepository topicRepository;
     private final VoteRepository voteRepository;
@@ -64,40 +67,58 @@ public class PostService {
     private final SecurityUtils securityUtils;
     private final ApplicationEventPublisher eventPublisher;
 
+    /**
+     * Creates a post or draft and queues AI summary generation when the content is eligible.
+     */
     public PostResponse createPost(@Valid PostRequest request) {
         UUID userId = currentUserId();
         PostEntity post = new PostEntity();
         post.setAuthorId(userId);
         applyPostRequest(post, request);
+        applySummaryStateForContent(post);
         post = postRepository.save(post);
         applyAuthorStatsDelta(post, false, post.getStatus() == PostStatus.PUBLISHED);
-        publishSummaryRequest(post);
+        publishSummaryRequestIfPending(post);
         return toPostResponse(post, userId);
     }
 
+    /**
+     * Fully replaces editable post fields; only an actual content change queues summary regeneration.
+     */
     public PostResponse updatePost(UUID id, @Valid PostRequest request) {
         UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
         boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
+        boolean contentChanged = !Objects.equals(post.getContent(), request.getContent());
         applyPostRequest(post, request);
+        if (contentChanged) {
+            applySummaryStateForContent(post);
+        }
         post = postRepository.save(post);
         applyAuthorStatsDelta(post, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
-        publishSummaryRequest(post);
+        if (contentChanged) {
+            publishSummaryRequestIfPending(post);
+        }
         return toPostResponse(post, userId);
     }
 
+    /**
+     * Partially updates editable post fields; only an actual content change queues summary regeneration.
+     */
     public PostResponse patchPost(UUID id, @Valid PostPatchRequest request) {
         UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
         boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
-        boolean summaryInputChanged = false;
+        boolean contentChanged = false;
         if (request.getTitle() != null) {
             post.setTitle(request.getTitle());
-            summaryInputChanged = true;
         }
         if (request.getContent() != null) {
+            contentChanged = !Objects.equals(post.getContent(), request.getContent());
             post.setContent(request.getContent());
-            summaryInputChanged = true;
+            if (contentChanged) {
+                applySummaryStateForContent(post);
+            }
         }
         if (request.getExcerpt() != null && request.getExcerpt().isPresent()) {
             post.setExcerpt(request.getExcerpt().get());
@@ -118,8 +139,8 @@ public class PostService {
         }
         post = postRepository.save(post);
         applyAuthorStatsDelta(post, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
-        if (summaryInputChanged) {
-            publishSummaryRequest(post);
+        if (contentChanged) {
+            publishSummaryRequestIfPending(post);
         }
         return toPostResponse(post, userId);
     }
@@ -154,17 +175,22 @@ public class PostService {
 
     public PostResponse getPost(UUID id) {
         UUID currentUser = optionalUserId();
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
-            throw new ResponseStatusException(NOT_FOUND);
-        }
+        PostEntity post = visiblePostOrNotFound(id, currentUser);
         // Build the response while the entity is still attached: incrementViewCount runs a
         // clearAutomatically update that detaches `post`, after which its lazy topics/sourceUrls
         // collections could no longer be initialised (open-in-view is disabled).
         PostResponse response = toPostResponse(post, currentUser);
         postRepository.incrementViewCount(post.getId());
         return response;
+    }
+
+    /**
+     * Returns the AI summary state for a visible post without incrementing view counters.
+     */
+    @Transactional(readOnly = true)
+    public PostSummaryResponse getPostSummary(UUID id) {
+        PostEntity post = visiblePostOrNotFound(id, optionalUserId());
+        return toPostSummaryResponse(post);
     }
 
     @Transactional(readOnly = true)
@@ -226,10 +252,25 @@ public class PostService {
                 .toList();
     }
 
-    private void publishSummaryRequest(PostEntity post) {
-        // Capture the raw token in the request thread; the async listener forwards it to genai (ADR-0002).
-        eventPublisher.publishEvent(new PostSummaryRequestedEvent(
-                post.getId(), post.getTitle(), post.getContent(), securityUtils.getCurrentTokenValue().orElse(null)));
+    private void applySummaryStateForContent(PostEntity post) {
+        if (!isSummaryEligible(post.getContent())) {
+            post.setSummaryStatus(SummaryStatus.NONE);
+            post.setContentSummary(null);
+            post.setSummaryGeneratedAt(null);
+            post.setSummaryModel(null);
+            return;
+        }
+        post.setSummaryStatus(SummaryStatus.PENDING);
+    }
+
+    private boolean isSummaryEligible(String content) {
+        return content != null && content.length() >= MIN_SUMMARY_CONTENT_LENGTH;
+    }
+
+    private void publishSummaryRequestIfPending(PostEntity post) {
+        if (post.getSummaryStatus() == SummaryStatus.PENDING) {
+            eventPublisher.publishEvent(new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent()));
+        }
     }
 
     private void applyPostRequest(PostEntity post, PostRequest request) {
@@ -304,6 +345,15 @@ public class PostService {
         return post;
     }
 
+    private PostEntity visiblePostOrNotFound(UUID id, UUID currentUser) {
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
+            throw new ResponseStatusException(NOT_FOUND);
+        }
+        return post;
+    }
+
     private PostPage mapPage(Page<PostEntity> page, UUID currentUser) {
         List<PostEntity> posts = page.getContent();
         if (posts.isEmpty()) {
@@ -337,6 +387,9 @@ public class PostService {
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .summary(post.getContentSummary())
+                .summaryStatus(toApiSummaryStatus(post.getSummaryStatus()))
+                .summaryGeneratedAt(post.getSummaryGeneratedAt())
+                .summaryModel(post.getSummaryModel())
                 .content(post.getContent())
                 .topics(post.getTopics().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
@@ -368,6 +421,9 @@ public class PostService {
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .summary(post.getContentSummary())
+                .summaryStatus(toApiSummaryStatus(post.getSummaryStatus()))
+                .summaryGeneratedAt(post.getSummaryGeneratedAt())
+                .summaryModel(post.getSummaryModel())
                 .content(post.getContent())
                 .topics(post.getTopics().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
@@ -386,6 +442,18 @@ public class PostService {
             response.coverImageUrl(URI.create(post.getCoverImageUrl()));
         }
         return response;
+    }
+
+    private PostSummaryResponse toPostSummaryResponse(PostEntity post) {
+        return new PostSummaryResponse()
+                .status(toApiSummaryStatus(post.getSummaryStatus()))
+                .summary(post.getContentSummary())
+                .generatedAt(post.getSummaryGeneratedAt())
+                .model(post.getSummaryModel());
+    }
+
+    private com.verita.model.SummaryStatus toApiSummaryStatus(SummaryStatus status) {
+        return com.verita.model.SummaryStatus.fromValue(status.name());
     }
 
     AuthorSummary authorSummary(UUID userId) {

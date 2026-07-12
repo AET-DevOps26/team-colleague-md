@@ -28,15 +28,15 @@ from app.schemas.summarize import SummarizeRequest, SummarizeResponse, TokenUsag
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# System prompt — instructs the LLM to produce exactly 3 bullet points.
+# System prompt — instructs the LLM to produce 3 to 5 bullet points.
 # ---------------------------------------------------------------------------
 SYSTEM_PROMPT = """\
 You are a concise summarization assistant for an AI knowledge-sharing platform called Verita.
 
-Your task is to summarize user-submitted posts into exactly 3 bullet points.
+Your task is to summarize user-submitted posts into 3 to 5 bullet points.
 
 Rules:
-- Output EXACTLY 3 bullet points, each starting with "• ".
+- Output 3 to 5 bullet points, each starting with "• ".
 - Each bullet should be one sentence (max ~25 words).
 - Focus on the most important facts, findings, or takeaways.
 - Use clear, technical language appropriate for AI practitioners.
@@ -135,8 +135,7 @@ def _parse_bullets(raw_output: str) -> list[str]:
     - "* " (markdown style)
     - Numbered lists "1. ", "2. ", "3. "
 
-    Always returns exactly 3 bullets. If the LLM returns fewer,
-    pads with empty strings. If more, truncates.
+    Returns up to 5 bullets. If the LLM returns more, truncates.
     """
     # Split by common bullet patterns
     lines = raw_output.strip().split("\n")
@@ -150,11 +149,7 @@ def _parse_bullets(raw_output: str) -> list[str]:
         if cleaned:
             bullets.append(cleaned)
 
-    # Ensure exactly 3 bullets
-    while len(bullets) < 3:
-        bullets.append("")
-
-    return bullets[:3]
+    return bullets[:5]
 
 
 async def summarize(request: SummarizeRequest) -> SummarizeResponse:
@@ -165,7 +160,7 @@ async def summarize(request: SummarizeRequest) -> SummarizeResponse:
         request: The summarization request containing post content and optional title.
 
     Returns:
-        SummarizeResponse with 3-bullet summary, model name, and token usage.
+        SummarizeResponse with 3 to 5 summary bullets, model name, and token usage.
 
     Raises:
         Exception: If the LLM call fails (caught by the router for error handling).

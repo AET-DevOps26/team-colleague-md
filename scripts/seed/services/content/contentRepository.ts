@@ -248,13 +248,15 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
         `
         INSERT INTO posts (
           id, author_id, title, content, excerpt, cover_image_url, content_summary,
+          summary_status, summary_generated_at, summary_model,
           status, like_count, dislike_count, comment_count, view_count, save_count,
           deleted, deleted_at, created_at, updated_at
         )
         VALUES (
           $1::uuid, $2::uuid, $3, $4, $5, $6, $7,
-          'PUBLISHED', $8, 0, $9, $10, $11,
-          false, NULL, $12::timestamptz, $13::timestamptz
+          'COMPLETED', $8::timestamptz, $9,
+          'PUBLISHED', $10, 0, $11, $12, $13,
+          false, NULL, $14::timestamptz, $15::timestamptz
         )
         ON CONFLICT (id) DO UPDATE SET
           author_id = EXCLUDED.author_id,
@@ -263,6 +265,9 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
           excerpt = EXCLUDED.excerpt,
           cover_image_url = EXCLUDED.cover_image_url,
           content_summary = EXCLUDED.content_summary,
+          summary_status = EXCLUDED.summary_status,
+          summary_generated_at = EXCLUDED.summary_generated_at,
+          summary_model = EXCLUDED.summary_model,
           status = EXCLUDED.status,
           like_count = EXCLUDED.like_count,
           dislike_count = 0,
@@ -282,6 +287,8 @@ export async function upsertSeedContent(client: ContentDbClient, coverUrlsByPost
           post.excerpt,
           coverUrlsByPostId.get(post.id) ?? null,
           post.contentSummary,
+          post.summaryGeneratedAt,
+          post.summaryModel,
           counters.likeCount,
           counters.commentCount,
           post.viewCount,

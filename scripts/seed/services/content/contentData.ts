@@ -27,6 +27,8 @@ export interface SeedPost {
   excerpt: string;
   content: string;
   contentSummary: string;
+  summaryGeneratedAt: string;
+  summaryModel: string;
   sourceUrls: string[];
   topicNames: string[];
   viewCount: number;
@@ -3582,7 +3584,9 @@ function post(
     title,
     excerpt,
     content,
-    contentSummary: excerpt,
+    contentSummary: seededPostSummary(title, excerpt, topicNames),
+    summaryGeneratedAt: createdAt,
+    summaryModel: "seeded-summary-v1",
     sourceUrls: [
       `https://example.com/verita/sources/${id.slice(-3)}`,
       `https://github.com/verita-labs/research-notes/${id.slice(-3)}`,
@@ -3593,6 +3597,15 @@ function post(
     createdAt,
     updatedAt: createdAt,
   };
+}
+
+function seededPostSummary(title: string, excerpt: string, topicNames: string[]): string {
+  const topicLabel = topicNames.slice(0, 2).join(", ");
+  return [
+    excerpt,
+    `Connects ${title.toLowerCase()} to ${topicLabel || "AI practice"} for readers evaluating practical tradeoffs.`,
+    "Highlights production implications and follow-up questions without relying on live LLM generation.",
+  ].join("\n");
 }
 
 function comment(id: string, postId: string, authorUsername: string, parentCommentId: string | null, text: string, likeCount: number, createdAt: string): SeedComment {

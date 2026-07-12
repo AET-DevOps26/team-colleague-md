@@ -1,12 +1,14 @@
 package com.verita.contentservice.repository;
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.SummaryStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -32,8 +34,23 @@ public interface PostRepository extends JpaRepository<PostEntity, UUID> {
            countQuery = "select count(p) from PostEntity p where p.id in (select v.targetId from VoteEntity v where v.userId = :userId and v.targetType = 'POST' and v.voteType = 'UPVOTE') and p.deleted = false and p.status = 'PUBLISHED'")
     Page<PostEntity> findLikedPublishedPostsByUserId(@Param("userId") UUID userId, Pageable pageable);
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE PostEntity p SET p.contentSummary = :summary WHERE p.id = :id")
-    void updateSummary(@Param("id") UUID id, @Param("summary") String summary);
+    @Query("""
+            UPDATE PostEntity p
+            SET p.contentSummary = :summary,
+                p.summaryGeneratedAt = :generatedAt,
+                p.summaryModel = :model,
+                p.summaryStatus = :status
+            WHERE p.id = :id
+            """)
+    void completeSummary(@Param("id") UUID id,
+                         @Param("summary") String summary,
+                         @Param("generatedAt") OffsetDateTime generatedAt,
+                         @Param("model") String model,
+                         @Param("status") SummaryStatus status);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE PostEntity p SET p.summaryStatus = :status WHERE p.id = :id")
+    void updateSummaryStatus(@Param("id") UUID id, @Param("status") SummaryStatus status);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE posts SET like_count = (SELECT COUNT(*) FROM votes WHERE target_type = 'POST' AND target_id = :id AND vote_type = 'UPVOTE'), dislike_count = (SELECT COUNT(*) FROM votes WHERE target_type = 'POST' AND target_id = :id AND vote_type = 'DOWNVOTE') WHERE id = :id",

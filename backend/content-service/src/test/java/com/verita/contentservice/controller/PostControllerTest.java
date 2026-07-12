@@ -4,6 +4,7 @@ import com.verita.contentservice.TestcontainersConfiguration;
 import com.verita.contentservice.service.PostService;
 import com.verita.model.PostPage;
 import com.verita.model.PostResponse;
+import com.verita.model.PostSummaryResponse;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,13 @@ class PostControllerTest {
     void getPostById_returns200() throws Exception {
         when(postService.getPost(any())).thenReturn(new PostResponse().id(UUID.randomUUID()));
         mockMvc.perform(get("/api/v1/posts/{id}", UUID.randomUUID()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getPostSummary_returns200() throws Exception {
+        when(postService.getPostSummary(any())).thenReturn(new PostSummaryResponse());
+        mockMvc.perform(get("/api/v1/posts/{id}/summary", UUID.randomUUID()))
                 .andExpect(status().isOk());
     }
 

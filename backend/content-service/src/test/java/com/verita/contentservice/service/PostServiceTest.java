@@ -55,7 +55,7 @@ public class PostServiceTest {
     @Mock private ApplicationEventPublisher eventPublisher;
     @InjectMocks private PostService postService;
 
-    private static final String AUTH = "Bearer token";
+    private static final String ELIGIBLE_CONTENT = "This post has enough substantive content for the GenAI summary request.";
     private UUID userId;
 
     @BeforeEach
@@ -83,7 +83,7 @@ public class PostServiceTest {
         p.setAuthorId(author);
         p.setStatus(status);
         p.setTitle("A valid title");
-        p.setContent("Some content here");
+        p.setContent(ELIGIBLE_CONTENT);
         return p;
     }
 
@@ -91,7 +91,7 @@ public class PostServiceTest {
 
     @Test
     void createPost_publishesSummaryEvent_andReturnsResponse() {
-        PostRequest request = new PostRequest("A valid title", "Hello world content")
+        PostRequest request = new PostRequest("A valid title", ELIGIBLE_CONTENT)
                 .status(PostRequest.StatusEnum.PUBLISHED)
                 .topics(List.of());
 
@@ -100,8 +100,21 @@ public class PostServiceTest {
         assertNotNull(response);
         assertNotNull(response.getId());
         assertEquals("A valid title", response.getTitle());
+        assertEquals(com.verita.model.SummaryStatus.PENDING, response.getSummaryStatus());
         verify(eventPublisher).publishEvent(any(PostSummaryRequestedEvent.class));
         verify(postRepository).save(any(PostEntity.class));
+    }
+
+    @Test
+    void createPost_shortContent_setsNoneAndSkipsSummaryEvent() {
+        PostRequest request = new PostRequest("A valid title", "Too short")
+                .status(PostRequest.StatusEnum.PUBLISHED)
+                .topics(List.of());
+
+        PostResponse response = postService.createPost(request);
+
+        assertEquals(com.verita.model.SummaryStatus.NONE, response.getSummaryStatus());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
     }
 
     @Test
@@ -144,7 +157,7 @@ public class PostServiceTest {
     }
 
     @Test
-    void patchPost_titleChange_publishesSummaryEvent() {
+    void patchPost_titleChange_doesNotPublishSummaryEvent() {
         PostEntity owned = post(userId, PostStatus.PUBLISHED);
         when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
 
@@ -152,7 +165,49 @@ public class PostServiceTest {
         postService.patchPost(owned.getId(), patch);
 
         assertEquals("A brand new title", owned.getTitle());
+        assertEquals(com.verita.contentservice.entity.SummaryStatus.NONE, owned.getSummaryStatus());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void patchPost_contentChange_setsPendingAndPublishesSummaryEvent() {
+        PostEntity owned = post(userId, PostStatus.PUBLISHED);
+        when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
+
+        PostPatchRequest patch = new PostPatchRequest().content(ELIGIBLE_CONTENT + " Updated.");
+        postService.patchPost(owned.getId(), patch);
+
+        assertEquals(com.verita.contentservice.entity.SummaryStatus.PENDING, owned.getSummaryStatus());
         verify(eventPublisher).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void patchPost_contentShortened_setsNoneAndClearsExistingSummary() {
+        PostEntity owned = post(userId, PostStatus.PUBLISHED);
+        owned.setContentSummary("old summary");
+        owned.setSummaryStatus(com.verita.contentservice.entity.SummaryStatus.COMPLETED);
+        when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
+
+        PostPatchRequest patch = new PostPatchRequest().content("Too short");
+        postService.patchPost(owned.getId(), patch);
+
+        assertEquals(com.verita.contentservice.entity.SummaryStatus.NONE, owned.getSummaryStatus());
+        assertNull(owned.getContentSummary());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void updatePost_sameContent_doesNotPublishSummaryEvent() {
+        PostEntity owned = post(userId, PostStatus.PUBLISHED);
+        when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
+
+        PostRequest request = new PostRequest("A brand new title", ELIGIBLE_CONTENT)
+                .status(PostRequest.StatusEnum.PUBLISHED)
+                .topics(List.of());
+        postService.updatePost(owned.getId(), request);
+
+        assertEquals("A brand new title", owned.getTitle());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
     }
 
     @Test
@@ -164,7 +219,7 @@ public class PostServiceTest {
         PostPatchRequest patch = new PostPatchRequest().status(PostPatchRequest.StatusEnum.DRAFT);
         postService.patchPost(owned.getId(), patch);
 
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
     }
 
     @Test
@@ -213,6 +268,31 @@ public class PostServiceTest {
 
         assertNotNull(response);
         verify(postRepository).incrementViewCount(draft.getId());
+    }
+
+    @Test
+    void getPostSummary_usesPostVisibilityWithoutIncrementingViews() {
+        PostEntity p = post(UUID.randomUUID(), PostStatus.PUBLISHED);
+        p.setContentSummary("line one\nline two");
+        p.setSummaryStatus(com.verita.contentservice.entity.SummaryStatus.COMPLETED);
+        when(postRepository.findByIdAndDeletedFalse(p.getId())).thenReturn(Optional.of(p));
+
+        var response = postService.getPostSummary(p.getId());
+
+        assertEquals(com.verita.model.SummaryStatus.COMPLETED, response.getStatus());
+        assertEquals("line one\nline two", response.getSummary().get());
+        verify(postRepository, never()).incrementViewCount(any());
+    }
+
+    @Test
+    void getPostSummary_draftByNonAuthor_throwsNotFound() {
+        PostEntity draft = post(UUID.randomUUID(), PostStatus.DRAFT);
+        when(postRepository.findByIdAndDeletedFalse(draft.getId())).thenReturn(Optional.of(draft));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> postService.getPostSummary(draft.getId()));
+
+        assertEquals(404, ex.getStatusCode().value());
     }
 
     // ---- delete + topic counters -------------------------------------------

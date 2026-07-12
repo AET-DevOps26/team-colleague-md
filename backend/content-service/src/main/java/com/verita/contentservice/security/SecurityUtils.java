@@ -41,15 +41,4 @@ public class SecurityUtils {
         }
     }
 
-    /**
-     * The raw bearer token of the authenticated caller, for forwarding on outbound calls
-     * (ADR-0002), e.g. the async genai summary request. Empty for anonymous callers.
-     */
-    public Optional<String> getCurrentTokenValue() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!(auth instanceof JwtAuthenticationToken jwtAuth)) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(jwtAuth.getToken().getTokenValue());
-    }
 }

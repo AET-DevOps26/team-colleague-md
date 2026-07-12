@@ -66,7 +66,7 @@ class SummarizeResponse(BaseModel):
     """
     Response body for POST /api/v1/genai/summarize.
 
-    Returns a 3-bullet summary of the input post content,
+    Returns a 3 to 5 bullet summary of the input post content,
     along with metadata about the LLM call.
     """
 
@@ -76,7 +76,7 @@ class SummarizeResponse(BaseModel):
     )
     summary: list[str] = Field(
         ...,
-        description="3-bullet summary of the post content",
+        description="3 to 5 bullet summary of the post content",
     )
     model: str = Field(
         ...,

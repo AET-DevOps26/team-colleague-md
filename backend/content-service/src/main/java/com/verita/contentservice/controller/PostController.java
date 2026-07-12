@@ -7,6 +7,7 @@ import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
+import com.verita.model.PostSummaryResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -52,6 +53,11 @@ public class PostController implements PostsApi {
     @Override
     public ResponseEntity<PostResponse> getPostById(UUID id) {
         return ResponseEntity.ok(postService.getPost(id));
+    }
+
+    @Override
+    public ResponseEntity<PostSummaryResponse> getPostSummary(UUID id) {
+        return ResponseEntity.ok(postService.getPostSummary(id));
     }
 
     @Override

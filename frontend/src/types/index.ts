@@ -166,6 +166,10 @@ export interface PostSource {
 
 export interface PostDetail extends Post {
   content: string;
+  summary?: string | null;
+  summaryStatus: SummaryStatus;
+  summaryGeneratedAt?: string | null;
+  summaryModel?: string | null;
   saveCount: number;
   isBookmarkedByMe: boolean;
   readTimeMinutes: number;
@@ -194,6 +198,7 @@ export interface AuthUser {
 // ── Post authoring (mirrors content-service OpenAPI) ──────────
 
 export type PostStatus = 'DRAFT' | 'PUBLISHED';
+export type SummaryStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'NONE';
 
 /** Mirrors content-service OpenAPI PostRequest (create / full replace). */
 export interface PostRequest {
@@ -225,6 +230,9 @@ export interface PostResponse {
   title: string;
   excerpt: string;
   summary?: string | null;
+  summaryStatus: SummaryStatus;
+  summaryGeneratedAt?: string | null;
+  summaryModel?: string | null;
   content: string;
   coverImageUrl?: string | null;
   topics: Topic[];
@@ -240,6 +248,14 @@ export interface PostResponse {
   isBookmarkedByMe: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Mirrors content-service OpenAPI PostSummaryResponse. */
+export interface PostSummaryResponse {
+  status: SummaryStatus;
+  summary?: string | null;
+  generatedAt?: string | null;
+  model?: string | null;
 }
 
 /** Mirrors content-service OpenAPI FileUploadResponse. */
