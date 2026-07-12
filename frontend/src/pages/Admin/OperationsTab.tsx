@@ -7,6 +7,27 @@ import styles from './Admin.module.css';
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 90_000;
 
+/**
+ * Known-good models per provider, offered as suggestions — the field stays free text because
+ * provider catalogues move faster than this list does.
+ *
+ * A model being listed in a provider's catalogue does not mean the account may call it: NVIDIA
+ * serves most of its catalogue only to orgs with "Public API Endpoints" enabled and answers the
+ * rest with `404 Function not found for account`. These entries are ones verified callable.
+ */
+const MODEL_SUGGESTIONS: Record<string, string[]> = {
+  nvidia: [
+    'mistralai/mistral-large-3-675b-instruct-2512',
+    'nvidia/nemotron-3-ultra-550b-a55b',
+    'qwen/qwen3.5-397b-a17b',
+    'deepseek-ai/deepseek-v4-pro',
+    'nvidia/nemotron-3-super-120b-a12b',
+    'z-ai/glm-5.2',
+    'minimaxai/minimax-m3',
+  ],
+  logos: ['openai/gpt-oss-120b'],
+};
+
 /** Per-post summary state shown next to a re-trigger, driven by polling GET /posts/{id}/summary. */
 type TrackedSummary = Record<string, SummaryStatus>;
 
@@ -173,9 +194,15 @@ export default function OperationsTab() {
               className={styles.input}
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              placeholder="e.g. moonshotai/kimi-k2.6"
+              list="llm-model-suggestions"
+              placeholder={MODEL_SUGGESTIONS[provider]?.[0] ?? 'provider/model-name'}
               data-testid="admin-llm-model"
             />
+            <datalist id="llm-model-suggestions" data-testid="admin-llm-model-suggestions">
+              {(MODEL_SUGGESTIONS[provider] ?? []).map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
           </div>
 
           <button
