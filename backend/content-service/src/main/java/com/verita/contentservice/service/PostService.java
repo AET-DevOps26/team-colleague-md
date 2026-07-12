@@ -16,6 +16,8 @@ import com.verita.contentservice.repository.TopicRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.AuthorSummary;
+import com.verita.model.FailedSummaryPage;
+import com.verita.model.FailedSummaryPost;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
@@ -48,6 +50,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -191,6 +194,46 @@ public class PostService {
     public PostSummaryResponse getPostSummary(UUID id) {
         PostEntity post = visiblePostOrNotFound(id, optionalUserId());
         return toPostSummaryResponse(post);
+    }
+
+    /**
+     * Admin re-trigger of AI summarization (ADR-0020). Puts the post back into {@code PENDING} and
+     * republishes the summary event, so the retrying listener is the only thing that ever writes a
+     * summary — there is no second, synchronous overwrite path to keep in sync.
+     *
+     * <p>Runs on the post regardless of its current status: a {@code FAILED} post is the common
+     * case, but re-running a {@code COMPLETED} one (e.g. after switching provider) is legitimate.
+     */
+    public void requestSummaryRegeneration(UUID id) {
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Post not found"));
+        if (!isSummaryEligible(post.getContent())) {
+            throw new ResponseStatusException(CONFLICT, "Post content is too short to summarize.");
+        }
+        post.setSummaryStatus(SummaryStatus.PENDING);
+        publishSummaryRequestIfPending(post);
+    }
+
+    /** Posts left in {@code FAILED} after the summary listener exhausted its retries (ADR-0020). */
+    @Transactional(readOnly = true)
+    public FailedSummaryPage listFailedSummaries(int page, int size) {
+        Page<PostEntity> result = postRepository.findByDeletedFalseAndSummaryStatusOrderByUpdatedAtDesc(
+                SummaryStatus.FAILED, PageRequest.of(page, Math.min(size, MAX_PAGE_SIZE)));
+        return new FailedSummaryPage()
+                .content(result.getContent().stream().map(this::toFailedSummaryPost).toList())
+                .page(result.getNumber())
+                .size(result.getSize())
+                .totalPages(result.getTotalPages())
+                .totalElements((int) result.getTotalElements());
+    }
+
+    private FailedSummaryPost toFailedSummaryPost(PostEntity post) {
+        return new FailedSummaryPost()
+                .id(post.getId())
+                .title(post.getTitle())
+                .authorId(post.getAuthorId())
+                .summaryStatus(toApiSummaryStatus(post.getSummaryStatus()))
+                .updatedAt(post.getUpdatedAt());
     }
 
     @Transactional(readOnly = true)

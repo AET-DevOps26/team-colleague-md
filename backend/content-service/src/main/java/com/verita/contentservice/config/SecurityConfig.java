@@ -60,6 +60,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/error",
                         "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                // Admin ops (ADR-0020): authorized on the token's `role` claim, which
+                // JwtAuthenticationFilter maps to a ROLE_* authority. Declared before the public
+                // reads so an /api/v1/admin/** path can never fall through to permitAll.
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 // Digest history is personal (ADR-0019): fail closed. Must precede the public
                 // digest reads below so it is not swallowed by them.
                 .requestMatchers(HttpMethod.GET, "/api/v1/digests").authenticated()

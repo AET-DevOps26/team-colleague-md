@@ -52,6 +52,9 @@ public interface PostRepository extends JpaRepository<PostEntity, UUID> {
     @Query("UPDATE PostEntity p SET p.summaryStatus = :status WHERE p.id = :id")
     void updateSummaryStatus(@Param("id") UUID id, @Param("status") SummaryStatus status);
 
+    /** Backs the admin Operations tab: posts the summary listener gave up on (ADR-0020). */
+    Page<PostEntity> findByDeletedFalseAndSummaryStatusOrderByUpdatedAtDesc(SummaryStatus status, Pageable pageable);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE posts SET like_count = (SELECT COUNT(*) FROM votes WHERE target_type = 'POST' AND target_id = :id AND vote_type = 'UPVOTE'), dislike_count = (SELECT COUNT(*) FROM votes WHERE target_type = 'POST' AND target_id = :id AND vote_type = 'DOWNVOTE') WHERE id = :id",
            nativeQuery = true)

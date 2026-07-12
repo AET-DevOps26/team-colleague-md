@@ -19,3 +19,8 @@ body:json {
     "role": "VERIFIED"
   }
 }
+
+docs {
+  Admin-only. An admin cannot change their OWN role (403) — self-demotion could strip the
+  platform of its last administrator with no way back in through the UI (ADR-0020).
+}

@@ -5,6 +5,8 @@ import com.verita.contentservice.dto.DigestJobAcceptedDto;
 import com.verita.contentservice.dto.DigestJobStatusDto;
 import com.verita.contentservice.dto.GenAiSummarizeRequest;
 import com.verita.contentservice.dto.GenAiSummarizeResponse;
+import com.verita.contentservice.dto.LlmConfigDto;
+import com.verita.contentservice.dto.LlmConfigUpdateDto;
 import java.time.Duration;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +51,29 @@ public class GenAiClient {
                 .body(request)
                 .retrieve()
                 .body(DigestJobAcceptedDto.class);
+    }
+
+    /** Reads genai-service's live (provider, model) pair and provider availability (ADR-0020). */
+    public LlmConfigDto getLlmConfig() {
+        return genaiClient.get()
+                .uri("/internal/v1/llm-config")
+                .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
+                .retrieve()
+                .body(LlmConfigDto.class);
+    }
+
+    /**
+     * Sets genai-service's in-memory (provider, model) override. genai-service answers 400 when the
+     * provider is unknown or has no API key; the caller translates that into the admin's 400.
+     */
+    public LlmConfigDto updateLlmConfig(LlmConfigUpdateDto request) {
+        return genaiClient.put()
+                .uri("/internal/v1/llm-config")
+                .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(LlmConfigDto.class);
     }
 
     public DigestJobStatusDto getDigestJob(String jobId) {

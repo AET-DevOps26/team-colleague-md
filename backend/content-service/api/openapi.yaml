@@ -781,6 +781,133 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '502': { $ref: '#/components/responses/BadGateway' }
 
+  # --- ADMIN OPS (ADR-0020) ---
+  # Browser-facing, ADMIN-JWT only. The GenAI routes are a thin front door: content-service
+  # forwards them to genai-service over the X-Internal-Service-Token channel (ADR-0007), so the
+  # browser never talks to GenAI directly and GenAI needs no JWT awareness.
+  /api/v1/admin/genai/llm-config:
+    get:
+      operationId: getLlmConfig
+      summary: Get the active GenAI LLM configuration (admin only)
+      description: >
+        Returns the live `(provider, model)` pair GenAI is currently using — the in-memory
+        override when an admin has set one, otherwise GenAI's environment default — plus every
+        supported provider and whether its API key is configured.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Active LLM configuration retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LlmConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+    put:
+      operationId: updateLlmConfig
+      summary: Switch the GenAI provider/model at runtime (admin only)
+      description: >
+        Sets GenAI's in-memory `(provider, model)` override. The override is deliberately not
+        persisted: it resets to the environment default when genai-service restarts (ADR-0020).
+        Selecting a provider whose API key is absent is rejected with `400`.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LlmConfigUpdateRequest' }
+      responses:
+        '200':
+          description: Override applied; the new active configuration is returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LlmConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+
+  /api/v1/admin/posts/summaries/failed:
+    get:
+      operationId: listFailedSummaries
+      summary: List posts whose AI summary failed (admin only)
+      description: >
+        Paged list of posts left in `summaryStatus = FAILED` after the retrying summary listener
+        gave up. Feeds the admin Operations tab, where each row can be re-triggered.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Failed-summary posts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FailedSummaryPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/admin/posts/{id}/summarize:
+    post:
+      operationId: resummarizePost
+      summary: Re-trigger AI summarization for a post (admin only)
+      description: >
+        Moves the post to `summaryStatus = PENDING` and republishes the summary event, reusing the
+        same retrying listener as authoring (there is no separate synchronous overwrite path). The
+        call returns `202` immediately; poll `GET /api/v1/posts/{id}/summary` for the outcome.
+        Admin-gated because it spends LLM budget on demand.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '202':
+          description: Summarization queued
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The post's content is not eligible for summarization (too short or empty)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /api/v1/admin/digests/generate/users/{userId}:
+    post:
+      operationId: adminGenerateUserDigest
+      summary: Generate a user's digest on demand (admin only)
+      description: >
+        Admin-JWT front door to the same orchestration the scheduled daily job runs
+        (ADR-0018/0019). The work blocks on a GenAI job plus external news fetches, so it is run
+        in the background and the call returns `202` immediately rather than risking a gateway or
+        browser timeout. By default it skips a user who already has a digest for the current
+        Platform Day; `force=true` regenerates.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: force
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '202':
+          description: Digest generation started
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1037,6 +1164,49 @@ components:
         summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets), if available" }
         generatedAt: { type: string, format: date-time, nullable: true }
         model: { type: string, nullable: true }
+
+    # --- ADMIN OPS (ADR-0020) ---
+    LlmProviderAvailability:
+      type: object
+      required: [name, configured]
+      properties:
+        name: { type: string, description: "Provider key, e.g. `nvidia`" }
+        configured: { type: boolean, description: "False when the provider has no API key; it cannot be selected" }
+
+    LlmConfig:
+      type: object
+      properties:
+        provider: { type: string }
+        model: { type: string }
+        temperature: { type: number, format: float }
+        availableProviders:
+          type: array
+          items: { $ref: '#/components/schemas/LlmProviderAvailability' }
+
+    LlmConfigUpdateRequest:
+      type: object
+      required: [provider, model]
+      properties:
+        provider: { type: string, minLength: 1, description: "Must be a provider reported as `configured`" }
+        model: { type: string, minLength: 1, description: "Free-text model id for that provider" }
+
+    FailedSummaryPost:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        authorId: { type: string, format: uuid }
+        summaryStatus: { $ref: '#/components/schemas/SummaryStatus' }
+        updatedAt: { type: string, format: date-time }
+
+    FailedSummaryPage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/FailedSummaryPost' } }
+        page: { type: integer }
+        size: { type: integer }
+        totalPages: { type: integer }
+        totalElements: { type: integer }
 
     PostPage:
       type: object

@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import Settings, get_settings
-from app.routers import digest, health, summarize
+from app.routers import digest, health, llm_config, summarize
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,7 @@ def create_app() -> FastAPI:
     application.include_router(health.router)
     application.include_router(summarize.router)
     application.include_router(digest.router)
+    application.include_router(llm_config.router)
 
     # --- Prometheus metrics ---
     # Exposes RED metrics (request count, latency histogram, in-progress) at GET /metrics.

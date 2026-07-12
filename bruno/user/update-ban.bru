@@ -19,3 +19,8 @@ body:json {
     "banned": true
   }
 }
+
+docs {
+  Admin-only. An admin cannot ban themselves (403) — it would lock the acting administrator out
+  of the panel needed to undo it (ADR-0020).
+}
