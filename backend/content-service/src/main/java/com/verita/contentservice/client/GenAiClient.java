@@ -28,7 +28,11 @@ public class GenAiClient {
         this.internalServiceToken = internalServiceToken;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
-        factory.setReadTimeout(Duration.ofSeconds(10));
+        // Summarization latency scales with the model an admin selected at runtime (ADR-0020): the
+        // small ones answer in seconds, the 400B+ ones take ~20s. The caller is an @Async listener,
+        // so waiting costs no request thread — timing out early would only mark a post FAILED while
+        // GenAI happily finished the work.
+        factory.setReadTimeout(Duration.ofSeconds(60));
         this.genaiClient = RestClient.builder().requestFactory(factory).baseUrl(genaiUrl).build();
     }
 

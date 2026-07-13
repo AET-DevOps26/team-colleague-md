@@ -43,6 +43,9 @@ const MODEL_SUGGESTIONS: Record<string, string[]> = {
     'qwen/qwen3.5-397b-a17b',
     'deepseek-ai/deepseek-v4-pro',
     'nvidia/nemotron-3-super-120b-a12b',
+    'nvidia/nemotron-3-nano-30b-a3b',
+    'meta/llama-3.3-70b-instruct',
+    'mistralai/mistral-medium-3.5-128b',
     'z-ai/glm-5.2',
     'minimaxai/minimax-m3',
   ],
@@ -81,6 +84,9 @@ export default function OperationsTab() {
   const [digestForce, setDigestForce] = useState(false);
   const [digestJob, setDigestJob] = useState<DigestGenerationJob | null>(null);
   const [startingDigest, setStartingDigest] = useState(false);
+
+  // What the model field held before it was focused, so blurring without a pick restores it.
+  const modelBeforeFocus = useRef('');
 
   // Every in-flight poll, so unmounting the tab mid-poll doesn't leave timers running.
   const timers = useRef<number[]>([]);
@@ -147,13 +153,17 @@ export default function OperationsTab() {
           // It is no longer a failure, so drop it from the FAILED list.
           setFailed((prev) => prev.filter((p) => p.id !== postId));
         }
+        if (status === 'FAILED') {
+          // The server just moved it into FAILED — re-read the list so it shows up there.
+          loadFailed();
+        }
       } catch {
         setTracked((prev) => ({ ...prev, [postId]: 'FAILED' }));
       }
     };
 
     timers.current.push(window.setTimeout(tick, POLL_INTERVAL_MS));
-  }, []);
+  }, [loadFailed]);
 
   const triggerResummarize = async (postId: string) => {
     setTracked((prev) => ({ ...prev, [postId]: 'PENDING' }));
@@ -263,7 +273,13 @@ export default function OperationsTab() {
               id="llm-provider"
               className={styles.select}
               value={provider}
-              onChange={(e) => setProvider(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setProvider(next);
+                // A model id belongs to exactly one provider, so carrying the old one across a
+                // switch only leaves a value that the new provider will reject.
+                if (!(MODEL_SUGGESTIONS[next] ?? []).includes(model)) setModel('');
+              }}
               data-testid="admin-llm-provider"
             >
               {config?.availableProviders.map((p) => (
@@ -285,6 +301,16 @@ export default function OperationsTab() {
               className={styles.input}
               value={model}
               onChange={(e) => setModel(e.target.value)}
+              // The datalist filters its options against whatever the field already holds, so any
+              // non-empty value hides every other suggestion. Empty it on focus to reveal the whole
+              // list, and put the previous value back if the admin leaves without choosing one.
+              onFocus={() => {
+                modelBeforeFocus.current = model;
+                setModel('');
+              }}
+              onBlur={() => {
+                if (!model.trim()) setModel(modelBeforeFocus.current);
+              }}
               list="llm-model-suggestions"
               placeholder={MODEL_SUGGESTIONS[provider]?.[0] ?? 'provider/model-name'}
               data-testid="admin-llm-model"
