@@ -7,11 +7,9 @@ import com.verita.model.LlmConfig;
 import com.verita.model.LlmConfigUpdateRequest;
 import com.verita.model.LlmProviderAvailability;
 import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -20,10 +18,10 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Admin operations that reach outside content-service's own data (ADR-0020).
  *
- * <p>The GenAI methods are a front door, not a second source of truth: the browser holds an admin
- * JWT that genai-service knows nothing about, so content-service authorizes the caller and forwards
- * over the internal-service-token channel (ADR-0007). The digest trigger wraps the existing daily
- * orchestration so admins can run it for one user on demand.
+ * <p>These are a front door, not a second source of truth: the browser holds an admin JWT that
+ * genai-service knows nothing about, so content-service authorizes the caller and forwards over the
+ * internal-service-token channel (ADR-0007). On-demand digest generation lives in
+ * {@link DigestGenerationJobService}, which has a job row to track.
  */
 @Slf4j
 @Service
@@ -31,7 +29,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class AdminService {
 
     private final GenAiClient genAiClient;
-    private final DailyDigestGenerationService digestGenerationService;
 
     public LlmConfig getLlmConfig() {
         return toApiModel(callGenAi(genAiClient::getLlmConfig));
@@ -40,23 +37,6 @@ public class AdminService {
     public LlmConfig updateLlmConfig(LlmConfigUpdateRequest request) {
         LlmConfigUpdateDto payload = new LlmConfigUpdateDto(request.getProvider(), request.getModel());
         return toApiModel(callGenAi(() -> genAiClient.updateLlmConfig(payload)));
-    }
-
-    /**
-     * Runs the daily digest orchestration for one user off the request thread.
-     *
-     * <p>The orchestration blocks on a GenAI job plus external news fetches — well past a browser or
-     * gateway timeout — so the endpoint answers 202 and the work continues here. A failure has
-     * nowhere to be reported to, so it is logged, exactly as the scheduled daily job does per user.
-     */
-    @Async
-    public void generateUserDigestAsync(UUID userId, boolean force) {
-        try {
-            digestGenerationService.generateForUser(userId, force);
-            log.info("Admin-triggered digest generation finished for userId={} (force={})", userId, force);
-        } catch (Exception e) {
-            log.warn("Admin-triggered digest generation failed for userId={}: {}", userId, e.getMessage());
-        }
     }
 
     /**

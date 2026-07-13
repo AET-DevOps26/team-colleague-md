@@ -71,18 +71,6 @@ test.describe('Admin — users tab', () => {
     await expect(ownRow.locator('[data-testid="admin-ban-button"]')).toBeDisabled();
   });
 
-  test('ADM-7: generate-digest opens a force toggle and reports that generation started', async ({ page }) => {
-    await page.locator('[data-testid="admin-user-search"]').fill('sarah');
-    const row = page.locator('[data-testid="admin-user-row"]').first();
-
-    await row.locator('[data-testid="admin-digest-button"]').click();
-    await expect(page.locator('[data-testid="admin-digest-popover"]')).toBeVisible();
-    await page.locator('[data-testid="admin-digest-force"]').check();
-    await page.locator('[data-testid="admin-digest-confirm"]').click();
-
-    // The endpoint answers 202 and generates in the background, so the toast is the whole contract.
-    await expect(page.getByText('Digest generation started', { exact: false })).toBeVisible();
-  });
 });
 
 test.describe('Admin — operations tab', () => {
@@ -111,6 +99,30 @@ test.describe('Admin — operations tab', () => {
     await page.locator('[data-testid="admin-resummarize-submit"]').click();
 
     await expect(page.getByText('Paste a post ID or a post URL', { exact: false })).toBeVisible();
+  });
+
+  test('ADM-7: digest generation defaults to yesterday and cannot run without a user', async ({ page }) => {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    await expect(page.locator('[data-testid="admin-digest-date"]')).toHaveValue(yesterday);
+
+    // A digest is generated *for someone*; there is nothing to submit until one is picked.
+    await expect(page.locator('[data-testid="admin-digest-submit"]')).toBeDisabled();
+  });
+
+  test('ADM-10: picking a user and generating starts a job the panel reports on', async ({ page }) => {
+    await page.locator('[data-testid="admin-digest-user-search"]').fill('sarah');
+    await page.locator('[data-testid="admin-digest-user-option"]').first().click();
+
+    await expect(page.locator('[data-testid="admin-digest-user-search"]')).toHaveValue(
+      `@${SEED_USERS.sarahjkim.username}`,
+    );
+    await page.locator('[data-testid="admin-digest-force"]').check();
+    await page.locator('[data-testid="admin-digest-submit"]').click();
+
+    // The 202 carries a PENDING job; the panel then polls it, so the status is the contract here.
+    const status = page.locator('[data-testid="admin-digest-status"]');
+    await expect(status).toBeVisible();
+    await expect(status).toContainText(/PENDING|COMPLETED|SKIPPED|FAILED/);
   });
 });
 

@@ -1,6 +1,7 @@
 import type {
   AdminUser,
   AdminUserPage,
+  DigestGenerationJob,
   FailedSummaryPage,
   LlmConfig,
   PostSummaryResponse,
@@ -70,9 +71,28 @@ export const adminService = {
 
   // ── Digest ──────────────────────────────────────────────────
 
-  /** Fire-and-forget (202): generation runs in the background on the server. */
-  async generateUserDigest(userId: string, force: boolean): Promise<void> {
-    await api.post(`/api/v1/admin/digests/generate/users/${userId}`, null, { params: { force } });
+  /**
+   * Starts generation for one user and one Platform Day (202). Generation is far too slow for a
+   * request thread, so the server answers with a PENDING job; poll `getDigestJob` for the outcome.
+   *
+   * `date` is an ISO `YYYY-MM-DD` day. Omitting it lets the server default to yesterday.
+   */
+  async generateUserDigest(
+    userId: string,
+    date: string,
+    force: boolean,
+  ): Promise<DigestGenerationJob> {
+    const { data } = await api.post<DigestGenerationJob>(
+      `/api/v1/admin/digests/generate/users/${userId}`,
+      null,
+      { params: { date, force } },
+    );
+    return data;
+  },
+
+  async getDigestJob(jobId: string): Promise<DigestGenerationJob> {
+    const { data } = await api.get<DigestGenerationJob>(`/api/v1/admin/digests/jobs/${jobId}`);
+    return data;
   },
 };
 

@@ -331,3 +331,20 @@ export interface FailedSummaryPage {
   totalPages: number;
   totalElements: number;
 }
+
+/** `SKIPPED` is terminal but not a failure: a digest for that day existed and force was off. */
+export type DigestJobStatus = 'PENDING' | 'COMPLETED' | 'SKIPPED' | 'FAILED';
+
+/**
+ * One admin-triggered digest generation. A digest row only exists once generation succeeds, so
+ * this job — not the digest — is what the panel polls to learn the outcome.
+ */
+export interface DigestGenerationJob {
+  id: string;
+  targetUserId: string;
+  digestDate: string;
+  status: DigestJobStatus;
+  message?: string | null;
+  createdAt?: string;
+  finishedAt?: string | null;
+}

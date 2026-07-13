@@ -382,44 +382,6 @@
   color: #fff;
 }
 
-/* ── Digest popover ── */
-.popover {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  z-index: 20;
-  width: 230px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 10px;
-  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.3);
-  padding: 12px;
-  text-align: left;
-}
-
-.popoverText {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-
-.popoverToggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-  cursor: pointer;
-}
-
-.popoverActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
 /* ── Pagination ── */
 .pagination {
   display: flex;
@@ -488,6 +450,62 @@
 .input:focus,
 .select:focus {
   border-color: var(--accent);
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+
+/* ── User search combobox (digest target) ── */
+.comboWrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.comboList {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.3);
+}
+
+.comboOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.comboOption:hover {
+  background: var(--bg-elevated);
 }
 
 .currentValue {

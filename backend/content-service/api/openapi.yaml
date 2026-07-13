@@ -885,13 +885,18 @@ paths:
   /api/v1/admin/digests/generate/users/{userId}:
     post:
       operationId: adminGenerateUserDigest
-      summary: Generate a user's digest on demand (admin only)
+      summary: Generate a user's digest for a given day on demand (admin only)
       description: >
         Admin-JWT front door to the same orchestration the scheduled daily job runs
         (ADR-0018/0019). The work blocks on a GenAI job plus external news fetches, so it is run
         in the background and the call returns `202` immediately rather than risking a gateway or
-        browser timeout. By default it skips a user who already has a digest for the current
-        Platform Day; `force=true` regenerates.
+        browser timeout — with a `DigestGenerationJob` whose id is polled via
+        `GET /api/v1/admin/digests/jobs/{jobId}` for the outcome.
+
+        `date` selects the day to generate for and defaults to **yesterday**: the current Platform
+        Day is still accumulating news, so the day worth (re)generating is the last complete one.
+        By default a user who already has a digest for that day is left alone (job status
+        `SKIPPED`); `force=true` regenerates.
       tags: [Admin]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -899,14 +904,46 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          description: Platform Day to generate for; defaults to yesterday in the digest timezone.
+          schema: { type: string, format: date }
         - name: force
           in: query
           schema: { type: boolean, default: false }
       responses:
         '202':
-          description: Digest generation started
+          description: Digest generation started; poll the returned job for the outcome
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestGenerationJob' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/admin/digests/jobs/{jobId}:
+    get:
+      operationId: getDigestGenerationJob
+      summary: Poll an admin-triggered digest generation (admin only)
+      description: >
+        Outcome of a run started by `POST /api/v1/admin/digests/generate/users/{userId}`. A digest
+        row only exists once generation succeeds, so this job — not the digest — is where a
+        `PENDING`, `SKIPPED` or `FAILED` run reports itself.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestGenerationJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
 components:
   securitySchemes:
@@ -1062,6 +1099,26 @@ components:
         status: { type: string, enum: [GENERATED, ASSIGNED_PUBLIC, SKIPPED] }
         message: { type: string }
         digest: { $ref: '#/components/schemas/DigestDetail' }
+
+    DigestJobStatus:
+      type: string
+      enum: [PENDING, COMPLETED, SKIPPED, FAILED]
+      description: >
+        Lifecycle of an admin-triggered digest generation. `SKIPPED` is terminal but not a failure:
+        the user already had a digest for that day and `force` was off.
+
+    DigestGenerationJob:
+      type: object
+      description: One admin-triggered digest generation run (ADR-0020).
+      required: [id, targetUserId, digestDate, status]
+      properties:
+        id: { type: string, format: uuid }
+        targetUserId: { type: string, format: uuid }
+        digestDate: { type: string, format: date }
+        status: { $ref: '#/components/schemas/DigestJobStatus' }
+        message: { type: string, nullable: true, description: "Why it was skipped, or what broke" }
+        createdAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
 
     AuthorSummary:
       type: object

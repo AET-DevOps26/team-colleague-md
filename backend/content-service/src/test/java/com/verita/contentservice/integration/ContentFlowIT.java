@@ -138,12 +138,33 @@ class ContentFlowIT {
     }
 
     @Test
-    void adminGenerateUserDigest_returns202Immediately() throws Exception {
+    void adminGenerateUserDigest_returns202WithAPendingJobForTheRequestedDate() throws Exception {
+        String adminBearer = "Bearer " + mintToken(UUID.randomUUID(), "root", "ADMIN");
+        UUID userId = UUID.randomUUID();
+
+        String accepted = mockMvc.perform(post("/api/v1/admin/digests/generate/users/" + userId)
+                        .param("date", "2026-07-04")
+                        .param("force", "true")
+                        .header("Authorization", adminBearer))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.digestDate").value("2026-07-04"))
+                .andExpect(jsonPath("$.targetUserId").value(userId.toString()))
+                .andReturn().getResponse().getContentAsString();
+
+        // The job id is the whole point of the 202: it is what the admin panel polls for the outcome.
+        String jobId = JsonPath.read(accepted, "$.id");
+        mockMvc.perform(get("/api/v1/admin/digests/jobs/" + jobId).header("Authorization", adminBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(jobId));
+    }
+
+    @Test
+    void adminGetDigestJob_unknownId_is404() throws Exception {
         String adminBearer = "Bearer " + mintToken(UUID.randomUUID(), "root", "ADMIN");
 
-        mockMvc.perform(post("/api/v1/admin/digests/generate/users/" + UUID.randomUUID() + "?force=true")
-                        .header("Authorization", adminBearer))
-                .andExpect(status().isAccepted());
+        mockMvc.perform(get("/api/v1/admin/digests/jobs/" + UUID.randomUUID()).header("Authorization", adminBearer))
+                .andExpect(status().isNotFound());
     }
 
     @Test

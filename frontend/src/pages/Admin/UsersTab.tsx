@@ -45,9 +45,6 @@ export default function UsersTab({ onCountChange }: UsersTabProps) {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
-  // Which row has its "Generate digest" popover open, and whether that popover's force is on.
-  const [digestFor, setDigestFor] = useState<string | null>(null);
-  const [force, setForce] = useState(false);
 
   const load = useCallback(
     async (q: string, p: number) => {
@@ -100,19 +97,6 @@ export default function UsersTab({ onCountChange }: UsersTabProps) {
     }
   };
 
-  const handleGenerateDigest = async (target: AdminUser) => {
-    setDigestFor(null);
-    try {
-      await adminService.generateUserDigest(target.id, force);
-      // The server runs generation in the background (202), so there is no result to await here.
-      showToast({ message: `Digest generation started for @${target.username}.`, variant: 'info' });
-    } catch {
-      showToast({ message: `Could not start digest generation for @${target.username}.`, variant: 'error' });
-    } finally {
-      setForce(false);
-    }
-  };
-
   return (
     <div data-testid="admin-users-tab">
       <div className={styles.sectionHd}>
@@ -148,7 +132,7 @@ export default function UsersTab({ onCountChange }: UsersTabProps) {
               <th style={{ width: 110 }}>Role</th>
               <th style={{ width: 120 }}>Joined</th>
               <th style={{ width: 110 }}>Status</th>
-              <th style={{ width: 300 }}>Actions</th>
+              <th style={{ width: 200 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -214,46 +198,6 @@ export default function UsersTab({ onCountChange }: UsersTabProps) {
                       >
                         {u.isBanned ? 'Unban' : 'Ban'}
                       </button>
-                      <button
-                        className={styles.btn}
-                        onClick={() => {
-                          setForce(false);
-                          setDigestFor(digestFor === u.id ? null : u.id);
-                        }}
-                        data-testid="admin-digest-button"
-                      >
-                        Generate digest
-                      </button>
-
-                      {digestFor === u.id && (
-                        <div className={styles.popover} data-testid="admin-digest-popover">
-                          <p className={styles.popoverText}>
-                            Generate today's digest for @{u.username}. This runs in the background and
-                            may take a minute.
-                          </p>
-                          <label className={styles.popoverToggle}>
-                            <input
-                              type="checkbox"
-                              checked={force}
-                              onChange={(e) => setForce(e.target.checked)}
-                              data-testid="admin-digest-force"
-                            />
-                            Force (regenerate if one already exists)
-                          </label>
-                          <div className={styles.popoverActions}>
-                            <button className={styles.btn} onClick={() => setDigestFor(null)}>
-                              Cancel
-                            </button>
-                            <button
-                              className={`${styles.btn} ${styles.btnPrimary}`}
-                              onClick={() => handleGenerateDigest(u)}
-                              data-testid="admin-digest-confirm"
-                            >
-                              Generate
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </td>
                 </tr>

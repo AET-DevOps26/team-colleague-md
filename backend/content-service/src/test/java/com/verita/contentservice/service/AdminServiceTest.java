@@ -8,7 +8,6 @@ import com.verita.model.LlmConfig;
 import com.verita.model.LlmConfigUpdateRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,19 +22,14 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Unit tests for the admin GenAI proxy and the background digest trigger (ADR-0020).
- */
+/** Unit tests for the admin GenAI proxy (ADR-0020). */
 @ExtendWith(MockitoExtension.class)
 class AdminServiceTest {
 
     @Mock private GenAiClient genAiClient;
-    @Mock private DailyDigestGenerationService digestGenerationService;
     @InjectMocks private AdminService adminService;
 
     private static LlmConfigDto genAiConfig() {
@@ -93,23 +87,4 @@ class AdminServiceTest {
                         .isEqualTo(HttpStatus.BAD_GATEWAY));
     }
 
-    @Test
-    void generateUserDigestAsync_delegatesToTheDailyOrchestrationWithForceFlag() {
-        UUID userId = UUID.randomUUID();
-
-        adminService.generateUserDigestAsync(userId, true);
-
-        verify(digestGenerationService).generateForUser(userId, true);
-    }
-
-    @Test
-    void generateUserDigestAsync_swallowsFailure_soTheBackgroundThreadNeverBubbles() {
-        UUID userId = UUID.randomUUID();
-        doThrow(new IllegalStateException("genai down"))
-                .when(digestGenerationService).generateForUser(any(), anyBoolean());
-
-        adminService.generateUserDigestAsync(userId, false);
-
-        verify(digestGenerationService).generateForUser(userId, false);
-    }
 }
