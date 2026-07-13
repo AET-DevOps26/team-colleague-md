@@ -71,7 +71,7 @@ def test_build_digest_chain_requests_structured_output():
 
     fake_llm = FakeLlm()
     with (
-        patch("app.services.digest_generator.get_settings") as mock_settings,
+        patch("app.services.digest_generator.active_settings") as mock_settings,
         patch("app.services.digest_generator._get_llm", return_value=fake_llm),
     ):
         mock_settings.return_value = SimpleNamespace(llm_model="test-model")
@@ -95,7 +95,7 @@ def test_build_digest_chain_uses_plain_structured_output_once():
 
     fake_llm = FakeLlm()
     with (
-        patch("app.services.digest_generator.get_settings") as mock_settings,
+        patch("app.services.digest_generator.active_settings") as mock_settings,
         patch("app.services.digest_generator._get_llm", return_value=fake_llm),
     ):
         mock_settings.return_value = SimpleNamespace(llm_model="test-model")

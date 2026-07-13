@@ -204,11 +204,17 @@ public class UserService {
      * Updates the role of a user. Only recognised role values are applied;
      * unrecognised values are silently ignored.
      *
+     * <p>An admin may not change their own role: self-demotion is the one role change that can
+     * strip the platform of its last administrator with no way back in through the UI.
+     *
      * @param userId            the UUID of the user to update
      * @param updateRoleRequest the new role
+     * @param actingUserId      the UUID of the admin performing the change
      */
-    public void updateUserRole(UUID userId, UpdateRoleRequest updateRoleRequest) {
-        UserEntity entity = userRepository.findById(userId).orElseThrow();
+    public void updateUserRole(UUID userId, UpdateRoleRequest updateRoleRequest, UUID actingUserId) {
+        rejectSelfAction(userId, actingUserId, "role");
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (updateRoleRequest.getRole() != null) {
             UserRole updatedRole = null;
@@ -240,12 +246,30 @@ public class UserService {
         if (likeReceivedCountDelta != 0) userRepository.applyLikeReceivedCountDelta(userId, likeReceivedCountDelta);
     }
 
-    public void updateUserBanStatus(UUID userId, UpdateBanStatusRequest updateBanStatusRequest) {
-        UserEntity entity = userRepository.findById(userId).orElseThrow();
+    /**
+     * Bans or unbans a user. An admin may not ban themselves — that would lock the acting
+     * administrator out of the very panel they would need to undo it.
+     *
+     * @param userId                 the UUID of the user to ban or unban
+     * @param updateBanStatusRequest the new ban status
+     * @param actingUserId           the UUID of the admin performing the change
+     */
+    public void updateUserBanStatus(UUID userId, UpdateBanStatusRequest updateBanStatusRequest, UUID actingUserId) {
+        rejectSelfAction(userId, actingUserId, "ban status");
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         if (updateBanStatusRequest.getBanned() != null) {
             entity.setIsBanned(updateBanStatusRequest.getBanned());
         }
         userRepository.save(entity);
+    }
+
+    /** Blocks an admin from applying a destructive admin action to their own account (lockout guard). */
+    private void rejectSelfAction(UUID targetUserId, UUID actingUserId, String field) {
+        if (actingUserId != null && actingUserId.equals(targetUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "An admin cannot change their own " + field + ".");
+        }
     }
 
     // --- Private helpers ---

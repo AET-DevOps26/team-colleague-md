@@ -132,6 +132,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/users/*").permitAll()
                     .requestMatchers("/api/v1/users").hasRole("ADMIN")
                     .requestMatchers("/api/v1/users/*/role").hasRole("ADMIN")
+                    .requestMatchers("/api/v1/users/*/ban").hasRole("ADMIN")
                     .requestMatchers("/api/v1/users/*/verification-status").hasRole("ADMIN")
                     .anyRequest().authenticated()
             );

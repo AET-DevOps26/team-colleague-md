@@ -12,10 +12,10 @@ from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field, ValidationError
 
-from app.config import get_settings
 from app.schemas.digest import DigestEvent, DigestGenerateRequest, DigestGenerateResponse, DigestSource
 from app.schemas.summarize import TokenUsage
 from app.services.external_sources import ExternalSourceItem
+from app.services.llm_config import active_settings
 from app.services.summarizer import _get_llm
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class DigestLlmOutput(BaseModel):
 
 
 def _build_digest_chain():
-    settings = get_settings()
+    settings = active_settings()
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", SYSTEM_PROMPT),

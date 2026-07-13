@@ -109,12 +109,25 @@ public class DailyDigestGenerationService {
         }
     }
 
+    /** Generates for the current Platform Day — what the scheduled run and self-service path want. */
     public DigestGenerationResponse generateForUser(UUID userId, boolean force) {
-        DigestWindow window = currentWindow();
+        return generateForUser(userId, currentPlatformDate(), force);
+    }
+
+    /**
+     * Generates the digest a user would have received on {@code date}. Admins reach this to backfill
+     * a day (ADR-0020); every day-scoped step below — the idempotency check, the public-digest
+     * assignment, the news window handed to GenAI — keys off the requested date rather than today's.
+     *
+     * <p>Backfilling a distant past date is allowed but rarely useful: the external news sources are
+     * queried for that day's window and return progressively less the further back it goes.
+     */
+    public DigestGenerationResponse generateForUser(UUID userId, LocalDate date, boolean force) {
+        DigestWindow window = windowFor(date);
         if (!force) {
             Optional<DigestEntity> existingPersonal = digestService.findPersonalForDate(userId, window.date());
             if (existingPersonal.isPresent()) {
-                return skipped("Digest already exists for the current Platform Day.",
+                return skipped("Digest already exists for " + window.date() + ".",
                         digestService.toDetail(existingPersonal.get()));
             }
         }
@@ -135,7 +148,7 @@ public class DailyDigestGenerationService {
         if (!force) {
             Optional<DigestEntity> existingPersonal = digestService.findPersonalForDate(userId, window.date());
             if (existingPersonal.isPresent()) {
-                return skipped("Digest already exists for the current Platform Day.",
+                return skipped("Digest already exists for " + window.date() + ".",
                         digestService.toDetail(existingPersonal.get()));
             }
         } else {
@@ -323,8 +336,16 @@ public class DailyDigestGenerationService {
         return new DigestGenerationResponse(DigestGenerationResponse.StatusEnum.SKIPPED, message).digest(digest);
     }
 
+    /** Today in the digest timezone — the day the platform considers "current". */
+    public LocalDate currentPlatformDate() {
+        return LocalDate.now(digestZone);
+    }
+
     private DigestWindow currentWindow() {
-        LocalDate date = LocalDate.now(digestZone);
+        return windowFor(currentPlatformDate());
+    }
+
+    private DigestWindow windowFor(LocalDate date) {
         // Free News API delays news ~12h; shift the window back so the period has available news.
         ZonedDateTime start = date.atStartOfDay(digestZone).minusHours(FREE_NEWS_API_DELAY_HOURS);
         return new DigestWindow(date, start.toOffsetDateTime(), start.plusDays(1).toOffsetDateTime());

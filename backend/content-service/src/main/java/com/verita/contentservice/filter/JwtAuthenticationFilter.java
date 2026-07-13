@@ -5,8 +5,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -36,12 +40,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Jwt jwt = jwtDecoder.decode(header.substring(7));
                 SecurityContextHolder.getContext().setAuthentication(
-                        new JwtAuthenticationToken(jwt, Collections.emptyList()));
+                        new JwtAuthenticationToken(jwt, authorities(jwt)));
             } catch (JwtException e) {
                 // Invalid/expired/userId-less token: fail open — drop any auth and continue.
                 SecurityContextHolder.clearContext();
             }
         }
         chain.doFilter(request, response);
+    }
+
+    /**
+     * Maps the token's {@code role} claim (ADR-0001, extended by ADR-0020) to the single
+     * {@code ROLE_*} authority the admin routes authorize on. A token minted before the claim
+     * existed simply carries no authorities, so it fails admin checks rather than passing them.
+     */
+    private Collection<GrantedAuthority> authorities(Jwt jwt) {
+        String role = jwt.getClaimAsString("role");
+        return role == null || role.isBlank()
+                ? Collections.emptyList()
+                : List.of(new SimpleGrantedAuthority("ROLE_" + role));
     }
 }

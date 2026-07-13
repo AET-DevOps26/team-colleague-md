@@ -13,8 +13,11 @@ export const SEED_USERS = {
   sarahjkim: { email: 'sarah.kim@example.com', username: 'sarahjkim', displayName: 'Sarah Kim' },
 } as const;
 
+/** Any seeded identity — alexchen is seeded ADMIN, sarahjkim is not (see scripts/seed). */
+export type SeedUser = (typeof SEED_USERS)[keyof typeof SEED_USERS];
+
 /** Logs in through the real auth modal so the refresh cookie + access token are genuine. */
-export async function loginAs(page: Page, user = SEED_USERS.alexchen): Promise<void> {
+export async function loginAs(page: Page, user: SeedUser = SEED_USERS.alexchen): Promise<void> {
   await page.goto('/');
   await page.locator('[data-testid="sidebar-signin"]').click();
   const dialog = page.locator('[role="dialog"]');
