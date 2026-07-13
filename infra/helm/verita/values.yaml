@@ -116,7 +116,9 @@ services:
       nvidiaNimApiKey: ""
       logosApiKey: ""
       gnewsApiKey: ""
-    replicaCount: 2
+    # Digest jobs are held in process memory and polled through the Service. Keep one replica so
+    # job creation and status polling cannot land on different, unsynchronised processes.
+    replicaCount: 1
     health:
       path: /health
       initialDelaySeconds: 15

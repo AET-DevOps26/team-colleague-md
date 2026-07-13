@@ -420,5 +420,7 @@ only reachable from the TUM network or eduVPN.
 Azure and Kubernetes CD use the same Logos provider/model defaults and inject
 `NVIDIA_NIM_API_KEY`, `LOGOS_API_KEY`, and `GNEWS_API_KEY` from GitHub Actions Secrets into the
 GenAI Service. The Logos endpoint is fixed in the application rather than deployment configuration.
+The Helm deployment uses one GenAI replica because asynchronous digest-job state is currently
+process-local; scaling out requires moving that state to a shared store.
 
 ---
