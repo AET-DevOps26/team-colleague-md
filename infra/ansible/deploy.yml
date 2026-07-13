@@ -4,7 +4,8 @@
 # recommendation_db_password, jwt_secret, minio_root_password,
 # user_service_s3_access_key, user_service_s3_secret_key,
 # content_service_s3_access_key, content_service_s3_secret_key,
-# mail_username, mail_password, mail_from passed as --extra-vars by the caller.
+# mail_username, mail_password, mail_from, nvidia_nim_api_key, logos_api_key,
+# and gnews_api_key passed as --extra-vars by the caller.
 - name: Deploy Verita services
   hosts: all
   become: true
@@ -95,6 +96,11 @@
           MAIL_USERNAME={{ mail_username }}
           MAIL_PASSWORD={{ mail_password }}
           MAIL_FROM={{ mail_from }}
+          LLM_PROVIDER=logos
+          LLM_MODEL=openai/gpt-oss-120b
+          NVIDIA_NIM_API_KEY={{ nvidia_nim_api_key }}
+          LOGOS_API_KEY={{ logos_api_key }}
+          GNEWS_API_KEY={{ gnews_api_key }}
         owner: azureuser
         group: azureuser
         mode: "0600"

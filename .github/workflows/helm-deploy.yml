@@ -95,6 +95,14 @@ jobs:
             )
           fi
 
+          # GenAI credentials are deployed to both demo environments so the daily-digest path can
+          # be exercised in dev as well as prod. They are kept in GitHub Secrets, never Helm values.
+          GENAI_SECRETS=(
+            --set-string services.genai.llm.nvidiaNimApiKey="${{ secrets.NVIDIA_NIM_API_KEY }}"
+            --set-string services.genai.llm.logosApiKey="${{ secrets.LOGOS_API_KEY }}"
+            --set-string services.genai.llm.gnewsApiKey="${{ secrets.GNEWS_API_KEY }}"
+          )
+
           helm upgrade --install verita \
             ./infra/helm/verita \
             -f ./infra/helm/verita/values.yaml \
@@ -102,6 +110,7 @@ jobs:
             --namespace verita-$DEPLOY_ENV \
             --create-namespace \
             "${PROD_SECRETS[@]}" \
+            "${GENAI_SECRETS[@]}" \
             --set services.frontend.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
             --set services.content.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
             --set services.user.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \

@@ -110,6 +110,12 @@ services:
     metrics:
       path: /metrics
     internalToken: true
+    llm:
+      provider: logos
+      model: openai/gpt-oss-120b
+      nvidiaNimApiKey: ""
+      logosApiKey: ""
+      gnewsApiKey: ""
     replicaCount: 2
     health:
       path: /health
