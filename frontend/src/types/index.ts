@@ -276,3 +276,75 @@ export interface EditorPost {
   topics: string[];
   status: PostStatus;
 }
+
+// ── Admin panel (ADR-0020) ────────────────────────────────────
+
+export type UserRole = 'USER' | 'VERIFIED' | 'ADMIN';
+
+/** One row of the admin Users table (user-service `User`). */
+export interface AdminUser {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  email: string;
+  role: UserRole;
+  isBanned: boolean;
+  createdAt: string;
+}
+
+export interface AdminUserPage {
+  content: AdminUser[];
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
+}
+
+/** A GenAI provider and whether it has an API key — keyless ones cannot be selected. */
+export interface LlmProviderAvailability {
+  name: string;
+  configured: boolean;
+}
+
+/** GenAI's live (provider, model) pair. The override is in-memory and resets on GenAI restart. */
+export interface LlmConfig {
+  provider: string;
+  model: string;
+  temperature: number;
+  availableProviders: LlmProviderAvailability[];
+}
+
+/** A post whose AI summary failed after the backend exhausted its retries. */
+export interface FailedSummaryPost {
+  id: string;
+  title: string;
+  authorId: string;
+  summaryStatus: SummaryStatus;
+  updatedAt: string;
+}
+
+export interface FailedSummaryPage {
+  content: FailedSummaryPost[];
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
+}
+
+/** `SKIPPED` is terminal but not a failure: a digest for that day existed and force was off. */
+export type DigestJobStatus = 'PENDING' | 'COMPLETED' | 'SKIPPED' | 'FAILED';
+
+/**
+ * One admin-triggered digest generation. A digest row only exists once generation succeeds, so
+ * this job — not the digest — is what the panel polls to learn the outcome.
+ */
+export interface DigestGenerationJob {
+  id: string;
+  targetUserId: string;
+  digestDate: string;
+  status: DigestJobStatus;
+  message?: string | null;
+  createdAt?: string;
+  finishedAt?: string | null;
+}

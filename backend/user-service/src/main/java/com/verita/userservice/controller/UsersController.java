@@ -27,6 +27,12 @@ public class UsersController implements UsersApi, AdminApi {
         }
     }
 
+    /** UUID of the admin making the call — used by the self-action guard on role/ban changes. */
+    private UUID getCurrentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return principal instanceof UserDetailsImpl ? ((UserDetailsImpl) principal).getId() : null;
+    }
+
     @Override
     public ResponseEntity<User> getUserByUsername(String username) {
         User user = userService.getByUsername(username);
@@ -98,13 +104,13 @@ public class UsersController implements UsersApi, AdminApi {
 
     @Override
     public ResponseEntity<User> updateUserRole(UUID userId, UpdateRoleRequest updateRoleRequest) {
-        userService.updateUserRole(userId, updateRoleRequest);
+        userService.updateUserRole(userId, updateRoleRequest, getCurrentUserId());
         return ResponseEntity.ok(userService.getById(userId));
     }
 
     @Override
     public ResponseEntity<User> updateUserBanStatus(UUID userId, UpdateBanStatusRequest updateBanStatusRequest) {
-        userService.updateUserBanStatus(userId, updateBanStatusRequest);
+        userService.updateUserBanStatus(userId, updateBanStatusRequest, getCurrentUserId());
         return ResponseEntity.ok(userService.getById(userId));
     }
 }

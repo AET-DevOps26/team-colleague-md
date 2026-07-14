@@ -2,6 +2,7 @@ package com.verita.contentservice.service;
 
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
+import com.verita.contentservice.entity.SummaryStatus;
 import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
@@ -12,6 +13,7 @@ import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.AuthorSummary;
+import com.verita.model.FailedSummaryPage;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
@@ -26,6 +28,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -491,5 +494,59 @@ public class PostServiceTest {
 
         verify(postRepository).findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
                 eq(userId), eq(PostStatus.DRAFT), any());
+    }
+
+    // ---- admin summary ops (ADR-0020) ---------------------------------------
+
+    @Test
+    void requestSummaryRegeneration_failedPost_setsPendingAndRepublishesEvent() {
+        PostEntity failed = post(userId, PostStatus.PUBLISHED);
+        failed.setSummaryStatus(SummaryStatus.FAILED);
+        when(postRepository.findByIdAndDeletedFalse(failed.getId())).thenReturn(Optional.of(failed));
+
+        postService.requestSummaryRegeneration(failed.getId());
+
+        assertEquals(SummaryStatus.PENDING, failed.getSummaryStatus());
+        verify(eventPublisher).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void requestSummaryRegeneration_shortContent_conflictsAndPublishesNothing() {
+        PostEntity ineligible = post(userId, PostStatus.PUBLISHED);
+        ineligible.setContent("Too short");
+        when(postRepository.findByIdAndDeletedFalse(ineligible.getId())).thenReturn(Optional.of(ineligible));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> postService.requestSummaryRegeneration(ineligible.getId()));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void requestSummaryRegeneration_unknownPost_notFound() {
+        UUID missing = UUID.randomUUID();
+        when(postRepository.findByIdAndDeletedFalse(missing)).thenReturn(Optional.empty());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> postService.requestSummaryRegeneration(missing));
+
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+    }
+
+    @Test
+    void listFailedSummaries_returnsOnlyFailedPosts() {
+        PostEntity failed = post(userId, PostStatus.PUBLISHED);
+        failed.setSummaryStatus(SummaryStatus.FAILED);
+        when(postRepository.findByDeletedFalseAndSummaryStatusOrderByUpdatedAtDesc(
+                eq(SummaryStatus.FAILED), any())).thenReturn(new PageImpl<>(List.of(failed)));
+
+        FailedSummaryPage page = postService.listFailedSummaries(0, 20);
+
+        assertEquals(1, page.getContent().size());
+        assertEquals(failed.getId(), page.getContent().get(0).getId());
+        assertEquals(com.verita.model.SummaryStatus.FAILED, page.getContent().get(0).getSummaryStatus());
+        verify(postRepository).findByDeletedFalseAndSummaryStatusOrderByUpdatedAtDesc(
+                eq(SummaryStatus.FAILED), any());
     }
 }

@@ -12,6 +12,8 @@ import com.verita.contentservice.client.GenAiClient;
 import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.filter.InternalAuthFilter;
 import com.verita.contentservice.dto.GenAiSummarizeResponse;
+import com.verita.contentservice.dto.LlmConfigDto;
+import com.verita.contentservice.dto.LlmProviderAvailabilityDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -80,16 +82,89 @@ class ContentFlowIT {
     }
 
     private String mintToken(UUID userId, String username) throws Exception {
+        return mintToken(userId, username, "USER");
+    }
+
+    private String mintToken(UUID userId, String username, String role) throws Exception {
         JWSSigner signer = new MACSigner(jwtSecret.getBytes(StandardCharsets.UTF_8));
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(username)
                 .claim("userId", userId.toString())
+                .claim("role", role)
                 .issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + 3_600_000))
                 .build();
         SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
         jwt.sign(signer);
         return jwt.serialize();
+    }
+
+    // ---- admin ops security (ADR-0020) --------------------------------------
+
+    @Test
+    void adminRoutes_withoutToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/genai/llm-config"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminRoutes_withNonAdminToken_returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/genai/llm-config").header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/posts/summaries/failed").header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/posts/" + UUID.randomUUID() + "/summarize")
+                        .header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/digests/generate/users/" + UUID.randomUUID())
+                        .header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminRoutes_withAdminToken_areReachable() throws Exception {
+        String adminBearer = "Bearer " + mintToken(UUID.randomUUID(), "root", "ADMIN");
+        when(genAiClient.getLlmConfig()).thenReturn(new LlmConfigDto(
+                "nvidia", "moonshotai/kimi-k2.6", 0.3f, List.of(new LlmProviderAvailabilityDto("nvidia", true))));
+
+        mockMvc.perform(get("/api/v1/admin/genai/llm-config").header("Authorization", adminBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.provider").value("nvidia"))
+                .andExpect(jsonPath("$.availableProviders[0].configured").value(true));
+
+        mockMvc.perform(get("/api/v1/admin/posts/summaries/failed").header("Authorization", adminBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void adminGenerateUserDigest_returns202WithAPendingJobForTheRequestedDate() throws Exception {
+        String adminBearer = "Bearer " + mintToken(UUID.randomUUID(), "root", "ADMIN");
+        UUID userId = UUID.randomUUID();
+
+        String accepted = mockMvc.perform(post("/api/v1/admin/digests/generate/users/" + userId)
+                        .param("date", "2026-07-04")
+                        .param("force", "true")
+                        .header("Authorization", adminBearer))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.digestDate").value("2026-07-04"))
+                .andExpect(jsonPath("$.targetUserId").value(userId.toString()))
+                .andReturn().getResponse().getContentAsString();
+
+        // The job id is the whole point of the 202: it is what the admin panel polls for the outcome.
+        String jobId = JsonPath.read(accepted, "$.id");
+        mockMvc.perform(get("/api/v1/admin/digests/jobs/" + jobId).header("Authorization", adminBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(jobId));
+    }
+
+    @Test
+    void adminGetDigestJob_unknownId_is404() throws Exception {
+        String adminBearer = "Bearer " + mintToken(UUID.randomUUID(), "root", "ADMIN");
+
+        mockMvc.perform(get("/api/v1/admin/digests/jobs/" + UUID.randomUUID()).header("Authorization", adminBearer))
+                .andExpect(status().isNotFound());
     }
 
     @Test

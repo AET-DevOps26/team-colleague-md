@@ -22,8 +22,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
-from app.config import get_settings
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse, TokenUsage
+from app.services.llm_config import active_settings
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +59,10 @@ def _build_chain():
         prompt | model | parser
 
     The chain is built fresh on each call rather than cached at module level,
-    so that config changes (e.g., model swap) are picked up without restart.
+    so that config changes (e.g., an admin's runtime provider swap, ADR-0020) are
+    picked up without restart.
     """
-    settings = get_settings()
+    settings = active_settings()
 
     prompt = ChatPromptTemplate.from_messages(
         [
