@@ -7,7 +7,7 @@ API docs, monitoring).
 ## 1. Get a running, populated instance
 
 **Option A — local (recommended).** Follow the
-[Quick Start](../README.md#quick-start-with-docker-compose-local) in the root README:
+[Quick Start](../../README.md#quick-start-with-docker-compose-local) in the root README:
 
 ```bash
 # add an LLM API key to enable AI features
@@ -19,7 +19,7 @@ npm install && npm run seed:local
 ```
 
 **Option B — live environments.** Use the deployed instances listed under
-[Cloud Deployments](../README.md#cloud-deployments) — production and dev on the TUM Rancher
+[Cloud Deployments](../../README.md#cloud-deployments) — production and dev on the TUM Rancher
 cluster, plus a single Azure VM running the same containers via Docker Compose. On the dev
 environment, type `thisisunsafe` if the browser blocks the self-signed TLS certificate.
 
@@ -41,7 +41,7 @@ Highlights worth visiting:
 - **Admin panel** (`/admin`, admin account only) — user management and GenAI operations:
   switch the LLM provider/model at runtime, re-run failed post summaries, and generate a
   digest for a chosen user and day. The GenAI features are documented step-by-step in
-  [GenAI Environment Setup](contributing/GenAI_Environment_Setup.md).
+  [GenAI Environment Setup](../contributing/GenAI_Environment_Setup.md).
 
 ## 3. Health checks
 
@@ -56,7 +56,7 @@ http://localhost:8000/health            # genai-service
 
 On the deployed environments the backends are not directly reachable — the frontend nginx
 gateway is the only public entry point and returns 404 for actuator paths (see
-[API Gateway & Routing](infrastructure/API_Gateway_Routing.md)).
+[API Gateway & Routing](../infrastructure/API_Gateway_Routing.md)).
 
 ## 4. API documentation and API client
 
@@ -64,7 +64,7 @@ gateway is the only public entry point and returns 404 for actuator paths (see
   <https://AET-DevOps26.github.io/team-colleague-md/> (built from each service's
   `openapi.yaml` on merge to `main`).
 - **Interactive genai docs**: `http://localhost:8000/docs` (FastAPI Swagger UI).
-- **Bruno collection**: [`bruno/`](../bruno/README.md) contains ready-made requests for all
+- **Bruno collection**: [`bruno/`](../../bruno/README.md) contains ready-made requests for all
   services and environments if you want to exercise the APIs directly.
 
 ## 5. View monitoring
@@ -90,4 +90,4 @@ login on dev).
 SSH tunnel.
 
 Details on what is collected and how discovery works per environment:
-[`infra/monitoring/README.md`](../infra/monitoring/README.md).
+[`infra/monitoring/README.md`](../../infra/monitoring/README.md).

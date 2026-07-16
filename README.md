@@ -7,7 +7,7 @@ share and discover practical AI knowledge through intelligent curation, automate
 summarization, and personalized recommendations. It is built as four backend microservices
 (three Spring Boot, one FastAPI) behind a React frontend.
 
-- **Reviewing the project?** Start with the [Review Guide](docs/Review_Guide.md).
+- **Reviewing the project?** Start with the [Review Guide](docs/review/Review_Guide.md).
 - **Developing locally?** See [Local Development](docs/contributing/Local_Development.md).
 - **Everything else:** the [documentation index](#documentation) below.
 
@@ -72,7 +72,7 @@ the full breakdown are in
 [Local Development](docs/contributing/Local_Development.md#local-seed-data).
 
 Then open http://localhost:3000, sign in as a [demo account](#demo-accounts), and follow
-the [Review Guide](docs/Review_Guide.md) for a guided tour.
+the [Review Guide](docs/review/Review_Guide.md) for a guided tour.
 
 ### Monitoring (optional)
 
@@ -130,7 +130,8 @@ describe. Key entry points:
 
 | Document | What's inside |
 |---|---|
-| [Review Guide](docs/Review_Guide.md) | Reviewer walkthrough: explore checklist, health checks, monitoring |
+| [Review Guide](docs/review/Review_Guide.md) | Reviewer walkthrough: explore checklist, health checks, monitoring |
+| [Team Responsibilities](docs/review/Team_Responsibilities.md) | Who owned which area, derived from the pull-request history |
 | [Problem Statement](docs/product/Problem_Statement.md) | The problem Verita solves, target users, and epics/user stories |
 | [System Overview & Architecture](docs/architecture/System_Overview_Architecture.md) | Services, technology decisions, data architecture, UML diagrams |
 | [Infrastructure Design](docs/infrastructure/Infrastructure_Design.md) | Infrastructure hub: environments, IaC, CI/CD, and deployments |

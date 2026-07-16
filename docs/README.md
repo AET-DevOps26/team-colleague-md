@@ -4,15 +4,16 @@ Index of Verita's project-wide documentation. Component and tooling docs live ne
 code they describe and are linked at the bottom.
 
 **Start here:**
-[Review Guide](Review_Guide.md) if you are reviewing/grading the project ·
+[Review Guide](review/Review_Guide.md) if you are reviewing/grading the project ·
 [Local Development](contributing/Local_Development.md) if you are developing on it.
 
-## docs root
+## review/
 
 | Document | What's inside |
 |---|---|
-| [Review Guide](Review_Guide.md) | Reviewer walkthrough: explore checklist, health checks, API docs, monitoring |
-| [Check List](Check_List.md) | Manually verified frontend ↔ backend integration flows |
+| [Review Guide](review/Review_Guide.md) | Reviewer walkthrough: explore checklist, health checks, API docs, monitoring |
+| [Check List](review/Check_List.md) | Manually verified frontend ↔ backend integration flows |
+| [Team Responsibilities](review/Team_Responsibilities.md) | Who owned which area, derived from the pull-request history |
 
 ## architecture/
 

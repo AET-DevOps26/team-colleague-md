@@ -72,4 +72,4 @@ Manual verification status for the frontend ↔ user-service / content-service i
 > Note: this list records the manually verified flows. Features not listed here (e.g. the
 > digest pages and the admin panel) also run against the real backend — there is no in-app
 > mock layer anymore — but their verification is covered by the automated tests instead
-> (see [Frontend Testing](testing/Frontend_Testing.md)).
+> (see [Frontend Testing](../testing/Frontend_Testing.md)).
