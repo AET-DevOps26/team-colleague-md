@@ -1,78 +1,43 @@
 import { test, expect } from '@playwright/test';
-import { loginAs } from './support';
+import { loginAs, postCards } from './support';
 
+/**
+ * US: Home Feed — the feed renders real seeded posts and is the entry point to everything else.
+ * Layout measurements and chip styling are not the story; navigating and engaging are.
+ */
 
-test.describe('Layout', () => {
-  test('LT-5: sidebar is 240px wide', async ({ page }) => {
-    await page.goto('/');
-    const box = await page.locator('[data-testid="sidebar"]').boundingBox();
-    expect(box?.width).toBe(240);
-  });
+test('HOME-1: the feed renders seeded posts and a card opens its detail page', async ({ page }) => {
+  await page.goto('/');
 
-  test('LT-6: topbar has search row and topic row', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('[data-testid="topbar-search-row"]')).toBeVisible();
-    await expect(page.locator('[data-testid="topbar-topic-row"]')).toBeVisible();
-  });
+  const cards = postCards(page);
+  await expect(cards.first()).toBeVisible();
 
-  test('LT-7: feed has both image cards and text cards', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('[data-testid="image-card"]').first()).toBeVisible();
-    await expect(page.locator('[data-testid="text-card"]').first()).toBeVisible();
-  });
+  await cards.first().click();
+
+  await expect(page).toHaveURL(/\/post\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
-test.describe('Interactions', () => {
-  test('I-8: topic chip click updates active state', async ({ page }) => {
-    await page.goto('/');
-    const chips = page.locator('[data-testid="topbar-topic-row"] button');
-    const second = chips.nth(1);
-    await second.click();
-    await expect(second).toHaveClass(/active/);
-  });
+test('HOME-2: the feed is personalised once signed in', async ({ page }) => {
+  await page.goto('/');
+  // Wait for the feed shell before judging the banner — the banner's absence and a page that has
+  // not rendered yet look identical.
+  await expect(page.locator('[data-testid="topbar-topic-row"] button').first()).toHaveText('Trending');
+  // Logged out: a community feed plus the sign-in upsell.
+  await expect(page.locator('[data-testid="auth-banner"]')).toBeVisible();
 
-  test('I-9: sidebar sign in opens auth modal', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('[data-testid="sidebar-signin"]').click();
-    await expect(page.locator('[role="dialog"]')).toBeVisible();
-  });
+  await loginAs(page);
 
-  test('I-10: scroll to bottom loads more posts', async ({ page }) => {
-    await page.goto('/');
-    const before = await page.locator('[data-testid="image-card"], [data-testid="text-card"]').count();
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForFunction(
-      (n) => document.querySelectorAll('[data-testid="image-card"], [data-testid="text-card"]').length > n,
-      before
-    );
-    const after = await page.locator('[data-testid="image-card"], [data-testid="text-card"]').count();
-    expect(after).toBeGreaterThan(before);
-  });
-
-  test('I-11: search submit navigates to /search', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('[data-testid="topbar-search-row"] input[aria-label="Search"]').fill('transformers');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/search\?q=transformers/);
-  });
+  await expect(page.locator('[data-testid="auth-banner"]')).toBeHidden();
+  await expect(page.locator('[data-testid="topbar-topic-row"] button').first()).toHaveText('For you');
+  await expect(postCards(page).first()).toBeVisible();
 });
 
-test.describe('Auth State', () => {
-  test('S-12: logged-out — banner visible, settings disabled, first chip is Trending', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('[data-testid="auth-banner"]')).toBeVisible();
-    const pointerEvents = await page.locator('[data-testid="sidebar-settings"]').evaluate(
-      (el) => window.getComputedStyle(el).pointerEvents
-    );
-    expect(pointerEvents).toBe('none');
-    await expect(page.locator('[data-testid="topbar-topic-row"] button').first()).toHaveText('Trending');
-  });
+test('HOME-3: searching from the topbar lands on filtered results', async ({ page }) => {
+  await page.goto('/');
 
-  test('S-13: logged-in — banner absent, first chip is For you, New post CTA visible', async ({ page }) => {
-    await loginAs(page);
-    await page.goto('/');
-    await expect(page.locator('[data-testid="auth-banner"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="topbar-topic-row"] button').first()).toHaveText('For you');
-    await expect(page.getByRole('link', { name: 'New post' })).toBeVisible();
-  });
+  await page.locator('[data-testid="topbar-search-row"] input[aria-label="Search"]').fill('transformers');
+  await page.keyboard.press('Enter');
+
+  await expect(page).toHaveURL(/\/search\?q=transformers/);
 });

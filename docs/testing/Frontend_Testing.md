@@ -25,14 +25,20 @@ frontend/tests/
 │   └── pages/Digest/
 │       ├── topicSort.test.ts
 │       └── ManageTopics.test.tsx
-└── e2e/                      ← Playwright: critical user flows (real seeded backend)
-    ├── support.ts               ← shared loginAs() + seed-user fixtures
-    ├── auth.spec.ts
-    ├── digest.spec.ts
-    ├── home.spec.ts
-    ├── profile.spec.ts
-    ├── settings.spec.ts
-    └── topic.spec.ts
+├── e2e/                      ← Playwright: one spec per user story (real seeded backend)
+│   ├── support.ts               ← loginAs(), seed-user fixtures, env config
+│   ├── auth.spec.ts             ← Registration & Login
+│   ├── home.spec.ts             ← Home Feed
+│   ├── post-detail.spec.ts      ← Post Detail (AI summary, like, bookmark, comment)
+│   ├── post-editor.spec.ts      ← Content Creation
+│   ├── profile.spec.ts          ← User Profile
+│   ├── settings.spec.ts         ← Settings
+│   ├── topics.spec.ts           ← Topic Management
+│   ├── digest.spec.ts           ← Daily Digest
+│   └── admin.spec.ts            ← Admin GenAI ops
+└── demo/                     ← Playwright: README/presentation GIF recordings (opt-in)
+    ├── support.ts
+    └── *.demo.ts
 ```
 
 ---
@@ -55,6 +61,61 @@ npm test
 
 The E2E suite runs the real frontend against a **live, seeded backend** (no mock layer, no
 route-mocking of data). It is **not run in CI**. Reseed before each run — some specs mutate the DB.
+
+### What belongs in the E2E suite
+
+The suite is deliberately thin — **one spec per user story, each test a complete flow**. It is an
+acceptance gate, not a rendering check. A test earns its place here only if it crosses the network:
+a real login, a write that must survive a reload, an AI summary that only GenAI can produce.
+
+Rendering details, copy, validation rules, sort order and component state are **cheaper and more
+precise as Vitest tests** — put them in `tests/unit/`, not here. Every test added to this suite is
+paid for on every run, by every reviewer.
+
+### Targeting an environment
+
+The same specs run against any environment carrying the seed users. `BASE_URL` selects the target
+and `SEED_PASSWORD` the seed password; both have working local defaults, so **a plain `npm test`
+needs no configuration**.
+
+| Environment | How to run |
+|---|---|
+| Local Docker Compose | `npm test` (defaults to `http://localhost:3000`) |
+| `verita-dev` on Rancher | `BASE_URL=https://dev.verita.stud.k8s.aet.cit.tum.de npm test` |
+| Azure VM | `BASE_URL=https://<vm-host> npm test` |
+
+A localhost target gets a `npm run dev` server started for it; a deployed target is used as-is.
+`tests/e2e/` carries a ready-to-source file per target rather than a template to fill in:
+
+```bash
+set -a && . tests/e2e/.env.verita-dev && set +a && npm test
+```
+
+`.env.local` and `.env.verita-dev` are committed, and deliberately so — the hosts are public and
+`SEED_PASSWORD` is the seed script's own fixture password, not a credential. Checking them in is
+what makes the multi-environment run work out of the box. The Azure VM is the exception: its public
+IP is assigned per deploy, so `.env.azure` is gitignored and `.env.azure.example` shows how to fill
+it in.
+
+Remote environments must be seeded first — see
+[Seeding_Remote_Environments.md](../infrastructure/Seeding_Remote_Environments.md).
+
+---
+
+## Demo recordings
+
+`tests/demo/` records the README/presentation GIFs from the real app against the same seeded stack,
+reusing the E2E seed fixtures. They are **not** part of `npm test` (a separate config and an
+`*.demo.ts` suffix keep them out): they carry deliberate pauses and few assertions.
+
+```bash
+docker compose up -d && npm run seed:local   # from the repo root
+cd frontend && npm run demo:record           # → frontend/demo-recordings/**/*.webm
+cd .. && ./scripts/make-demo-gifs.sh         # → docs/assets/demo/*.gif
+```
+
+Raw `.webm` output is gitignored; only the converted GIFs are committed. Regenerate them
+deliberately rather than on every UI tweak — each one is a few MB in the repo.
 
 ---
 
@@ -145,101 +206,40 @@ Uses `vi.mock('../../../../src/services/content.service')` with three topics: al
 
 ## E2E tests
 
-All E2E tests run against the real, seeded backend and log in with a seed user via
-`tests/e2e/support.ts` (`loginAs`) — no route-mocking of data.
+All E2E tests drive the real, seeded backend and log in with a seed user via `tests/e2e/support.ts`
+(`loginAs`) — no route-mocking of data. Each test is one user story, end to end.
 
-### `tests/e2e/home.spec.ts` — Layout + Interactions + Auth State
-
-| ID | Test | Type |
+| ID | Story | What only a browser + real backend can prove |
 |---|---|---|
-| LT-5 | Sidebar is 240 px wide | Layout |
-| LT-6 | Topbar has search row and topic row | Layout |
-| LT-7 | Feed has both image cards and text cards | Layout |
-| I-8 | Topic chip click updates active state | Interaction |
-| I-9 | Sidebar sign in opens auth modal | Interaction |
-| I-10 | Scroll to bottom loads more posts | Interaction |
-| I-11 | Search submit navigates to /search | Interaction |
-| S-12 | Logged-out — banner visible, settings disabled, first chip is Trending | Auth state |
-| S-13 | Logged-in — banner absent, first chip is For you, digest badge visible | Auth state |
+| AUTH-1 | A seeded user signs in and is greeted by name | Real credentials accepted through the auth modal |
+| AUTH-2 | A signed-in session survives a page reload | The refresh cookie round-trips; the access token is memory-only |
+| AUTH-3 | A new visitor signs up and lands signed in | Registration creates a usable account |
+| AUTH-4 | Bad credentials and a taken email are rejected inline | Real 401 / availability responses reach the form |
+| HOME-1 | The feed renders seeded posts; a card opens its detail page | The feed is served, not fixtured |
+| HOME-2 | The feed is personalised once signed in | Trending → For you, driven by recommendation-service |
+| HOME-3 | Searching from the topbar lands on filtered results | Search wiring end to end |
+| POST-1 | A reader opens a post and expands its AI summary | The summary is generated by GenAI, served via content-service |
+| POST-2 | Liking and bookmarking persists to the reader | The writes reach content-service, not just optimistic UI |
+| POST-3 | A signed-in reader comments and sees it in the thread | Comment write + read-back |
+| EDIT-1 | An author writes, publishes, and finds it on their profile | The full authoring round trip |
+| EDIT-2 | The preview renders Markdown and KaTeX math | Live preview incl. formula typesetting |
+| PROF-1 | Own profile has management affordances, another's does not | Ownership is resolved from the real identity |
+| PROF-2 | Profile edits are saved and survive a refresh | The write reached user-service |
+| PROF-3 | Unpublishing moves a post from Posts into Drafts | Status transition persists |
+| PROF-4 | A visitor sees the profile without management controls | Signed-out rendering incl. the VERIFIED badge |
+| SET-1 | Signing out ends the session and it stays ended | The refresh cookie is really cleared |
+| SET-2 | The bookmarks privacy toggle controls what visitors see | The setting changes another viewer's page |
+| TOPIC-1 | Following a topic persists across a refresh | The follow reached user-service |
+| TOPIC-2 | A visitor is asked to sign in before managing topics | Auth gate on /topics |
+| DIG-1 | A signed-in reader opens today's personalised digest | A real generated digest renders (ADR-0019) |
+| DIG-2 | A visitor gets the public digest plus a sign-in upsell | PUBLIC vs PERSONAL digest split |
+| ADM-1 | /admin is open to an admin and closed to everyone else | The guard keys off the real JWT role |
+| ADM-2 | An admin reaches the panel; it survives a hard refresh | Async session restore does not bounce a real admin |
+| ADM-3 | The live LLM config loads; keyless providers are unselectable | content-service → GenAI over the internal-token channel (ADR-0020) |
 
-### `tests/e2e/auth.spec.ts` — Auth Modal
-
-| ID | Test | Type |
-|---|---|---|
-| AM-1 | Login screen shows wordmark, email, password, forgot link | Static render |
-| AM-2 | Password toggle reveals password | Interaction |
-| AM-3 | Signup screen shows username field and terms text | Static render |
-| AM-4 | Forgot password screen opens from login | Navigation |
-| AM-5 | Back link on forgot screen returns to login | Navigation |
-| AM-6 | Send reset link navigates to OTP screen | Navigation |
-| AM-7 | OTP grid has 6 cells that accept digits | Interaction |
-| AM-8 | Tab switch between login and signup | Interaction |
-| AM-9 | Switch link at bottom of login navigates to signup | Navigation |
-| AM-10 | Switch link at bottom of signup navigates to login | Navigation |
-| AM-11 | Login success → modal closes and Sign in button disappears | Auth flow |
-| AM-12 | Login success → page reload keeps user logged in | Auth flow |
-| AM-13 | Login with wrong password → shows credential error | Error state |
-| AM-14 | Login with network error → shows connection error | Error state |
-| AM-15 | Signup with duplicate email → shows email taken error | Error state |
-| AM-16 | Signup with duplicate username → shows username taken error | Error state |
-
-### `tests/e2e/digest.spec.ts` — Digest Page
-
-| ID | Test | Type |
-|---|---|---|
-| DIG-1 | Logged-in user sees today hero and past digests | Static render |
-| DIG-2 | Opening the today digest renders the reader (badge, read time, Save/Share, back) | Reader |
-| DIG-3 | Reader shows the personalisation note when logged in | Reader |
-| DIG-4 | Digest is a single past-digests view with no tab bar (ADR-0014) | Navigation |
-| DIG-5 | Logged-out user sees the public today digest + sign-in hero (ADR-0016) | Auth gate |
-| DIG-6 | Logged-out user can open the public digest reader with an auth upsell | Reader |
-
-### `tests/e2e/profile.spec.ts` — User Profile
-
-| ID | Test | Type |
-|---|---|---|
-| UP-1 | Own profile shows Edit Profile button | Auth-gated render |
-| UP-2 | Own profile shows Drafts tab | Auth-gated render |
-| UP-3 | Other user profile does not show Follow button | Auth-gated render |
-| UP-4 | Other user profile does not show Drafts tab | Auth-gated render |
-| UP-5 | Own profile does not show Follow button | Auth-gated render |
-| UP-6 | Profile displays name, handle, bio and stats | Static render |
-| UP-7 | Verified badge shown for VERIFIED user profile | Static render |
-| UP-8 | No verified badge on USER role profile | Static render |
-| UP-9 | Edit profile modal opens when Edit Profile clicked | Interaction |
-| UP-10 | Edit profile modal contains expected form fields | Static render |
-| UP-11 | Saving edit profile updates display name on page | Edit flow |
-| UP-13 | Switching to Bookmarks tab shows bookmark content | Navigation |
-| UP-14 | Switching to Drafts tab shows draft cards | Navigation |
-| UP-15 | Clicking a post card navigates to post detail | Navigation |
-| UP-16 | Unauthenticated user sees profile without edit or follow buttons | Auth state |
-| UP-17 | Navigating from Settings Edit Profile link loads own profile | Navigation |
-| UP-18 | Tabs appear in order Posts, Bookmarks, Likes, Drafts | Static render |
-| UP-19 | Each tab contains an SVG icon | Static render |
-| UP-20 | Own profile posts grid shows manage buttons | Auth-gated render |
-| UP-21 | Other profile posts grid has no manage buttons | Auth-gated render |
-| UP-22 | Delete post shows confirmation dialog; cancel keeps post | Interaction |
-| UP-23 | Confirming delete removes post from grid | Edit flow |
-| UP-24 | Unpublish shows confirmation; confirmed post appears in Drafts | Edit flow |
-| UP-25 | Draft delete shows confirmation dialog; cancel keeps draft | Interaction |
-| UP-26 | Confirming draft delete removes it from drafts grid | Edit flow |
-| UP-27 | Invalid website URL shows error and blocks save | Validation |
-| UP-28 | Website without protocol is normalized to https:// | Validation |
-| UP-29 | Bookmarks tab cards show Saved badge | Static render |
-| UP-30 | Likes tab is selectable and renders post cards | Navigation |
-
-### `tests/e2e/settings.spec.ts` — Settings Modal
-
-| ID | Test | Type |
-|---|---|---|
-| SM-1 | Opens when settings icon clicked while logged in | Interaction |
-| SM-2 | Account section shows stacked email and username | Static render |
-| SM-3 | Edit profile link-row has description text | Static render |
-| SM-4 | Sign out link-row has description text and signs out on click | Auth flow |
-| SM-5 | Digest frequency buttons change active state | Interaction |
-| SM-6 | Manage topics link-row has description text | Static render |
-| SM-7 | Privacy toggles have description text | Static render |
-| SM-8 | Privacy toggles are interactive | Interaction |
+Deliberately **not** here — these are Vitest tests in `tests/unit/`, where they are faster and more
+precise: auth-modal screen navigation and field rendering, toast copy, settings-row text, topic sort
+and filter logic, editor toolbar/validation/exit-guard behaviour, layout measurements.
 
 ---
 
