@@ -10,7 +10,13 @@ from fastapi.testclient import TestClient
 
 from app.config import get_settings
 from app.main import app
-from app.schemas.digest import DigestEvent, DigestGenerateResponse, DigestJobWarning, DigestTopic
+from app.schemas.digest import (
+    DigestEvent,
+    DigestGenerateResponse,
+    DigestJobWarning,
+    DigestSource,
+    DigestTopic,
+)
 from app.services.digest_generator import DigestJsonParseError
 from app.services.digest_jobs import clear_jobs
 from app.services.external_sources import ExternalSourceItem
@@ -74,7 +80,6 @@ def _digest_result() -> DigestGenerateResponse:
         digestDate=datetime(2026, 6, 4, tzinfo=timezone.utc).date(),
         periodStart=datetime(2026, 6, 3, tzinfo=timezone.utc),
         periodEnd=datetime(2026, 6, 4, tzinfo=timezone.utc),
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work and agent tooling updates shaped the day.",
         topics=topics,
@@ -83,7 +88,15 @@ def _digest_result() -> DigestGenerateResponse:
                 headline="New LLM benchmark compares long-context behavior",
                 summaryBullets=["The benchmark highlights differences in retrieval quality."],
                 topicIds=[topics[0].id],
-                sourceUrls=["https://example.com/llm-benchmark"],
+                sources=[
+                    DigestSource(
+                        url="https://example.com/llm-benchmark",
+                        sourceName="Example News",
+                        provider="gnews",
+                        publishedAt=datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc),
+                        title="New LLM benchmark",
+                    )
+                ],
             )
         ],
         eventCount=1,
@@ -120,7 +133,7 @@ class TestDigestJobs:
         assert status_response.status_code == 200
         data = status_response.json()
         assert data["status"] == "SUCCEEDED"
-        assert data["result"]["title"] == "Your Thursday AI Digest"
+        assert "title" not in data["result"]
         assert data["result"]["sourceCount"] == 1
         assert data["error"] is None
 

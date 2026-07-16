@@ -5,6 +5,7 @@ import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -32,8 +33,13 @@ public class JwtUtils {
     /**
      * Generates a signed JWT for an authenticated principal.
      * The token subject is the username; the user's UUID is carried in a {@code userId}
-     * claim so consumer services can identify the caller without a lookup. Expiry is set
-     * from {@code app.jwt-expiration-ms}.
+     * claim so consumer services can identify the caller without a lookup, and the user's role
+     * in a {@code role} claim so consumer services can authorize admin-only routes without a
+     * lookup either (ADR-0001, extended by ADR-0020). Expiry is set from
+     * {@code app.jwt-expiration-ms}.
+     *
+     * <p>The role is a snapshot: a role change only reaches consumer services when the caller's
+     * next access token is minted (login or refresh, which rebuilds the principal from the DB).
      *
      * @param authentication the authenticated principal returned by the AuthenticationManager
      * @return a compact, URL-safe JWT string
@@ -44,10 +50,21 @@ public class JwtUtils {
         return Jwts.builder()
                 .setSubject(userPrincipal.getUsername())
                 .claim("userId", userPrincipal.getId().toString())
+                .claim("role", extractRole(userPrincipal))
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    /** Unwraps the principal's single {@code ROLE_*} authority back to the bare role name. */
+    private String extractRole(UserDetailsImpl principal) {
+        return principal.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(a -> a.startsWith("ROLE_"))
+                .map(a -> a.substring("ROLE_".length()))
+                .findFirst()
+                .orElse("USER");
     }
 
     /**

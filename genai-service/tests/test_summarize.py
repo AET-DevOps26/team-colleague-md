@@ -69,7 +69,7 @@ class TestSummarizeEndpoint:
 
     @patch("app.services.summarizer._build_chain")
     def test_summarize_success(self, mock_build_chain, client):
-        """Valid request should return 200 with 3-bullet summary."""
+        """Valid request should return 200 with summary bullets."""
         # Mock the LCEL chain's ainvoke to return canned response
         from langchain_core.messages import AIMessage
         mock_chain = AsyncMock()
@@ -198,23 +198,22 @@ class TestBulletParsing:
         result = _parse_bullets(raw)
         assert result == ["First point", "Second point", "Third point"]
 
-    def test_parse_pads_short_output(self):
-        """Output with fewer than 3 bullets should be padded."""
+    def test_parse_keeps_short_output(self):
+        """Output with fewer than 3 bullets should not gain empty bullets."""
         from app.services.summarizer import _parse_bullets
 
         raw = "• First point\n• Second point"
         result = _parse_bullets(raw)
-        assert len(result) == 3
-        assert result[2] == ""
+        assert result == ["First point", "Second point"]
 
     def test_parse_truncates_long_output(self):
-        """Output with more than 3 bullets should be truncated."""
+        """Output with more than 5 bullets should be truncated."""
         from app.services.summarizer import _parse_bullets
 
-        raw = "• One\n• Two\n• Three\n• Four\n• Five"
+        raw = "• One\n• Two\n• Three\n• Four\n• Five\n• Six"
         result = _parse_bullets(raw)
-        assert len(result) == 3
-        assert result == ["One", "Two", "Three"]
+        assert len(result) == 5
+        assert result == ["One", "Two", "Three", "Four", "Five"]
 
 
 class TestLlmFactory:
@@ -229,7 +228,6 @@ class TestLlmFactory:
             llm_model="openai/gpt-oss-120b",
             llm_temperature=0.3,
             logos_api_key="test-logos-key",
-            logos_base_url="https://logos.aet.cit.tum.de/v1",
         )
 
         result = _get_llm(settings)

@@ -71,7 +71,7 @@ def test_build_digest_chain_requests_structured_output():
 
     fake_llm = FakeLlm()
     with (
-        patch("app.services.digest_generator.get_settings") as mock_settings,
+        patch("app.services.digest_generator.active_settings") as mock_settings,
         patch("app.services.digest_generator._get_llm", return_value=fake_llm),
     ):
         mock_settings.return_value = SimpleNamespace(llm_model="test-model")
@@ -95,7 +95,7 @@ def test_build_digest_chain_uses_plain_structured_output_once():
 
     fake_llm = FakeLlm()
     with (
-        patch("app.services.digest_generator.get_settings") as mock_settings,
+        patch("app.services.digest_generator.active_settings") as mock_settings,
         patch("app.services.digest_generator._get_llm", return_value=fake_llm),
     ):
         mock_settings.return_value = SimpleNamespace(llm_model="test-model")
@@ -117,7 +117,6 @@ async def test_generate_digest_only_mocks_llm_api(mock_build_chain):
             usage_metadata={"input_tokens": 120, "output_tokens": 80, "total_tokens": 200}
         ),
         "parsed": DigestLlmOutput(
-            title="Your Thursday AI Digest",
             topStorySubtitle="LLM benchmarking led today's AI updates.",
             summary="New model evaluation work shaped the day.",
             events=[
@@ -135,12 +134,15 @@ async def test_generate_digest_only_mocks_llm_api(mock_build_chain):
 
     result = await generate_digest(_request(), [_source()])
 
-    assert result.title == "Your Thursday AI Digest"
+    assert not hasattr(result, "title")
     assert result.model == "test-model"
     assert result.sourceCount == 1
     assert result.eventCount == 1
     assert result.events[0].topicIds == ["topic-llms"]
-    assert result.events[0].sourceUrls == ["https://example.com/llm-benchmark"]
+    assert [s.url for s in result.events[0].sources] == ["https://example.com/llm-benchmark"]
+    assert result.events[0].sources[0].sourceName == "Example News"
+    assert result.events[0].sources[0].provider == "gnews"
+    assert result.events[0].sources[0].publishedAt == datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc)
     assert result.usage is not None
     assert result.usage.total_tokens == 200
 
@@ -158,7 +160,6 @@ async def test_generate_digest_only_mocks_llm_api(mock_build_chain):
 async def test_generate_digest_accepts_direct_structured_output_without_usage(mock_build_chain):
     chain = AsyncMock()
     chain.ainvoke.return_value = DigestLlmOutput(
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work shaped the day.",
         events=[
@@ -198,7 +199,6 @@ async def test_generate_digest_rejects_invalid_structured_output(mock_build_chai
 async def test_generate_digest_rejects_invalid_source_ids(mock_build_chain):
     chain = AsyncMock()
     chain.ainvoke.return_value = DigestLlmOutput(
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work shaped the day.",
         events=[
@@ -221,7 +221,6 @@ async def test_generate_digest_rejects_invalid_source_ids(mock_build_chain):
 async def test_generate_digest_rejects_invalid_topic_keys(mock_build_chain):
     chain = AsyncMock()
     chain.ainvoke.return_value = DigestLlmOutput(
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work shaped the day.",
         events=[

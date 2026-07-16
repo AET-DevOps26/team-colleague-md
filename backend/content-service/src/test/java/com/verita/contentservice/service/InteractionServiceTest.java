@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
@@ -41,6 +42,7 @@ public class InteractionServiceTest {
     @Mock private VoteRepository voteRepository;
     @Mock private BookmarkRepository bookmarkRepository;
     @Mock private SecurityUtils securityUtils;
+    @Mock private ApplicationEventPublisher eventPublisher;
     @InjectMocks private InteractionService interactionService;
 
     private UUID userId;
@@ -75,6 +77,24 @@ public class InteractionServiceTest {
         assertFalse(response.getIsDislikedByMe());
         verify(voteRepository).save(any(VoteEntity.class));
         verify(postRepository).refreshVoteCounts(post.getId());
+    }
+
+    @Test
+    void likePost_like_writesBackLikeReceivedDeltaToAuthor() {
+        PostEntity post = publishedPost();
+        PostEntity refreshed = publishedPost();
+        refreshed.setId(post.getId());
+        refreshed.setAuthorId(post.getAuthorId());
+        refreshed.setLikeCount(1); // one like now recorded on the post
+        when(postRepository.findByIdAndDeletedFalse(post.getId()))
+                .thenReturn(Optional.of(post))   // initial lookup: 0 likes
+                .thenReturn(Optional.of(refreshed)); // after refreshVoteCounts: 1 like
+        when(voteRepository.findByUserIdAndTargetTypeAndTargetId(userId, VoteTargetType.POST, post.getId()))
+                .thenReturn(Optional.empty());
+
+        interactionService.likePost(post.getId(), LikeRequest.TypeEnum.LIKE);
+
+        verify(eventPublisher).publishEvent(new UserStatsDeltaEvent(post.getAuthorId(), 0, 1));
     }
 
     @Test

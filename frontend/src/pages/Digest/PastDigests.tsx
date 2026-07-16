@@ -95,11 +95,20 @@ export default function PastDigests() {
             <div className={styles.todayLabel}>
               <span className={styles.todayLabelDot} />
               Today · {todayFormatted}
+              <span className={styles.digestTypeBadge}>
+                {todayDigest.digestType === 'PUBLIC' ? 'Community' : 'Personalized'}
+              </span>
             </div>
             {todayDigest.status === 'generated' ? (
               <>
                 <div className={styles.todayTitle}>{todayDigest.title}</div>
                 <div className={styles.todaySubtitle}>{todayDigest.topStorySubtitle}</div>
+                {todayDigest.digestType === 'PUBLIC' && (
+                  <div className={styles.zeroSubHint}>
+                    You follow no topics — you’ll only get the public digest.{' '}
+                    <button type="button" onClick={() => navigate('/topics')}>Follow topics →</button>
+                  </div>
+                )}
                 <div className={styles.todayMeta}>
                   <span>{todayDigest.eventCount} events</span>
                   <span className={styles.todayMetaDot}>·</span>
@@ -192,6 +201,9 @@ function DigestCard({ item, onClick }: { item: DigestListItem; onClick: () => vo
       <div className={styles.histCardBlock}>
         <div className={styles.histEyebrow}>
           <span className={styles.histDate}>{item.displayDate}</span>
+          <span className={styles.digestTypeBadge}>
+            {item.digestType === 'PUBLIC' ? 'Community' : 'Personalized'}
+          </span>
           <span className={styles.histMetaInline}>{item.eventCount} events · ~{item.readTimeMinutes} min</span>
         </div>
         <blockquote className={styles.histPull}>{item.title}</blockquote>

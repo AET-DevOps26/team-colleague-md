@@ -52,7 +52,7 @@
 .panel {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 18px 20px;
 }
 
@@ -76,6 +76,16 @@
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   margin-left: auto;
+}
+
+.updatingTag {
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 4px;
 }
 
 .bullets {
@@ -110,34 +120,44 @@
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  gap: 10px;
   font-size: 11.5px;
   color: var(--text-tertiary);
 }
 
-.dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
+.pending {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
 }
 
-.regenerate {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+.pending p {
+  margin: 2px 0 0;
   color: var(--text-secondary);
-  font-size: 11.5px;
-  font-weight: 500;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color 120ms;
+  font-size: 13px;
 }
 
-.regenerate:hover {
-  color: var(--text-primary);
+.skeletonLine,
+.skeletonLineShort {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--border-subtle), var(--bg-page), var(--border-subtle));
+  background-size: 200% 100%;
+  animation: summaryPulse 1.4s ease-in-out infinite;
+}
+
+.skeletonLine {
+  width: 86%;
+}
+
+.skeletonLineShort {
+  width: 62%;
+}
+
+@keyframes summaryPulse {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }

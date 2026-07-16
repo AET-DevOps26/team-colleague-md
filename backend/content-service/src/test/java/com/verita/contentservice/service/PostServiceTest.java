@@ -2,7 +2,7 @@ package com.verita.contentservice.service;
 
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
-import com.verita.contentservice.entity.PostType;
+import com.verita.contentservice.entity.SummaryStatus;
 import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
@@ -13,6 +13,7 @@ import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.AuthorSummary;
+import com.verita.model.FailedSummaryPage;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
@@ -27,6 +28,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -56,7 +58,7 @@ public class PostServiceTest {
     @Mock private ApplicationEventPublisher eventPublisher;
     @InjectMocks private PostService postService;
 
-    private static final String AUTH = "Bearer token";
+    private static final String ELIGIBLE_CONTENT = "This post has enough substantive content for the GenAI summary request.";
     private UUID userId;
 
     @BeforeEach
@@ -84,7 +86,7 @@ public class PostServiceTest {
         p.setAuthorId(author);
         p.setStatus(status);
         p.setTitle("A valid title");
-        p.setContent("Some content here");
+        p.setContent(ELIGIBLE_CONTENT);
         return p;
     }
 
@@ -92,7 +94,7 @@ public class PostServiceTest {
 
     @Test
     void createPost_publishesSummaryEvent_andReturnsResponse() {
-        PostRequest request = new PostRequest("A valid title", "Hello world content")
+        PostRequest request = new PostRequest("A valid title", ELIGIBLE_CONTENT)
                 .status(PostRequest.StatusEnum.PUBLISHED)
                 .topics(List.of());
 
@@ -101,8 +103,21 @@ public class PostServiceTest {
         assertNotNull(response);
         assertNotNull(response.getId());
         assertEquals("A valid title", response.getTitle());
+        assertEquals(com.verita.model.SummaryStatus.PENDING, response.getSummaryStatus());
         verify(eventPublisher).publishEvent(any(PostSummaryRequestedEvent.class));
         verify(postRepository).save(any(PostEntity.class));
+    }
+
+    @Test
+    void createPost_shortContent_setsNoneAndSkipsSummaryEvent() {
+        PostRequest request = new PostRequest("A valid title", "Too short")
+                .status(PostRequest.StatusEnum.PUBLISHED)
+                .topics(List.of());
+
+        PostResponse response = postService.createPost(request);
+
+        assertEquals(com.verita.model.SummaryStatus.NONE, response.getSummaryStatus());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
     }
 
     @Test
@@ -115,51 +130,6 @@ public class PostServiceTest {
         PostResponse response = postService.createPost(request);
 
         assertEquals(240, response.getExcerpt().length());
-    }
-
-    @Test
-    void createDigest_savesPublishedDigestTypePostBySystemAuthor() {
-        UUID systemAuthor = UUID.randomUUID();
-        org.springframework.test.util.ReflectionTestUtils.setField(postService, "digestSystemAuthorId", systemAuthor);
-        com.verita.model.DigestPostRequest req =
-                new com.verita.model.DigestPostRequest("Daily AI Digest", "## Top stories\nbody");
-
-        PostResponse resp = postService.createDigest(req);
-
-        assertEquals(PostResponse.TypeEnum.DIGEST, resp.getType());
-        ArgumentCaptor<PostEntity> captor = ArgumentCaptor.forClass(PostEntity.class);
-        verify(postRepository).save(captor.capture());
-        assertEquals(PostType.DIGEST, captor.getValue().getType());
-        assertEquals(PostStatus.PUBLISHED, captor.getValue().getStatus());
-        assertEquals(systemAuthor, captor.getValue().getAuthorId());
-        // No targetUserId supplied → global digest (ADR-0013).
-        assertNull(captor.getValue().getTargetUserId());
-    }
-
-    @Test
-    void createDigest_withTargetUserId_persistsPerUserAssociation() {
-        org.springframework.test.util.ReflectionTestUtils.setField(postService, "digestSystemAuthorId", UUID.randomUUID());
-        UUID target = UUID.randomUUID();
-        com.verita.model.DigestPostRequest req =
-                new com.verita.model.DigestPostRequest("Daily AI Digest", "## Top stories\nbody")
-                        .targetUserId(target);
-
-        postService.createDigest(req);
-
-        ArgumentCaptor<PostEntity> captor = ArgumentCaptor.forClass(PostEntity.class);
-        verify(postRepository).save(captor.capture());
-        assertEquals(target, captor.getValue().getTargetUserId());
-    }
-
-    @Test
-    void getMyDigests_queriesCallersDigestsByTargetUser() {
-        when(postRepository.findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
-                eq(userId), eq(PostType.DIGEST), any())).thenReturn(Page.empty());
-
-        postService.getMyDigests(0, 10);
-
-        verify(postRepository).findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
-                eq(userId), eq(PostType.DIGEST), any());
     }
 
     // ---- update / patch ownership ------------------------------------------
@@ -190,7 +160,7 @@ public class PostServiceTest {
     }
 
     @Test
-    void patchPost_titleChange_publishesSummaryEvent() {
+    void patchPost_titleChange_doesNotPublishSummaryEvent() {
         PostEntity owned = post(userId, PostStatus.PUBLISHED);
         when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
 
@@ -198,7 +168,49 @@ public class PostServiceTest {
         postService.patchPost(owned.getId(), patch);
 
         assertEquals("A brand new title", owned.getTitle());
+        assertEquals(com.verita.contentservice.entity.SummaryStatus.NONE, owned.getSummaryStatus());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void patchPost_contentChange_setsPendingAndPublishesSummaryEvent() {
+        PostEntity owned = post(userId, PostStatus.PUBLISHED);
+        when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
+
+        PostPatchRequest patch = new PostPatchRequest().content(ELIGIBLE_CONTENT + " Updated.");
+        postService.patchPost(owned.getId(), patch);
+
+        assertEquals(com.verita.contentservice.entity.SummaryStatus.PENDING, owned.getSummaryStatus());
         verify(eventPublisher).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void patchPost_contentShortened_setsNoneAndClearsExistingSummary() {
+        PostEntity owned = post(userId, PostStatus.PUBLISHED);
+        owned.setContentSummary("old summary");
+        owned.setSummaryStatus(com.verita.contentservice.entity.SummaryStatus.COMPLETED);
+        when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
+
+        PostPatchRequest patch = new PostPatchRequest().content("Too short");
+        postService.patchPost(owned.getId(), patch);
+
+        assertEquals(com.verita.contentservice.entity.SummaryStatus.NONE, owned.getSummaryStatus());
+        assertNull(owned.getContentSummary());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void updatePost_sameContent_doesNotPublishSummaryEvent() {
+        PostEntity owned = post(userId, PostStatus.PUBLISHED);
+        when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
+
+        PostRequest request = new PostRequest("A brand new title", ELIGIBLE_CONTENT)
+                .status(PostRequest.StatusEnum.PUBLISHED)
+                .topics(List.of());
+        postService.updatePost(owned.getId(), request);
+
+        assertEquals("A brand new title", owned.getTitle());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
     }
 
     @Test
@@ -210,7 +222,7 @@ public class PostServiceTest {
         PostPatchRequest patch = new PostPatchRequest().status(PostPatchRequest.StatusEnum.DRAFT);
         postService.patchPost(owned.getId(), patch);
 
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
     }
 
     @Test
@@ -261,80 +273,27 @@ public class PostServiceTest {
         verify(postRepository).incrementViewCount(draft.getId());
     }
 
-    // ---- digest access model (ADR-0016) ------------------------------------
-
-    private PostEntity digest(UUID target) {
-        PostEntity p = post(UUID.randomUUID(), PostStatus.PUBLISHED);
-        p.setType(PostType.DIGEST);
-        p.setTargetUserId(target);
-        return p;
-    }
-
     @Test
-    void getPost_personalDigestByNonTarget_throwsNotFound() {
-        PostEntity d = digest(UUID.randomUUID()); // targeted at someone else
-        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
+    void getPostSummary_usesPostVisibilityWithoutIncrementingViews() {
+        PostEntity p = post(UUID.randomUUID(), PostStatus.PUBLISHED);
+        p.setContentSummary("line one\nline two");
+        p.setSummaryStatus(com.verita.contentservice.entity.SummaryStatus.COMPLETED);
+        when(postRepository.findByIdAndDeletedFalse(p.getId())).thenReturn(Optional.of(p));
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getPost(d.getId()));
+        var response = postService.getPostSummary(p.getId());
 
-        assertEquals(404, ex.getStatusCode().value());
+        assertEquals(com.verita.model.SummaryStatus.COMPLETED, response.getStatus());
+        assertEquals("line one\nline two", response.getSummary().get());
         verify(postRepository, never()).incrementViewCount(any());
     }
 
     @Test
-    void getPost_personalDigestByAnonymous_throwsNotFound() {
-        when(securityUtils.getCurrentUserIdOptional()).thenReturn(Optional.empty());
-        PostEntity d = digest(UUID.randomUUID());
-        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
+    void getPostSummary_draftByNonAuthor_throwsNotFound() {
+        PostEntity draft = post(UUID.randomUUID(), PostStatus.DRAFT);
+        when(postRepository.findByIdAndDeletedFalse(draft.getId())).thenReturn(Optional.of(draft));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getPost(d.getId()));
-
-        assertEquals(404, ex.getStatusCode().value());
-    }
-
-    @Test
-    void getPost_personalDigestByTarget_isVisible() {
-        PostEntity d = digest(userId); // targeted at me
-        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
-
-        PostResponse response = postService.getPost(d.getId());
-
-        assertNotNull(response);
-        verify(postRepository).incrementViewCount(d.getId());
-    }
-
-    @Test
-    void getPost_publicDigestByAnonymous_isVisible() {
-        when(securityUtils.getCurrentUserIdOptional()).thenReturn(Optional.empty());
-        PostEntity d = digest(null); // public digest
-        when(postRepository.findByIdAndDeletedFalse(d.getId())).thenReturn(Optional.of(d));
-
-        PostResponse response = postService.getPost(d.getId());
-
-        assertNotNull(response);
-        verify(postRepository).incrementViewCount(d.getId());
-    }
-
-    @Test
-    void getPublicTodayDigest_returnsNewestNullTargetDigest() {
-        PostEntity d = digest(null);
-        when(postRepository.findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(
-                PostType.DIGEST)).thenReturn(Optional.of(d));
-
-        PostResponse response = postService.getPublicTodayDigest();
-
-        assertEquals(d.getId(), response.getId());
-    }
-
-    @Test
-    void getPublicTodayDigest_noneExists_throwsNotFound() {
-        when(postRepository.findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(
-                PostType.DIGEST)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> postService.getPublicTodayDigest());
+                () -> postService.getPostSummary(draft.getId()));
 
         assertEquals(404, ex.getStatusCode().value());
     }
@@ -355,6 +314,18 @@ public class PostServiceTest {
         assertTrue(owned.isDeleted());
         assertNotNull(owned.getDeletedAt());
         verify(topicRepository).decrementTotalPostCount(topic.getId());
+    }
+
+    @Test
+    void deletePost_published_reversesAccruedLikesFromAuthorStats() {
+        PostEntity owned = post(userId, PostStatus.PUBLISHED);
+        owned.setLikeCount(3);
+        when(postRepository.findByIdAndDeletedFalse(owned.getId())).thenReturn(Optional.of(owned));
+
+        postService.deletePost(owned.getId());
+
+        // postCount -1 for the unpublish, and the 3 likes it had accrued are reversed (#178)
+        verify(eventPublisher).publishEvent(new UserStatsDeltaEvent(userId, -1, -3));
     }
 
     @Test
@@ -460,25 +431,25 @@ public class PostServiceTest {
     // ---- listing routes the right query ------------------------------------
 
     @Test
-    void getAllPosts_noTopic_defaultsToNormalTypeQuery() {
-        when(postRepository.findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), any())).thenReturn(Page.empty());
+    void getAllPosts_noTopic_usesPublishedQuery() {
+        when(postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, null, null);
+        postService.getAllPosts(0, 10, null);
 
-        verify(postRepository).findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.NORMAL), any());
+        verify(postRepository).findByDeletedFalseAndStatusOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), any());
     }
 
     @Test
-    void getAllPosts_withTopicAndType_usesTopicAndTypeFilteredQuery() {
-        when(postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.DIGEST), eq("java"), any())).thenReturn(Page.empty());
+    void getAllPosts_withTopic_usesTopicFilteredQuery() {
+        when(postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq("java"), any())).thenReturn(Page.empty());
 
-        postService.getAllPosts(0, 10, "java", "DIGEST");
+        postService.getAllPosts(0, 10, "java");
 
-        verify(postRepository).findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
-                eq(PostStatus.PUBLISHED), eq(PostType.DIGEST), eq("java"), any());
+        verify(postRepository).findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(
+                eq(PostStatus.PUBLISHED), eq("java"), any());
     }
 
     // ---- pure helpers / author summary -------------------------------------
@@ -523,5 +494,59 @@ public class PostServiceTest {
 
         verify(postRepository).findByDeletedFalseAndAuthorIdAndStatusOrderByCreatedAtDesc(
                 eq(userId), eq(PostStatus.DRAFT), any());
+    }
+
+    // ---- admin summary ops (ADR-0020) ---------------------------------------
+
+    @Test
+    void requestSummaryRegeneration_failedPost_setsPendingAndRepublishesEvent() {
+        PostEntity failed = post(userId, PostStatus.PUBLISHED);
+        failed.setSummaryStatus(SummaryStatus.FAILED);
+        when(postRepository.findByIdAndDeletedFalse(failed.getId())).thenReturn(Optional.of(failed));
+
+        postService.requestSummaryRegeneration(failed.getId());
+
+        assertEquals(SummaryStatus.PENDING, failed.getSummaryStatus());
+        verify(eventPublisher).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void requestSummaryRegeneration_shortContent_conflictsAndPublishesNothing() {
+        PostEntity ineligible = post(userId, PostStatus.PUBLISHED);
+        ineligible.setContent("Too short");
+        when(postRepository.findByIdAndDeletedFalse(ineligible.getId())).thenReturn(Optional.of(ineligible));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> postService.requestSummaryRegeneration(ineligible.getId()));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        verify(eventPublisher, never()).publishEvent(any(PostSummaryRequestedEvent.class));
+    }
+
+    @Test
+    void requestSummaryRegeneration_unknownPost_notFound() {
+        UUID missing = UUID.randomUUID();
+        when(postRepository.findByIdAndDeletedFalse(missing)).thenReturn(Optional.empty());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> postService.requestSummaryRegeneration(missing));
+
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+    }
+
+    @Test
+    void listFailedSummaries_returnsOnlyFailedPosts() {
+        PostEntity failed = post(userId, PostStatus.PUBLISHED);
+        failed.setSummaryStatus(SummaryStatus.FAILED);
+        when(postRepository.findByDeletedFalseAndSummaryStatusOrderByUpdatedAtDesc(
+                eq(SummaryStatus.FAILED), any())).thenReturn(new PageImpl<>(List.of(failed)));
+
+        FailedSummaryPage page = postService.listFailedSummaries(0, 20);
+
+        assertEquals(1, page.getContent().size());
+        assertEquals(failed.getId(), page.getContent().get(0).getId());
+        assertEquals(com.verita.model.SummaryStatus.FAILED, page.getContent().get(0).getSummaryStatus());
+        verify(postRepository).findByDeletedFalseAndSummaryStatusOrderByUpdatedAtDesc(
+                eq(SummaryStatus.FAILED), any());
     }
 }

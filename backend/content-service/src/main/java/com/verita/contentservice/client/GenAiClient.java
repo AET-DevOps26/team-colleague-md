@@ -5,6 +5,8 @@ import com.verita.contentservice.dto.DigestJobAcceptedDto;
 import com.verita.contentservice.dto.DigestJobStatusDto;
 import com.verita.contentservice.dto.GenAiSummarizeRequest;
 import com.verita.contentservice.dto.GenAiSummarizeResponse;
+import com.verita.contentservice.dto.LlmConfigDto;
+import com.verita.contentservice.dto.LlmConfigUpdateDto;
 import java.time.Duration;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,12 +28,16 @@ public class GenAiClient {
         this.internalServiceToken = internalServiceToken;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
-        factory.setReadTimeout(Duration.ofSeconds(10));
+        // Summarization latency scales with the model an admin selected at runtime (ADR-0020): the
+        // small ones answer in seconds, the 400B+ ones take ~20s. The caller is an @Async listener,
+        // so waiting costs no request thread — timing out early would only mark a post FAILED while
+        // GenAI happily finished the work.
+        factory.setReadTimeout(Duration.ofSeconds(60));
         this.genaiClient = RestClient.builder().requestFactory(factory).baseUrl(genaiUrl).build();
     }
 
     /** Fired from an async best-effort listener; genai work endpoints authenticate by service token. */
-    public GenAiSummarizeResponse summarize(String authorization, UUID postId, String title, String content) {
+    public GenAiSummarizeResponse summarize(UUID postId, String title, String content) {
         return genaiClient.post()
                 .uri("/api/v1/genai/summarize")
                 .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
@@ -49,6 +55,29 @@ public class GenAiClient {
                 .body(request)
                 .retrieve()
                 .body(DigestJobAcceptedDto.class);
+    }
+
+    /** Reads genai-service's live (provider, model) pair and provider availability (ADR-0020). */
+    public LlmConfigDto getLlmConfig() {
+        return genaiClient.get()
+                .uri("/internal/v1/llm-config")
+                .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
+                .retrieve()
+                .body(LlmConfigDto.class);
+    }
+
+    /**
+     * Sets genai-service's in-memory (provider, model) override. genai-service answers 400 when the
+     * provider is unknown or has no API key; the caller translates that into the admin's 400.
+     */
+    public LlmConfigDto updateLlmConfig(LlmConfigUpdateDto request) {
+        return genaiClient.put()
+                .uri("/internal/v1/llm-config")
+                .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(LlmConfigDto.class);
     }
 
     public DigestJobStatusDto getDigestJob(String jobId) {

@@ -22,4 +22,4 @@ We decided:
 ## Consequences
 
 - Tokens minted before this change lack the `userId` claim; users must re-login to obtain it. Acceptable pre-launch.
-- recommendation-service adopts the Nimbus-shared-secret consumer pattern **now**; content-service converging onto it (and dropping its `/users/me` identity resolution) is tracked as a separate issue. No `roles` claim is added yet (YAGNI).
+- recommendation-service adopts the Nimbus-shared-secret consumer pattern **now**; content-service converging onto it (and dropping its `/users/me` identity resolution) is tracked as a separate issue. No `roles` claim is added yet (YAGNI). **Superseded by ADR-0020:** the admin panel needs consumer services to authorize on role, so the access token now also carries a `role` claim.

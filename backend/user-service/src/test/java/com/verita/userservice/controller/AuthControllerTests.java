@@ -2,14 +2,19 @@ package com.verita.userservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.verita.model.AuthResponse;
+import com.verita.model.ForgotPasswordRequest;
 import com.verita.model.LoginRequest;
 import com.verita.model.RegisterRequest;
+import com.verita.model.ResetPasswordRequest;
+import com.verita.model.VerifyResetCodeRequest;
+import com.verita.model.VerifyResetCodeResponse;
 import com.verita.userservice.exception.*;
 import com.verita.userservice.security.AuthEntryPointJwt;
 import com.verita.userservice.security.JwtUtils;
 import com.verita.userservice.security.UserDetailsServiceImpl;
 import com.verita.userservice.security.SecurityConfig;
 import com.verita.userservice.service.AuthService;
+import com.verita.userservice.service.PasswordResetService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,6 +31,7 @@ import jakarta.servlet.http.Cookie;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -48,6 +54,9 @@ public class AuthControllerTests {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
 
     @MockitoBean
     private JwtUtils jwtUtils;
@@ -225,5 +234,79 @@ public class AuthControllerTests {
                 .andExpect(cookie().maxAge("refreshToken", 0));
 
         verify(authService).logout(null);
+    }
+
+    @Test
+    void testForgotPassword_Returns204() throws Exception {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("alice@example.com");
+
+        mockMvc.perform(post("/api/v1/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(passwordResetService).forgotPassword(any(ForgotPasswordRequest.class));
+    }
+
+    @Test
+    void testVerifyResetCode_Valid_Returns200WithToken() throws Exception {
+        VerifyResetCodeRequest request = new VerifyResetCodeRequest();
+        request.setEmail("alice@example.com");
+        request.setCode("123456");
+
+        VerifyResetCodeResponse response = new VerifyResetCodeResponse();
+        response.setResetToken("reset-token-uuid");
+        when(passwordResetService.verifyResetCode(any(VerifyResetCodeRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/auth/verify-reset-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resetToken").value("reset-token-uuid"));
+    }
+
+    @Test
+    void testVerifyResetCode_InvalidCode_Returns400() throws Exception {
+        VerifyResetCodeRequest request = new VerifyResetCodeRequest();
+        request.setEmail("alice@example.com");
+        request.setCode("000000");
+
+        when(passwordResetService.verifyResetCode(any(VerifyResetCodeRequest.class)))
+                .thenThrow(new InvalidPasswordResetException());
+
+        mockMvc.perform(post("/api/v1/auth/verify-reset-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testResetPassword_Returns204() throws Exception {
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setToken("reset-token-uuid");
+        request.setNewPassword("New-Pass-123");
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(passwordResetService).resetPassword(any(ResetPasswordRequest.class));
+    }
+
+    @Test
+    void testResetPassword_InvalidToken_Returns400() throws Exception {
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setToken("bad-token");
+        request.setNewPassword("New-Pass-123");
+
+        doThrow(new InvalidPasswordResetException())
+                .when(passwordResetService).resetPassword(any(ResetPasswordRequest.class));
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 }

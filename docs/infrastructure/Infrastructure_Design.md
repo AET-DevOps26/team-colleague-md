@@ -367,6 +367,12 @@ The K8s deployment is a single umbrella chart, [`infra/helm/verita/`](../../infr
 - **Namespace constraints**: the shared TUM namespace enforces a ResourceQuota (every
   container must declare limits) and grants no cluster-scoped RBAC — which shapes the
   monitoring setup (see below) and the chart's explicit `resources` blocks.
+- **GenAI Service**: both Helm and Ansible default to the TUM Logos provider
+  (`LLM_PROVIDER=logos`, `LLM_MODEL=openai/gpt-oss-120b`) and inject the provider keys from
+  GitHub Actions Secrets; the Logos endpoint itself is fixed in the application rather than
+  in deployment configuration. The chart pins `replicaCount: 1` because digest-job state is
+  process-local — job creation and status polling must land on the same process, so scaling
+  out requires moving that state to a shared store.
 
 Chart layout, install/upgrade commands, and troubleshooting:
 [`infra/helm/verita/README.md`](../../infra/helm/verita/README.md).
@@ -412,6 +418,7 @@ Details and troubleshooting: [`infra/monitoring/README.md`](../../infra/monitori
 | Secret | `USER_SERVICE_S3_ACCESS_KEY` / `USER_SERVICE_S3_SECRET_KEY` | Ansible; Helm prod overrides the secret key |
 | Secret | `CONTENT_SERVICE_S3_ACCESS_KEY` / `CONTENT_SERVICE_S3_SECRET_KEY` | Ansible; Helm prod overrides the secret key |
 | Secret | `MAIL_USERNAME` / `MAIL_PASSWORD` / `MAIL_FROM` | Ansible + Helm prod — Brevo SMTP (password-reset mail) |
+| Secret | `NVIDIA_NIM_API_KEY` / `LOGOS_API_KEY` / `GNEWS_API_KEY` | Ansible + Helm — GenAI Service LLM providers and digest sources |
 | Secret | `KUBECONFIG` | Helm deploy — Rancher cluster access |
 | Variable | `AZURE_USER` | Ansible — VM admin username (`azureuser`) |
 | Variable | `AZURE_PUBLIC_IP` | Ansible + docs — VM public IP (set after `terraform apply`) |

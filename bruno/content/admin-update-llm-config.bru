@@ -1,0 +1,27 @@
+meta {
+  name: Admin — switch LLM provider/model
+  type: http
+  seq: 27
+}
+
+put {
+  url: {{contentBaseUrl}}/api/v1/admin/genai/llm-config
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "provider": "nvidia",
+    "model": "moonshotai/kimi-k2.6"
+  }
+}
+
+docs {
+  Admin-only (ADR-0020). Sets genai's in-memory override; it resets to the env default when
+  genai-service restarts. A provider with no API key configured is rejected with 400.
+}

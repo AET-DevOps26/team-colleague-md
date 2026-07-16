@@ -2,12 +2,12 @@ package com.verita.contentservice.controller;
 
 import com.verita.api.PostsApi;
 import com.verita.contentservice.service.PostService;
-import com.verita.model.DigestPostRequest;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
+import com.verita.model.PostSummaryResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -44,32 +44,20 @@ public class PostController implements PostsApi {
     }
 
     @Override
-    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String topic, String type) {
+    public ResponseEntity<PostPage> getAllPosts(Integer page, Integer size, String topic) {
         int p = page == null ? 0 : page;
         int s = size == null ? 10 : size;
-        return ResponseEntity.ok(postService.getAllPosts(p, s, topic, type));
-    }
-
-    @Override
-    public ResponseEntity<PostResponse> createDigestPost(@Valid DigestPostRequest digestPostRequest) {
-        return ResponseEntity.status(201).body(postService.createDigest(digestPostRequest));
-    }
-
-    @Override
-    public ResponseEntity<PostPage> getMyDigests(Integer page, Integer size) {
-        int p = page == null ? 0 : page;
-        int s = size == null ? 10 : size;
-        return ResponseEntity.ok(postService.getMyDigests(p, s));
-    }
-
-    @Override
-    public ResponseEntity<PostResponse> getPublicTodayDigest() {
-        return ResponseEntity.ok(postService.getPublicTodayDigest());
+        return ResponseEntity.ok(postService.getAllPosts(p, s, topic));
     }
 
     @Override
     public ResponseEntity<PostResponse> getPostById(UUID id) {
         return ResponseEntity.ok(postService.getPost(id));
+    }
+
+    @Override
+    public ResponseEntity<PostSummaryResponse> getPostSummary(UUID id) {
+        return ResponseEntity.ok(postService.getPostSummary(id));
     }
 
     @Override

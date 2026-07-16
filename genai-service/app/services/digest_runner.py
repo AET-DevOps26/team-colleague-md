@@ -76,7 +76,9 @@ async def run_digest_job(job_id: str) -> None:
             return
 
         complete_job(job_id, result, warnings)
-        cited_source_count = len({url for event in result.events for url in event.sourceUrls})
+        cited_source_count = len(
+            {source.url for event in result.events for source in event.sources}
+        )
         logger.info(
             "Digest job succeeded jobId=%s eventCount=%d sourceCount=%d citedSourceCount=%d warningCount=%d readTimeMinutes=%d",
             job_id,

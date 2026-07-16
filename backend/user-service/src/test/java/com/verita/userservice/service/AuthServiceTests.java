@@ -1,6 +1,7 @@
 package com.verita.userservice.service;
 
 import com.verita.model.AuthResponse;
+import com.verita.model.DigestFrequency;
 import com.verita.model.LoginRequest;
 import com.verita.model.RegisterRequest;
 import com.verita.model.User;
@@ -13,6 +14,7 @@ import com.verita.userservice.service.AuthService;
 import com.verita.userservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -82,7 +84,9 @@ public class AuthServiceTests {
         assertNotNull(response.getRefreshToken());
         assertNotNull(response.getUser());
         // save() called twice: initial user save + refresh token save in buildAuthResponse
-        verify(userRepository, times(2)).save(any(UserEntity.class));
+        ArgumentCaptor<UserEntity> savedUsers = ArgumentCaptor.forClass(UserEntity.class);
+        verify(userRepository, times(2)).save(savedUsers.capture());
+        assertEquals(DigestFrequency.DAILY, savedUsers.getAllValues().get(0).getDigestFrequency());
     }
 
     @Test

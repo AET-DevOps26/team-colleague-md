@@ -236,8 +236,9 @@ Add a `SeedDigest` array + interface (mirror the post fields it needs). Produce 
 - `authorId` — the **digest system id** `00000000-0000-0000-0000-000000000000` (constant; not a
   seed user).
 - `type` — `'DIGEST'`; `status` `'PUBLISHED'`.
-- `title` — a daily-digest headline (e.g. "Your AI digest — <topic theme>"). The existing
-  frontend mock `DIGEST_LIST_LOGGEDIN` has good example titles to imitate in tone.
+- `title` — deterministic from the target and digest date: personal digests use
+  `<displayName>’s AI Digest — <Month d, yyyy>` and public digests use
+  `Verita Community Digest — <Month d, yyyy>`.
 - `summary` — the **top-story subtitle** (1 sentence). This is what the hero shows.
 - `content` — Markdown digest body: a short intro then **N "events"**, each an `###` headline +
   1–3 summary bullets, matching the genai digest style. Keep it real and scannable.

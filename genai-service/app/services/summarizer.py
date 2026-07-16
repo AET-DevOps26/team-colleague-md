@@ -22,21 +22,21 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
-from app.config import get_settings
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse, TokenUsage
+from app.services.llm_config import active_settings
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# System prompt — instructs the LLM to produce exactly 3 bullet points.
+# System prompt — instructs the LLM to produce 3 to 5 bullet points.
 # ---------------------------------------------------------------------------
 SYSTEM_PROMPT = """\
 You are a concise summarization assistant for an AI knowledge-sharing platform called Verita.
 
-Your task is to summarize user-submitted posts into exactly 3 bullet points.
+Your task is to summarize user-submitted posts into 3 to 5 bullet points.
 
 Rules:
-- Output EXACTLY 3 bullet points, each starting with "• ".
+- Output 3 to 5 bullet points, each starting with "• ".
 - Each bullet should be one sentence (max ~25 words).
 - Focus on the most important facts, findings, or takeaways.
 - Use clear, technical language appropriate for AI practitioners.
@@ -59,9 +59,10 @@ def _build_chain():
         prompt | model | parser
 
     The chain is built fresh on each call rather than cached at module level,
-    so that config changes (e.g., model swap) are picked up without restart.
+    so that config changes (e.g., an admin's runtime provider swap, ADR-0020) are
+    picked up without restart.
     """
-    settings = get_settings()
+    settings = active_settings()
 
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -94,7 +95,7 @@ def _get_llm(settings):
         return ChatOpenAI(
             model=settings.llm_model,
             api_key=settings.logos_api_key,
-            base_url=settings.logos_base_url,
+            base_url="https://logos.aet.cit.tum.de/v1",
             temperature=settings.llm_temperature,
         )
     elif provider == "nvidia":
@@ -135,8 +136,7 @@ def _parse_bullets(raw_output: str) -> list[str]:
     - "* " (markdown style)
     - Numbered lists "1. ", "2. ", "3. "
 
-    Always returns exactly 3 bullets. If the LLM returns fewer,
-    pads with empty strings. If more, truncates.
+    Returns up to 5 bullets. If the LLM returns more, truncates.
     """
     # Split by common bullet patterns
     lines = raw_output.strip().split("\n")
@@ -150,11 +150,7 @@ def _parse_bullets(raw_output: str) -> list[str]:
         if cleaned:
             bullets.append(cleaned)
 
-    # Ensure exactly 3 bullets
-    while len(bullets) < 3:
-        bullets.append("")
-
-    return bullets[:3]
+    return bullets[:5]
 
 
 async def summarize(request: SummarizeRequest) -> SummarizeResponse:
@@ -165,7 +161,7 @@ async def summarize(request: SummarizeRequest) -> SummarizeResponse:
         request: The summarization request containing post content and optional title.
 
     Returns:
-        SummarizeResponse with 3-bullet summary, model name, and token usage.
+        SummarizeResponse with 3 to 5 summary bullets, model name, and token usage.
 
     Raises:
         Exception: If the LLM call fails (caught by the router for error handling).
