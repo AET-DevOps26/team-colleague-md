@@ -10,9 +10,12 @@ API docs, monitoring).
 [Quick Start](../README.md#quick-start-with-docker-compose-local) in the root README:
 
 ```bash
-cp genai-service/.env.example genai-service/.env   # add an LLM API key to enable AI features
+# add an LLM API key to enable AI features
+cp genai-service/.env.example genai-service/.env
 docker compose up --build
-npm install && npm run seed:local                  # once the services are healthy
+
+# once the services are healthy
+npm install && npm run seed:local
 ```
 
 **Option B — live environments.** Use the deployed instances listed under
