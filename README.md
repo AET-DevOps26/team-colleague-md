@@ -15,14 +15,18 @@ summarization, and personalized recommendations. It is built as four backend mic
 
 The fastest way to run the full platform.
 
-**First-time setup.** Create `genai-service/.env` from the template (the placeholder values
-are enough to boot; add a real LLM API key such as `NVIDIA_NIM_API_KEY` or `LOGOS_API_KEY`
-to enable AI summaries and the daily digest — see
-[GenAI Environment Setup](docs/contributing/GenAI_Environment_Setup.md)):
+**First-time setup.** Create `genai-service/.env` from the template:
 
 ```bash
 cp genai-service/.env.example genai-service/.env
 ```
+
+The recommended setup for testing GenAI is Logos with `openai/gpt-oss-120b`, which is already
+the template default. Add a real `LOGOS_API_KEY` in `genai-service/.env` to enable AI summaries
+and daily digest generation. A `GNEWS_API_KEY` is recommended for reliable digest source coverage,
+but is not required to run the service. See
+[GenAI Environment Setup](docs/contributing/GenAI_Environment_Setup.md) for the other providers
+and source API keys.
 
 Run the docker compose from the repository root:
 
