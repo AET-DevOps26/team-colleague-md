@@ -13,6 +13,7 @@ from app.schemas.digest import DigestGenerateRequest, DigestJobWarning, DigestTo
 from app.services.external_sources import (
     ExternalSourceItem,
     _clean_snippet,
+    _fetch_github_sources,
     _fetch_gnews_sources,
     fetch_and_select_sources,
 )
@@ -73,8 +74,8 @@ class _FakeGNewsResponse:
         return {
             "articles": [
                 {
-                    "title": "AI agents gain new tool support",
-                    "description": "A product update added tool-use features for AI agents.",
+                    "title": "🚀 AI agents gain new tool support",
+                    "description": "A product update added tool-use features 🧰 for AI agents.",
                     "content": "Fallback content should not be needed.",
                     "url": "https://example.com/gnews/agents",
                     "publishedAt": "2026-06-03T12:00:00Z",
@@ -91,6 +92,19 @@ class _FakeGNewsClient:
     async def get(self, url, params):
         self.calls.append((url, params))
         return _FakeGNewsResponse()
+
+
+class _FakeEmojiOnlyGNewsResponse(_FakeGNewsResponse):
+    def json(self):
+        payload = super().json()
+        payload["articles"][0]["title"] = "🚀"
+        return payload
+
+
+class _FakeEmojiOnlyGNewsClient(_FakeGNewsClient):
+    async def get(self, url, params):
+        self.calls.append((url, params))
+        return _FakeEmojiOnlyGNewsResponse()
 
 
 @pytest.mark.asyncio
@@ -197,6 +211,7 @@ async def test_fetch_gnews_sources_uses_gnews_search_api(mock_settings):
     assert len(sources) == 1
     assert sources[0].provider == "gnews"
     assert sources[0].title == "AI agents gain new tool support"
+    assert sources[0].snippet == "A product update added tool-use features for AI agents."
     assert sources[0].sourceName == "Example News"
 
     url, params = client.calls[0]
@@ -211,3 +226,51 @@ async def test_fetch_gnews_sources_uses_gnews_search_api(mock_settings):
         "max": 10,
         "apikey": "test-gnews-key",
     }
+
+
+@pytest.mark.asyncio
+@patch("app.services.external_sources.get_settings")
+async def test_fetch_gnews_sources_discards_emoji_only_titles(mock_settings):
+    mock_settings.return_value.gnews_api_key = "test-gnews-key"
+    request = _request()
+
+    sources, warnings = await _fetch_gnews_sources(
+        cast(httpx.AsyncClient, _FakeEmojiOnlyGNewsClient()),
+        request,
+        request.topics[1],
+    )
+
+    assert warnings == []
+    assert sources == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_github_sources_discards_emoji_only_release_title():
+    request = _request()
+    releases = [
+        {
+            "name": "🚀",
+            "body": "A valid release description.",
+            "html_url": "https://github.com/owner/repo/releases/tag/v1",
+            "published_at": "2026-06-03T12:00:00Z",
+        }
+    ]
+    with (
+        patch("app.services.external_sources.get_settings") as mock_settings,
+        patch("app.services.external_sources._matching_github_repos", return_value=["owner/repo"]),
+        patch(
+            "app.services.external_sources._github_get",
+            new_callable=AsyncMock,
+            side_effect=[releases, {"items": []}],
+        ),
+    ):
+        mock_settings.return_value.github_token = None
+
+        sources, warnings = await _fetch_github_sources(
+            cast(httpx.AsyncClient, object()),
+            request,
+            request.topics[0],
+        )
+
+    assert warnings == []
+    assert sources == []

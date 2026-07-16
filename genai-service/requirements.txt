@@ -15,6 +15,9 @@ langchain-nvidia-ai-endpoints>=0.3.0
 pydantic-settings>=2.0.0
 python-dotenv>=1.0.0
 
+# --- Text sanitization ---
+regex>=2024.11.6
+
 # --- HTTP Client (used by LangChain internally) ---
 httpx>=0.28.1
 

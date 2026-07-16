@@ -16,7 +16,6 @@ Architecture:
 import logging
 import re
 
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
@@ -24,8 +23,15 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse, TokenUsage
 from app.services.llm_config import active_settings
+from app.services.llm_usage import aggregate_usage, extract_usage
+from app.services.output_sanitizer import InvalidLlmOutputError, sanitize_text
 
 logger = logging.getLogger(__name__)
+MAX_LLM_ATTEMPTS = 2
+RETRY_INSTRUCTION = (
+    "Regenerate the complete summary. The previous response became empty after sanitization. "
+    "Return ordinary text without emoji in every summary bullet."
+)
 
 # ---------------------------------------------------------------------------
 # System prompt — instructs the LLM to produce 3 to 5 bullet points.
@@ -42,6 +48,7 @@ Rules:
 - Use clear, technical language appropriate for AI practitioners.
 - Do NOT include introductory phrases like "Here is a summary".
 - Do NOT use markdown formatting other than the bullet character "• ".
+- Do NOT use emoji in any summary bullet.
 - If a title is provided, use it as context but do not repeat it.
 
 Example output format:
@@ -67,7 +74,7 @@ def _build_chain():
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", SYSTEM_PROMPT),
-            ("human", "{input_text}"),
+            ("human", "{input_text}\n{retry_instruction}"),
         ]
     )
 
@@ -171,35 +178,39 @@ async def summarize(request: SummarizeRequest) -> SummarizeResponse:
 
     logger.info("Summarizing content (length=%d, model=%s)", len(request.content), model_name)
 
-    # Invoke the LCEL chain
-    # Use ainvoke for async execution (FastAPI is async-native)
-    ai_message = await chain.ainvoke({"input_text": input_text})
-
-    # ai_message.content can theoretically be a list of blocks, but for this prompt it is a string.
-    raw_output = ai_message.content if isinstance(ai_message.content, str) else str(ai_message.content)
-
-    logger.debug("Raw LLM output: %s", raw_output)
-
-    # Extract token usage metadata if available
-    usage_info = None
-    if hasattr(ai_message, "usage_metadata") and ai_message.usage_metadata:
-        usage = ai_message.usage_metadata
-        usage_info = TokenUsage(
-            input_tokens=usage.get("input_tokens", 0),
-            output_tokens=usage.get("output_tokens", 0),
-            total_tokens=usage.get("total_tokens", 0),
+    attempt_usage: list[TokenUsage | None] = []
+    for attempt in range(1, MAX_LLM_ATTEMPTS + 1):
+        ai_message = await chain.ainvoke(
+            {
+                "input_text": input_text,
+                "retry_instruction": RETRY_INSTRUCTION if attempt > 1 else "",
+            }
         )
+        raw_output = ai_message.content if isinstance(ai_message.content, str) else str(ai_message.content)
+        logger.debug("Post summary LLM output received length=%d", len(raw_output))
+        attempt_usage.append(extract_usage(ai_message))
 
-    # Parse the bullet points from the raw output
-    bullets = _parse_bullets(raw_output)
+        bullets = _parse_bullets(raw_output)
+        sanitized_bullets = [cleaned for bullet in bullets if (cleaned := sanitize_text(bullet))]
+        if sanitized_bullets != bullets:
+            logger.info("Sanitized Post AI Summary prose field=summary")
+        if sanitized_bullets:
+            logger.info("Summarization complete: %d bullets returned", len(sanitized_bullets))
+            return SummarizeResponse(
+                postId=request.postId,
+                summary=sanitized_bullets,
+                model=model_name,
+                usage=aggregate_usage(attempt_usage),
+            )
 
-    # Build response
-    response = SummarizeResponse(
-        postId=request.postId,
-        summary=bullets,
-        model=model_name,
-        usage=usage_info,
-    )
+        error = InvalidLlmOutputError("Post AI Summary has no non-empty bullets after sanitization")
+        logger.warning(
+            "Post summary LLM sanitized output invalid attempt=%d maxAttempts=%d reason=%s",
+            attempt,
+            MAX_LLM_ATTEMPTS,
+            error,
+        )
+        if attempt == MAX_LLM_ATTEMPTS:
+            raise error
 
-    logger.info("Summarization complete: %d bullets returned", len(bullets))
-    return response
+    raise AssertionError("Post summary LLM attempt loop exited unexpectedly")
