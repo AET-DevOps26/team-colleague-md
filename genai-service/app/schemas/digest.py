@@ -70,7 +70,6 @@ class DigestGenerateResponse(BaseModel):
     digestDate: date
     periodStart: datetime
     periodEnd: datetime
-    title: str
     topStorySubtitle: str
     summary: str
     topics: list[DigestTopic]

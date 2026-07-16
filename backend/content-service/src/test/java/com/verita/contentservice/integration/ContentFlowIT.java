@@ -227,7 +227,7 @@ class ContentFlowIT {
         mockMvc.perform(get("/api/v1/digests").header("Authorization", bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].title").value("Your daily briefing"))
+                .andExpect(jsonPath("$.content[0].title").value("Alice’s AI Digest — July 4, 2026"))
                 .andExpect(jsonPath("$.content[0].digestType").value("PERSONAL"));
     }
 
@@ -238,7 +238,7 @@ class ContentFlowIT {
         mockMvc.perform(get("/api/v1/digests/public/today"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.digestType").value("PUBLIC"))
-                .andExpect(jsonPath("$.title").value("Community briefing"));
+                .andExpect(jsonPath("$.title").value("Verita Community Digest — July 4, 2026"));
     }
 
     private void createPersonalDigest(String title, UUID targetUserId) throws Exception {

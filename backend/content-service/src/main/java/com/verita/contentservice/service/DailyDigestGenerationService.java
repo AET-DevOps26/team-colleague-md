@@ -255,7 +255,6 @@ public class DailyDigestGenerationService {
                 .digestType(type)
                 .targetUserId(targetUserId)
                 .digestDate(result.digestDate())
-                .title(result.title())
                 .subtitle(result.topStorySubtitle())
                 .summary(result.summary())
                 .events(toApiEvents(result))

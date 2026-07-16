@@ -55,7 +55,6 @@ class DigestLlmEvent(BaseModel):
 class DigestLlmOutput(BaseModel):
     """Structured digest shape requested from the LLM."""
 
-    title: str
     topStorySubtitle: str
     summary: str
     events: list[DigestLlmEvent] = Field(..., min_length=1, max_length=20)
@@ -119,7 +118,6 @@ async def generate_digest(
         digestDate=request.digestDate,
         periodStart=request.periodStart,
         periodEnd=request.periodEnd,
-        title=payload.title or f"Your {request.digestDate.isoformat()} AI Digest",
         topStorySubtitle=payload.topStorySubtitle or "New AI developments across subscribed topics.",
         summary=payload.summary or "",
         topics=request.topics,
@@ -248,7 +246,6 @@ def _extract_usage(ai_message) -> TokenUsage | None:
 def _estimate_read_time(payload: DigestLlmOutput, events: list[DigestEvent]) -> int:
     text = " ".join(
         [
-            payload.title,
             payload.topStorySubtitle,
             payload.summary,
             " ".join(event.headline for event in events),

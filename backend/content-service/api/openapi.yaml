@@ -732,10 +732,12 @@ paths:
     post:
       operationId: createDigest
       summary: Create a digest (internal, service-authenticated)
+      deprecated: true
       description: >
-        Service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Persists an
-        already-generated digest (personal or public) as a standalone `digests` row, computing
-        `preview_headlines` at write time. The generation (genai) and scheduling are the caller's.
+        Deprecated service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Existing
+        callers may still persist an already-generated digest, but content-service ignores the
+        request title and applies its deterministic personal/public title rule. Scheduled and admin
+        generation persist in-process and do not call this endpoint.
       tags: [Digests]
       security: []
       requestBody:
@@ -1064,7 +1066,7 @@ components:
 
     CreateDigestRequest:
       type: object
-      required: [digestType, digestDate, title, events]
+      required: [digestType, digestDate, events]
       description: Persist an already-generated digest. topicIds live inside events; topics carries names for display.
       properties:
         digestType: { $ref: '#/components/schemas/DigestType' }
@@ -1074,7 +1076,11 @@ components:
           nullable: true
           description: "Required when digestType=PERSONAL; must be null when PUBLIC."
         digestDate: { type: string, format: date }
-        title: { type: string }
+        title:
+          type: string
+          nullable: true
+          deprecated: true
+          description: Deprecated compatibility field. Content-service ignores it and constructs the digest title.
         subtitle: { type: string, nullable: true }
         summary: { type: string, nullable: true }
         events: { type: array, items: { $ref: '#/components/schemas/DigestEvent' } }

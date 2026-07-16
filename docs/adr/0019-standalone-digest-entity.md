@@ -60,14 +60,23 @@ land the structured-events contract that ADR-0017 deferred.
   it now projects the full `ExternalSourceItem` instead of `.url`.
 - `publishedAt` is an absolute time; the "Xh ago" relative label is computed **client-side** (a
   stored relative label would go stale on historical reads).
+- GenAI generates the substantive digest (`topStorySubtitle`, `summary`, and `events`) but not its
+  title. Title ownership belongs to content-service so repeated runs cannot vary the identity of the
+  same user/day digest.
 
-### content-service — dedicated digest API (hard cut, no back-compat)
+### content-service — dedicated digest API
 
 - New `DigestController` under `/api/v1/digests`; the digest endpoints were removed from
   `PostController` and the digest coupling (`target_user_id`, `DIGEST` type/rows) dropped from
   `posts` via migrations V10–V12.
 - Two projections: **`DigestSummary`** (no events) and **`DigestDetail`** (summary + full events).
-- Endpoints: `POST /internal/v1/digests` (service-token, create personal or public);
+- Titles are deterministic snapshots of `digest_date`: personal digests use
+  `<displayName>’s AI Digest — <Month d, yyyy>` and fall back to
+  `Your AI Digest — <Month d, yyyy>` when the display name is unavailable or the result would
+  exceed the 200-character column; public digests use
+  `Verita Community Digest — <Month d, yyyy>`. Profile lookup failures do not fail generation.
+- Endpoints: deprecated `POST /internal/v1/digests` (service-token, create personal or public;
+  caller-supplied titles are ignored);
   `GET /api/v1/digests` (auth — history: union of personal + assigned public, paginated);
   `GET /api/v1/digests/{id}` (optional auth — `PERSONAL` for non-owner ⇒ 404, `PUBLIC` open);
   `GET /api/v1/digests/public/today` (permitAll — newest public digest).
@@ -99,3 +108,5 @@ land the structured-events contract that ADR-0017 deferred.
 - The digest can now evolve independently of `posts`; per-event provenance renders in the UI.
 - Personal digests remain private (404 for non-owners); sharing them needs a share-token/visibility
   mechanism — out of scope, tracked as a follow-up.
+- Existing non-seed digest titles are not backfilled. Seed upserts and all newly generated or
+  force-regenerated digests use the deterministic title rule.

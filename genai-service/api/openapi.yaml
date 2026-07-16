@@ -443,7 +443,6 @@ components:
         - digestDate
         - periodStart
         - periodEnd
-        - title
         - topStorySubtitle
         - summary
         - topics
@@ -463,9 +462,6 @@ components:
         periodEnd:
           type: string
           format: date-time
-        title:
-          type: string
-          example: Your Thursday AI Digest
         topStorySubtitle:
           type: string
           description: One-sentence headline for the most important new development.

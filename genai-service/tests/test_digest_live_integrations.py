@@ -102,9 +102,11 @@ async def test_live_llm_endpoint_generates_digest_from_static_source():
     result = await generate_digest(request, [source])
 
     assert result.model
-    assert result.title
+    assert not hasattr(result, "title")
     assert result.summary
     assert result.sourceCount == 1
     assert result.eventCount >= 1
     assert result.events[0].topicIds == ["topic-live-llms"]
-    assert "https://example.com/llm-long-context-benchmark" in result.events[0].sourceUrls
+    assert "https://example.com/llm-long-context-benchmark" in [
+        source.url for source in result.events[0].sources
+    ]

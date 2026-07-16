@@ -3,6 +3,8 @@ package com.verita.contentservice.service.digest;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
+import com.verita.contentservice.client.UserClient;
+import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.entity.DigestAssignmentEntity;
 import com.verita.contentservice.entity.DigestAssignmentId;
 import com.verita.contentservice.entity.DigestEntity;
@@ -20,8 +22,10 @@ import com.verita.model.DigestSummary;
 import com.verita.model.DigestSummaryPage;
 import com.verita.model.DigestType;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -45,13 +49,24 @@ import org.springframework.web.server.ResponseStatusException;
 public class DigestService {
     private static final int MAX_PAGE_SIZE = 50;
     private static final int PREVIEW_HEADLINE_COUNT = 3;
+    private static final int MAX_TITLE_LENGTH = 200;
+    private static final DateTimeFormatter TITLE_DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("MMMM d, uuuu", Locale.ENGLISH);
 
     private final DigestRepository digestRepository;
     private final DigestAssignmentRepository assignmentRepository;
     private final DigestMapper digestMapper;
     private final SecurityUtils securityUtils;
+    private final UserClient userClient;
 
-    /** Persists an already-generated digest (personal or public), computing denormalized fields. */
+    /**
+     * Persists an already-generated digest, replacing any caller title with the deterministic
+     * personal/public title and computing denormalized fields.
+     *
+     * @param request generated digest content and target metadata
+     * @return the stored digest detail
+     * @throws ResponseStatusException when the target user conflicts with the digest type
+     */
     @Transactional
     public DigestDetail createDigest(CreateDigestRequest request) {
         DigestTypeValue type = DigestTypeValue.valueOf(request.getDigestType().getValue());
@@ -71,7 +86,7 @@ public class DigestService {
         entity.setDigestType(type);
         entity.setTargetUserId(targetUserId);
         entity.setDigestDate(request.getDigestDate());
-        entity.setTitle(request.getTitle());
+        entity.setTitle(titleFor(type, targetUserId, request.getDigestDate()));
         entity.setSubtitle(request.getSubtitle().orElse(null));
         entity.setSummary(request.getSummary().orElse(null));
         entity.setEvents(events);
@@ -86,6 +101,27 @@ public class DigestService {
         DigestEntity saved = digestRepository.save(entity);
         log.info("Stored {} digest id={} date={} events={}", type, saved.getId(), saved.getDigestDate(), events.size());
         return digestMapper.toDetail(saved);
+    }
+
+    private String titleFor(DigestTypeValue type, UUID targetUserId, LocalDate digestDate) {
+        String formattedDate = TITLE_DATE_FORMATTER.format(digestDate);
+        if (type == DigestTypeValue.PUBLIC) {
+            return "Verita Community Digest — " + formattedDate;
+        }
+        String fallbackTitle = "Your AI Digest — " + formattedDate;
+        UserProfileDto profile;
+        try {
+            profile = userClient.getUserById(targetUserId);
+        } catch (Exception e) {
+            log.warn("Failed to resolve display name for digest title userId={}: {}", targetUserId, e.getMessage());
+            return fallbackTitle;
+        }
+        String displayName = profile == null ? null : profile.displayName();
+        if (displayName == null || displayName.isBlank()) {
+            return fallbackTitle;
+        }
+        String personalTitle = displayName.trim() + "’s AI Digest — " + formattedDate;
+        return personalTitle.length() <= MAX_TITLE_LENGTH ? personalTitle : fallbackTitle;
     }
 
     @Transactional(readOnly = true)

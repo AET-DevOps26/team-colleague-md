@@ -80,7 +80,6 @@ def _digest_result() -> DigestGenerateResponse:
         digestDate=datetime(2026, 6, 4, tzinfo=timezone.utc).date(),
         periodStart=datetime(2026, 6, 3, tzinfo=timezone.utc),
         periodEnd=datetime(2026, 6, 4, tzinfo=timezone.utc),
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work and agent tooling updates shaped the day.",
         topics=topics,
@@ -134,7 +133,7 @@ class TestDigestJobs:
         assert status_response.status_code == 200
         data = status_response.json()
         assert data["status"] == "SUCCEEDED"
-        assert data["result"]["title"] == "Your Thursday AI Digest"
+        assert "title" not in data["result"]
         assert data["result"]["sourceCount"] == 1
         assert data["error"] is None
 
