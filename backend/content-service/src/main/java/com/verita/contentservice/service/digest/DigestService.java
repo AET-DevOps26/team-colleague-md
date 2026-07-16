@@ -103,6 +103,17 @@ public class DigestService {
         return digestMapper.toDetail(saved);
     }
 
+    /**
+     * Builds the persisted title for a digest. Public digests use the community title; personal
+     * digests use the target user's trimmed display name when available and otherwise fall back to
+     * the generic personal title. Profile lookup failures are logged and treated as unavailable
+     * profile data, and personal titles exceeding the persistence limit also use the fallback.
+     *
+     * @param type whether the digest is public or personal
+     * @param targetUserId target user for a personal digest; ignored for public digests
+     * @param digestDate date displayed in the title
+     * @return a deterministic title no longer than {@value MAX_TITLE_LENGTH} characters
+     */
     private String titleFor(DigestTypeValue type, UUID targetUserId, LocalDate digestDate) {
         String formattedDate = TITLE_DATE_FORMATTER.format(digestDate);
         if (type == DigestTypeValue.PUBLIC) {
@@ -120,8 +131,9 @@ public class DigestService {
         if (displayName == null || displayName.isBlank()) {
             return fallbackTitle;
         }
-        String personalTitle = displayName.trim() + "’s AI Digest — " + formattedDate;
-        return personalTitle.length() <= MAX_TITLE_LENGTH ? personalTitle : fallbackTitle;
+        String personalTitle = displayName.strip() + "’s AI Digest — " + formattedDate;
+        int titleLength = personalTitle.codePointCount(0, personalTitle.length());
+        return titleLength <= MAX_TITLE_LENGTH ? personalTitle : fallbackTitle;
     }
 
     @Transactional(readOnly = true)

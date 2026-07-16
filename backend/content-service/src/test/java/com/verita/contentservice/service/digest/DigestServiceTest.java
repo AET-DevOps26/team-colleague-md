@@ -106,6 +106,21 @@ class DigestServiceTest {
         assertEquals("Your AI Digest — July 16, 2026", saved.getValue().getTitle());
     }
 
+    @Test
+    void createDigest_countsTrimmedUnicodeCodePointsAgainstColumnLimit() {
+        String displayName = "\u2003" + "😀".repeat(172) + "\u2003";
+        when(userClient.getUserById(USER_ID))
+                .thenReturn(new UserProfileDto(USER_ID, "alexchen", displayName, null, "USER", null));
+        when(digestRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(digestMapper.toDetail(any())).thenReturn(new DigestDetail());
+
+        service.createDigest(request(DigestType.PERSONAL, USER_ID, "Caller-supplied title"));
+
+        ArgumentCaptor<DigestEntity> saved = ArgumentCaptor.forClass(DigestEntity.class);
+        verify(digestRepository).save(saved.capture());
+        assertEquals("😀".repeat(172) + "’s AI Digest — July 16, 2026", saved.getValue().getTitle());
+    }
+
     private CreateDigestRequest request(DigestType type, UUID targetUserId, String callerTitle) {
         return new CreateDigestRequest()
                 .digestType(type)
