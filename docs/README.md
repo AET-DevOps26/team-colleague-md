@@ -1,27 +1,34 @@
 # Documentation
 
-Project-wide documentation for Verita. Component and tooling docs live next to the code they
-describe ([`frontend/`](../frontend/README.md), [`infra/`](../infra/helm/verita/README.md),
-[`bruno/`](../bruno/README.md)).
+Index of Verita's project-wide documentation. Component and tooling docs live next to the
+code they describe and are linked at the bottom.
 
-**New here?** Reviewers should start with the [Review Guide](Review_Guide.md); contributors
-with [Local Development](contributing/Local_Development.md).
+**Start here:**
+[Review Guide](Review_Guide.md) if you are reviewing/grading the project ·
+[Local Development](contributing/Local_Development.md) if you are developing on it.
 
-## For Reviewers
+## docs root
 
 | Document | What's inside |
 |---|---|
-| [Review Guide](Review_Guide.md) | Guided walkthrough: bring the stack up, explore, health checks, view monitoring |
-| [Integration Check List](Check_List.md) | Manual verification status per feature area |
+| [Review Guide](Review_Guide.md) | Reviewer walkthrough: explore checklist, health checks, API docs, monitoring |
+| [Check List](Check_List.md) | Manually verified frontend ↔ backend integration flows |
 
-## Architecture
+## architecture/
 
 | Document | What's inside |
 |---|---|
 | [System Overview & Architecture](architecture/System_Overview_Architecture.md) | Services, technology decisions, data architecture, UML diagrams, product backlog |
-| [Architecture Decision Records](adr/) | ADR-0001 … the source of truth for cross-cutting concerns |
 
-## Product
+## infrastructure/
+
+| Document | What's inside |
+|---|---|
+| [Infrastructure Design](infrastructure/Infrastructure_Design.md) | The infra hub: environments, toolchain, CI/CD, Terraform/Ansible, Helm/Rancher |
+| [API Gateway & Routing](infrastructure/API_Gateway_Routing.md) | Path-prefix routing pattern across local, Azure, and Kubernetes |
+| [Seeding Remote Environments](infrastructure/Seeding_Remote_Environments.md) | Running the demo seed against verita-dev and the Azure VM |
+
+## product/
 
 | Document | What's inside |
 |---|---|
@@ -29,17 +36,22 @@ with [Local Development](contributing/Local_Development.md).
 | [Frontend PRD](product/Frontend_PRD.md) | Product requirements for the web client |
 | [Project Plan](product/Project_Plan.md) | Milestones, scope, and team plan |
 
-## Infrastructure
+## testing/
 
 | Document | What's inside |
 |---|---|
-| [Infrastructure Design](infrastructure/Infrastructure_Design.md) | **Infra hub** — build, CI/CD, Terraform/Ansible (VM), Helm (Rancher), gateway, monitoring |
-| [API Gateway & Routing](infrastructure/API_Gateway_Routing.md) | Path-prefix routing across local, Azure, and Kubernetes |
-| [Seeding Remote Environments](infrastructure/Seeding_Remote_Environments.md) | Running the seed against verita-dev and the Azure VM |
-| [Helm Chart](../infra/helm/verita/README.md) | Kubernetes deployment via the `verita` umbrella chart |
-| [Monitoring](../infra/monitoring/README.md) | Prometheus + Grafana stack for Compose and Kubernetes |
+| [Testing Strategy](testing/Testing.md) | Platform-wide test tooling, coverage gates, and how to run tests per service |
+| [Frontend Testing](testing/Frontend_Testing.md) | Unit, component, and end-to-end test layers for the frontend |
 
-## Database
+## contributing/
+
+| Document | What's inside |
+|---|---|
+| [Local Development](contributing/Local_Development.md) | Prerequisites, backend infrastructure, seed data, per-service build & run |
+| [Git Branching Guide](contributing/Git_Branching_Guide.md) | Branch naming and pull-request workflow |
+| [GenAI Environment Setup](contributing/GenAI_Environment_Setup.md) | LLM provider keys and testing GenAI features via the admin panel |
+
+## database/
 
 | Document | What's inside |
 |---|---|
@@ -48,16 +60,17 @@ with [Local Development](contributing/Local_Development.md).
 | [Content Service Schema](database/content_service_schema.md) | `verita_contents` tables |
 | [Recommendation Service Schema](database/recommendation_service_schema.md) | `verita_recommendations` tables |
 
-## Testing
+## Other folders
+
+- [`adr/`](adr/) — Architecture Decision Records (numbered, one decision per file)
+- [`diagrams/`](diagrams/) — UML sources and exported images used by the architecture doc
+- [`archive/`](archive/) — superseded or spent documents kept for the historical record
+
+## Component & tooling docs (next to the code)
 
 | Document | What's inside |
 |---|---|
-| [Backend Testing](testing/Testing.md) | Backend test tooling, coverage gates, and how to run tests per service |
-| [Frontend Testing](testing/Frontend_Testing.md) | Unit, component, and end-to-end test layers for the frontend |
-
-## Contributing
-
-| Document | What's inside |
-|---|---|
-| [Local Development](contributing/Local_Development.md) | Prerequisites, backend infra, deep seed data, per-service builds |
-| [Git Branching Guide](contributing/Git_Branching_Guide.md) | Branch naming and pull-request workflow |
+| [Frontend](../frontend/README.md) | React app — dev scripts, structure, design reference, tests |
+| [Monitoring](../infra/monitoring/README.md) | Prometheus + Grafana stack for Compose and Kubernetes |
+| [Helm Chart](../infra/helm/verita/README.md) | Kubernetes deployment via the `verita` umbrella chart |
+| [API Client (Bruno)](../bruno/README.md) | Repo-level Bruno collection for exercising the APIs |

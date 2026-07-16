@@ -1,34 +1,44 @@
 # Review Guide
 
-A guided walkthrough for reviewing Verita. It assumes the stack is running — either locally
-via Docker Compose or on one of the [cloud deployments](../README.md#cloud-deployments).
+A guided tour for graders and reviewers: how to get a populated instance running, which
+account to use, what to click through, and how to see the operational side (health checks,
+API docs, monitoring).
 
-## 1. Bring the stack up
+## 1. Get a running, populated instance
+
+**Option A — local (recommended).** Follow the
+[Quick Start](../README.md#quick-start-with-docker-compose-local) in the root README:
 
 ```bash
-cp genai-service/.env.example genai-service/.env   # first time only
+cp genai-service/.env.example genai-service/.env   # add an LLM API key to enable AI features
 docker compose up --build
-npm install && npm run seed:local                  # once services are healthy
+npm install && npm run seed:local                  # once the services are healthy
 ```
 
-A fresh stack starts empty, so the seed step is what populates the demo content. Full
-setup detail is in [Local Development](contributing/Local_Development.md).
-
-To review a live environment instead of a local one, use the URLs in
-[Cloud Deployments](../README.md#cloud-deployments) — they are already seeded.
+**Option B — live environments.** Use the deployed instances listed under
+[Cloud Deployments](../README.md#cloud-deployments) — production and dev on the TUM Rancher
+cluster, plus a single Azure VM running the same containers via Docker Compose. On the dev
+environment, type `thisisunsafe` if the browser blocks the self-signed TLS certificate.
 
 ## 2. Log in and explore
 
-Open `http://localhost:3000` and sign in as **`alexchen`** (email `alex@example.com`,
-password `Password123!`). This admin account is seeded with content across every feature
-area, so it can exercise the whole product.
+Open `http://localhost:3000` (or a live environment) and sign in as **`alexchen`**
+(email `alex@example.com`, password `Password123!`). This admin account is seeded with
+content across every area, so you can walk through all features in the
+[feature check list](Check_List.md).
 
-Walk through the features using the **[Integration Check List](Check_List.md)**, which
-tracks manual verification status per feature area (home feed, authentication, posts,
-comments, topics, bookmarks, profile, digest, recommendations, search).
+Highlights worth visiting:
 
-Suggested happy path: **log in → open a post → generate an AI summary → view the daily
-digest → follow topics → browse the recommendation feed**.
+- **Home feed** — masonry grid of seeded posts; filter by topic chips, like and bookmark.
+- **Post detail** — comments (top/newest/oldest), replies, AI-generated summary when the
+  GenAI service has an API key.
+- **Digest** — the daily AI digest page; per-user digests plus a public fallback.
+- **Topics** — follow/unfollow a topic and see it appear in the home-feed filter bar.
+- **Profile & settings** — edit profile, upload an avatar, toggle bookmark/like visibility.
+- **Admin panel** (`/admin`, admin account only) — user management and GenAI operations:
+  switch the LLM provider/model at runtime, re-run failed post summaries, and generate a
+  digest for a chosen user and day. The GenAI features are documented step-by-step in
+  [GenAI Environment Setup](contributing/GenAI_Environment_Setup.md).
 
 ## 3. Health checks
 
@@ -41,33 +51,40 @@ http://localhost:8083/actuator/health   # recommendation-service
 http://localhost:8000/health            # genai-service
 ```
 
-On the deployed environments the backends are not publicly exposed (the nginx gateway
-returns 404 for `/…/actuator`); use the frontend URL to confirm the stack is healthy.
+On the deployed environments the backends are not directly reachable — the frontend nginx
+gateway is the only public entry point and returns 404 for actuator paths (see
+[API Gateway & Routing](infrastructure/API_Gateway_Routing.md)).
 
-## 4. View monitoring
+## 4. API documentation and API client
 
-Verita ships a shared Prometheus + Grafana stack (same Micrometer metric names on every
-deployment target). See [`infra/monitoring/README.md`](../infra/monitoring/README.md) for
-what is collected.
+- **Rendered API docs** for all four services are published to GitHub Pages:
+  <https://AET-DevOps26.github.io/team-colleague-md/> (built from each service's
+  `openapi.yaml` on merge to `main`).
+- **Interactive genai docs**: `http://localhost:8000/docs` (FastAPI Swagger UI).
+- **Bruno collection**: [`bruno/`](../bruno/README.md) contains ready-made requests for all
+  services and environments if you want to exercise the APIs directly.
 
-**Local (Docker Compose):**
+## 5. View monitoring
+
+**Locally** (adds Prometheus + Grafana on top of the dev stack):
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
-# Grafana     http://localhost:3001   (admin / verita_grafana_admin)
-# Prometheus  http://localhost:9090
+# Grafana    http://localhost:3001  (admin / verita_grafana_admin)
+# Prometheus http://localhost:9090
 ```
 
-**Rancher (Kubernetes):** Grafana is served behind the shared ingress at `/grafana` —
-e.g. `https://dev.verita.stud.k8s.aet.cit.tum.de/grafana`. Log in with `admin` /
-`verita_grafana_admin` (dev default).
+Open the pre-provisioned **Verita — Services Overview** dashboard in Grafana: request
+rate, 5xx error ratio, latency percentiles, JVM and database-pool metrics per service. The Prometheus
+`node` target reads DOWN locally by design (the host exporter cannot run on Docker
+Desktop).
 
-The pre-provisioned **Verita Overview** dashboard covers HTTP RED metrics (request rate,
-5xx ratio, latency), JVM, DB connection pools, and PostgreSQL health.
+**On Rancher**, Grafana is served through the shared ingress at `/grafana`:
+`https://dev.verita.stud.k8s.aet.cit.tum.de/grafana` (same `admin / verita_grafana_admin`
+login on dev).
 
-## Where to go next
+**On the Azure VM**, the monitoring stack binds to localhost only and is reached over an
+SSH tunnel.
 
-- **Architecture:** [System Overview & Architecture](architecture/System_Overview_Architecture.md)
-- **What problem it solves:** [Problem Statement](product/Problem_Statement.md)
-- **How it's deployed:** [Infrastructure Design](infrastructure/Infrastructure_Design.md)
-- **Testing strategy:** [Backend Testing](testing/Testing.md) · [Frontend Testing](testing/Frontend_Testing.md)
+Details on what is collected and how discovery works per environment:
+[`infra/monitoring/README.md`](../infra/monitoring/README.md).

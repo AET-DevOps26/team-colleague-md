@@ -81,47 +81,50 @@ location /user/ {
 
 ## Environment 3 — Rancher / Kubernetes (Helm + nginx Ingress)
 
-The nginx Ingress Controller is the single public entry point on port 443 (TLS). All pods are inside the cluster network.
+The nginx Ingress Controller is the single public entry point on port 443 (TLS), but it is
+**intentionally trivial**: one `Prefix` rule routes `/` to the frontend Service (plus one
+sub-path rule for `/grafana` → Grafana when monitoring is enabled). The frontend pod's
+nginx — the **same `nginx.conf` as on the Azure VM** — is the actual API gateway and does
+all prefix stripping, so both deployed environments route identically.
 
 ```
-Browser → verita.stud.k8s.aet.cit.tum.de:443 (Ingress)
-    ├── /user(/|$)(.*)           rewrite /$2 → user-service:8081
-    ├── /content(/|$)(.*)        rewrite /$2 → content-service:8082
-    ├── /recommendation(/|$)(.*) rewrite /$2 → recommendation-service:8083
-    ├── /genai(/|$)(.*)          rewrite /$2 → genai-service:8000
-    └── /                                    → frontend:80
-                                                 └── /storage/ proxy_pass → minio:9000
+Browser → verita.stud.k8s.aet.cit.tum.de:443 (Ingress, TLS via cert-manager)
+    ├── /grafana   → grafana:3000        (monitoring sub-path)
+    └── /          → frontend:80 (nginx)
+                        ├── /user/           proxy_pass → user-service:8081
+                        ├── /content/        proxy_pass → content-service:8082
+                        ├── /recommendation/ proxy_pass → recommendation-service:8083
+                        ├── /genai/          proxy_pass → genai-service:8000
+                        ├── /storage/        proxy_pass → minio:9000
+                        └── /                try_files  → index.html (React Router)
 ```
 
-Config: `infra/helm/verita/templates/ingress.yaml`
+Config: `infra/helm/verita/templates/ingress.yaml` (Ingress), `frontend/nginx.conf`
+(gateway; backend Service URLs injected via the `proxyBackend` env block in
+`templates/deployment.yaml`)
 
-**How the Ingress rewrite works** (`rewrite-target: /$2`):
-
-```
-path pattern:  /user(/|$)(.*)
-input:         /user/api/v1/users/me/preferences
-$1 = /    $2 = api/v1/users/me/preferences
-rewrites to:   /api/v1/users/me/preferences  ✓
-```
+An earlier iteration used per-service Ingress rules with `rewrite-target: /$2` regexes;
+it was replaced by this single-rule design because the rewrites broke static-asset
+serving and two same-host Ingresses tripped the nginx admission webhook on upgrade. It
+also keeps the backends off the public Ingress entirely.
 
 | Request | Path | Reaches |
 |---------|------|---------|
-| Page navigation | `/post/123` | Ingress → frontend → React |
-| Login | `POST /user/api/v1/auth/login` | Ingress rewrite → `user-service /api/v1/auth/login` |
-| API test in browser | `host/user/api/v1/users/me/preferences` | Ingress rewrite → user-service |
-| GenAI summarize | `host/genai/api/v1/genai/summarize` | Ingress rewrite → `genai-service /api/v1/genai/summarize` |
-| Avatar image | `/storage/verita-user-portraits/abc.jpg` | Ingress `/` → frontend nginx → minio |
-
-> **Note on `/storage` in K8s:** There is no dedicated Ingress rule for `/storage`. The request falls through to the frontend pod, which proxies it to the in-cluster MinIO service via its own `nginx.conf` `/storage/` block. This adds one extra network hop compared to the other services.
+| Page navigation | `/post/123` | Ingress → frontend nginx → index.html → React |
+| Login | `POST /user/api/v1/auth/login` | frontend nginx → `user-service /api/v1/auth/login` |
+| API test in browser | `host/user/api/v1/users/me/preferences` | frontend nginx → user-service |
+| GenAI summarize | `host/genai/api/v1/genai/summarize` | frontend nginx → `genai-service /api/v1/genai/summarize` |
+| Avatar image | `/storage/verita-user-portraits/abc.jpg` | frontend nginx → `minio:9000` |
+| Grafana | `host/grafana` | Ingress sub-path rule → Grafana pod |
 
 ---
 
 ## Comparison
 
-| | Local (Vite) | Azure VM (nginx) | K8s (Ingress) |
+| | Local (Vite) | Azure VM (nginx) | K8s (Ingress + nginx) |
 |--|--|--|--|
 | Entry point | `localhost:3000` | `<VM_IP>:80` | `host:443` (TLS) |
-| Gateway component | Vite proxy | nginx in frontend container | nginx Ingress Controller |
-| Prefix strip method | `rewrite` function | trailing slash on `proxy_pass` | `rewrite-target: /$2` regex |
+| Gateway component | Vite proxy | nginx in frontend container | frontend nginx (behind a trivial `/` Ingress) |
+| Prefix strip method | `rewrite` function | trailing slash on `proxy_pass` | trailing slash on `proxy_pass` (same nginx.conf) |
 | Backend ports exposed externally | No (direct localhost) | No (Docker network only) | No (cluster network only) |
 | Storage routing | Direct to `localhost:9000` | nginx → MinIO container | Ingress → frontend nginx → MinIO pod |

@@ -1,6 +1,6 @@
 # API Gap Analysis
 
-This document tracks gaps between the refined [Problem Statement](Problem_Statement.md) and the per-service OpenAPI contracts (`backend/<service>/api/openapi.yaml`).
+This document tracks gaps between the refined [Problem Statement](../product/Problem_Statement.md) and the per-service OpenAPI contracts (`backend/<service>/api/openapi.yaml`).
 
 - **P0/P1 (To implement)**: required for delivery.
 - **P2 (Optional)**: implement only if time permits.

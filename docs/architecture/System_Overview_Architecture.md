@@ -14,7 +14,6 @@
 3. [System Architecture](#3-system-architecture)
 4. [UML Diagrams](#4-uml-diagrams)
 5. [Initial Product Backlog](#5-initial-product-backlog)
-6. [Technical Documentation Roadmap](#6-technical-documentation-roadmap)
 
 ---
 
@@ -35,7 +34,7 @@ The system follows a microservices architecture consisting of:
 - **GenAI Service:** AI-powered summarization, daily digest generation
 
 **Infrastructure Layer:**
-- **API Gateway / Reverse Proxy:** Path-prefix routing that strips the prefix before forwarding (Vite proxy in local dev, frontend nginx on the Azure VM, nginx Ingress on Kubernetes). JWT tokens are validated independently by each backend service, not at the gateway.
+- **API Gateway / Reverse Proxy:** Path-prefix routing that strips the prefix before forwarding (Vite proxy in local dev; the frontend container's nginx on the Azure VM and on Kubernetes, where a trivial `/` Ingress forwards everything to it). JWT tokens are validated independently by each backend service, not at the gateway.
 - **PostgreSQL Databases:** One PostgreSQL 16 instance per service (user, content, recommendation) — there is no shared instance
 - **Object Storage (MinIO):** S3-compatible store for user portraits and post images
 - **Monitoring Stack:** Prometheus and Grafana for observability
