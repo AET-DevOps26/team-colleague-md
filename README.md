@@ -1,6 +1,9 @@
 <div align="center">
 
-![Verita](docs/assets/header.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/header-dark.svg">
+  <img alt="Verita — AI news digests, automatically summarized and personalized for you" src="docs/assets/header-light.svg">
+</picture>
 
 </div>
 
@@ -88,25 +91,14 @@ npm install
 npm run seed:local
 ```
 
-The seed is idempotent and non-destructive; options (`--dry-run`, `--only`, `--reset`) and
-the full breakdown are in
+The seed is idempotent and non-destructive; options and the full breakdown are in
 [Local Development](docs/contributing/Local_Development.md#local-seed-data).
 
 Then open http://localhost:3000, sign in as a [demo account](#demo-accounts), and follow
 the [Review Guide](docs/review/Review_Guide.md) for a guided tour.
 
-### Monitoring (optional)
-
-Layer a Prometheus + Grafana stack on top of the dev stack:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.monitoring.local.yml up -d
-# Grafana    http://localhost:3001  (admin / verita_grafana_admin)
-# Prometheus http://localhost:9090
-```
-
-Grafana also runs on the Rancher deployments, exposed through the shared ingress at
-`/grafana` (e.g. https://dev.verita.stud.k8s.aet.cit.tum.de/grafana). See
+A Prometheus + Grafana stack can be layered on top — see the
+[Review Guide](docs/review/Review_Guide.md#5-view-monitoring) to bring it up, and
 [`infra/monitoring/README.md`](infra/monitoring/README.md) for what is collected and the
 Azure/Kubernetes variants.
 
@@ -118,12 +110,7 @@ Live environments:
 |---|---|---|
 | Production | https://verita.stud.k8s.aet.cit.tum.de/ | Kubernetes (Rancher) |
 | Development | https://dev.verita.stud.k8s.aet.cit.tum.de/ | Kubernetes (Rancher) |
-| Azure VM | `TBD` | Docker Compose on a single VM |
-
-The Azure VM IP above is the current value and changes when the VM is rebuilt. The
-authoritative value is the `AZURE_PUBLIC_IP` GitHub Actions variable (repository Settings →
-Secrets and variables → Actions), printed by the Terraform deploy workflow after each apply;
-see [Infrastructure Design](docs/infrastructure/Infrastructure_Design.md).
+| Azure VM | http://REPLACE_ME_WITH_VM_IP/ | Docker Compose on a single VM |
 
 > Note: don't forget to type `thisisunsafe` when the browser warns about the self-signed
 > TLS certificate on the dev environment.
