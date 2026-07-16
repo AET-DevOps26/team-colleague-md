@@ -4,7 +4,7 @@ The seed script under [`scripts/seed/`](../scripts/seed) populates demo users,
 posts, comments, votes, bookmarks and avatars. It is fully environment-agnostic
 (everything is driven by env vars) and idempotent (upserts, safe to re-run). Out
 of the box `npm run seed:local` targets a local `docker compose` stack; this doc
-covers running the **same** script against the two remote demo environments.
+covers running the **same** script against the deployed demo environments.
 
 > **No core changes.** These wrappers only add connectivity + credential wiring
 > around the existing seed — the seed logic itself is untouched.
@@ -21,23 +21,23 @@ covers running the **same** script against the two remote demo environments.
 - **`SEED_RESET=1` (a.k.a. `--reset`)** additionally purges stale seed rows before
   re-seeding: everything owned by users with `@example.com` emails (resolved from
   the live DB, so rows from fixtures dropped in a newer seed are caught too), plus
-  system digests. Real user-created data is still preserved, and topics are left
-  intact. Use it when updated fixtures would otherwise leave old demo data behind.
-  Combine with `SEED_ONLY` to scope it, and preview with `--reset --dry-run`.
+  system digests. Data owned by non-seeded users and all topics are preserved, but
+  posts created manually through a seeded demo account are removed. Use it when
+  updated fixtures would otherwise leave old demo data behind. Combine with
+  `SEED_ONLY` to scope it, and preview with `--reset --dry-run`.
 
 ## Scope
 
 | Environment | Wrapper | Credentials source | k8s `get secret` needed? |
 |---|---|---|---|
 | **verita-dev** (Rancher) | `scripts/seed-rancher.sh` (npm: `seed:rancher`) | committed `values.yaml` dev defaults | **No** |
+| **verita-prod** (Rancher production demo) | manual `Seed Rancher Production Demo` GitHub Actions workflow | GitHub Secrets | **No** |
 | **Azure VM** (prod compose) | `scripts/seed-vm.sh` | the VM's own `.env` (via SSH) | n/a |
-| **verita-prod** (Rancher) | — not supported — | real cluster Secrets | would be |
 
-`verita-prod` is intentionally excluded: seeding real prod with demo data is
-undesirable, and its credentials are only available as cluster Secrets the TUM
-cluster may not let you read. If it is ever needed, do it with an **in-cluster
-Job** that pulls credentials via `secretKeyRef` (so nobody reads the Secret) —
-not with these runbook scripts.
+`verita-prod` is the production-configured demo deployment used for showcases
+and reviews; it does not serve live customer data. Its seed path is deliberately
+manual, main-only, all-domain, and upsert-only. It never runs as part of the prod
+deployment workflow.
 
 ## verita-dev (Rancher)
 
@@ -60,6 +60,34 @@ Local ports used while it runs: `5432` (user db), `5433` (content db), `5434`
 Avatar/cover URLs are stored as `https://dev.verita.stud.k8s.aet.cit.tum.de/storage/...`
 (the ingress `/storage` path), while uploads go through the port-forwarded MinIO
 — the seed separates upload endpoint from public endpoint, so both are correct.
+
+## verita-prod (Rancher production demo)
+
+In GitHub, open **Actions → Seed Rancher Production Demo → Run workflow**. The
+workflow has no inputs: it always checks out `main`, targets `verita-prod`, seeds
+all domains in dependency order, and uses normal upserts. Concurrent prod seed
+runs are serialized.
+
+The GitHub-hosted runner uses the existing `KUBECONFIG` secret to port-forward
+the three PostgreSQL services and MinIO. Database usernames remain the committed
+service users (`svc_user`, `svc_content`, and `svc_recommendation`). The workflow
+injects these existing GitHub Secrets without printing them:
+
+- `USER_DB_PASSWORD`
+- `CONTENT_DB_PASSWORD`
+- `RECOMMENDATION_DB_PASSWORD`
+- `USER_SERVICE_S3_SECRET_KEY`
+- `CONTENT_SERVICE_S3_SECRET_KEY`
+
+Before writing, the wrapper runs a mandatory full `--dry-run`. This authenticates
+against all three databases, validates their seed schemas and fixture dependencies,
+and checks access to both MinIO buckets. Only a successful preflight proceeds to
+the full upsert. Prod mode rejects `SEED_ONLY` and `SEED_RESET`; stale-fixture
+cleanup remains a separate, deliberate operation.
+
+If the write phase fails after partially completing, do not try to roll it back.
+Fix the reported connectivity or credential problem and manually rerun the workflow;
+the deterministic upserts are designed for that recovery path.
 
 ## Azure VM (prod compose)
 
@@ -93,5 +121,12 @@ purges stale seed rows before seeding (see *What it does / doesn't seed*).
 - **dev: `connection refused`** — a port-forward didn't come up; verify the
   service names (`verita-{user,content,recommendation}-postgresql`, `verita-minio`)
   exist in the `verita-dev` namespace and your kube-context is correct.
+- **prod: `Missing required production-demo credential`** — the named GitHub
+  Secret is absent or empty. Add it under the repository's Actions secrets and
+  rerun the manual workflow.
+- **prod: dry-run failed** — no seed write was attempted. Use the named database,
+  schema, or storage error to correct the deployment/secret wiring, then rerun.
+- **prod: write failed after preflight** — the run may have updated earlier seed
+  domains. Correct the failure and rerun the whole workflow; upserts reconcile it.
 - **VM: `user-db container not found`** — the prod stack isn't running, or the
   compose project name differs; pass `SEED_NETWORK=<network>` explicitly.
