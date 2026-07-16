@@ -99,7 +99,7 @@ Live environments:
 | Development | https://dev.verita.stud.k8s.aet.cit.tum.de/ | Kubernetes (Rancher) |
 | Azure VM | `http://68.210.231.173/` | Docker Compose on a single VM |
 
-The Azure VM IP is deliberately not hardcoded here — it changes when the VM is rebuilt. The
+The Azure VM IP above is the current value and changes when the VM is rebuilt. The
 authoritative value is the `AZURE_PUBLIC_IP` GitHub Actions variable (repository Settings →
 Secrets and variables → Actions), printed by the Terraform deploy workflow after each apply;
 see [Infrastructure Design](docs/infrastructure/Infrastructure_Design.md).
