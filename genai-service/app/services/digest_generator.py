@@ -77,7 +77,12 @@ def _build_digest_chain():
         ]
     )
     llm = _get_llm(settings)
-    structured_llm = llm.with_structured_output(DigestLlmOutput, include_raw=True)
+    structured_output_options = {"include_raw": True}
+    if settings.llm_provider.lower() == "ollama":
+        structured_output_options["method"] = "json_schema"
+    structured_llm = llm.with_structured_output(
+        DigestLlmOutput, **structured_output_options
+    )
     return prompt | structured_llm, settings.llm_model
 
 
@@ -230,7 +235,12 @@ def _build_event(
     source_by_id: dict[str, ExternalSourceItem],
     topic_id_by_key: dict[str, str],
 ) -> DigestEvent:
-    topic_ids = [topic_id_by_key[topic_key] for topic_key in payload.topicKeys if topic_key in topic_id_by_key]
+    if any(topic_key not in topic_id_by_key for topic_key in payload.topicKeys) or any(
+        source_id not in source_by_id for source_id in payload.sourceIds
+    ):
+        raise DigestJsonParseError("Digest event contains invalid topicKeys or sourceIds")
+
+    topic_ids = [topic_id_by_key[topic_key] for topic_key in payload.topicKeys]
     sources = [
         DigestSource(
             url=item.url,
@@ -242,8 +252,6 @@ def _build_event(
         for source_id in payload.sourceIds
         if (item := source_by_id.get(source_id)) is not None
     ]
-    if not topic_ids or not sources:
-        raise DigestJsonParseError("Digest event contains invalid topicKeys or sourceIds")
     return DigestEvent(
         headline=payload.headline,
         summaryBullets=[bullet for bullet in payload.summaryBullets if bullet.strip()],

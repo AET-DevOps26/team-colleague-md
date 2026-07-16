@@ -43,6 +43,8 @@ def _llm_credentials_available() -> bool:
         return bool(settings.nvidia_nim_api_key)
     if provider == "logos":
         return bool(settings.logos_api_key)
+    if provider == "ollama":
+        return bool(settings.ollama_base_url)
     return False
 
 

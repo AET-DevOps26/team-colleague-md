@@ -61,6 +61,8 @@ services:
       USER_SERVICE_BASE_URL: "http://{{ .Release.Name }}-user:8081"
       RECOMMENDATION_SERVICE_BASE_URL: "http://{{ .Release.Name }}-recommendation:8083"
       GENAI_SERVICE_BASE_URL: "http://{{ .Release.Name }}-genai:8000"
+      GENAI_READ_TIMEOUT_SECONDS: "60"
+      DIGEST_MAX_WAIT_MS: "120000"
     health:
       path: /actuator/health
       initialDelaySeconds: 45
@@ -115,6 +117,7 @@ services:
       model: openai/gpt-oss-120b
       nvidiaNimApiKey: ""
       logosApiKey: ""
+      ollamaBaseUrl: ""
       gnewsApiKey: ""
     # Digest jobs are held in process memory and polled through the Service. Keep one replica so
     # job creation and status polling cannot land on different, unsynchronised processes.

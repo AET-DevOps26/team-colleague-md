@@ -29,16 +29,23 @@ public class GenAiClient {
     private final RestClient genaiClient;
     private final String internalServiceToken;
 
+    /**
+     * Creates the internal GenAI HTTP client with an environment-specific inference timeout.
+     *
+     * @param genaiUrl base URL of genai-service
+     * @param internalServiceToken shared token sent to authenticated internal endpoints
+     * @param readTimeoutSeconds maximum time to wait for an inference response
+     */
     public GenAiClient(@Value("${app.genai-service-base-url}") String genaiUrl,
-                       @Value("${app.internal-service-token}") String internalServiceToken) {
+                       @Value("${app.internal-service-token}") String internalServiceToken,
+                       @Value("${app.genai-service-read-timeout-seconds}") long readTimeoutSeconds) {
         this.internalServiceToken = internalServiceToken;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
         // Summarization latency scales with the model an admin selected at runtime (ADR-0020): the
-        // small ones answer in seconds, the 400B+ ones take ~20s. The caller is an @Async listener,
-        // so waiting costs no request thread — timing out early would only mark a post FAILED while
-        // GenAI happily finished the work.
-        factory.setReadTimeout(Duration.ofSeconds(60));
+        // local models can be materially slower than cloud models. The caller is an @Async listener,
+        // so waiting costs no request thread; the environment chooses the appropriate upper bound.
+        factory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
         this.genaiClient = RestClient.builder().requestFactory(factory).baseUrl(genaiUrl).build();
     }
 
@@ -101,7 +108,8 @@ public class GenAiClient {
 
     /**
      * Sets genai-service's in-memory (provider, model) override. genai-service answers 400 when the
-     * provider is unknown or has no API key; the caller translates that into the admin's 400.
+     * provider is unknown or lacks its required connection setting; the caller translates that
+     * into the admin's 400.
      */
     public LlmConfigDto updateLlmConfig(LlmConfigUpdateDto request) {
         return genaiClient.put()

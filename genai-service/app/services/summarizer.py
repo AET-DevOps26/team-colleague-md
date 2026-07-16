@@ -105,6 +105,13 @@ def _get_llm(settings):
             base_url="https://logos.aet.cit.tum.de/v1",
             temperature=settings.llm_temperature,
         )
+    elif provider == "ollama":
+        return ChatOpenAI(
+            model=settings.llm_model,
+            api_key="ollama",
+            base_url=settings.ollama_base_url.strip(),
+            temperature=settings.llm_temperature,
+        )
     elif provider == "nvidia":
         return ChatNVIDIA(
             model=settings.llm_model,

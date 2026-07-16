@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # --- LLM Provider ---
-    llm_provider: str = "nvidia"  # "openrouter", "nvidia", "google", or "logos"
+    llm_provider: str = "nvidia"  # "openrouter", "nvidia", "google", "logos", or "ollama"
     llm_model: str = "moonshotai/kimi-k2.6"
     llm_temperature: float = 0.3
 
@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     nvidia_nim_api_key: str = ""
     logos_api_key: str = ""
+    ollama_base_url: str = ""
 
     # --- External Source Providers ---
     github_token: str = ""
@@ -29,6 +30,7 @@ class Settings(BaseSettings):
     # --- Opt-in Live Integration Tests ---
     run_digest_provider_integration: bool = False
     run_digest_llm_integration: bool = False
+    run_ollama_integration: bool = False
 
     # --- Application ---
     app_name: str = "GenAI Service"

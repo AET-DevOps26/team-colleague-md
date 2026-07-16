@@ -353,3 +353,24 @@ class TestLlmFactory:
             base_url="https://logos.aet.cit.tum.de/v1",
             temperature=0.3,
         )
+
+    @patch("app.services.summarizer.ChatOpenAI")
+    def test_get_llm_supports_ollama_openai_compatible_provider(self, mock_chat_openai):
+        from app.services.summarizer import _get_llm
+
+        settings = SimpleNamespace(
+            llm_provider="ollama",
+            llm_model="qwen3:4b-instruct",
+            llm_temperature=0.0,
+            ollama_base_url="http://host.docker.internal:11434/v1",
+        )
+
+        result = _get_llm(settings)
+
+        assert result == mock_chat_openai.return_value
+        mock_chat_openai.assert_called_once_with(
+            model="qwen3:4b-instruct",
+            api_key="ollama",
+            base_url="http://host.docker.internal:11434/v1",
+            temperature=0.0,
+        )

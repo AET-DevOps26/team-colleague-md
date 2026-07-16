@@ -113,6 +113,30 @@ def test_build_digest_chain_uses_plain_structured_output_once():
     assert fake_llm.calls == [(DigestLlmOutput, True, None)]
 
 
+def test_build_digest_chain_uses_json_schema_for_ollama():
+    class FakeLlm:
+        calls = []
+
+        def with_structured_output(self, schema, include_raw=False, method=None):
+            self.calls.append((schema, include_raw, method))
+            return lambda value: value
+
+    fake_llm = FakeLlm()
+    with (
+        patch("app.services.digest_generator.active_settings") as mock_settings,
+        patch("app.services.digest_generator._get_llm", return_value=fake_llm),
+    ):
+        mock_settings.return_value = SimpleNamespace(
+            llm_provider="ollama", llm_model="qwen3:4b-instruct"
+        )
+
+        chain, model = _build_digest_chain()
+
+    assert chain is not None
+    assert model == "qwen3:4b-instruct"
+    assert fake_llm.calls == [(DigestLlmOutput, True, "json_schema")]
+
+
 @pytest.mark.asyncio
 @patch("app.services.digest_generator._build_digest_chain")
 async def test_generate_digest_only_mocks_llm_api(mock_build_chain):
@@ -347,6 +371,29 @@ async def test_generate_digest_rejects_invalid_source_ids(mock_build_chain):
                 summaryBullets=["The benchmark highlights differences in retrieval quality."],
                 topicKeys=["t1"],
                 sourceIds=["not-a-real-source"],
+            )
+        ],
+    )
+    mock_build_chain.return_value = (chain, "test-model")
+
+    with pytest.raises(DigestJsonParseError, match="invalid topicKeys or sourceIds"):
+        await generate_digest(_request(), [_source()])
+    assert chain.ainvoke.await_count == 1
+
+
+@pytest.mark.asyncio
+@patch("app.services.digest_generator._build_digest_chain")
+async def test_generate_digest_rejects_partially_invalid_references(mock_build_chain):
+    chain = AsyncMock()
+    chain.ainvoke.return_value = DigestLlmOutput(
+        topStorySubtitle="LLM benchmarking led today's AI updates.",
+        summary="New model evaluation work shaped the day.",
+        events=[
+            DigestLlmEvent(
+                headline="New LLM benchmark compares long-context behavior",
+                summaryBullets=["The benchmark highlights differences in retrieval quality."],
+                topicKeys=["t1", "invented-topic"],
+                sourceIds=["s1", "invented-source"],
             )
         ],
     )
