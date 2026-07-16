@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from app.config import get_settings
 from app.main import app
@@ -370,7 +371,7 @@ class TestLlmFactory:
         assert result == mock_chat_openai.return_value
         mock_chat_openai.assert_called_once_with(
             model="qwen3:4b-instruct",
-            api_key="ollama",
+            api_key=SecretStr("ollama"),
             base_url="http://host.docker.internal:11434/v1",
             temperature=0.0,
         )

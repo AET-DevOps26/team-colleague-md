@@ -20,6 +20,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from pydantic import SecretStr
 
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse, TokenUsage
 from app.services.llm_config import active_settings
@@ -108,7 +109,7 @@ def _get_llm(settings):
     elif provider == "ollama":
         return ChatOpenAI(
             model=settings.llm_model,
-            api_key="ollama",
+            api_key=SecretStr("ollama"),
             base_url=settings.ollama_base_url.strip(),
             temperature=settings.llm_temperature,
         )

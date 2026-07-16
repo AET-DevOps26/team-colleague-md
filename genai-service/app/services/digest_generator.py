@@ -77,12 +77,12 @@ def _build_digest_chain():
         ]
     )
     llm = _get_llm(settings)
-    structured_output_options = {"include_raw": True}
     if settings.llm_provider.lower() == "ollama":
-        structured_output_options["method"] = "json_schema"
-    structured_llm = llm.with_structured_output(
-        DigestLlmOutput, **structured_output_options
-    )
+        structured_llm = llm.with_structured_output(
+            DigestLlmOutput, include_raw=True, method="json_schema"
+        )
+    else:
+        structured_llm = llm.with_structured_output(DigestLlmOutput, include_raw=True)
     return prompt | structured_llm, settings.llm_model
 
 
