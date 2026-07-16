@@ -300,30 +300,34 @@ Connection defaults match `docker-compose.yml` and can be overridden:
 | `CONTENT_STORAGE_S3_SECRET_KEY` | `content-service-s3-secret` |
 | `CONTENT_POST_PHOTOS_BUCKET` | `verita-post-photos` |
 
-#### Seeding Remote Environments (verita-dev & Azure VM)
+#### Seeding Remote Environments
 
 The same seed runs against the deployed demo environments — only the connectivity
-and credentials differ, so the core script is reused unchanged via two wrappers:
+and credentials differ, so every target reuses the same core seed:
 
 ```bash
 # verita-dev (Rancher): port-forwards in-cluster Postgres + MinIO, uses the
 # committed dev credentials — no `kubectl get secret` or GitHub secret access.
 npm run seed:rancher
 
+# verita-prod (Rancher production demo): manually run the input-free
+# "Seed Rancher Production Demo" workflow in GitHub Actions. It checks out main,
+# performs a full dry-run, then upserts every seed domain with GitHub Secrets.
+
 # Azure VM (prod compose): ships the seed over SSH and runs it in a one-off
 # node container on the compose network, reading the VM's Ansible-written .env.
 VM_HOST=<public-ip> ./scripts/seed-vm.sh
 
-# Both wrappers accept SEED_RESET=1 to purge stale seed rows before re-seeding
-# (same semantics as `seed:local -- --reset`), so updated fixtures don't leave
-# old demo data behind:
+# The dev and VM wrappers accept SEED_RESET=1 to purge stale seed rows before
+# re-seeding (same semantics as `seed:local -- --reset`):
 SEED_RESET=1 npm run seed:rancher
 VM_HOST=<public-ip> SEED_RESET=1 ./scripts/seed-vm.sh
 ```
 
-`seed:rancher` is guarded to `verita-dev` only. Seeding the real prod namespace is
-intentionally unsupported. See [Seeding Remote Environments](docs/Seeding_Remote_Environments.md)
-for prerequisites, scope, and troubleshooting.
+The production-demo workflow is manual-only, main-only, all-domain, and upsert-only;
+it does not run with prod deployment and does not expose reset or target inputs. See
+[Seeding Remote Environments](docs/Seeding_Remote_Environments.md) for credentials,
+scope, recovery, and troubleshooting.
 
 ---
 
