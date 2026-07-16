@@ -30,7 +30,7 @@ seven-week project. Everyone reviewed each other's PRs; the table lists primary 
 | CI/CD | All three | GitHub Actions per service, image tagging & deploy triggers, secret handling, Helm CI, Java 25 upgrade |
 | Testing | Arpad / Yaxuan | Backend test suites for all three services (Arpad); frontend Playwright layers and the 3-layer digest suite (Yaxuan) |
 | Documentation & ADRs | Yaxuan | Architecture overview, problem statement, PRD, project plan, ADR-0001…0020, infrastructure docs, review guide & check list |
-| API specs (OpenAPI) | Arpad | Initial specs per service (Arpad); alignment with the class diagram and frontend needs (Yaxuan) |
+| API specs (OpenAPI) | Arpad / Yaxuan | Initial specs per service (Arpad); alignment with the class diagram and frontend needs (Yaxuan) |
 | Release management | Yaxuan | Weekly `dev` → `main` releases, branching guide, PR/issue templates, history reconvergence |
 
 ## Timeline highlights
@@ -47,5 +47,5 @@ seven-week project. Everyone reviewed each other's PRs; the table lists primary 
 ## References
 
 - [Review Guide](Review_Guide.md) — how to run and explore the project
-- [Check List](Check_List.md) — manually verified integration flows
+- [Check List](Check_List.md) — promised user stories versus what ships, verified by hand
 - [Project Plan](../product/Project_Plan.md) — milestones and scope

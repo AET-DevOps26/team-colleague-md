@@ -12,7 +12,7 @@ code they describe and are linked at the bottom.
 | Document | What's inside |
 |---|---|
 | [Review Guide](review/Review_Guide.md) | Reviewer walkthrough: explore checklist, health checks, API docs, monitoring |
-| [Check List](review/Check_List.md) | Manually verified frontend ↔ backend integration flows |
+| [Check List](review/Check_List.md) | Every Problem Statement user story versus what actually ships, verified by hand |
 | [Team Responsibilities](review/Team_Responsibilities.md) | Who owned which area, derived from the pull-request history |
 
 ## architecture/
