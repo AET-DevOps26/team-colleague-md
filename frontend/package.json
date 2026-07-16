@@ -12,7 +12,8 @@
     "test:ui": "playwright test --ui",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:unit:ui": "vitest --ui"
+    "test:unit:ui": "vitest --ui",
+    "demo:record": "playwright test --config playwright.demo.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

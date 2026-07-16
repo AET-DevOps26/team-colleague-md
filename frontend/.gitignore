@@ -33,3 +33,6 @@ playwright-report/
 *.njsproj
 *.sln
 *.sw?
+
+# Raw demo takes (webm) — only the converted clips under docs/assets/demo are committed.
+demo-recordings/
