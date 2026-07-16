@@ -1,6 +1,7 @@
 package com.verita.contentservice.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -104,7 +105,7 @@ class DailyDigestGenerationServiceTest {
         verify(digestService).createDigest(createRequest.capture());
         CreateDigestRequest request = createRequest.getValue();
         assertEquals(DigestType.PERSONAL, request.getDigestType());
-        assertEquals("Your Thursday AI Digest", request.getTitle());
+        assertFalse(request.getTitle().isPresent());
         assertEquals("Top story subtitle", request.getSubtitle().get());
         assertEquals(userId, request.getTargetUserId().get());
         assertEquals("https://example.com/story", request.getEvents().get(0).getSources().get(0).getUrl().toString());
@@ -137,7 +138,6 @@ class DailyDigestGenerationServiceTest {
                 now.toLocalDate(),
                 now.minusDays(1),
                 now,
-                "Your Thursday AI Digest",
                 "Top story subtitle",
                 "Longer executive summary.",
                 List.of(new DigestTopicDto(topicId.toString(), "LLMs")),

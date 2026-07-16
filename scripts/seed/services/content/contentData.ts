@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SEED_USERS } from "../users/usersData.ts";
 import { SEED_NOW, daysAgo, hoursAgo } from "../seedClock.ts";
+import { seedDigestTitle } from "./digestTitle.ts";
 
 export const SEED_REFERENCE_TIME = SEED_NOW.toISOString();
 const contentDataDir = path.dirname(fileURLToPath(import.meta.url));
@@ -3174,7 +3175,7 @@ export const SEED_DIGESTS: SeedDigest[] = [
   // so it is the newest null-target digest.
   {
     id: "98000000-0000-4000-8000-000000000000",
-    title: "The AI briefing: interpretability circuits, agent reliability, and faster inference",
+    title: seedDigestTitle(null, daysAgo(4)),
     summary: "Today across the Verita community: mechanistic interpretability pins down few-shot learning, agent tool-call failures get catalogued, and inference optimisation compounds into real throughput wins.",
     content: `## Today's public briefing
 
@@ -3211,7 +3212,7 @@ Combining grouped-query attention, int8 KV cache, and prefix sharing reduces per
   // ── Today's hero digest ───────────────────────────────────────────────────
   {
     id: "98000000-0000-4000-8000-000000000001",
-    title: "Breakthroughs in mechanistic interpretability and agent reliability",
+    title: seedDigestTitle("alexchen", hoursAgo(2)),
     summary: "Skill induction heads reveal how 70B models learn from demonstrations, while new patterns emerge for building agents that hold up in production.",
     content: `## Today's highlights
 
@@ -3254,7 +3255,7 @@ Tobias Klein shared production numbers for speculative decoding with Llama 3 70B
   },
   {
     id: "98000000-0000-4000-8000-000000000002",
-    title: "RAG chunking strategies benchmarked end-to-end",
+    title: seedDigestTitle("alexchen", daysAgo(1)),
     summary: "Five chunking strategies tested across three domains reveal late chunking as the clear winner, with 13% quality gains over fixed-size approaches.",
     content: `## Yesterday's highlights
 
@@ -3285,7 +3286,7 @@ A detailed comparison showed a fully self-hosted RAG stack (BGE-M3 + Qdrant + Ll
   },
   {
     id: "98000000-0000-4000-8000-000000000003",
-    title: "Model evaluation frameworks and LLM-as-judge reliability",
+    title: seedDigestTitle("alexchen", daysAgo(2)),
     summary: "A new three-layer evaluation framework addresses the gap between benchmark scores and production performance, while LLM-as-judge calibration data reveals 15% inter-model disagreement.",
     content: `## Highlights
 
@@ -3317,7 +3318,7 @@ HumanEval pass@1 scores now exceed 90% for frontier models, making the benchmark
   },
   {
     id: "98000000-0000-4000-8000-000000000004",
-    title: "DPO vs RLHF and the alignment tax in practice",
+    title: seedDigestTitle("alexchen", daysAgo(3)),
     summary: "Practical comparisons show DPO is 6× cheaper than RLHF with only 2-4% quality trade-off, while the total alignment tax adds ~60% to fine-tuning effort.",
     content: `## Highlights
 
@@ -3351,7 +3352,7 @@ Adding learned direction vectors to model activations at inference time increase
   },
   {
     id: "98000000-0000-4000-8000-000000000005",
-    title: "Inference optimisation roundup: KV cache, FP8, and speculative decoding",
+    title: seedDigestTitle("alexchen", daysAgo(5)),
     summary: "Compound optimisations achieve 27× KV cache reduction, FP8 quantisation delivers 1.8× throughput with negligible quality loss, and vLLM emerges as the default inference server.",
     content: `## Highlights
 
@@ -3382,7 +3383,7 @@ vLLM leads in model support and community adoption, SGLang excels for agentic mu
   },
   {
     id: "98000000-0000-4000-8000-000000000006",
-    title: "Fine-tuning on consumer hardware and open-source model updates",
+    title: seedDigestTitle("alexchen", daysAgo(7)),
     summary: "A comprehensive QLoRA guide demonstrates 7B model fine-tuning in 4 hours on RTX 4090s, while the open-source multimodal landscape matures rapidly.",
     content: `## Highlights
 
@@ -3414,7 +3415,7 @@ An accessible deep-dive on sparse expert routing explained why top-2 routing is 
   },
   {
     id: "98000000-0000-4000-8000-000000000007",
-    title: "Multi-agent evaluation and prompt reliability at scale",
+    title: seedDigestTitle("alexchen", daysAgo(9)),
     summary: "A three-level framework for evaluating non-deterministic agent systems achieves 91% pass rate, while prompt reliability techniques address the 100K-failures-per-day problem.",
     content: `## Highlights
 
@@ -3449,7 +3450,7 @@ A three-phase approach (threat modeling → systematic testing → automated sca
   },
   {
     id: "98000000-0000-4000-8000-000000000008",
-    title: "Context windows, superposition, and the limits of scaling",
+    title: seedDigestTitle("alexchen", daysAgo(11)),
     summary: "Context window size proves to be a misleading metric as realistic QA accuracy drops to 71% at 128K tokens, while superposition research reveals why interpretability remains fundamentally challenging.",
     content: `## Highlights
 
@@ -3480,7 +3481,7 @@ Testing 6 embedding models on long documents revealed all models degrade with do
   },
   {
     id: "98000000-0000-4000-8000-000000000009",
-    title: "Open-source ecosystem roundup and medical AI progress",
+    title: seedDigestTitle("alexchen", daysAgo(13)),
     summary: "MLOps tooling matures with vLLM, SGLang, and TensorRT-LLM, while vision-language models in medicine remain years from primary diagnostic use.",
     content: `## Highlights
 

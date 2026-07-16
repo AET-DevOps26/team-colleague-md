@@ -110,7 +110,15 @@ services:
     metrics:
       path: /metrics
     internalToken: true
-    replicaCount: 2
+    llm:
+      provider: logos
+      model: openai/gpt-oss-120b
+      nvidiaNimApiKey: ""
+      logosApiKey: ""
+      gnewsApiKey: ""
+    # Digest jobs are held in process memory and polled through the Service. Keep one replica so
+    # job creation and status polling cannot land on different, unsynchronised processes.
+    replicaCount: 1
     health:
       path: /health
       initialDelaySeconds: 15

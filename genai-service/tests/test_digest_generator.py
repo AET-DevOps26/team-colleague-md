@@ -117,7 +117,6 @@ async def test_generate_digest_only_mocks_llm_api(mock_build_chain):
             usage_metadata={"input_tokens": 120, "output_tokens": 80, "total_tokens": 200}
         ),
         "parsed": DigestLlmOutput(
-            title="Your Thursday AI Digest",
             topStorySubtitle="LLM benchmarking led today's AI updates.",
             summary="New model evaluation work shaped the day.",
             events=[
@@ -135,7 +134,7 @@ async def test_generate_digest_only_mocks_llm_api(mock_build_chain):
 
     result = await generate_digest(_request(), [_source()])
 
-    assert result.title == "Your Thursday AI Digest"
+    assert not hasattr(result, "title")
     assert result.model == "test-model"
     assert result.sourceCount == 1
     assert result.eventCount == 1
@@ -161,7 +160,6 @@ async def test_generate_digest_only_mocks_llm_api(mock_build_chain):
 async def test_generate_digest_accepts_direct_structured_output_without_usage(mock_build_chain):
     chain = AsyncMock()
     chain.ainvoke.return_value = DigestLlmOutput(
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work shaped the day.",
         events=[
@@ -201,7 +199,6 @@ async def test_generate_digest_rejects_invalid_structured_output(mock_build_chai
 async def test_generate_digest_rejects_invalid_source_ids(mock_build_chain):
     chain = AsyncMock()
     chain.ainvoke.return_value = DigestLlmOutput(
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work shaped the day.",
         events=[
@@ -224,7 +221,6 @@ async def test_generate_digest_rejects_invalid_source_ids(mock_build_chain):
 async def test_generate_digest_rejects_invalid_topic_keys(mock_build_chain):
     chain = AsyncMock()
     chain.ainvoke.return_value = DigestLlmOutput(
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work shaped the day.",
         events=[

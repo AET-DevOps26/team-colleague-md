@@ -228,7 +228,6 @@ class TestLlmFactory:
             llm_model="openai/gpt-oss-120b",
             llm_temperature=0.3,
             logos_api_key="test-logos-key",
-            logos_base_url="https://logos.aet.cit.tum.de/v1",
         )
 
         result = _get_llm(settings)

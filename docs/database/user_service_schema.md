@@ -12,7 +12,7 @@
 | Enum Name          | Values                      | Notes                              |
 | ------------------ | --------------------------- | ---------------------------------- |
 | `user_role`        | `USER`, `VERIFIED`, `ADMIN` | `VERIFIED` drives the badge        |
-| `digest_frequency` | `DAILY`, `WEEKLY`, `OFF`    | AI Digest cadence; default `WEEKLY` |
+| `digest_frequency` | `DAILY`, `WEEKLY`, `OFF`    | AI Digest cadence; new accounts default to `DAILY` in the application |
 
 > Stored as strings (`@Enumerated(EnumType.STRING)`), not native PostgreSQL enum types.
 
@@ -43,7 +43,7 @@ auth/refresh-token state, and notification preferences.
 | `follower_count`       | `INTEGER`      | NO       | `0`                 | Denormalized cache (see note)                               |
 | `following_count`      | `INTEGER`      | NO       | `0`                 | Denormalized cache (see note)                               |
 | `like_received_count`  | `INTEGER`      | NO       | `0`                 | Denormalized cache (see note)                               |
-| `digest_frequency`     | `digest_frequency` | NO   | `'WEEKLY'`          | AI Digest email cadence                                     |
+| `digest_frequency`     | `digest_frequency` | NO   |                     | AI Digest cadence; new accounts start at `DAILY` in the application |
 | `show_bookmarks`       | `BOOLEAN`      | NO       | `true`              | Whether others can see this user's bookmarks               |
 | `show_likes`           | `BOOLEAN`      | NO       | `true`              | Whether others can see this user's liked posts             |
 | `refresh_token`        | `TEXT`         | YES      |                     | Current refresh token (unique)                             |

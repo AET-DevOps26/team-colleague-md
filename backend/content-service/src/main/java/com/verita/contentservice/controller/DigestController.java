@@ -22,6 +22,17 @@ public class DigestController implements DigestsApi {
     private final DigestService digestService;
     private final DailyDigestGenerationService generationService;
 
+    /**
+     * Persists a service-supplied digest while replacing its legacy caller title with the
+     * deterministic content-service title.
+     *
+     * @param createDigestRequest generated digest content and target metadata; any supplied title
+     *     is ignored
+     * @return the persisted digest with its content-service-generated title
+     * @deprecated Scheduled and admin generation persist in-process; retained for service-client
+     *     compatibility only.
+     */
+    @Deprecated(forRemoval = false)
     @Override
     public ResponseEntity<DigestDetail> createDigest(@Valid CreateDigestRequest createDigestRequest) {
         return ResponseEntity.status(201).body(digestService.createDigest(createDigestRequest));

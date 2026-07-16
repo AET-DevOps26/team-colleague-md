@@ -8,7 +8,6 @@ public record DigestGenerateResponseDto(
         LocalDate digestDate,
         OffsetDateTime periodStart,
         OffsetDateTime periodEnd,
-        String title,
         String topStorySubtitle,
         String summary,
         List<DigestTopicDto> topics,

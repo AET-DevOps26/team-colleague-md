@@ -79,7 +79,7 @@ public class UserEntity {
     private OffsetDateTime refreshTokenExpiry;
 
     @Enumerated(EnumType.STRING)
-    private DigestFrequency digestFrequency = DigestFrequency.WEEKLY;
+    private DigestFrequency digestFrequency = DigestFrequency.DAILY;
 
     private Boolean showBookmarks = true;
     private Boolean showLikes = true;

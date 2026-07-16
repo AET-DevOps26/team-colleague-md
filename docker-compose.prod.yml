@@ -244,6 +244,11 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
     environment:
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required — must be identical across all services}
+      - LLM_PROVIDER=${LLM_PROVIDER:-logos}
+      - LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-120b}
+      - NVIDIA_NIM_API_KEY=${NVIDIA_NIM_API_KEY:-}
+      - LOGOS_API_KEY=${LOGOS_API_KEY:-}
+      - GNEWS_API_KEY=${GNEWS_API_KEY:-}
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)" ]

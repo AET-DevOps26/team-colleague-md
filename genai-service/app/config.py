@@ -21,7 +21,6 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     nvidia_nim_api_key: str = ""
     logos_api_key: str = ""
-    logos_base_url: str = "https://logos.aet.cit.tum.de/v1"
 
     # --- External Source Providers ---
     github_token: str = ""
