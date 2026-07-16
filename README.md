@@ -1,6 +1,10 @@
-# Verita
+<div align="center">
+
+![Verita](docs/assets/header.svg)
 
 [![API Docs](https://img.shields.io/badge/API-Documentation-blue)](https://AET-DevOps26.github.io/team-colleague-md/)
+
+</div>
 
 Verita is an AI-focused community platform where developers, researchers, and enthusiasts
 share and discover practical AI knowledge through intelligent curation, automated
@@ -10,6 +14,20 @@ summarization, and personalized recommendations. It is built as four backend mic
 - **Reviewing the project?** Start with the [Review Guide](docs/review/Review_Guide.md).
 - **Developing locally?** See [Local Development](docs/contributing/Local_Development.md).
 - **Everything else:** the [documentation index](#documentation) below.
+
+## Architecture at a Glance
+
+<div align="center">
+
+![Verita request flow: the browser calls the API gateway, which routes by path prefix to the user, content, and recommendation Spring Boot services, each with its own PostgreSQL database. Content-service forwards to the FastAPI GenAI service over an internal service-token channel.](docs/assets/architecture-flow.svg)
+
+</div>
+
+Every service validates its JWT independently — there is no shared session store — and each
+owns its own database. The browser never talks to GenAI directly: content-service fronts it
+over the internal service-token channel. Full rationale in
+[System Overview & Architecture](docs/architecture/System_Overview_Architecture.md) and the
+[ADRs](docs/adr/).
 
 ## Quick Start with Docker Compose (Local)
 
