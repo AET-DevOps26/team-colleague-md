@@ -19,9 +19,6 @@ Related: [ADR-0020](../adr/0020-runtime-llm-selection-and-admin-ops.md) (runtime
 You only need **one** LLM provider key to test everything. A provider **without a key is
 unavailable**: it appears greyed out in the Admin panel and the backend rejects selecting it.
 
-> **Logos only works inside the TUM network.** Off-campus you must be connected to **eduVPN**,
-> otherwise every Logos call times out. NVIDIA works from anywhere on the public internet.
-
 ---
 
 ## 2. Configure the environment
