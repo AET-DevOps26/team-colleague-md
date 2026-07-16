@@ -2,8 +2,6 @@
 
 ![Verita](docs/assets/header.svg)
 
-[![API Docs](https://img.shields.io/badge/API-Documentation-blue)](https://AET-DevOps26.github.io/team-colleague-md/)
-
 </div>
 
 Verita is an AI-focused community platform where developers, researchers, and enthusiasts
@@ -15,6 +13,9 @@ summarization, and personalized recommendations. It is built as four backend mic
 - **Developing locally?** See [Local Development](docs/contributing/Local_Development.md).
 - **Everything else:** the [documentation index](#documentation) below.
 
+[![API Docs](https://img.shields.io/badge/API-Documentation-blue)](https://AET-DevOps26.github.io/team-colleague-md/)
+
+
 ## Architecture at a Glance
 
 <div align="center">
@@ -23,9 +24,7 @@ summarization, and personalized recommendations. It is built as four backend mic
 
 </div>
 
-Every service validates its JWT independently — there is no shared session store — and each
-owns its own database. The browser never talks to GenAI directly: content-service fronts it
-over the internal service-token channel. Full rationale in
+Full rationale in
 [System Overview & Architecture](docs/architecture/System_Overview_Architecture.md) and the
 [ADRs](docs/adr/).
 
