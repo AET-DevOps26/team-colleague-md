@@ -36,7 +36,7 @@ frontend/tests/
 │   ├── topics.spec.ts           ← Topic Management
 │   ├── digest.spec.ts           ← Daily Digest
 │   └── admin.spec.ts            ← Admin GenAI ops
-└── demo/                     ← Playwright: README/presentation GIF recordings (opt-in)
+└── demo/                     ← Playwright: README/presentation clip recordings (opt-in)
     ├── support.ts
     └── *.demo.ts
 ```
@@ -104,18 +104,64 @@ Remote environments must be seeded first — see
 
 ## Demo recordings
 
-`tests/demo/` records the README/presentation GIFs from the real app against the same seeded stack,
+`tests/demo/` records the README/presentation clips from the real app against the same seeded stack,
 reusing the E2E seed fixtures. They are **not** part of `npm test` (a separate config and an
 `*.demo.ts` suffix keep them out): they carry deliberate pauses and few assertions.
 
 ```bash
 docker compose up -d && npm run seed:local   # from the repo root
-cd frontend && npm run demo:record           # → frontend/demo-recordings/**/*.webm
-cd .. && ./scripts/make-demo-gifs.sh         # → docs/assets/demo/*.gif
+cd frontend && npm run demo:record           # → frontend/demo-recordings/<run>/**/*.webm
+cd .. && ./scripts/make-demo-clips.sh        # → docs/assets/demo/*.webp
+SPEED=1.5 ./scripts/make-demo-clips.sh      # → docs/assets/demo/*-1.5x.webp
 ```
 
-Raw `.webm` output is gitignored; only the converted GIFs are committed. Regenerate them
-deliberately rather than on every UI tweak — each one is a few MB in the repo.
+Raw `.webm` output is gitignored; only the converted clips are committed. Regenerate them
+deliberately rather than on every UI tweak — each one is a few MB in the repo. Every recording run
+writes its own timestamped directory and `make-demo-clips.sh` encodes the newest by default; point
+`REC_DIR` at an older one to keep a better take.
+
+Only the 1.5x clips the README embeds are committed — the full set at three speeds is ~66MB against
+a ~22MB repo, so other speeds are generated on demand rather than carried in history. `SPEED`
+re-times rather than decimates: WebP carries a duration per frame, so speeding up shortens each
+delay and every recorded frame still ships.
+
+Five properties of the pipeline are easy to break by "tidying up":
+
+- **The `Desktop Chrome` preset must stay out of the project's `use`.** A project's `use` overrides
+  the top-level one, and that preset carries its own `viewport` (1280x720) and `deviceScaleFactor`
+  (1) — spread into the project it silently reverts both, and the clip records the cramped
+  small-desktop breakpoint. It is spread *under* the shared `use` instead.
+- **`--force-device-scale-factor=2`** is what raises the capture; `deviceScaleFactor: 2` alone only
+  changes what the page reports about itself. The screencast then captures at CSS size and the
+  recorder pads it into the corner of the frame rather than scaling it up — a grey L around a
+  small picture is the symptom of both this and the preset problem above.
+- **`slowMo` must stay 0.** It delays every Playwright call, including each step of the synthetic
+  cursor's glide, which turns the pointer into a slideshow. Scripts pace themselves with `beat()`.
+- **25fps is the ceiling**, not a choice. Playwright's screencast records at a fixed 25fps, so the
+  clips ship it unaltered. Interpolating up to 60 either cross-fades (ghosting on moving text) or
+  costs ~40x realtime to estimate motion vectors.
+- **`-enc_time_base 1/1000` is what makes `SPEED` work.** Left out, the encoder inherits a 1/25
+  timebase and quantizes frame delays onto a 40ms grid; re-timed frames round onto the same tick and
+  get a **0ms duration** — present in the file, never displayed. The clip then looks sped up while
+  having quietly dropped a third of its frames.
+
+Verify a re-time by frame count, not by eye: every speed of a clip must have the *same* frame count
+as its 1x, with the total duration divided. `ffprobe` cannot help — ffmpeg encodes animated WebP but
+cannot decode it, and PIL reports the durations as 0. Parse the ANMF chunks (the 3-byte duration sits
+at body+12). Note the *average* fps of a finished clip reads well below 25: the screencast emits a
+frame only when the page changes, so a `beat()` pause becomes one long-duration frame rather than a
+run of identical ones. Motion is still 25fps.
+
+The page lays out at 1920x1080 and is captured at 2x, so `make-demo-clips.sh` downscales 3840x2160
+frames to a 2560-wide clip — the extra pixels are supersampled away rather than wasted.
+
+Demos drive the pointer through `click()`/`hover()` in `tests/demo/support.ts` rather than
+`locator.click()`: Playwright does not record the real cursor, so those helpers paint a synthetic
+one and glide it, and a bare `locator.click()` teleports it.
+
+Anything on the LLM path is recorded against a live model, so model choice is a recording concern.
+`admin-genai-ops` pins `mistralai/mistral-medium-3.5-128b` (~3s, against ~53s for llama-3.3-70b);
+see that file's header for why the env-default provider is not usable outside the TUM network.
 
 ---
 

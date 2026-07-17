@@ -145,12 +145,17 @@ export async function hover(page: Page, target: Locator, duration = 420): Promis
  * The demo's click: glide onto the target, pause long enough for the viewer's eye to arrive, then
  * press. Every interaction in a demo script should go through this — a bare `locator.click()` warps
  * the cursor and defeats the point of drawing it.
+ *
+ * The press itself is delegated to the locator rather than fired at the coordinates the glide aimed
+ * at. Async content lands *during* the glide — the admin tab bar reflows when the user count
+ * resolves — and a raw `mouse.click` at a stale point silently hits whatever moved into it. The
+ * locator re-resolves the box and waits for actionability; it also moves the pointer to the element
+ * centre itself, which is already where the glide left it, so nothing jumps on camera.
  */
 export async function click(page: Page, target: Locator): Promise<void> {
-  const { x, y } = await centerOf(target);
-  await glideMouse(page, x, y);
+  await hover(page, target);
   await beat(page, 220);
-  await page.mouse.click(x, y);
+  await target.click();
   await beat(page, 180);
 }
 

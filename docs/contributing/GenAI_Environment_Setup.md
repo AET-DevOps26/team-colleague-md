@@ -37,7 +37,7 @@ Then edit `.env`. Pick **one** of the two providers as the default:
 
 ```dotenv
 LLM_PROVIDER=nvidia
-LLM_MODEL=nvidia/nemotron-3-super-120b-a12b
+LLM_MODEL=mistralai/mistral-medium-3.5-128b
 NVIDIA_NIM_API_KEY=nvapi-...
 
 INTERNAL_SERVICE_TOKEN=dev-only-internal-service-token

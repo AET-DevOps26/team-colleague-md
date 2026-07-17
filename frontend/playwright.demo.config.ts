@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const desktopChrome = devices['Desktop Chrome'];
+
 /**
  * Recording config for the README/presentation demo clips — opt-in, never part of `npm test`.
  *
@@ -33,17 +35,26 @@ export default defineConfig({
   // Pauses are the point here, and admin-genai-ops waits on a real LLM round trip.
   timeout: 240_000,
   use: {
+    ...desktopChrome,
     baseURL,
-    // 1440p 16:9. The page is laid out at 1280x720 and rendered at deviceScaleFactor 2, so the
-    // screencast captures 2560x1440 real device pixels — the layout a 720p viewport produces, with
-    // four times the pixels behind every glyph. Recording at native size means the encoder never
-    // has to upscale, which is what smeared the type before.
-    viewport: { width: 1280, height: 720 },
+    // The page lays out at 1920x1080 and is painted at 2x, so the frames arrive at 3840x2160 and
+    // make-demo-clips.sh scales them to a 2560-wide clip. Both halves matter and they are separate:
+    // the viewport decides the *layout* a viewer sees (a 1280 viewport gives the cramped small-
+    // desktop breakpoint), the scale factor decides how many pixels are behind each glyph.
+    //
+    // --force-device-scale-factor is what raises the capture. `deviceScaleFactor: 2` alone only
+    // changes what the page reports to itself — the screencast still captures at CSS size, and the
+    // recorder then pads that into the top-left of the frame rather than scaling it up, which
+    // yields a clip with a grey L around it. The flag raises the compositor surface instead.
+    viewport: { width: 1920, height: 1080 },
     deviceScaleFactor: 2,
-    video: { mode: 'on', size: { width: 2560, height: 1440 } },
-    // No slowMo: it delays every single Playwright call, which turns the cursor glide in
-    // tests/demo/support.ts into a slideshow. The scripts pace themselves with explicit beats.
-    launchOptions: { slowMo: 0 },
+    video: { mode: 'on', size: { width: 3840, height: 2160 } },
+    launchOptions: {
+      args: ['--force-device-scale-factor=2'],
+      // No slowMo: it delays every single Playwright call, which turns the cursor glide in
+      // tests/demo/support.ts into a slideshow. The scripts pace themselves with explicit beats.
+      slowMo: 0,
+    },
   },
   webServer: {
     command: 'npm run dev',
@@ -51,6 +62,10 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 30_000,
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // The device preset is spread *under* the shared `use`, not in a project on top of it: a project's
+  // `use` wins over the top-level one, and Desktop Chrome carries its own viewport (1280x720) and
+  // deviceScaleFactor (1). Spread into a project it silently reverts both settings above, and the
+  // recorder pads the smaller surface into the top-left of the frame — a 720p clip in a 4K box.
+  projects: [{ name: 'chromium' }],
   outputDir: `./demo-recordings/${runId}`,
 });

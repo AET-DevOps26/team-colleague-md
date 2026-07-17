@@ -16,10 +16,13 @@ import { beat, click, findPostIdByTitle, glideTo, SEED_USERS, startSignedIn, typ
  * linger on the switched state as though it were persisted.
  */
 
-// Both providers are keyed in the local stack; nvidia is the one that is not the default, so
-// picking it makes the change visible in `active:` rather than being a no-op.
+// nvidia, because the env default (logos) is only reachable from inside the TUM network and 401s
+// anywhere else — so nvidia is both the provider that works here and a genuine change to show.
+//
+// This model is picked for latency: it summarizes this post in ~3s, against ~53s for
+// llama-3.3-70b and a hard timeout for mistral-large-3, so the clip has no dead air.
 const TARGET_PROVIDER = 'nvidia';
-const TARGET_MODEL = 'meta/llama-3.3-70b-instruct';
+const TARGET_MODEL = 'mistralai/mistral-medium-3.5-128b';
 
 const DEMO_POST = 'How I fine-tuned Llama 3 on 4 GPUs in under 6 hours';
 
@@ -70,8 +73,8 @@ test('admin-genai-ops', async ({ page }) => {
   await expect(status).toBeVisible();
   await beat(page, 1200);
 
-  // The panel polls every 2s; a live model round trip can take most of a minute.
-  await expect(status).toContainText('COMPLETED', { timeout: 120_000 });
+  // The panel polls every 2s and gives up at 90s, so there is no point waiting longer than it does.
+  await expect(status).toContainText('COMPLETED', { timeout: 90_000 });
   await beat(page, 1800);
 
   /* ── 3. read the result where a reader would ── */
@@ -83,7 +86,7 @@ test('admin-genai-ops', async ({ page }) => {
   await glideTo(page, 'h1');
   await click(page, page.getByRole('button', { name: 'AI summary' }));
 
-  // The summary on screen is the one the job just wrote, on the model chosen 30 seconds ago.
-  await expect(page.getByText('Key points')).toBeVisible();
+  // Exact, because a bullet that happens to contain the words "key points" also matches otherwise.
+  await expect(page.getByText('Key points', { exact: true })).toBeVisible();
   await beat(page, 3200);
 });
