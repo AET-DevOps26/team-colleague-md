@@ -111,7 +111,7 @@ Live environments:
 |---|---|---|
 | Production | https://verita.stud.k8s.aet.cit.tum.de/ | Kubernetes (Rancher) |
 | Development | https://dev.verita.stud.k8s.aet.cit.tum.de/ | Kubernetes (Rancher) |
-| Azure VM | http://REPLACE_ME_WITH_VM_IP/ | Docker Compose on a single VM |
+| Azure VM | http://68.210.231.173/ | Docker Compose on a single VM |
 
 > Note: don't forget to type `thisisunsafe` when the browser warns about the self-signed
 > TLS certificate on the dev environment.
