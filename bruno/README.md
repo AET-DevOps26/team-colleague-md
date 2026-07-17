@@ -28,18 +28,22 @@ Each flow is **self-contained** (its own Login at step 1), **self-provisions** t
 
 ## Environments
 
-Four environments. The per-service `baseUrl` absorbs the [gateway path-prefix](../docs/API_Gateway_Routing.md) so request files stay environment-agnostic (`{{userBaseUrl}}/api/v1/...`):
+Four environments. The per-service `baseUrl` absorbs the [gateway path-prefix](../docs/infrastructure/API_Gateway_Routing.md) so request files stay environment-agnostic (`{{userBaseUrl}}/api/v1/...`):
 
 | Env | `userBaseUrl` | Prefix |
 |---|---|---|
 | `local` | `http://localhost:8081` | none (direct) |
-| `azure-vm` | `http://20.91.194.13/user` | `/user` `/content` `/recommendation` `/genai` |
+| `azure-vm` | `http://<AZURE_PUBLIC_IP>/user` | `/user` `/content` `/recommendation` `/genai` |
 | `k8s-dev` | `https://dev.verita.stud.k8s.aet.cit.tum.de/user` | same |
 | `k8s-prod` | `https://verita.stud.k8s.aet.cit.tum.de/user` | same |
 
+> The Azure VM IP changes when the VM is rebuilt; the authoritative value is the
+> `AZURE_PUBLIC_IP` GitHub Actions variable. The committed `environments/azure-vm.bru`
+> carries the last-known IP — update its four `*BaseUrl` vars after a rebuild.
+
 ## Credentials: structure is committed, secrets are not (ADR-0005)
 
-- `userPassword` is a **secret var** in every environment — entered locally in Bruno, never written to the committed `.bru` files. For `local` use the seed password `Password123!` (`scripts/seed/data/users.ts`).
+- `userPassword` is a **secret var** in every environment — entered locally in Bruno, never written to the committed `.bru` files. For `local` use the seed password `Password123!` (`scripts/seed/services/users/usersData.ts`).
 - `internalServiceToken` is a **committed plaintext dev default in `local`** (`dev-only-internal-service-token`, ADR-0007), but a **secret var in `azure-vm` / `k8s-dev` / `k8s-prod`** — a real secret there, filled locally.
 - `token` and the other capture vars (`ownUserId`, `otherUserId`, `postId`, `commentId`, `topicId`, `jobId`, `flow*`) are **runtime-only** — populated by post-response scripts, never committed.
 - `userEmail` defaults to a seed user (`alex@example.com`, an ADMIN — required by the moderation flow). `otherUsername` defaults to `sarahjkim`.

@@ -5,7 +5,7 @@ import com.verita.contentservice.dto.UserPreferencesDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import com.verita.contentservice.entity.PostEntity;
 import com.verita.contentservice.entity.PostStatus;
-import com.verita.contentservice.entity.PostType;
+import com.verita.contentservice.entity.SummaryStatus;
 import com.verita.contentservice.entity.TopicEntity;
 import com.verita.contentservice.entity.VoteEntity;
 import com.verita.contentservice.entity.VoteTargetType;
@@ -16,12 +16,14 @@ import com.verita.contentservice.repository.TopicRepository;
 import com.verita.contentservice.repository.VoteRepository;
 import com.verita.contentservice.security.SecurityUtils;
 import com.verita.model.AuthorSummary;
-import com.verita.model.DigestPostRequest;
+import com.verita.model.FailedSummaryPage;
+import com.verita.model.FailedSummaryPost;
 import com.verita.model.PostCard;
 import com.verita.model.PostPage;
 import com.verita.model.PostPatchRequest;
 import com.verita.model.PostRequest;
 import com.verita.model.PostResponse;
+import com.verita.model.PostSummaryResponse;
 import com.verita.model.Topic;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -48,6 +50,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -58,6 +61,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @RequiredArgsConstructor
 public class PostService {
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MIN_SUMMARY_CONTENT_LENGTH = 50;
     private final PostRepository postRepository;
     private final TopicRepository topicRepository;
     private final VoteRepository voteRepository;
@@ -66,39 +70,58 @@ public class PostService {
     private final SecurityUtils securityUtils;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Value("${app.digest.system-author-id}")
-    private UUID digestSystemAuthorId;
-
+    /**
+     * Creates a post or draft and queues AI summary generation when the content is eligible.
+     */
     public PostResponse createPost(@Valid PostRequest request) {
         UUID userId = currentUserId();
         PostEntity post = new PostEntity();
         post.setAuthorId(userId);
         applyPostRequest(post, request);
+        applySummaryStateForContent(post);
         post = postRepository.save(post);
-        publishSummaryRequest(post);
+        applyAuthorStatsDelta(post, false, post.getStatus() == PostStatus.PUBLISHED);
+        publishSummaryRequestIfPending(post);
         return toPostResponse(post, userId);
     }
 
+    /**
+     * Fully replaces editable post fields; only an actual content change queues summary regeneration.
+     */
     public PostResponse updatePost(UUID id, @Valid PostRequest request) {
         UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
+        boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
+        boolean contentChanged = !Objects.equals(post.getContent(), request.getContent());
         applyPostRequest(post, request);
+        if (contentChanged) {
+            applySummaryStateForContent(post);
+        }
         post = postRepository.save(post);
-        publishSummaryRequest(post);
+        applyAuthorStatsDelta(post, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
+        if (contentChanged) {
+            publishSummaryRequestIfPending(post);
+        }
         return toPostResponse(post, userId);
     }
 
+    /**
+     * Partially updates editable post fields; only an actual content change queues summary regeneration.
+     */
     public PostResponse patchPost(UUID id, @Valid PostPatchRequest request) {
         UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
-        boolean summaryInputChanged = false;
+        boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
+        boolean contentChanged = false;
         if (request.getTitle() != null) {
             post.setTitle(request.getTitle());
-            summaryInputChanged = true;
         }
         if (request.getContent() != null) {
+            contentChanged = !Objects.equals(post.getContent(), request.getContent());
             post.setContent(request.getContent());
-            summaryInputChanged = true;
+            if (contentChanged) {
+                applySummaryStateForContent(post);
+            }
         }
         if (request.getExcerpt() != null && request.getExcerpt().isPresent()) {
             post.setExcerpt(request.getExcerpt().get());
@@ -118,8 +141,9 @@ public class PostService {
             applyTopics(post, request.getTopics());
         }
         post = postRepository.save(post);
-        if (summaryInputChanged) {
-            publishSummaryRequest(post);
+        applyAuthorStatsDelta(post, wasPublished, post.getStatus() == PostStatus.PUBLISHED);
+        if (contentChanged) {
+            publishSummaryRequestIfPending(post);
         }
         return toPostResponse(post, userId);
     }
@@ -127,32 +151,24 @@ public class PostService {
     public void deletePost(UUID id) {
         UUID userId = currentUserId();
         PostEntity post = mustOwnEditablePost(id, userId);
+        boolean wasPublished = post.getStatus() == PostStatus.PUBLISHED;
         post.setDeleted(true);
         post.setDeletedAt(OffsetDateTime.now());
         postRepository.save(post);
-        if (post.getStatus() == PostStatus.PUBLISHED && post.getTopics() != null) {
+        if (wasPublished && post.getTopics() != null) {
             post.getTopics().forEach(t -> topicRepository.decrementTotalPostCount(t.getId()));
         }
+        applyAuthorStatsDelta(post, wasPublished, false);
     }
 
     @Transactional(readOnly = true)
-    public PostPage getAllPosts(int page, int size, String topic, String typeStr) {
+    public PostPage getAllPosts(int page, int size, String topic) {
         PageRequest pageable = PageRequest.of(page, clampPageSize(size));
-        PostType type = parsePostType(typeStr);
         UUID currentUser = optionalUserId();
         Page<PostEntity> result = (topic == null || topic.isBlank())
-                ? postRepository.findByDeletedFalseAndStatusAndTypeOrderByCreatedAtDesc(PostStatus.PUBLISHED, type, pageable)
-                : postRepository.findByDeletedFalseAndStatusAndTypeAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, type, topic, pageable);
+                ? postRepository.findByDeletedFalseAndStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED, pageable)
+                : postRepository.findByDeletedFalseAndStatusAndTopics_NameIgnoreCaseOrderByCreatedAtDesc(PostStatus.PUBLISHED, topic, pageable);
         return mapPage(result, currentUser);
-    }
-
-    private PostType parsePostType(String typeStr) {
-        if (typeStr == null || typeStr.isBlank()) return PostType.NORMAL;
-        try {
-            return PostType.valueOf(typeStr);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(BAD_REQUEST, "Invalid post type: " + typeStr);
-        }
     }
 
     @Transactional(readOnly = true)
@@ -162,24 +178,62 @@ public class PostService {
 
     public PostResponse getPost(UUID id) {
         UUID currentUser = optionalUserId();
-        PostEntity post = postRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
-            throw new ResponseStatusException(NOT_FOUND);
-        }
-        // A personal digest (DIGEST + target set) is readable only by its target; hide existence
-        // from everyone else with 404, mirroring the DRAFT rule (ADR-0016). Public digests
-        // (target null) and NORMAL posts are unaffected.
-        if (post.getType() == PostType.DIGEST && post.getTargetUserId() != null
-                && !Objects.equals(post.getTargetUserId(), currentUser)) {
-            throw new ResponseStatusException(NOT_FOUND);
-        }
+        PostEntity post = visiblePostOrNotFound(id, currentUser);
         // Build the response while the entity is still attached: incrementViewCount runs a
         // clearAutomatically update that detaches `post`, after which its lazy topics/sourceUrls
         // collections could no longer be initialised (open-in-view is disabled).
         PostResponse response = toPostResponse(post, currentUser);
         postRepository.incrementViewCount(post.getId());
         return response;
+    }
+
+    /**
+     * Returns the AI summary state for a visible post without incrementing view counters.
+     */
+    @Transactional(readOnly = true)
+    public PostSummaryResponse getPostSummary(UUID id) {
+        PostEntity post = visiblePostOrNotFound(id, optionalUserId());
+        return toPostSummaryResponse(post);
+    }
+
+    /**
+     * Admin re-trigger of AI summarization (ADR-0020). Puts the post back into {@code PENDING} and
+     * republishes the summary event, so the retrying listener is the only thing that ever writes a
+     * summary — there is no second, synchronous overwrite path to keep in sync.
+     *
+     * <p>Runs on the post regardless of its current status: a {@code FAILED} post is the common
+     * case, but re-running a {@code COMPLETED} one (e.g. after switching provider) is legitimate.
+     */
+    public void requestSummaryRegeneration(UUID id) {
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Post not found"));
+        if (!isSummaryEligible(post.getContent())) {
+            throw new ResponseStatusException(CONFLICT, "Post content is too short to summarize.");
+        }
+        post.setSummaryStatus(SummaryStatus.PENDING);
+        publishSummaryRequestIfPending(post);
+    }
+
+    /** Posts left in {@code FAILED} after the summary listener exhausted its retries (ADR-0020). */
+    @Transactional(readOnly = true)
+    public FailedSummaryPage listFailedSummaries(int page, int size) {
+        Page<PostEntity> result = postRepository.findByDeletedFalseAndSummaryStatusOrderByUpdatedAtDesc(
+                SummaryStatus.FAILED, PageRequest.of(page, Math.min(size, MAX_PAGE_SIZE)));
+        return new FailedSummaryPage()
+                .content(result.getContent().stream().map(this::toFailedSummaryPost).toList())
+                .page(result.getNumber())
+                .size(result.getSize())
+                .totalPages(result.getTotalPages())
+                .totalElements((int) result.getTotalElements());
+    }
+
+    private FailedSummaryPost toFailedSummaryPost(PostEntity post) {
+        return new FailedSummaryPost()
+                .id(post.getId())
+                .title(post.getTitle())
+                .authorId(post.getAuthorId())
+                .summaryStatus(toApiSummaryStatus(post.getSummaryStatus()))
+                .updatedAt(post.getUpdatedAt());
     }
 
     @Transactional(readOnly = true)
@@ -222,44 +276,6 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostPage getMyDigests(int page, int size) {
-        UUID userId = currentUserId();
-        return mapPage(postRepository.findByDeletedFalseAndTargetUserIdAndTypeOrderByCreatedAtDesc(
-                userId, PostType.DIGEST, PageRequest.of(page, clampPageSize(size))), userId);
-    }
-
-    /** Newest public digest (target null) for the logged-out surface; 404 when none exists (ADR-0016). */
-    @Transactional(readOnly = true)
-    public PostResponse getPublicTodayDigest() {
-        PostEntity post = postRepository
-                .findFirstByDeletedFalseAndTypeAndTargetUserIdIsNullOrderByCreatedAtDesc(PostType.DIGEST)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        return toPostResponse(post, optionalUserId());
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<PostResponse> findPersonalDigest(UUID userId, OffsetDateTime start, OffsetDateTime end) {
-        return postRepository.findFirstByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
-                        userId, PostType.DIGEST, start, end)
-                .map(post -> toPostResponse(post, userId));
-    }
-
-    @Transactional
-    public void softDeletePersonalDigests(UUID userId, OffsetDateTime start, OffsetDateTime end) {
-        OffsetDateTime deletedAt = OffsetDateTime.now();
-        List<PostEntity> posts = postRepository.findByDeletedFalseAndTargetUserIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
-                userId, PostType.DIGEST, start, end);
-        for (PostEntity post : posts) {
-            post.setDeleted(true);
-            post.setDeletedAt(deletedAt);
-            if (post.getStatus() == PostStatus.PUBLISHED && post.getTopics() != null) {
-                post.getTopics().forEach(topic -> topicRepository.decrementTotalPostCount(topic.getId()));
-            }
-        }
-        postRepository.saveAll(posts);
-    }
-
-    @Transactional(readOnly = true)
     public List<PostCard> getCards(List<UUID> ids) {
         if (ids.size() > 50) throw new ResponseStatusException(BAD_REQUEST, "max 50 ids");
         Map<UUID, PostEntity> postsMap = postRepository.findByIdInAndDeletedFalse(new LinkedHashSet<>(ids)).stream()
@@ -279,36 +295,25 @@ public class PostService {
                 .toList();
     }
 
-    /** Stores an externally-generated digest payload as a published DIGEST post (ADR-0007 internal). */
-    public PostResponse createDigest(DigestPostRequest request) {
-        PostEntity post = new PostEntity();
-        post.setAuthorId(digestSystemAuthorId);
-        post.setType(PostType.DIGEST);
-        post.setStatus(PostStatus.PUBLISHED);
-        if (request.getTargetUserId() != null && request.getTargetUserId().isPresent()) {
-            post.setTargetUserId(request.getTargetUserId().get());
+    private void applySummaryStateForContent(PostEntity post) {
+        if (!isSummaryEligible(post.getContent())) {
+            post.setSummaryStatus(SummaryStatus.NONE);
+            post.setContentSummary(null);
+            post.setSummaryGeneratedAt(null);
+            post.setSummaryModel(null);
+            return;
         }
-        post.setTitle(request.getTitle());
-        post.setContent(request.getContent());
-        String summary = request.getSummary() != null && request.getSummary().isPresent()
-                ? request.getSummary().get() : null;
-        post.setContentSummary(summary);
-        post.setExcerpt(summary != null ? summary : summarizeLocally(request.getContent()));
-        if (request.getCoverImageUrl() != null && request.getCoverImageUrl().isPresent()
-                && request.getCoverImageUrl().get() != null) {
-            post.setCoverImageUrl(request.getCoverImageUrl().get().toString());
-        }
-        post.setSourceUrls(request.getSourceUrl() == null ? new ArrayList<>()
-                : request.getSourceUrl().stream().map(URI::toString).toList());
-        applyTopics(post, request.getTopics() == null ? List.of() : request.getTopics());
-        post = postRepository.save(post);
-        return toPostResponse(post, null);
+        post.setSummaryStatus(SummaryStatus.PENDING);
     }
 
-    private void publishSummaryRequest(PostEntity post) {
-        // Capture the raw token in the request thread; the async listener forwards it to genai (ADR-0002).
-        eventPublisher.publishEvent(new PostSummaryRequestedEvent(
-                post.getId(), post.getTitle(), post.getContent(), securityUtils.getCurrentTokenValue().orElse(null)));
+    private boolean isSummaryEligible(String content) {
+        return content != null && content.length() >= MIN_SUMMARY_CONTENT_LENGTH;
+    }
+
+    private void publishSummaryRequestIfPending(PostEntity post) {
+        if (post.getSummaryStatus() == SummaryStatus.PENDING) {
+            eventPublisher.publishEvent(new PostSummaryRequestedEvent(post.getId(), post.getTitle(), post.getContent()));
+        }
     }
 
     private void applyPostRequest(PostEntity post, PostRequest request) {
@@ -348,6 +353,22 @@ public class PostService {
         }
     }
 
+    /**
+     * Write-back of the author's aggregate profile counts on a publish-state transition (issue #178).
+     * Emits the signed change in postCount so drafts and soft-deletes are excluded. Likes are tallied
+     * into likeReceivedCount at like-time ({@link InteractionService}); when a published post is
+     * unpublished or soft-deleted, its accrued likes must be reversed here or the count inflates
+     * permanently. A no-op when the state is unchanged. The event is forwarded to user-service after
+     * commit ({@link UserStatsDeltaEventListener}), keeping the HTTP call out of this transaction.
+     */
+    private void applyAuthorStatsDelta(PostEntity post, boolean wasPublished, boolean isPublished) {
+        int postDelta = (isPublished ? 1 : 0) - (wasPublished ? 1 : 0);
+        int likeDelta = (wasPublished && !isPublished) ? -(int) post.getLikeCount() : 0;
+        if (postDelta != 0 || likeDelta != 0) {
+            eventPublisher.publishEvent(new UserStatsDeltaEvent(post.getAuthorId(), postDelta, likeDelta));
+        }
+    }
+
     private String summarizeLocally(String content) {
         return content == null ? "" : (content.length() <= 240 ? content : content.substring(0, 240));
     }
@@ -364,6 +385,15 @@ public class PostService {
         PostEntity post = postRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (!Objects.equals(post.getAuthorId(), userId)) throw new ResponseStatusException(FORBIDDEN);
+        return post;
+    }
+
+    private PostEntity visiblePostOrNotFound(UUID id, UUID currentUser) {
+        PostEntity post = postRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        if (post.getStatus() == PostStatus.DRAFT && !Objects.equals(post.getAuthorId(), currentUser)) {
+            throw new ResponseStatusException(NOT_FOUND);
+        }
         return post;
     }
 
@@ -397,10 +427,12 @@ public class PostService {
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId()))
                 .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
-                .type(post.getType() == null ? null : PostResponse.TypeEnum.fromValue(post.getType().name()))
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .summary(post.getContentSummary())
+                .summaryStatus(toApiSummaryStatus(post.getSummaryStatus()))
+                .summaryGeneratedAt(post.getSummaryGeneratedAt())
+                .summaryModel(post.getSummaryModel())
                 .content(post.getContent())
                 .topics(post.getTopics().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
@@ -429,10 +461,12 @@ public class PostService {
                 .id(post.getId())
                 .author(authorSummary(post.getAuthorId(), author))
                 .status(post.getStatus() == null ? null : PostResponse.StatusEnum.fromValue(post.getStatus().name()))
-                .type(post.getType() == null ? null : PostResponse.TypeEnum.fromValue(post.getType().name()))
                 .title(post.getTitle())
                 .excerpt(post.getExcerpt())
                 .summary(post.getContentSummary())
+                .summaryStatus(toApiSummaryStatus(post.getSummaryStatus()))
+                .summaryGeneratedAt(post.getSummaryGeneratedAt())
+                .summaryModel(post.getSummaryModel())
                 .content(post.getContent())
                 .topics(post.getTopics().stream().map(this::toApiTopic).toList())
                 .sourceUrl(post.getSourceUrls() == null ? List.of() : post.getSourceUrls().stream().map(URI::create).toList())
@@ -451,6 +485,18 @@ public class PostService {
             response.coverImageUrl(URI.create(post.getCoverImageUrl()));
         }
         return response;
+    }
+
+    private PostSummaryResponse toPostSummaryResponse(PostEntity post) {
+        return new PostSummaryResponse()
+                .status(toApiSummaryStatus(post.getSummaryStatus()))
+                .summary(post.getContentSummary())
+                .generatedAt(post.getSummaryGeneratedAt())
+                .model(post.getSummaryModel());
+    }
+
+    private com.verita.model.SummaryStatus toApiSummaryStatus(SummaryStatus status) {
+        return com.verita.model.SummaryStatus.fromValue(status.name());
     }
 
     AuthorSummary authorSummary(UUID userId) {

@@ -1,0 +1,17 @@
+# Never needed in the image build context — and node_modules is not merely wasteful here: the
+# Dockerfile runs `npm ci` before `COPY . .`, so a host node_modules would overwrite the one the
+# builder just installed for Alpine with whatever the host platform produced.
+node_modules
+dist
+dist-ssr
+
+# Playwright output — recordings and reports are large and have no place in the image.
+test-results/
+playwright-report/
+demo-recordings/
+
+# Local E2E environment files (see tests/e2e/.env.azure.example).
+tests/e2e/.env.azure
+
+.git/
+*.log

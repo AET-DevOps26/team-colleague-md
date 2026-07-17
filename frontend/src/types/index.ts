@@ -64,11 +64,16 @@ export interface Post {
   readTimeMinutes?: number;
 }
 
+/** PERSONAL = built for one subscriber; PUBLIC = shared community digest (ADR-0019). */
+export type DigestType = 'PERSONAL' | 'PUBLIC';
+
 export interface TodayDigest {
   id: string;
   date: string;
+  digestType: DigestType;
   title: string;
   topStorySubtitle: string;
+  previewHeadlines: string[];
   eventCount: number;
   readTimeMinutes: number;
   generatedAt: string;
@@ -79,9 +84,45 @@ export interface DigestListItem {
   id: string;
   date: string;
   displayDate: string;
+  digestType: DigestType;
   title: string;
   eventCount: number;
   readTimeMinutes: number;
+}
+
+/** One external source cited by a digest event (ADR-0019). */
+export interface DigestSource {
+  url: string;
+  sourceName?: string | null;
+  provider?: string | null;
+  publishedAt?: string | null;
+  title?: string | null;
+}
+
+/** One development in the digest event stream. */
+export interface DigestEvent {
+  headline: string;
+  summaryBullets: string[];
+  topicIds: string[];
+  sources: DigestSource[];
+}
+
+/** Full digest with its structured event stream (GET /api/v1/digests/{id}). */
+export interface DigestDetail {
+  id: string;
+  digestType: DigestType;
+  date: string;
+  title: string;
+  subtitle: string;
+  summary: string;
+  eventCount: number;
+  sourceCount: number;
+  readTimeMinutes: number;
+  previewHeadlines: string[];
+  topics: Topic[];
+  events: DigestEvent[];
+  generatedAt?: string | null;
+  createdAt: string;
 }
 
 /** Mirrors content-service OpenAPI TopicResponse */
@@ -125,6 +166,10 @@ export interface PostSource {
 
 export interface PostDetail extends Post {
   content: string;
+  summary?: string | null;
+  summaryStatus: SummaryStatus;
+  summaryGeneratedAt?: string | null;
+  summaryModel?: string | null;
   saveCount: number;
   isBookmarkedByMe: boolean;
   readTimeMinutes: number;
@@ -153,6 +198,7 @@ export interface AuthUser {
 // ── Post authoring (mirrors content-service OpenAPI) ──────────
 
 export type PostStatus = 'DRAFT' | 'PUBLISHED';
+export type SummaryStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'NONE';
 
 /** Mirrors content-service OpenAPI PostRequest (create / full replace). */
 export interface PostRequest {
@@ -181,10 +227,12 @@ export interface PostResponse {
   id: string;
   author: User;
   status: PostStatus;
-  type: 'NORMAL' | 'DIGEST';
   title: string;
   excerpt: string;
   summary?: string | null;
+  summaryStatus: SummaryStatus;
+  summaryGeneratedAt?: string | null;
+  summaryModel?: string | null;
   content: string;
   coverImageUrl?: string | null;
   topics: Topic[];
@@ -200,6 +248,14 @@ export interface PostResponse {
   isBookmarkedByMe: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Mirrors content-service OpenAPI PostSummaryResponse. */
+export interface PostSummaryResponse {
+  status: SummaryStatus;
+  summary?: string | null;
+  generatedAt?: string | null;
+  model?: string | null;
 }
 
 /** Mirrors content-service OpenAPI FileUploadResponse. */
@@ -219,4 +275,76 @@ export interface EditorPost {
   sources: string[];
   topics: string[];
   status: PostStatus;
+}
+
+// ── Admin panel (ADR-0020) ────────────────────────────────────
+
+export type UserRole = 'USER' | 'VERIFIED' | 'ADMIN';
+
+/** One row of the admin Users table (user-service `User`). */
+export interface AdminUser {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  email: string;
+  role: UserRole;
+  isBanned: boolean;
+  createdAt: string;
+}
+
+export interface AdminUserPage {
+  content: AdminUser[];
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
+}
+
+/** A GenAI provider and whether its required connection setting is present. */
+export interface LlmProviderAvailability {
+  name: string;
+  configured: boolean;
+}
+
+/** GenAI's live (provider, model) pair. The override is in-memory and resets on GenAI restart. */
+export interface LlmConfig {
+  provider: string;
+  model: string;
+  temperature: number;
+  availableProviders: LlmProviderAvailability[];
+}
+
+/** A post whose AI summary failed after the backend exhausted its retries. */
+export interface FailedSummaryPost {
+  id: string;
+  title: string;
+  authorId: string;
+  summaryStatus: SummaryStatus;
+  updatedAt: string;
+}
+
+export interface FailedSummaryPage {
+  content: FailedSummaryPost[];
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
+}
+
+/** `SKIPPED` is terminal but not a failure: a digest for that day existed and force was off. */
+export type DigestJobStatus = 'PENDING' | 'COMPLETED' | 'SKIPPED' | 'FAILED';
+
+/**
+ * One admin-triggered digest generation. A digest row only exists once generation succeeds, so
+ * this job — not the digest — is what the panel polls to learn the outcome.
+ */
+export interface DigestGenerationJob {
+  id: string;
+  targetUserId: string;
+  digestDate: string;
+  status: DigestJobStatus;
+  message?: string | null;
+  createdAt?: string;
+  finishedAt?: string | null;
 }

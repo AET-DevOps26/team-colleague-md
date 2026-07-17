@@ -155,6 +155,15 @@ services:
       - STORAGE_S3_PATH_STYLE_ACCESS=true
       - STORAGE_USER_PORTRAITS_BUCKET=${STORAGE_USER_PORTRAITS_BUCKET:-verita-user-portraits}
       - CONTENT_SERVICE_BASE_URL=http://content-service:8082
+      # Password-reset mail via Brevo SMTP. Host/port carry committed defaults; the SMTP login,
+      # SMTP key, and verified sender are required secrets injected from .env (see Ansible deploy).
+      - MAIL_HOST=${MAIL_HOST:-smtp-relay.brevo.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:?MAIL_USERNAME is required — Brevo SMTP login}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:?MAIL_PASSWORD is required — Brevo SMTP key}
+      - MAIL_FROM=${MAIL_FROM:?MAIL_FROM is required — a Brevo-verified sender address}
+      - MAIL_SMTP_AUTH=true
+      - MAIL_SMTP_STARTTLS=true
     depends_on:
       user-db:
         condition: service_healthy
@@ -180,6 +189,8 @@ services:
       - USER_SERVICE_BASE_URL=http://user-service:8081
       - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083
       - GENAI_SERVICE_BASE_URL=http://genai-service:8000
+      - GENAI_READ_TIMEOUT_SECONDS=${GENAI_READ_TIMEOUT_SECONDS:-60}
+      - DIGEST_MAX_WAIT_MS=${DIGEST_MAX_WAIT_MS:-120000}
       - DB_HOST=content-db
       - DB_PORT=5432
       - DB_NAME=${CONTENT_DB_NAME:-verita_contents}
@@ -235,6 +246,12 @@ services:
     image: ghcr.io/aet-devops26/team-colleague-md/genai-service:latest
     environment:
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required — must be identical across all services}
+      - LLM_PROVIDER=${LLM_PROVIDER:-logos}
+      - LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-120b}
+      - NVIDIA_NIM_API_KEY=${NVIDIA_NIM_API_KEY:-}
+      - LOGOS_API_KEY=${LOGOS_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
+      - GNEWS_API_KEY=${GNEWS_API_KEY:-}
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)" ]

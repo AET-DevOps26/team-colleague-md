@@ -63,10 +63,6 @@ paths:
         - name: topic
           in: query
           schema: { type: string }
-        - name: type
-          in: query
-          description: "Post type filter; defaults to NORMAL (digests are excluded from the main list unless requested)"
-          schema: { type: string, enum: [NORMAL, DIGEST] }
       responses:
         '200':
           description: A paginated list of posts retrieved successfully
@@ -161,15 +157,16 @@ paths:
               schema: { $ref: '#/components/schemas/PostPage' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
-  /api/v1/posts/digests:
+  # --- DIGESTS (standalone entity, ADR-0019) ---
+  /api/v1/digests:
     get:
       operationId: getMyDigests
-      summary: Get the current user's AI Daily Digests
+      summary: Get the current user's digest history
       description: >
-        Returns the caller's own digests — DIGEST-type posts whose `target_user_id` equals the
-        authenticated user's `userId` claim (ADR-0013), newest first. Auth-required (fails closed).
-        Until the genai generation pipeline exists this returns empty for every user.
-      tags: [Posts]
+        Union of the caller's personal digests (`digest_type = PERSONAL`, `target_user_id = me`)
+        and the public digests assigned to the caller on days they had no subscriptions, newest
+        first, paginated. Auth-required (fails closed).
+      tags: [Digests]
       security: [{ bearerAuth: [] }]
       parameters:
         - name: page
@@ -183,26 +180,46 @@ paths:
           description: Digests retrieved successfully
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PostPage' }
+              schema: { $ref: '#/components/schemas/DigestSummaryPage' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /api/v1/posts/digests/today/public:
+  /api/v1/digests/public/today:
     get:
       operationId: getPublicTodayDigest
       summary: Get today's public digest
       description: >
-        Returns the newest public digest — a DIGEST-type post with `target_user_id = null`
-        (ADR-0016), readable without authentication so the logged-out `/digest` surface has
-        something to show. A valid token additionally personalises the response (ADR-0006).
-        Responds `404` when no public digest exists.
-      tags: [Posts]
+        Returns the newest `PUBLIC` digest, readable without authentication so the logged-out
+        `/digest` surface has something to show (ADR-0018/0019). Responds `404` when none exists.
+      tags: [Digests]
       security: []
       responses:
         '200':
           description: Public digest retrieved successfully
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PostResponse' }
+              schema: { $ref: '#/components/schemas/DigestSummary' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/digests/{id}:
+    get:
+      operationId: getDigestById
+      summary: Get one digest with its full event stream
+      description: >
+        Optional authentication (ADR-0006/0016). A `PERSONAL` digest whose `target_user_id` is not
+        the caller responds `404`; a `PUBLIC` digest is open (including logged-out).
+      tags: [Digests]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Digest retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestDetail' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /api/v1/posts/{id}:
@@ -298,6 +315,29 @@ paths:
           description: Post deleted successfully
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/posts/{id}/summary:
+    get:
+      operationId: getPostSummary
+      summary: Get post AI summary status
+      description: |
+        Returns the AI summary state for a single post. Uses the same visibility
+        rules as post detail: published posts are public, drafts are visible only
+        to their author, and non-visible posts return 404.
+      tags: [Posts]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Post summary state retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostSummaryResponse' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   # --- LIKES ---
@@ -688,27 +728,29 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /internal/v1/posts/digest:
+  /internal/v1/digests:
     post:
-      operationId: createDigestPost
-      summary: Create an AI Daily Digest post (internal, service-authenticated)
+      operationId: createDigest
+      summary: Create a digest (internal, service-authenticated)
+      deprecated: true
       description: >
-        Service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Stores an
-        already-generated digest payload as a published DIGEST-type post. The digest generation
-        (genai) and daily scheduling are performed by the caller.
-      tags: [Posts]
+        Deprecated service-only endpoint (gated by X-Internal-Service-Token, ADR-0007). Existing
+        callers may still persist an already-generated digest, but content-service ignores the
+        request title and applies its deterministic personal/public title rule. Scheduled and admin
+        generation persist in-process and do not call this endpoint.
+      tags: [Digests]
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/DigestPostRequest' }
+            schema: { $ref: '#/components/schemas/CreateDigestRequest' }
       responses:
         '201':
-          description: Digest post created
+          description: Digest created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PostResponse' }
+              schema: { $ref: '#/components/schemas/DigestDetail' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -718,10 +760,11 @@ paths:
       summary: Generate one user's AI Daily Digest (internal)
       description: >
         Service-only manual trigger for the same generation orchestration used by the scheduled
-        daily digest job. By default, skips generation when the user already has a digest for the
-        current Platform Day. With force=true, soft-deletes visible same-day digests before storing
-        the regenerated one.
-      tags: [Internal]
+        daily digest job. Branches on whether the user has topic subscriptions: subscribers get a
+        freshly generated `PERSONAL` digest; zero-subscription users are assigned the day's `PUBLIC`
+        digest (ADR-0018/0019). By default, skips when the user already has a digest for the current
+        Platform Day; force=true regenerates.
+      tags: [Digests]
       security: []
       parameters:
         - name: userId
@@ -739,6 +782,170 @@ paths:
               schema: { $ref: '#/components/schemas/DigestGenerationResponse' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '502': { $ref: '#/components/responses/BadGateway' }
+
+  # --- ADMIN OPS (ADR-0020) ---
+  # Browser-facing, ADMIN-JWT only. The GenAI routes are a thin front door: content-service
+  # forwards them to genai-service over the X-Internal-Service-Token channel (ADR-0007), so the
+  # browser never talks to GenAI directly and GenAI needs no JWT awareness.
+  /api/v1/admin/genai/llm-config:
+    get:
+      operationId: getLlmConfig
+      summary: Get the active GenAI LLM configuration (admin only)
+      description: >
+        Returns the live `(provider, model)` pair GenAI is currently using — the in-memory
+        override when an admin has set one, otherwise GenAI's environment default — plus every
+        supported provider and whether its API key is configured.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Active LLM configuration retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LlmConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+    put:
+      operationId: updateLlmConfig
+      summary: Switch the GenAI provider/model at runtime (admin only)
+      description: >
+        Sets GenAI's in-memory `(provider, model)` override. The override is deliberately not
+        persisted: it resets to the environment default when genai-service restarts (ADR-0020).
+        Selecting a provider whose API key is absent is rejected with `400`.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LlmConfigUpdateRequest' }
+      responses:
+        '200':
+          description: Override applied; the new active configuration is returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LlmConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+
+  /api/v1/admin/posts/summaries/failed:
+    get:
+      operationId: listFailedSummaries
+      summary: List posts whose AI summary failed (admin only)
+      description: >
+        Paged list of posts left in `summaryStatus = FAILED` after the retrying summary listener
+        gave up. Feeds the admin Operations tab, where each row can be re-triggered.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Failed-summary posts retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FailedSummaryPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/admin/posts/{id}/summarize:
+    post:
+      operationId: resummarizePost
+      summary: Re-trigger AI summarization for a post (admin only)
+      description: >
+        Moves the post to `summaryStatus = PENDING` and republishes the summary event, reusing the
+        same retrying listener as authoring (there is no separate synchronous overwrite path). The
+        call returns `202` immediately; poll `GET /api/v1/posts/{id}/summary` for the outcome.
+        Admin-gated because it spends LLM budget on demand.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '202':
+          description: Summarization queued
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The post's content is not eligible for summarization (too short or empty)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /api/v1/admin/digests/generate/users/{userId}:
+    post:
+      operationId: adminGenerateUserDigest
+      summary: Generate a user's digest for a given day on demand (admin only)
+      description: >
+        Admin-JWT front door to the same orchestration the scheduled daily job runs
+        (ADR-0018/0019). The work blocks on a GenAI job plus external news fetches, so it is run
+        in the background and the call returns `202` immediately rather than risking a gateway or
+        browser timeout — with a `DigestGenerationJob` whose id is polled via
+        `GET /api/v1/admin/digests/jobs/{jobId}` for the outcome.
+
+        `date` selects the day to generate for and defaults to **yesterday**: the current Platform
+        Day is still accumulating news, so the day worth (re)generating is the last complete one.
+        By default a user who already has a digest for that day is left alone (job status
+        `SKIPPED`); `force=true` regenerates.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          description: Platform Day to generate for; defaults to yesterday in the digest timezone.
+          schema: { type: string, format: date }
+        - name: force
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '202':
+          description: Digest generation started; poll the returned job for the outcome
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestGenerationJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/admin/digests/jobs/{jobId}:
+    get:
+      operationId: getDigestGenerationJob
+      summary: Poll an admin-triggered digest generation (admin only)
+      description: >
+        Outcome of a run started by `POST /api/v1/admin/digests/generate/users/{userId}`. A digest
+        row only exists once generation succeeds, so this job — not the digest — is where a
+        `PENDING`, `SKIPPED` or `FAILED` run reports itself.
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job retrieved successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DigestGenerationJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
 components:
   securitySchemes:
@@ -782,29 +989,142 @@ components:
       properties:
         url: { type: string, format: uri, description: "Public URL of the stored file" }
 
-    DigestPostRequest:
+    DigestType:
+      type: string
+      enum: [PERSONAL, PUBLIC]
+      description: "PERSONAL = generated for one subscriber (target set); PUBLIC = shared platform digest (target null)."
+
+    DigestSource:
       type: object
-      required: [title, content]
+      required: [url]
+      description: A single external source cited by a digest event.
       properties:
+        url: { type: string, format: uri }
+        sourceName: { type: string, nullable: true, description: "Human-readable source/domain name" }
+        provider: { type: string, nullable: true, description: "Upstream provider (github, gnews, huggingface)" }
+        publishedAt: { type: string, format: date-time, nullable: true, description: "Absolute publish time; the client computes the relative label" }
+        title: { type: string, nullable: true, description: "Source article/item title" }
+
+    DigestEvent:
+      type: object
+      required: [headline, summaryBullets, topicIds, sources]
+      description: One newly observed development in the digest, with its structured sources.
+      properties:
+        headline: { type: string }
+        summaryBullets: { type: array, items: { type: string } }
+        topicIds: { type: array, items: { type: string, format: uuid } }
+        sources: { type: array, items: { $ref: '#/components/schemas/DigestSource' } }
+
+    DigestSummary:
+      type: object
+      description: Lightweight digest projection for list/card reads — no events JSONB loaded.
+      required: [id, digestType, digestDate, title]
+      properties:
+        id: { type: string, format: uuid }
+        digestType: { $ref: '#/components/schemas/DigestType' }
+        digestDate: { type: string, format: date }
         title: { type: string }
-        content: { type: string, description: "Markdown body of the digest" }
-        summary: { type: string, nullable: true, description: "Short AI summary / top-story subtitle" }
-        coverImageUrl: { type: string, format: uri, nullable: true }
-        sourceUrl: { type: array, items: { type: string, format: uri } }
-        topics: { type: array, items: { type: string } }
+        subtitle: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        eventCount: { type: integer }
+        sourceCount: { type: integer }
+        readTimeMinutes: { type: integer }
+        previewHeadlines: { type: array, items: { type: string }, description: "First 3 event headlines, denormalized at write time" }
+        topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
+        generatedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    DigestDetail:
+      type: object
+      description: Full digest including the event stream.
+      required: [id, digestType, digestDate, title, events]
+      properties:
+        id: { type: string, format: uuid }
+        digestType: { $ref: '#/components/schemas/DigestType' }
+        digestDate: { type: string, format: date }
+        title: { type: string }
+        subtitle: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        eventCount: { type: integer }
+        sourceCount: { type: integer }
+        readTimeMinutes: { type: integer }
+        previewHeadlines: { type: array, items: { type: string } }
+        topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
+        events: { type: array, items: { $ref: '#/components/schemas/DigestEvent' } }
+        model: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    DigestSummaryPage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/DigestSummary' } }
+        page: { type: integer }
+        size: { type: integer }
+        totalPages: { type: integer }
+        totalElements: { type: integer }
+
+    CreateDigestRequest:
+      type: object
+      required: [digestType, digestDate, events]
+      description: Persist an already-generated digest. topicIds live inside events; topics carries names for display.
+      properties:
+        digestType: { $ref: '#/components/schemas/DigestType' }
         targetUserId:
           type: string
           format: uuid
           nullable: true
-          description: "User this digest was personalised for (ADR-0013); null = global/system digest belonging to no one."
+          description: "Required when digestType=PERSONAL; must be null when PUBLIC."
+        digestDate: { type: string, format: date }
+        title:
+          type: string
+          nullable: true
+          deprecated: true
+          description: Deprecated compatibility field. Content-service ignores it and constructs the digest title.
+        subtitle: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        events: { type: array, items: { $ref: '#/components/schemas/DigestEvent' } }
+        topics: { type: array, items: { $ref: '#/components/schemas/DigestTopicRef' } }
+        eventCount: { type: integer, nullable: true }
+        sourceCount: { type: integer, nullable: true }
+        readTimeMinutes: { type: integer, nullable: true }
+        model: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time, nullable: true }
+
+    DigestTopicRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
 
     DigestGenerationResponse:
       type: object
       required: [status, message]
       properties:
-        status: { type: string, enum: [GENERATED, SKIPPED] }
+        status: { type: string, enum: [GENERATED, ASSIGNED_PUBLIC, SKIPPED] }
         message: { type: string }
-        post: { $ref: '#/components/schemas/PostResponse' }
+        digest: { $ref: '#/components/schemas/DigestDetail' }
+
+    DigestJobStatus:
+      type: string
+      enum: [PENDING, COMPLETED, SKIPPED, FAILED]
+      description: >
+        Lifecycle of an admin-triggered digest generation. `SKIPPED` is terminal but not a failure:
+        the user already had a digest for that day and `force` was off.
+
+    DigestGenerationJob:
+      type: object
+      description: One admin-triggered digest generation run (ADR-0020).
+      required: [id, targetUserId, digestDate, status]
+      properties:
+        id: { type: string, format: uuid }
+        targetUserId: { type: string, format: uuid }
+        digestDate: { type: string, format: date }
+        status: { $ref: '#/components/schemas/DigestJobStatus' }
+        message: { type: string, nullable: true, description: "Why it was skipped, or what broke" }
+        createdAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
 
     AuthorSummary:
       type: object
@@ -824,6 +1144,11 @@ components:
         name: { type: string }
 
     # --- POSTS ---
+    SummaryStatus:
+      type: string
+      enum: [PENDING, COMPLETED, FAILED, NONE]
+      description: Current lifecycle state of a post's AI summary.
+
     PostCard:
       type: object
       description: Lightweight post shape for feed cards. Omits full body content.
@@ -873,10 +1198,12 @@ components:
         id: { type: string, format: uuid }
         author: { $ref: '#/components/schemas/AuthorSummary' }
         status: { type: string, enum: [DRAFT, PUBLISHED] }
-        type: { type: string, enum: [NORMAL, DIGEST], description: "NORMAL user post or system-generated DIGEST" }
         title: { type: string }
         excerpt: { type: string, description: "Short preview text for feed cards" }
         summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets); null until generated" }
+        summaryStatus: { $ref: '#/components/schemas/SummaryStatus' }
+        summaryGeneratedAt: { type: string, format: date-time, nullable: true, description: "When the current summary was generated; null for historical or not-yet-generated summaries" }
+        summaryModel: { type: string, nullable: true, description: "LLM model used for the current summary; null when unknown or not generated" }
         content: { type: string, description: "Full post body (Markdown)" }
         coverImageUrl: { type: string, format: uri, nullable: true }
         topics: { type: array, items: { $ref: '#/components/schemas/Topic' } }
@@ -892,6 +1219,57 @@ components:
         isBookmarkedByMe: { type: boolean, description: "True if the authenticated user bookmarked this post" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+    PostSummaryResponse:
+      type: object
+      properties:
+        status: { $ref: '#/components/schemas/SummaryStatus' }
+        summary: { type: string, nullable: true, description: "AI-generated key-points summary (newline-separated bullets), if available" }
+        generatedAt: { type: string, format: date-time, nullable: true }
+        model: { type: string, nullable: true }
+
+    # --- ADMIN OPS (ADR-0020) ---
+    LlmProviderAvailability:
+      type: object
+      required: [name, configured]
+      properties:
+        name: { type: string, description: "Provider key, e.g. `nvidia`" }
+        configured: { type: boolean, description: "False when the provider lacks its required connection setting; it cannot be selected" }
+
+    LlmConfig:
+      type: object
+      properties:
+        provider: { type: string }
+        model: { type: string }
+        temperature: { type: number, format: float }
+        availableProviders:
+          type: array
+          items: { $ref: '#/components/schemas/LlmProviderAvailability' }
+
+    LlmConfigUpdateRequest:
+      type: object
+      required: [provider, model]
+      properties:
+        provider: { type: string, minLength: 1, description: "Must be a provider reported as `configured`" }
+        model: { type: string, minLength: 1, description: "Free-text model id for that provider" }
+
+    FailedSummaryPost:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        authorId: { type: string, format: uuid }
+        summaryStatus: { $ref: '#/components/schemas/SummaryStatus' }
+        updatedAt: { type: string, format: date-time }
+
+    FailedSummaryPage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: '#/components/schemas/FailedSummaryPost' } }
+        page: { type: integer }
+        size: { type: integer }
+        totalPages: { type: integer }
+        totalElements: { type: integer }
 
     PostPage:
       type: object

@@ -1,0 +1,24 @@
+meta {
+  name: Get/set LLM config (internal)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{genaiBaseUrl}}/internal/v1/llm-config
+  body: none
+  auth: none
+}
+
+headers {
+  X-Internal-Service-Token: {{internalServiceToken}}
+}
+
+docs {
+  Internal-service endpoint (ADR-0007/0020), gated by X-Internal-Service-Token — this is the door
+  content-service's /api/v1/admin/genai/llm-config forwards to.
+
+  GET returns { provider, model, temperature, availableProviders: [{ name, configured }] }.
+  PUT { "provider": ..., "model": ... } sets the in-memory override (resets on restart) and
+  rejects a provider whose API key is absent with 400.
+}

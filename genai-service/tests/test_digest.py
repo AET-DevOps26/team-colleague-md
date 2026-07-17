@@ -10,10 +10,17 @@ from fastapi.testclient import TestClient
 
 from app.config import get_settings
 from app.main import app
-from app.schemas.digest import DigestEvent, DigestGenerateResponse, DigestJobWarning, DigestTopic
+from app.schemas.digest import (
+    DigestEvent,
+    DigestGenerateResponse,
+    DigestJobWarning,
+    DigestSource,
+    DigestTopic,
+)
 from app.services.digest_generator import DigestJsonParseError
 from app.services.digest_jobs import clear_jobs
 from app.services.external_sources import ExternalSourceItem
+from app.services.output_sanitizer import InvalidLlmOutputError
 
 INTERNAL_TOKEN = "test-internal-token"
 INTERNAL_HEADERS = {"X-Internal-Service-Token": INTERNAL_TOKEN}
@@ -74,7 +81,6 @@ def _digest_result() -> DigestGenerateResponse:
         digestDate=datetime(2026, 6, 4, tzinfo=timezone.utc).date(),
         periodStart=datetime(2026, 6, 3, tzinfo=timezone.utc),
         periodEnd=datetime(2026, 6, 4, tzinfo=timezone.utc),
-        title="Your Thursday AI Digest",
         topStorySubtitle="LLM benchmarking led today's AI updates.",
         summary="New model evaluation work and agent tooling updates shaped the day.",
         topics=topics,
@@ -83,7 +89,15 @@ def _digest_result() -> DigestGenerateResponse:
                 headline="New LLM benchmark compares long-context behavior",
                 summaryBullets=["The benchmark highlights differences in retrieval quality."],
                 topicIds=[topics[0].id],
-                sourceUrls=["https://example.com/llm-benchmark"],
+                sources=[
+                    DigestSource(
+                        url="https://example.com/llm-benchmark",
+                        sourceName="Example News",
+                        provider="gnews",
+                        publishedAt=datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc),
+                        title="New LLM benchmark",
+                    )
+                ],
             )
         ],
         eventCount=1,
@@ -120,7 +134,7 @@ class TestDigestJobs:
         assert status_response.status_code == 200
         data = status_response.json()
         assert data["status"] == "SUCCEEDED"
-        assert data["result"]["title"] == "Your Thursday AI Digest"
+        assert "title" not in data["result"]
         assert data["result"]["sourceCount"] == 1
         assert data["error"] is None
 
@@ -186,6 +200,21 @@ class TestDigestJobs:
         assert data["status"] == "FAILED"
         assert data["error"]["code"] == "llm_parse_error"
         assert "bad json" in data["error"]["details"]
+
+    @patch("app.services.digest_runner.generate_digest", new_callable=AsyncMock)
+    @patch("app.services.digest_runner.fetch_and_select_sources", new_callable=AsyncMock)
+    def test_digest_job_distinguishes_invalid_sanitized_output(self, mock_fetch, mock_generate, client):
+        mock_fetch.return_value = ([_source()], [])
+        mock_generate.side_effect = InvalidLlmOutputError(
+            "Digest LLM output has empty required prose fields: summary"
+        )
+
+        response = client.post("/api/v1/genai/digests/generate", json=REQUEST_BODY)
+        data = client.get(response.json()["statusUrl"]).json()
+
+        assert data["status"] == "FAILED"
+        assert data["error"]["code"] == "invalid_llm_output"
+        assert "summary" in data["error"]["details"]
 
     def test_digest_job_not_found(self, client):
         response = client.get("/api/v1/genai/digests/jobs/00000000-0000-0000-0000-000000000000")

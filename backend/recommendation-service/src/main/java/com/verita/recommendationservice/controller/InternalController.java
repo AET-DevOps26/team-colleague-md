@@ -35,4 +35,12 @@ public class InternalController implements InternalApi {
                 .map(TopicSubscriptionResponse::new)
                 .toList());
     }
+
+    @Override
+    public ResponseEntity<List<TopicSubscriptionResponse>> getTrendingTopics(Integer limit) {
+        int cappedLimit = limit == null ? 8 : limit;
+        return ResponseEntity.ok(subscriptionService.getTrendingTopicIds(cappedLimit).stream()
+                .map(TopicSubscriptionResponse::new)
+                .toList());
+    }
 }

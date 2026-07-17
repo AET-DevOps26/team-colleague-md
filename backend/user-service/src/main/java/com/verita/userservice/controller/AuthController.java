@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import com.verita.userservice.service.AuthService;
+import com.verita.userservice.service.PasswordResetService;
 
 /**
  * REST controller implementing the OpenAPI {@link AuthenticationApi} interface.
@@ -24,6 +25,7 @@ public class AuthController implements AuthenticationApi {
     static final String REFRESH_COOKIE = "refreshToken";
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
     private final HttpServletRequest httpRequest;
     private final HttpServletResponse httpResponse;
 
@@ -59,12 +61,19 @@ public class AuthController implements AuthenticationApi {
 
     @Override
     public ResponseEntity<Void> forgotPassword(ForgotPasswordRequest forgotPasswordRequest) {
-        return ResponseEntity.ok(authService.forgotPassword(forgotPasswordRequest));
+        passwordResetService.forgotPassword(forgotPasswordRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<VerifyResetCodeResponse> verifyResetCode(VerifyResetCodeRequest verifyResetCodeRequest) {
+        return ResponseEntity.ok(passwordResetService.verifyResetCode(verifyResetCodeRequest));
     }
 
     @Override
     public ResponseEntity<Void> resetPassword(ResetPasswordRequest resetPasswordRequest) {
-        return ResponseEntity.ok(authService.resetPassword(resetPasswordRequest));
+        passwordResetService.resetPassword(resetPasswordRequest);
+        return ResponseEntity.noContent().build();
     }
 
     @Override
@@ -82,7 +91,10 @@ public class AuthController implements AuthenticationApi {
     private void setRefreshCookie(String token) {
         Cookie cookie = new Cookie(REFRESH_COOKIE, token);
         cookie.setHttpOnly(true);
-        cookie.setPath("/api/v1/auth");
+        // The gateway serves this service under a prefix (/user/api/v1/auth/...), which the browser
+        // matches the cookie path against. This service cannot know its own external prefix, so
+        // anything narrower than "/" would stop the cookie from ever being sent back.
+        cookie.setPath("/");
         cookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
         // cookie.setSecure(true); // enable in production (requires HTTPS)
         httpResponse.addCookie(cookie);
@@ -91,7 +103,8 @@ public class AuthController implements AuthenticationApi {
     private void clearRefreshCookie() {
         Cookie cookie = new Cookie(REFRESH_COOKIE, "");
         cookie.setHttpOnly(true);
-        cookie.setPath("/api/v1/auth");
+        // Must match setRefreshCookie's path, or the browser keeps the original cookie on logout.
+        cookie.setPath("/");
         cookie.setMaxAge(0);
         httpResponse.addCookie(cookie);
     }

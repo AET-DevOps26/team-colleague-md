@@ -1,7 +1,7 @@
 package com.verita.contentservice.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -16,13 +16,16 @@ import com.verita.contentservice.dto.DigestGenerateRequestDto;
 import com.verita.contentservice.dto.DigestGenerateResponseDto;
 import com.verita.contentservice.dto.DigestJobAcceptedDto;
 import com.verita.contentservice.dto.DigestJobStatusDto;
+import com.verita.contentservice.dto.DigestSourceDto;
 import com.verita.contentservice.dto.DigestTopicDto;
 import com.verita.contentservice.dto.TopicSubscriptionDto;
+import com.verita.contentservice.entity.DigestEntity;
+import com.verita.contentservice.service.digest.DigestService;
+import com.verita.model.CreateDigestRequest;
+import com.verita.model.DigestDetail;
 import com.verita.model.DigestGenerationResponse;
-import com.verita.model.DigestPostRequest;
-import com.verita.model.PostResponse;
+import com.verita.model.DigestType;
 import com.verita.model.Topic;
-import java.net.URI;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -39,7 +42,7 @@ class DailyDigestGenerationServiceTest {
     @Mock private RecommendationClient recommendationClient;
     @Mock private GenAiClient genAiClient;
     @Mock private TopicService topicService;
-    @Mock private PostService postService;
+    @Mock private DigestService digestService;
 
     private DailyDigestGenerationService service;
 
@@ -47,30 +50,32 @@ class DailyDigestGenerationServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new DailyDigestGenerationService(
-                userClient, recommendationClient, genAiClient, topicService, postService,
+                userClient, recommendationClient, genAiClient, topicService, digestService,
                 "Europe/Berlin", 1, 100);
     }
 
     @Test
     void generateForUser_skipsWhenDailyDigestAlreadyExists() {
         UUID userId = UUID.randomUUID();
-        PostResponse existing = new PostResponse().id(UUID.randomUUID()).title("Existing digest");
-        when(postService.findPersonalDigest(eq(userId), any(), any())).thenReturn(Optional.of(existing));
+        DigestEntity existing = new DigestEntity();
+        DigestDetail detail = new DigestDetail().id(UUID.randomUUID()).title("Existing digest");
+        when(digestService.findPersonalForDate(eq(userId), any())).thenReturn(Optional.of(existing));
+        when(digestService.toDetail(existing)).thenReturn(detail);
 
         DigestGenerationResponse response = service.generateForUser(userId, false);
 
         assertEquals(DigestGenerationResponse.StatusEnum.SKIPPED, response.getStatus());
-        assertEquals(existing, response.getPost());
+        assertEquals(detail, response.getDigest());
         verify(recommendationClient, never()).getUserTopicSubscriptions(any());
         verify(genAiClient, never()).createDigestJob(any());
-        verify(postService, never()).createDigest(any());
+        verify(digestService, never()).createDigest(any());
     }
 
     @Test
     void generateForUser_forceReplacesVisibleDigestAndStoresGenAiResult() {
         UUID userId = UUID.randomUUID();
         UUID topicId = UUID.randomUUID();
-        PostResponse created = new PostResponse().id(UUID.randomUUID()).title("Your Thursday AI Digest");
+        DigestDetail created = new DigestDetail().id(UUID.randomUUID()).title("Your Thursday AI Digest");
 
         when(recommendationClient.getUserTopicSubscriptions(userId))
                 .thenReturn(List.of(new TopicSubscriptionDto(topicId)));
@@ -82,13 +87,13 @@ class DailyDigestGenerationServiceTest {
         when(genAiClient.getDigestJob("job-1")).thenReturn(new DigestJobStatusDto(
                 "job-1", "SUCCEEDED", OffsetDateTime.now(), List.of(), "request-1",
                 userId.toString(), OffsetDateTime.now(), OffsetDateTime.now(), digestResult(topicId), null));
-        when(postService.createDigest(any())).thenReturn(created);
+        when(digestService.createDigest(any())).thenReturn(created);
 
         DigestGenerationResponse response = service.generateForUser(userId, true);
 
         assertEquals(DigestGenerationResponse.StatusEnum.GENERATED, response.getStatus());
-        assertEquals(created, response.getPost());
-        verify(postService).softDeletePersonalDigests(eq(userId), any(), any());
+        assertEquals(created, response.getDigest());
+        verify(digestService).deletePersonalForDate(eq(userId), any());
 
         ArgumentCaptor<DigestGenerateRequestDto> genAiRequest = ArgumentCaptor.forClass(DigestGenerateRequestDto.class);
         verify(genAiClient).createDigestJob(genAiRequest.capture());
@@ -96,14 +101,35 @@ class DailyDigestGenerationServiceTest {
         assertEquals(LocalDate.now(java.time.ZoneId.of("Europe/Berlin")), genAiRequest.getValue().digestDate());
         assertEquals("LLMs", genAiRequest.getValue().topics().get(0).name());
 
-        ArgumentCaptor<DigestPostRequest> digestPost = ArgumentCaptor.forClass(DigestPostRequest.class);
-        verify(postService).createDigest(digestPost.capture());
-        DigestPostRequest request = digestPost.getValue();
-        assertEquals("Your Thursday AI Digest", request.getTitle());
-        assertEquals("Top story subtitle", request.getSummary().get());
+        ArgumentCaptor<CreateDigestRequest> createRequest = ArgumentCaptor.forClass(CreateDigestRequest.class);
+        verify(digestService).createDigest(createRequest.capture());
+        CreateDigestRequest request = createRequest.getValue();
+        assertEquals(DigestType.PERSONAL, request.getDigestType());
+        assertFalse(request.getTitle().isPresent());
+        assertEquals("Top story subtitle", request.getSubtitle().get());
         assertEquals(userId, request.getTargetUserId().get());
-        assertEquals(List.of(URI.create("https://example.com/story")), request.getSourceUrl());
-        assertNotNull(request.getContent());
+        assertEquals("https://example.com/story", request.getEvents().get(0).getSources().get(0).getUrl().toString());
+    }
+
+    @Test
+    void generateForUser_assignsPublicDigestWhenUserHasNoSubscriptions() {
+        UUID userId = UUID.randomUUID();
+        UUID publicId = UUID.randomUUID();
+        DigestEntity publicDigest = new DigestEntity();
+        publicDigest.setId(publicId);
+        DigestDetail publicDetail = new DigestDetail().id(publicId).digestType(DigestType.PUBLIC);
+
+        when(digestService.findPersonalForDate(eq(userId), any())).thenReturn(Optional.empty());
+        when(recommendationClient.getUserTopicSubscriptions(userId)).thenReturn(List.of());
+        when(digestService.findPublicForDate(any())).thenReturn(Optional.of(publicDigest));
+        when(digestService.toDetail(publicDigest)).thenReturn(publicDetail);
+
+        DigestGenerationResponse response = service.generateForUser(userId, false);
+
+        assertEquals(DigestGenerationResponse.StatusEnum.ASSIGNED_PUBLIC, response.getStatus());
+        assertEquals(publicDetail, response.getDigest());
+        verify(digestService).assignPublicDigest(eq(userId), any(), eq(publicId));
+        verify(genAiClient, never()).createDigestJob(any());
     }
 
     private DigestGenerateResponseDto digestResult(UUID topicId) {
@@ -112,7 +138,6 @@ class DailyDigestGenerationServiceTest {
                 now.toLocalDate(),
                 now.minusDays(1),
                 now,
-                "Your Thursday AI Digest",
                 "Top story subtitle",
                 "Longer executive summary.",
                 List.of(new DigestTopicDto(topicId.toString(), "LLMs")),
@@ -120,7 +145,8 @@ class DailyDigestGenerationServiceTest {
                         "A useful LLM story",
                         List.of("One important bullet"),
                         List.of(topicId.toString()),
-                        List.of("https://example.com/story"))),
+                        List.of(new DigestSourceDto("https://example.com/story", "Example",
+                                "gnews", now, "Story title")))),
                 1,
                 1,
                 2,

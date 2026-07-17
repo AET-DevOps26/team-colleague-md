@@ -1,0 +1,23 @@
+meta {
+  name: Admin — get LLM config
+  type: http
+  seq: 26
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/admin/genai/llm-config
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Admin-only (ADR-0020). Returns genai-service's live (provider, model) pair and which providers
+  have an API key configured. content-service forwards to genai over X-Internal-Service-Token —
+  the browser never calls genai directly.
+
+  Requires a token whose `role` claim is ADMIN; a non-admin gets 403.
+}

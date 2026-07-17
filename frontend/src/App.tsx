@@ -9,6 +9,7 @@ import { NavigationHistoryProvider } from "./contexts/NavigationHistoryContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { ToastStack, WelcomePill } from "./components/ui/Toast";
 import AppLayout from "./components/layout/AppLayout";
+import AdminRoute from "./components/layout/AdminRoute";
 import Home from "./pages/Home";
 import PostDetail from "./pages/PostDetail";
 import PostEditor from "./pages/PostEditor";
@@ -42,7 +43,14 @@ export default function App() {
                     <Route path="topics" element={<Topic />} />
                     <Route path="search" element={<Search />} />
                     <Route path="profile/:username" element={<UserProfile />} />
-                    <Route path="admin" element={<Admin />} />
+                    <Route
+                      path="admin"
+                      element={
+                        <AdminRoute>
+                          <Admin />
+                        </AdminRoute>
+                      }
+                    />
                     <Route path="*" element={<NotFound />} />
                   </Route>
                 </Routes>

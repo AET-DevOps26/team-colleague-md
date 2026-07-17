@@ -12,6 +12,8 @@ import com.verita.contentservice.client.GenAiClient;
 import com.verita.contentservice.client.UserClient;
 import com.verita.contentservice.filter.InternalAuthFilter;
 import com.verita.contentservice.dto.GenAiSummarizeResponse;
+import com.verita.contentservice.dto.LlmConfigDto;
+import com.verita.contentservice.dto.LlmProviderAvailabilityDto;
 import com.verita.contentservice.dto.UserProfileDto;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -75,21 +77,94 @@ class ContentFlowIT {
         UserProfileDto profile = new UserProfileDto(userId, "alice", "Alice", null, "USER", null);
         when(userClient.getUserById(any())).thenReturn(profile);
         when(userClient.getUsersByIds(any())).thenReturn(Map.of(userId, profile));
-        when(genAiClient.summarize(any(), any(), any(), any()))
+        when(genAiClient.summarize(any(), any(), any()))
                 .thenReturn(new GenAiSummarizeResponse(UUID.randomUUID().toString(), List.of("summary"), "model", null));
     }
 
     private String mintToken(UUID userId, String username) throws Exception {
+        return mintToken(userId, username, "USER");
+    }
+
+    private String mintToken(UUID userId, String username, String role) throws Exception {
         JWSSigner signer = new MACSigner(jwtSecret.getBytes(StandardCharsets.UTF_8));
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(username)
                 .claim("userId", userId.toString())
+                .claim("role", role)
                 .issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + 3_600_000))
                 .build();
         SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
         jwt.sign(signer);
         return jwt.serialize();
+    }
+
+    // ---- admin ops security (ADR-0020) --------------------------------------
+
+    @Test
+    void adminRoutes_withoutToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/genai/llm-config"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminRoutes_withNonAdminToken_returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/genai/llm-config").header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/posts/summaries/failed").header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/posts/" + UUID.randomUUID() + "/summarize")
+                        .header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/digests/generate/users/" + UUID.randomUUID())
+                        .header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminRoutes_withAdminToken_areReachable() throws Exception {
+        String adminBearer = "Bearer " + mintToken(UUID.randomUUID(), "root", "ADMIN");
+        when(genAiClient.getLlmConfig()).thenReturn(new LlmConfigDto(
+                "nvidia", "moonshotai/kimi-k2.6", 0.3f, List.of(new LlmProviderAvailabilityDto("nvidia", true))));
+
+        mockMvc.perform(get("/api/v1/admin/genai/llm-config").header("Authorization", adminBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.provider").value("nvidia"))
+                .andExpect(jsonPath("$.availableProviders[0].configured").value(true));
+
+        mockMvc.perform(get("/api/v1/admin/posts/summaries/failed").header("Authorization", adminBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void adminGenerateUserDigest_returns202WithAPendingJobForTheRequestedDate() throws Exception {
+        String adminBearer = "Bearer " + mintToken(UUID.randomUUID(), "root", "ADMIN");
+        UUID userId = UUID.randomUUID();
+
+        String accepted = mockMvc.perform(post("/api/v1/admin/digests/generate/users/" + userId)
+                        .param("date", "2026-07-04")
+                        .param("force", "true")
+                        .header("Authorization", adminBearer))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.digestDate").value("2026-07-04"))
+                .andExpect(jsonPath("$.targetUserId").value(userId.toString()))
+                .andReturn().getResponse().getContentAsString();
+
+        // The job id is the whole point of the 202: it is what the admin panel polls for the outcome.
+        String jobId = JsonPath.read(accepted, "$.id");
+        mockMvc.perform(get("/api/v1/admin/digests/jobs/" + jobId).header("Authorization", adminBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(jobId));
+    }
+
+    @Test
+    void adminGetDigestJob_unknownId_is404() throws Exception {
+        String adminBearer = "Bearer " + mintToken(UUID.randomUUID(), "root", "ADMIN");
+
+        mockMvc.perform(get("/api/v1/admin/digests/jobs/" + UUID.randomUUID()).header("Authorization", adminBearer))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -137,31 +212,55 @@ class ContentFlowIT {
 
     @Test
     void getMyDigests_withoutToken_returns401() throws Exception {
-        mockMvc.perform(get("/api/v1/posts/digests"))
+        mockMvc.perform(get("/api/v1/digests"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void getMyDigests_returnsOnlyCallersPersonalisedDigests() throws Exception {
-        // A digest personalised for the caller (ADR-0013: target_user_id = caller).
-        createDigestForUser("Your daily briefing", userId);
-        // A digest for someone else, and a global (null target) digest — neither should surface.
-        createDigestForUser("Someone else's briefing", UUID.randomUUID());
-        createDigestForUser("Global briefing", null);
+    void getMyDigests_returnsOnlyCallersPersonalDigests() throws Exception {
+        // A PERSONAL digest for the caller and one for someone else (ADR-0019).
+        createPersonalDigest("Your daily briefing", userId);
+        createPersonalDigest("Someone else's briefing", UUID.randomUUID());
+        // A PUBLIC digest exists but is not assigned to the caller, so it must not surface.
+        createPublicDigest("Community briefing");
 
-        mockMvc.perform(get("/api/v1/posts/digests").header("Authorization", bearer))
+        mockMvc.perform(get("/api/v1/digests").header("Authorization", bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].title").value("Your daily briefing"))
-                .andExpect(jsonPath("$.content[0].type").value("DIGEST"));
+                .andExpect(jsonPath("$.content[0].title").value("Alice’s AI Digest — July 4, 2026"))
+                .andExpect(jsonPath("$.content[0].digestType").value("PERSONAL"));
     }
 
-    private void createDigestForUser(String title, UUID targetUserId) throws Exception {
-        String target = targetUserId == null ? "null" : "\"" + targetUserId + "\"";
-        mockMvc.perform(post("/internal/v1/posts/digest")
+    @Test
+    void getPublicTodayDigest_isReadableWithoutToken() throws Exception {
+        createPublicDigest("Community briefing");
+
+        mockMvc.perform(get("/api/v1/digests/public/today"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.digestType").value("PUBLIC"))
+                .andExpect(jsonPath("$.title").value("Verita Community Digest — July 4, 2026"));
+    }
+
+    private void createPersonalDigest(String title, UUID targetUserId) throws Exception {
+        String body = "{\"digestType\":\"PERSONAL\",\"targetUserId\":\"" + targetUserId + "\","
+                + "\"digestDate\":\"2026-07-04\",\"title\":\"" + title + "\","
+                + "\"events\":[{\"headline\":\"Headline\",\"summaryBullets\":[\"A bullet\"],"
+                + "\"topicIds\":[],\"sources\":[{\"url\":\"https://example.com/a\"}]}]}";
+        mockMvc.perform(post("/internal/v1/digests")
                         .header(InternalAuthFilter.HEADER, internalServiceToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"" + title + "\",\"content\":\"Digest body content\",\"targetUserId\":" + target + "}"))
+                        .content(body))
+                .andExpect(status().isCreated());
+    }
+
+    private void createPublicDigest(String title) throws Exception {
+        String body = "{\"digestType\":\"PUBLIC\",\"digestDate\":\"2026-07-04\",\"title\":\"" + title + "\","
+                + "\"events\":[{\"headline\":\"Headline\",\"summaryBullets\":[\"A bullet\"],"
+                + "\"topicIds\":[],\"sources\":[{\"url\":\"https://example.com/a\"}]}]}";
+        mockMvc.perform(post("/internal/v1/digests")
+                        .header(InternalAuthFilter.HEADER, internalServiceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isCreated());
     }
 }

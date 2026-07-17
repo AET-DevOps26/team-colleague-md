@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Optional;
@@ -246,5 +247,75 @@ public class UserServiceTests {
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
         assertEquals(1, result.getContent().size());
+    }
+
+    @Test
+    void applyStatsDelta_nonZeroDeltas_appliesEach() {
+        UUID id = userEntity.getId();
+        userService.applyStatsDelta(id, 1, -2);
+        verify(userRepository).applyPostCountDelta(id, 1);
+        verify(userRepository).applyLikeReceivedCountDelta(id, -2);
+    }
+
+    @Test
+    void applyStatsDelta_zeroDeltas_areNoOps() {
+        userService.applyStatsDelta(userEntity.getId(), 0, 0);
+        verify(userRepository, never()).applyPostCountDelta(any(), anyInt());
+        verify(userRepository, never()).applyLikeReceivedCountDelta(any(), anyInt());
+    }
+
+    // ---- admin self-action guard (ADR-0020) ---------------------------------
+
+    @Test
+    void updateUserRole_otherUser_isApplied() {
+        UserEntity target = new UserEntity();
+        target.setId(UUID.randomUUID());
+        target.setRole(UserRole.USER);
+        when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
+        UpdateRoleRequest request = new UpdateRoleRequest();
+        request.setRole(UserRole.VERIFIED);
+
+        userService.updateUserRole(target.getId(), request, userEntity.getId());
+
+        assertEquals(UserRole.VERIFIED, target.getRole());
+        verify(userRepository).save(target);
+    }
+
+    @Test
+    void updateUserRole_ownAccount_isRejected_soAdminsCannotDemoteThemselves() {
+        UpdateRoleRequest request = new UpdateRoleRequest();
+        request.setRole(UserRole.USER);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> userService.updateUserRole(userEntity.getId(), request, userEntity.getId()));
+
+        assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateUserBanStatus_otherUser_isApplied() {
+        UserEntity target = new UserEntity();
+        target.setId(UUID.randomUUID());
+        when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
+        UpdateBanStatusRequest request = new UpdateBanStatusRequest();
+        request.setBanned(true);
+
+        userService.updateUserBanStatus(target.getId(), request, userEntity.getId());
+
+        assertTrue(target.getIsBanned());
+        verify(userRepository).save(target);
+    }
+
+    @Test
+    void updateUserBanStatus_ownAccount_isRejected_soAdminsCannotLockThemselvesOut() {
+        UpdateBanStatusRequest request = new UpdateBanStatusRequest();
+        request.setBanned(true);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> userService.updateUserBanStatus(userEntity.getId(), request, userEntity.getId()));
+
+        assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+        verify(userRepository, never()).save(any());
     }
 }

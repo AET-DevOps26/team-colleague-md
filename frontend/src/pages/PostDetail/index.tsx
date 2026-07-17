@@ -8,7 +8,9 @@ import PostFooter from '../../components/post/PostFooter';
 import EngageRow from '../../components/post/EngageRow';
 import BottomBar from '../../components/post/BottomBar';
 import CommentSection from '../../components/post/CommentSection';
+import AISummaryPanel from '../../components/post/AISummaryPanel';
 import { useComments } from '../../hooks/useComments';
+import { useAuth } from '../../hooks/useAuth';
 import Markdown from '../../components/ui/Markdown';
 import { useToast } from '../../hooks/useToast';
 import { timeAgo } from '../../utils/timeAgo';
@@ -23,14 +25,60 @@ export default function PostDetail() {
 
   const [post, setPost] = useState<PostDetailType | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isRestoring } = useAuth();
   const { showToast } = useToast();
   const comments = useComments(post?.id, post?.commentCount ?? 0);
 
   useEffect(() => {
     if (!id) { navigate('/'); return; }
+    // Wait for session restoration (which re-mints the in-memory access token from the refresh
+    // cookie on a hard reload). Fetching before it completes sends no token, so the reader's own
+    // isLikedByMe / isBookmarkedByMe come back false — and an anonymous read is a 200, so api.ts's
+    // 401 refresh-and-retry never fires to correct it (cf. DigestPost).
+    if (isRestoring) return;
     setLoading(true);
     contentService.getPost(id).then((p) => { setPost(p); setLoading(false); });
-  }, [id, navigate]);
+  }, [id, navigate, isRestoring]);
+
+  useEffect(() => {
+    if (!post || post.summaryStatus !== 'PENDING') return;
+
+    let cancelled = false;
+    let attempts = 0;
+    let timer: number | undefined;
+
+    const pollSummary = async () => {
+      attempts += 1;
+      try {
+        const summary = await contentService.getPostSummary(post.id);
+        if (cancelled) return;
+        if (summary.status !== 'PENDING') {
+          setPost((current) => current && current.id === post.id
+            ? {
+                ...current,
+                summary: summary.summary ?? null,
+                summaryStatus: summary.status,
+                summaryGeneratedAt: summary.generatedAt ?? null,
+                summaryModel: summary.model ?? null,
+              }
+            : current);
+          return;
+        }
+      } catch {
+        if (cancelled) return;
+      }
+
+      if (attempts < 5) {
+        timer = window.setTimeout(pollSummary, 3000);
+      }
+    };
+
+    timer = window.setTimeout(pollSummary, 3000);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [post?.id, post?.summaryStatus]);
 
   function handleLike() {
     if (!post) return;
@@ -141,8 +189,13 @@ export default function PostDetail() {
           {/* Title */}
           <h1 className={styles.postTitle}>{post.title}</h1>
 
-          {/* Article body (real Markdown). The AI summary is intentionally hidden until
-              that backend is wired (ADR-0012); comments are live (ADR-0015). */}
+          <AISummaryPanel
+            status={post.summaryStatus}
+            summary={post.summary}
+            generatedAt={post.summaryGeneratedAt}
+            model={post.summaryModel}
+          />
+
           <Markdown>{post.content}</Markdown>
 
           {/* Footer: tags + sources */}

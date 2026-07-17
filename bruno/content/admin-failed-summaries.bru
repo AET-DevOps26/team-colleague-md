@@ -1,0 +1,25 @@
+meta {
+  name: Admin — list failed summaries
+  type: http
+  seq: 28
+}
+
+get {
+  url: {{contentBaseUrl}}/api/v1/admin/posts/summaries/failed?page=0&size=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 0
+  size: 20
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Admin-only (ADR-0020). Posts left in summaryStatus = FAILED after the summary listener
+  exhausted its retries (#199). Feeds the Operations tab's re-trigger list.
+}

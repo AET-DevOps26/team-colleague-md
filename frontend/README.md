@@ -121,7 +121,7 @@ root) before signing in. The auth session is stored in `localStorage` under the 
 
 ## Tests
 
-Two layers. See [docs/Frontend_Testing.md](../docs/Frontend_Testing.md) for the full test case register.
+Two layers. See [Frontend Testing](../docs/testing/Frontend_Testing.md) for the full test case register.
 
 | Layer | Tool | Command | Speed | CI |
 |---|---|---|---|---|

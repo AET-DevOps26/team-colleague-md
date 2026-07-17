@@ -36,4 +36,16 @@ public class RecommendationClient {
                 .body(TopicSubscriptionDto[].class);
         return body == null ? List.of() : List.of(body);
     }
+
+    /** Platform-wide trending topic ids that seed the daily PUBLIC digest (ADR-0018/0019). */
+    public List<TopicSubscriptionDto> getTrendingTopics(int limit) {
+        TopicSubscriptionDto[] body = recommendationClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/internal/v1/topics/trending")
+                        .queryParam("limit", limit)
+                        .build())
+                .header(INTERNAL_TOKEN_HEADER, internalServiceToken)
+                .retrieve()
+                .body(TopicSubscriptionDto[].class);
+        return body == null ? List.of() : List.of(body);
+    }
 }

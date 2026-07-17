@@ -27,6 +27,12 @@ public class SubscriptionService {
         return topicSubscriptionRepository.findByUserId(userId);
     }
 
+    /** Most-subscribed topic IDs platform-wide, most popular first (seeds the daily public digest). */
+    public List<UUID> getTrendingTopicIds(int limit) {
+        return topicSubscriptionRepository.findMostSubscribedTopicIds(
+                org.springframework.data.domain.PageRequest.of(0, limit));
+    }
+
     /**
      * Subscribes the user to the topic, idempotently.
      *

@@ -3,10 +3,21 @@ global:
   #   helm upgrade ... -f values-prod.yaml --set global.jwtSecret="$JWT_SECRET"
   # The value below mirrors the dev default and is insecure; replace it for real deployments.
   jwtSecret: "dev-only-insecure-secret-replace-in-production!!"
+  # Brevo SMTP credentials — DO NOT commit. Inject at deploy time so secret-mail.yaml renders:
+  #   helm upgrade ... -f values-prod.yaml --set global.mailUsername="$MAIL_USERNAME" \
+  #     --set global.mailPassword="$MAIL_PASSWORD"
+  mailUsername: ""
+  mailPassword: ""
 
 services:
   user:
     springProfile: prod
+    # Enables the password-reset SMTP env block (deployment.yaml). from must be a Brevo-verified
+    # sender; the login/key come from the {Release}-mail Secret.
+    mail:
+      host: smtp-relay.brevo.com
+      port: 587
+      from: no-reply@verita.stud.k8s.aet.cit.tum.de
   content:
     springProfile: prod
   recommendation:

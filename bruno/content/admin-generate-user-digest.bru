@@ -1,0 +1,27 @@
+meta {
+  name: Admin — generate a user's digest
+  type: http
+  seq: 30
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/admin/digests/generate/users/{{userId}}?force=false
+  body: none
+  auth: bearer
+}
+
+params:query {
+  force: false
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Admin-only (ADR-0020). Runs the same orchestration as the scheduled daily job for one user
+  (ADR-0018/0019). Generation blocks on a GenAI job plus external news fetches, so it runs in the
+  background and this returns 202 immediately — there is no result body to wait for.
+
+  force=true regenerates even when the user already has a digest for the current Platform Day.
+}

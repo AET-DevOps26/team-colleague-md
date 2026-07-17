@@ -1,0 +1,23 @@
+meta {
+  name: Admin — re-summarize post
+  type: http
+  seq: 29
+}
+
+post {
+  url: {{contentBaseUrl}}/api/v1/admin/posts/{{postId}}/summarize
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Admin-only (ADR-0020). Sets summaryStatus = PENDING and republishes the #199 summary event,
+  then returns 202 — there is no synchronous overwrite path. Poll GET /api/v1/posts/{id}/summary
+  for PENDING → COMPLETED/FAILED.
+
+  409 when the post's content is too short to summarize.
+}

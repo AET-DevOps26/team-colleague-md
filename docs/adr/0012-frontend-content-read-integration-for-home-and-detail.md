@@ -62,4 +62,4 @@ The `/recommendation` proxy route already exists in both `vite.config.ts` and `n
 - Showing a real post body while hiding the AI summary and comments is an honest partial view,
   preferred over a real body topped with mock summary/comments.
 - Verification before the demo is mandatory: `docker compose up` → run seed → log in as
-  `alexchen` → walk the five home items + login. See `docs/Check_List.md`.
+  `alexchen` → walk the five home items + login. See `docs/review/Check_List.md`.

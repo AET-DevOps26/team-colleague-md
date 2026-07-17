@@ -30,7 +30,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.environment == 'prod' && 'main' || 'dev') || github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.environment == 'prod' && 'main' || github.ref_name) || github.event.workflow_run.head_sha }}
 
       - name: Set up Kubeconfig
         run: |
@@ -87,8 +87,21 @@ jobs:
               --set recommendation-postgresql.auth.password="${{ secrets.RECOMMENDATION_DB_PASSWORD }}"
               --set minio.users[0].secretKey="${{ secrets.USER_SERVICE_S3_SECRET_KEY }}"
               --set minio.users[1].secretKey="${{ secrets.CONTENT_SERVICE_S3_SECRET_KEY }}"
+              # Brevo SMTP for the user-service password-reset mail. Renders secret-mail.yaml and
+              # the MAIL_* env block (deployment.yaml); overrides the placeholder sender in values-prod.
+              --set global.mailUsername="${{ secrets.MAIL_USERNAME }}"
+              --set global.mailPassword="${{ secrets.MAIL_PASSWORD }}"
+              --set services.user.mail.from="${{ secrets.MAIL_FROM }}"
             )
           fi
+
+          # GenAI credentials are deployed to both demo environments so the daily-digest path can
+          # be exercised in dev as well as prod. They are kept in GitHub Secrets, never Helm values.
+          GENAI_SECRETS=(
+            --set-string services.genai.llm.nvidiaNimApiKey="${{ secrets.NVIDIA_NIM_API_KEY }}"
+            --set-string services.genai.llm.logosApiKey="${{ secrets.LOGOS_API_KEY }}"
+            --set-string services.genai.llm.gnewsApiKey="${{ secrets.GNEWS_API_KEY }}"
+          )
 
           helm upgrade --install verita \
             ./infra/helm/verita \
@@ -97,6 +110,7 @@ jobs:
             --namespace verita-$DEPLOY_ENV \
             --create-namespace \
             "${PROD_SECRETS[@]}" \
+            "${GENAI_SECRETS[@]}" \
             --set services.frontend.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
             --set services.content.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \
             --set services.user.rolloutId=${{ github.event.workflow_run.id || github.run_id }} \

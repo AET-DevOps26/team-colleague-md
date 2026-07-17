@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# E2E target environments. .env.local and .env.verita-dev are committed on purpose: the hosts are
+# public and SEED_PASSWORD is the seed script's own fixture password, not a credential. Only the
+# Azure VM's file is ignored, because its public IP is assigned per deploy.
+tests/e2e/.env.azure
+# Vite's `*.local` above is meant for local secrets and would otherwise swallow this one.
+!tests/e2e/.env.local
+
+# Playwright
+test-results/
+playwright-report/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +33,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Raw demo takes — only the converted clips under docs/assets/demo are committed.
+# demo-recordings/ is Playwright's output; demo_recording/ holds hand-recorded screen captures
+# (the mp4 sources for scripts/make-demo-webp.sh), which are far larger than the clips cut from them.
+demo-recordings/
+demo_recording/

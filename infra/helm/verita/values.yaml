@@ -7,6 +7,11 @@ global:
   # Shared service-to-service secret (ADR-0007) consumed by backend internal endpoints.
   # DEV DEFAULT ONLY — override via --set global.internalServiceToken=... for real deployments.
   internalServiceToken: "dev-only-internal-service-token"
+  # Brevo SMTP credentials for the user-service password-reset mail. Empty by default so dev
+  # installs run mail-less (secret-mail.yaml and the user-service mail env are skipped). Set both
+  # in prod via --set global.mailUsername=... --set global.mailPassword=... (see values-prod.yaml).
+  mailUsername: ""
+  mailPassword: ""
 
 services:
   user:
@@ -56,6 +61,8 @@ services:
       USER_SERVICE_BASE_URL: "http://{{ .Release.Name }}-user:8081"
       RECOMMENDATION_SERVICE_BASE_URL: "http://{{ .Release.Name }}-recommendation:8083"
       GENAI_SERVICE_BASE_URL: "http://{{ .Release.Name }}-genai:8000"
+      GENAI_READ_TIMEOUT_SECONDS: "60"
+      DIGEST_MAX_WAIT_MS: "120000"
     health:
       path: /actuator/health
       initialDelaySeconds: 45
@@ -105,7 +112,16 @@ services:
     metrics:
       path: /metrics
     internalToken: true
-    replicaCount: 2
+    llm:
+      provider: logos
+      model: openai/gpt-oss-120b
+      nvidiaNimApiKey: ""
+      logosApiKey: ""
+      ollamaBaseUrl: ""
+      gnewsApiKey: ""
+    # Digest jobs are held in process memory and polled through the Service. Keep one replica so
+    # job creation and status polling cannot land on different, unsynchronised processes.
+    replicaCount: 1
     health:
       path: /health
       initialDelaySeconds: 15

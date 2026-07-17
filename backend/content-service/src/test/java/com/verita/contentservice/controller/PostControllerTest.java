@@ -4,6 +4,7 @@ import com.verita.contentservice.TestcontainersConfiguration;
 import com.verita.contentservice.service.PostService;
 import com.verita.model.PostPage;
 import com.verita.model.PostResponse;
+import com.verita.model.PostSummaryResponse;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,26 +80,17 @@ class PostControllerTest {
     }
 
     @Test
+    void getPostSummary_returns200() throws Exception {
+        when(postService.getPostSummary(any())).thenReturn(new PostSummaryResponse());
+        mockMvc.perform(get("/api/v1/posts/{id}/summary", UUID.randomUUID()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void getAllPosts_publicNoToken_returns200() throws Exception {
-        when(postService.getAllPosts(anyInt(), anyInt(), any(), any())).thenReturn(new PostPage());
+        when(postService.getAllPosts(anyInt(), anyInt(), any())).thenReturn(new PostPage());
         mockMvc.perform(get("/api/v1/posts"))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void getMyDigests_returns200() throws Exception {
-        when(postService.getMyDigests(anyInt(), anyInt())).thenReturn(new PostPage());
-        mockMvc.perform(get("/api/v1/posts/digests"))
-                .andExpect(status().isOk());
-        verify(postService).getMyDigests(anyInt(), anyInt());
-    }
-
-    @Test
-    void getPublicTodayDigest_returns200() throws Exception {
-        when(postService.getPublicTodayDigest()).thenReturn(new PostResponse().id(UUID.randomUUID()));
-        mockMvc.perform(get("/api/v1/posts/digests/today/public"))
-                .andExpect(status().isOk());
-        verify(postService).getPublicTodayDigest();
     }
 
     @Test

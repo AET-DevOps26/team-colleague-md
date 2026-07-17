@@ -9,6 +9,7 @@ from app.schemas.digest import DigestJobError
 from app.services.digest_generator import DigestJsonParseError, generate_digest
 from app.services.digest_jobs import complete_job, fail_job, get_request, mark_running
 from app.services.external_sources import fetch_and_select_sources
+from app.services.output_sanitizer import InvalidLlmOutputError
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,18 @@ async def run_digest_job(job_id: str) -> None:
         try:
             logger.info("Digest job LLM generation started jobId=%s sourceCount=%d", job_id, len(sources))
             result = await generate_digest(request, sources)
+        except InvalidLlmOutputError as exc:
+            logger.warning("Digest job LLM output invalid after retry jobId=%s error=%s", job_id, exc)
+            fail_job(
+                job_id,
+                DigestJobError(
+                    code="invalid_llm_output",
+                    message="LLM returned unusable digest prose after retry.",
+                    details=str(exc),
+                ),
+                warnings,
+            )
+            return
         except DigestJsonParseError:
             raise
         except Exception as exc:
@@ -76,7 +89,9 @@ async def run_digest_job(job_id: str) -> None:
             return
 
         complete_job(job_id, result, warnings)
-        cited_source_count = len({url for event in result.events for url in event.sourceUrls})
+        cited_source_count = len(
+            {source.url for event in result.events for source in event.sources}
+        )
         logger.info(
             "Digest job succeeded jobId=%s eventCount=%d sourceCount=%d citedSourceCount=%d warningCount=%d readTimeMinutes=%d",
             job_id,

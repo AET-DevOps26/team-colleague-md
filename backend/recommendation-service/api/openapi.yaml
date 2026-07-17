@@ -63,6 +63,32 @@ paths:
                 items: { $ref: '#/components/schemas/TopicSubscriptionResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /internal/v1/topics/trending:
+    get:
+      operationId: getTrendingTopics
+      summary: List platform-wide trending topics (internal)
+      description: |
+        Internal endpoint called by content-service's daily digest job to seed the public digest
+        (ADR-0018/0019). Returns the most-subscribed topic IDs across the platform, most popular
+        first. Gated by X-Internal-Service-Token (ADR-0007), not a user JWT.
+      tags: [Internal]
+      # Gated by X-Internal-Service-Token, not a user JWT — no bearerAuth advertised (matches the
+      # other internal endpoints in this collection).
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 8, minimum: 1, maximum: 50 }
+      responses:
+        '200':
+          description: Trending topics
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TopicSubscriptionResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   # --- FEEDS & DISCOVERY ---
   /api/v1/feed/personal:
     get:

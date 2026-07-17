@@ -28,6 +28,14 @@ function IconTopic() {
   );
 }
 
+function IconAdmin() {
+  return (
+    <svg className={styles.ico} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 4 5v6c0 4.4 3.4 7.8 8 9 4.6-1.2 8-4.6 8-9V5l-8-3z" />
+    </svg>
+  );
+}
+
 function IconSettings() {
   return (
     <svg className={styles.ico} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
@@ -60,7 +68,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed = false }: SidebarProps) {
-  const { isLoggedIn } = useAuth();
+  const { user, isLoggedIn } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const { open: openAuth } = useAuthModal();
   const { open: openSettings } = useSettingsModal();
   const { pathname } = useLocation();
@@ -102,6 +111,18 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           <IconTopic />
           <span className={styles.label}>Topic</span>
         </Link>
+        {/* Admin panel is discoverable only to admins; /admin is guarded server- and client-side. */}
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className={styles.navItem}
+            aria-current={pathname.startsWith('/admin') ? 'page' : undefined}
+            data-testid="sidebar-admin"
+          >
+            <IconAdmin />
+            <span className={styles.label}>Admin</span>
+          </Link>
+        )}
       </nav>
 
       <div className={styles.navSpacer} />

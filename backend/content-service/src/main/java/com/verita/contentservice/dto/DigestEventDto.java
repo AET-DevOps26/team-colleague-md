@@ -6,5 +6,5 @@ public record DigestEventDto(
         String headline,
         List<String> summaryBullets,
         List<String> topicIds,
-        List<String> sourceUrls
+        List<DigestSourceDto> sources
 ) {}

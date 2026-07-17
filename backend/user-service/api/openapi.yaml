@@ -92,8 +92,10 @@ paths:
   /api/v1/auth/forgot-password:
     post:
       operationId: forgotPassword
-      summary: Request a password reset email
-      description: Not yet implemented. Reserved for future use.
+      summary: Request a password reset code by email
+      description: |
+        Sends a 6-digit reset code to the address if it belongs to a registered account.
+        Always returns 204 regardless of whether the email exists, to avoid account enumeration.
       tags: [Authentication]
       security: []
       requestBody:
@@ -103,14 +105,35 @@ paths:
             schema: { $ref: '#/components/schemas/ForgotPasswordRequest' }
       responses:
         '204':
-          description: Password reset email sent if the address is registered
+          description: Password reset code sent if the address is registered
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/auth/verify-reset-code:
+    post:
+      operationId: verifyResetCode
+      summary: Verify a password reset code and obtain a reset token
+      description: |
+        Exchanges the email + 6-digit code from the reset email for a short-lived,
+        single-use reset token, which is then passed to /reset-password.
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerifyResetCodeRequest' }
+      responses:
+        '200':
+          description: Code verified; reset token issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerifyResetCodeResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
   /api/v1/auth/reset-password:
     post:
       operationId: resetPassword
-      summary: Reset password using a token from the reset email
-      description: Not yet implemented. Reserved for future use.
+      summary: Reset password using a token from /verify-reset-code
       tags: [Authentication]
       security: []
       requestBody:
@@ -213,6 +236,32 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PaginatedDigestRecipients' }
         '400': { $ref: '#/components/responses/BadRequest' }
+
+  /internal/v1/users/{userId}/stats/deltas:
+    post:
+      operationId: applyUserStatsDelta
+      summary: Apply deltas to a user's profile stat counts (internal)
+      description: |
+        Internal endpoint called by content-service to keep an author's profile aggregate counts
+        (postCount, likeReceivedCount) in sync as posts are published/unpublished and likes are
+        added/removed. Gated by the shared X-Internal-Service-Token (ADR-0007), not a user JWT.
+        Counts are clamped at zero; unknown user IDs are a no-op.
+        TODO(#178): followerCount/followingCount deltas are intentionally not handled yet — the
+        follow graph aggregate is not maintained (those two counts stay hidden in the UI).
+      tags: [Internal]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserStatsDelta' }
+      responses:
+        '204': { description: Deltas applied }
 
   # --- CURRENT USER ---
   /api/v1/users/me:
@@ -511,11 +560,22 @@ components:
         role: { $ref: '#/components/schemas/UserRole' }
         isBanned: { type: boolean }
         postCount: { type: integer }
+        # TODO(#178): followerCount/followingCount are not yet maintained (no follow-graph
+        # aggregate) and are hidden in the UI. Kept in the contract so re-enabling is additive.
         followerCount: { type: integer }
         followingCount: { type: integer }
         likeReceivedCount: { type: integer }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+    UserStatsDelta:
+      type: object
+      description: |
+        Signed deltas to apply to a user's profile stat counts. Omitted or zero fields are no-ops.
+        Only the counts maintained via write-back (ADR-0007 internal call) are represented.
+      properties:
+        postCountDelta: { type: integer, default: 0 }
+        likeReceivedCountDelta: { type: integer, default: 0 }
 
     RegisterRequest:
       type: object
@@ -554,12 +614,27 @@ components:
       properties:
         email: { type: string, format: email }
 
+    VerifyResetCodeRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email: { type: string, format: email }
+        code: { type: string, pattern: '^[0-9]{6}$', description: The 6-digit code from the reset email. }
+
+    VerifyResetCodeResponse:
+      type: object
+      required: [resetToken]
+      properties:
+        resetToken:
+          type: string
+          description: Short-lived, single-use token to pass to /reset-password.
+
     ResetPasswordRequest:
       type: object
       required: [token, newPassword]
       properties:
-        token: { type: string }
-        newPassword: { type: string, minLength: 8 }
+        token: { type: string, description: The reset token returned by /verify-reset-code. }
+        newPassword: { type: string, minLength: 8, pattern: '^(?=.*[a-zA-Z])(?=.*\d).+$' }
 
     UpdateUserRequest:
       type: object

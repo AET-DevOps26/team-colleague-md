@@ -140,6 +140,15 @@ services:
         mc anonymous set download "local/$${MINIO_USER_PORTRAITS_BUCKET}"
         mc anonymous set download "local/$${MINIO_POST_PHOTOS_BUCKET}"
 
+  mailpit:
+    # Local SMTP sink for the password-reset flow. Captures all outbound mail (no real delivery);
+    # browse it at http://localhost:8025. SMTP listens on 1025 with no auth/TLS.
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # web UI
+    restart: unless-stopped
+
   user-service:
     build:
       context: ./backend/user-service
@@ -150,6 +159,9 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       # Shared HS256 secret — all services sign/verify with the same value so tokens interoperate.
       - JWT_SECRET=dev-only-insecure-secret-replace-in-production!!
+      # Password-reset mail goes to the local Mailpit sink (no auth/TLS).
+      - MAIL_HOST=mailpit
+      - MAIL_PORT=1025
       - DB_HOST=user-db
       - DB_PORT=5432
       - DB_NAME=verita_users
@@ -168,6 +180,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     healthcheck:
       # Poll Spring Actuator health endpoint; non-200 response marks container unhealthy
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
@@ -198,6 +212,9 @@ services:
       # Cross-service calls (Clients.java) reach peers by compose service name, not localhost.
       - USER_SERVICE_BASE_URL=http://user-service:8081
       - GENAI_SERVICE_BASE_URL=http://genai-service:8000
+      # Local inference can take longer than the cloud defaults.
+      - GENAI_READ_TIMEOUT_SECONDS=${GENAI_READ_TIMEOUT_SECONDS:-300}
+      - DIGEST_MAX_WAIT_MS=${DIGEST_MAX_WAIT_MS:-300000}
       - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083
       - MINIO_URL=http://minio:9000
     depends_on:
