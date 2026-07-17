@@ -33,7 +33,9 @@ export async function seedUsers(config: SeedConfig, options: SeedOptions) {
 
   try {
     await assertUserSeedSchemaExists(dbClient);
-    await assertNoUserIdentityConflicts(dbClient, SEED_USERS);
+    await assertNoUserIdentityConflicts(dbClient, SEED_USERS, {
+      ignoreSeedOwnedRows: options.reset && options.dryRun,
+    });
 
     if (options.dryRun) {
       console.log(`Would upload ${avatars.length} avatar object(s) to ${config.storage.users.bucket}.`);

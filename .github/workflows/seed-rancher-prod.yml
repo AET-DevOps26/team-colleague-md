@@ -2,6 +2,12 @@ name: Seed Rancher Production Demo
 
 on:
   workflow_dispatch:
+    inputs:
+      reset:
+        description: "Purge stale seed-owned rows before seeding (needed when prod holds pre-deterministic-ID seed data)"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -47,4 +53,6 @@ jobs:
           RECOMMENDATION_DB_PASSWORD: ${{ secrets.RECOMMENDATION_DB_PASSWORD }}
           USER_STORAGE_S3_SECRET_KEY: ${{ secrets.USER_SERVICE_S3_SECRET_KEY }}
           CONTENT_STORAGE_S3_SECRET_KEY: ${{ secrets.CONTENT_SERVICE_S3_SECRET_KEY }}
+          SEED_RESET: ${{ inputs.reset == true && '1' || '' }}
+          SEED_RESET_CONFIRM: ${{ inputs.reset == true && 'verita-prod' || '' }}
         run: npm run seed:rancher

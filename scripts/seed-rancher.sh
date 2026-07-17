@@ -17,8 +17,9 @@
 #
 # SEED_RESET deletes only seed-owned rows (users with @example.com emails and the
 # data they own, plus system digests) before seeding. Posts created manually by a
-# seeded demo account are seed-owned too. Production-demo mode is always upsert-only
-# and rejects SEED_RESET and SEED_ONLY.
+# seeded demo account are seed-owned too. Production-demo mode rejects SEED_ONLY and
+# requires SEED_RESET_CONFIRM=verita-prod alongside SEED_RESET (needed when prod holds
+# seed rows from before the deterministic-ID fixtures, which upserts cannot reconcile).
 #
 # Requires: kubectl (with access to the selected namespace), node + npm.
 # Stop local Docker Compose PostgreSQL and MinIO instances first; this script must
@@ -31,6 +32,7 @@ RELEASE="${RELEASE:-verita}"
 INGRESS_HOST="${INGRESS_HOST:-}"
 SEED_ONLY="${SEED_ONLY:-}"
 SEED_RESET="${SEED_RESET:-}"   # set to any non-empty value to purge stale seed rows before re-seeding
+SEED_RESET_CONFIRM="${SEED_RESET_CONFIRM:-}"   # must equal "verita-prod" for SEED_RESET in prod mode
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -67,8 +69,12 @@ case "$RANCHER_ENV" in
       echo "Refusing: prod mode only supports ingress host 'verita.stud.k8s.aet.cit.tum.de', got '$INGRESS_HOST'." >&2
       exit 1
     fi
-    if [ -n "$SEED_ONLY" ] || [ -n "$SEED_RESET" ]; then
-      echo "Refusing: prod mode always seeds all domains with upserts; SEED_ONLY and SEED_RESET are unsupported." >&2
+    if [ -n "$SEED_ONLY" ]; then
+      echo "Refusing: prod mode always seeds all domains; SEED_ONLY is unsupported." >&2
+      exit 1
+    fi
+    if [ -n "$SEED_RESET" ] && [ "$SEED_RESET_CONFIRM" != "verita-prod" ]; then
+      echo "Refusing: SEED_RESET in prod purges seed-owned rows. Set SEED_RESET_CONFIRM=verita-prod to confirm." >&2
       exit 1
     fi
 
@@ -144,8 +150,8 @@ run_seed() {
 }
 
 if [ "$RANCHER_ENV" = "prod" ]; then
-  echo "==> Preflighting all production-demo seed domains (dry run)"
-  run_seed --dry-run
+  echo "==> Preflighting all production-demo seed domains (dry run${SEED_RESET:+, reset})"
+  run_seed --dry-run "${SEED_ARGS[@]}"
 fi
 
 echo "==> Running seed (${SEED_ONLY:-all domains}${SEED_RESET:+, reset})"
