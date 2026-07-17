@@ -124,11 +124,11 @@ Authentication is always against the real backend. Seed the database (`npm run s
 to create the demo users, then log in at http://localhost:3000. All seed users share the
 password `Password123!`; profiles, posts, bookmarks, and likes are populated by the seed.
 
-| Display Name | Username | Role |
-|---|---|---|
-| Alex Chen | `alexchen` | Admin |
-| Sarah Kim | `sarahjkim` | Verified |
-| Marcello Rossi | `marcello_r` | User |
+| Display Name | Email (sign in with this) | Username | Role |
+|---|---|---|---|
+| Alex Chen | `alex@example.com` | `alexchen` | Admin |
+| Sarah Kim | `sarah.kim@example.com` | `sarahjkim` | Verified |
+| Marcello Rossi | `marcello.rossi@example.com` | `marcello_r` | User |
 
 ## Documentation
 
