@@ -1,5 +1,10 @@
 # Seed Data Generation Spec
 
+> **Archived (2026-07).** This was a one-shot work order for regenerating the demo seed
+> data; the work has been executed and the resulting seed lives under `scripts/seed/`.
+> Kept for the DECISION records inline. File paths and line references below describe the
+> repository as it was when the spec was written.
+
 > **Purpose.** This document is the complete, self-contained brief for a generative AI to
 > **regenerate the Verita demo seed data** so the local demo looks real and full. Read it end
 > to end, then produce the code changes described in **§10 Deliverables**. Do **not** invent

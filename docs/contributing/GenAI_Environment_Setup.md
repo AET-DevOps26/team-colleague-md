@@ -3,7 +3,7 @@
 How to configure the GenAI service locally and test its features (post summary, daily digest,
 LLM provider switching) through the **Admin panel**.
 
-Related: [ADR-0020](adr/0020-runtime-llm-selection-and-admin-ops.md) (runtime LLM selection and the admin GenAI-ops surface).
+Related: [ADR-0020](../adr/0020-runtime-llm-selection-and-admin-ops.md) (runtime LLM selection and the admin GenAI-ops surface).
 
 ---
 
@@ -20,9 +20,6 @@ Related: [ADR-0020](adr/0020-runtime-llm-selection-and-admin-ops.md) (runtime LL
 You only need **one** configured LLM provider to test everything. Cloud providers require their
 API key; Ollama requires `OLLAMA_BASE_URL`. An unconfigured provider appears greyed out in the
 Admin panel and the backend rejects selecting it.
-
-> **Logos only works inside the TUM network.** Off-campus you must be connected to **eduVPN**,
-> otherwise every Logos call times out. NVIDIA works from anywhere on the public internet.
 
 ---
 
@@ -42,7 +39,7 @@ Then edit `.env`. Pick **one** provider as the default:
 
 ```dotenv
 LLM_PROVIDER=nvidia
-LLM_MODEL=nvidia/nemotron-3-super-120b-a12b
+LLM_MODEL=mistralai/mistral-medium-3.5-128b
 NVIDIA_NIM_API_KEY=nvapi-...
 
 INTERNAL_SERVICE_TOKEN=dev-only-internal-service-token

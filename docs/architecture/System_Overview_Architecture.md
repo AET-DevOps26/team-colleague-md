@@ -14,7 +14,6 @@
 3. [System Architecture](#3-system-architecture)
 4. [UML Diagrams](#4-uml-diagrams)
 5. [Initial Product Backlog](#5-initial-product-backlog)
-6. [Technical Documentation Roadmap](#6-technical-documentation-roadmap)
 
 ---
 
@@ -22,7 +21,7 @@
 
 ### 1.1 Project Description
 
-Verita is an AI-focused community platform designed to address the information overload problem in the rapidly evolving AI industry. The platform enables developers, researchers, and enthusiasts to share and discover practical AI knowledge through intelligent content curation, automated summarization, and personalized recommendations. See more in [Problem Statement](Problem_Statement.md)
+Verita is an AI-focused community platform designed to address the information overload problem in the rapidly evolving AI industry. The platform enables developers, researchers, and enthusiasts to share and discover practical AI knowledge through intelligent content curation, automated summarization, and personalized recommendations. See more in [Problem Statement](../product/Problem_Statement.md)
 
 ### 1.2 Core System Components
 
@@ -35,7 +34,7 @@ The system follows a microservices architecture consisting of:
 - **GenAI Service:** AI-powered summarization, daily digest generation
 
 **Infrastructure Layer:**
-- **API Gateway / Reverse Proxy:** Path-prefix routing that strips the prefix before forwarding (Vite proxy in local dev, frontend nginx on the Azure VM, nginx Ingress on Kubernetes). JWT tokens are validated independently by each backend service, not at the gateway.
+- **API Gateway / Reverse Proxy:** Path-prefix routing that strips the prefix before forwarding (Vite proxy in local dev; the frontend container's nginx on the Azure VM and on Kubernetes, where a trivial `/` Ingress forwards everything to it). JWT tokens are validated independently by each backend service, not at the gateway.
 - **PostgreSQL Databases:** One PostgreSQL 16 instance per service (user, content, recommendation) — there is no shared instance
 - **Object Storage (MinIO):** S3-compatible store for user portraits and post images
 - **Monitoring Stack:** Prometheus and Grafana for observability
@@ -249,7 +248,7 @@ Binary assets are stored in MinIO, not in PostgreSQL — database rows hold only
 ### 4.1 Analysis Object Model (Class Diagram)
 
 This diagram illustrates the core domain entities, their attributes, relationships, and key methods.
-![Class Diagram](diagrams/Class%20Diagram.png)
+![Class Diagram](../diagrams/Class%20Diagram.png)
 
 
 **Key Design Decisions:**
@@ -265,19 +264,19 @@ This diagram illustrates the core domain entities, their attributes, relationshi
 
 ### 4.2 Use Case Diagram
 This diagram captures the primary actors (users) and their interactions with the system's core functionalities.
-![Use Case Diagram](diagrams/Use%20Case%20Diagram.png)
+![Use Case Diagram](../diagrams/Use%20Case%20Diagram.png)
 
 ---
 
 ### 4.3 Component Diagram (Top-Level Architecture)
 This diagram shows the high-level components (services) and their interactions, including external dependencies.
-![Component Diagram](diagrams/Component%20Diagram.png)
+![Component Diagram](../diagrams/Component%20Diagram.png)
 
 ---
 
 ## 5. Initial Product Backlog
 
-The backlog is organized into 6 Epics matching the [Problem Statement](Problem_Statement.md). Each Epic lists core functionalities at a high level, tagged by priority (P0 must-have, P1 should-have, P2 nice-to-have). Detailed User Stories with acceptance criteria live in the Problem Statement.
+The backlog is organized into 6 Epics matching the [Problem Statement](../product/Problem_Statement.md). Each Epic lists core functionalities at a high level, tagged by priority (P0 must-have, P1 should-have, P2 nice-to-have). Detailed User Stories with acceptance criteria live in the Problem Statement.
 
 ### Epic 1: User Management & Authentication
 

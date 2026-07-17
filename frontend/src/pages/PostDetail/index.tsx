@@ -10,6 +10,7 @@ import BottomBar from '../../components/post/BottomBar';
 import CommentSection from '../../components/post/CommentSection';
 import AISummaryPanel from '../../components/post/AISummaryPanel';
 import { useComments } from '../../hooks/useComments';
+import { useAuth } from '../../hooks/useAuth';
 import Markdown from '../../components/ui/Markdown';
 import { useToast } from '../../hooks/useToast';
 import { timeAgo } from '../../utils/timeAgo';
@@ -24,14 +25,20 @@ export default function PostDetail() {
 
   const [post, setPost] = useState<PostDetailType | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isRestoring } = useAuth();
   const { showToast } = useToast();
   const comments = useComments(post?.id, post?.commentCount ?? 0);
 
   useEffect(() => {
     if (!id) { navigate('/'); return; }
+    // Wait for session restoration (which re-mints the in-memory access token from the refresh
+    // cookie on a hard reload). Fetching before it completes sends no token, so the reader's own
+    // isLikedByMe / isBookmarkedByMe come back false — and an anonymous read is a 200, so api.ts's
+    // 401 refresh-and-retry never fires to correct it (cf. DigestPost).
+    if (isRestoring) return;
     setLoading(true);
     contentService.getPost(id).then((p) => { setPost(p); setLoading(false); });
-  }, [id, navigate]);
+  }, [id, navigate, isRestoring]);
 
   useEffect(() => {
     if (!post || post.summaryStatus !== 'PENDING') return;

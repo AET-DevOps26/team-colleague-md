@@ -1,24 +1,24 @@
 {
   "id": "c3e4cdd2-7502-4e8e-b577-7e2674a97ae6",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "title": "Use Case Diagram",
   "type": "UseCaseDiagram",
   "nodes": [
     {
       "id": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
-      "width": 570,
-      "height": 540,
+      "width": 590,
+      "height": 550,
       "type": "useCaseSystem",
       "position": {
-        "x": 150,
+        "x": 135,
         "y": -140
       },
       "data": {
         "name": "Verita"
       },
       "measured": {
-        "width": 570,
-        "height": 540
+        "width": 590,
+        "height": 550
       }
     },
     {
@@ -27,8 +27,8 @@
       "height": 100,
       "type": "useCaseActor",
       "position": {
-        "x": 50,
-        "y": -50
+        "x": 45,
+        "y": -80
       },
       "data": {
         "name": "Visitor"
@@ -40,35 +40,35 @@
     },
     {
       "id": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
-      "width": 60,
-      "height": 90,
+      "width": 80,
+      "height": 60,
       "type": "useCaseActor",
       "position": {
-        "x": 20,
-        "y": 100
+        "x": 0,
+        "y": 130
       },
       "data": {
         "name": "Registered User"
       },
       "measured": {
-        "width": 60,
-        "height": 90
+        "width": 80,
+        "height": 60
       }
     },
     {
       "id": "cc030de4-d582-44c6-b98e-615dbed60375",
-      "width": 60,
+      "width": 125,
       "height": 100,
       "type": "useCaseActor",
       "position": {
-        "x": 370,
-        "y": 450
+        "x": 775,
+        "y": 250
       },
       "data": {
         "name": "Post/Comment Author"
       },
       "measured": {
-        "width": 60,
+        "width": 125,
         "height": 100
       }
     },
@@ -78,8 +78,8 @@
       "height": 100,
       "type": "useCaseActor",
       "position": {
-        "x": 740,
-        "y": 10
+        "x": 745,
+        "y": -10
       },
       "data": {
         "name": "Administrator"
@@ -91,88 +91,16 @@
     },
     {
       "id": "d7e4aa2d-11ed-4270-add8-64e90dd8c43f",
-      "width": 150,
-      "height": 50,
-      "type": "useCase",
-      "position": {
-        "x": 10,
-        "y": 90
-      },
-      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
-      "data": {
-        "name": "Create account"
-      },
-      "measured": {
-        "width": 150,
-        "height": 50
-      }
-    },
-    {
-      "id": "59c7ed07-50e5-4076-8916-b470c56969af",
-      "width": 150,
-      "height": 50,
-      "type": "useCase",
-      "position": {
-        "x": 10,
-        "y": 140
-      },
-      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
-      "data": {
-        "name": "Create new post"
-      },
-      "measured": {
-        "width": 150,
-        "height": 50
-      }
-    },
-    {
-      "id": "9bd60c03-9e59-4d30-9204-db2128f90405",
-      "width": 170,
-      "height": 50,
-      "type": "useCase",
-      "position": {
-        "x": 10,
-        "y": 190
-      },
-      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
-      "data": {
-        "name": "Comment on posts"
-      },
-      "measured": {
-        "width": 170,
-        "height": 50
-      }
-    },
-    {
-      "id": "ffb63f09-b900-4472-9767-c3ce625e4ff4",
-      "width": 160,
-      "height": 50,
-      "type": "useCase",
-      "position": {
-        "x": 10,
-        "y": 240
-      },
-      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
-      "data": {
-        "name": "Subscribe to tags"
-      },
-      "measured": {
-        "width": 160,
-        "height": 50
-      }
-    },
-    {
-      "id": "fb1f1c7b-009d-4bf7-9f85-2fdc92e878df",
       "width": 190,
       "height": 50,
       "type": "useCase",
       "position": {
-        "x": 10,
-        "y": 290
+        "x": 15,
+        "y": 115
       },
       "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
       "data": {
-        "name": "Generate AI summary"
+        "name": "Create account"
       },
       "measured": {
         "width": 190,
@@ -180,39 +108,111 @@
       }
     },
     {
-      "id": "c46f8788-0c13-4882-b026-e14b497f6b37",
-      "width": 240,
-      "height": 50,
+      "id": "59c7ed07-50e5-4076-8916-b470c56969af",
+      "width": 190,
+      "height": 55,
       "type": "useCase",
       "position": {
-        "x": 10,
-        "y": 340
+        "x": 15,
+        "y": 165
       },
       "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
       "data": {
-        "name": "Upvote or downvote posts"
+        "name": "Create new post"
       },
       "measured": {
-        "width": 240,
+        "width": 190,
+        "height": 55
+      }
+    },
+    {
+      "id": "9bd60c03-9e59-4d30-9204-db2128f90405",
+      "width": 210,
+      "height": 55,
+      "type": "useCase",
+      "position": {
+        "x": 15,
+        "y": 215
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Comment on posts"
+      },
+      "measured": {
+        "width": 210,
+        "height": 55
+      }
+    },
+    {
+      "id": "ffb63f09-b900-4472-9767-c3ce625e4ff4",
+      "width": 220,
+      "height": 50,
+      "type": "useCase",
+      "position": {
+        "x": 20,
+        "y": 265
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Subscribe to topics"
+      },
+      "measured": {
+        "width": 220,
         "height": 50
       }
     },
     {
-      "id": "5e09ad36-3617-4dc2-aecb-970dfa842869",
-      "width": 180,
+      "id": "fb1f1c7b-009d-4bf7-9f85-2fdc92e878df",
+      "width": 255,
       "height": 50,
       "type": "useCase",
       "position": {
+        "x": 15,
+        "y": 315
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Recive Post's AI summary"
+      },
+      "measured": {
+        "width": 255,
+        "height": 50
+      }
+    },
+    {
+      "id": "c46f8788-0c13-4882-b026-e14b497f6b37",
+      "width": 290,
+      "height": 55,
+      "type": "useCase",
+      "position": {
+        "x": 15,
+        "y": 365
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Like posts & comments\n"
+      },
+      "measured": {
+        "width": 290,
+        "height": 55
+      }
+    },
+    {
+      "id": "5e09ad36-3617-4dc2-aecb-970dfa842869",
+      "width": 215,
+      "height": 65,
+      "type": "useCase",
+      "position": {
         "x": 10,
-        "y": 390
+        "y": 420
       },
       "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
       "data": {
         "name": "Receive daily digest"
       },
       "measured": {
-        "width": 180,
-        "height": 50
+        "width": 215,
+        "height": 65
       }
     },
     {
@@ -221,8 +221,8 @@
       "height": 50,
       "type": "useCase",
       "position": {
-        "x": 0,
-        "y": 440
+        "x": 390,
+        "y": 470
       },
       "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
       "data": {
@@ -234,31 +234,13 @@
       }
     },
     {
-      "id": "894f996a-6e7a-4b8b-a7f5-36f00a1e0838",
-      "width": 340,
-      "height": 50,
-      "type": "useCase",
-      "position": {
-        "x": 200,
-        "y": 390
-      },
-      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
-      "data": {
-        "name": "Delete user comments on own posts"
-      },
-      "measured": {
-        "width": 340,
-        "height": 50
-      }
-    },
-    {
       "id": "2eddba51-b948-4d58-93b6-00ca7da19c84",
       "width": 320,
       "height": 60,
       "type": "useCase",
       "position": {
-        "x": 200,
-        "y": 120
+        "x": 255,
+        "y": 40
       },
       "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
       "data": {
@@ -270,31 +252,13 @@
       }
     },
     {
-      "id": "4b8eb59c-e87d-41ad-b0dd-24c68d249943",
-      "width": 340,
-      "height": 50,
-      "type": "useCase",
-      "position": {
-        "x": 200,
-        "y": 180
-      },
-      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
-      "data": {
-        "name": "Delete any user's post or comment"
-      },
-      "measured": {
-        "width": 340,
-        "height": 50
-      }
-    },
-    {
       "id": "a9eb5f2a-5648-4354-b668-6cec988faa80",
       "width": 130,
       "height": 50,
       "type": "useCase",
       "position": {
-        "x": 290,
-        "y": 230
+        "x": 345,
+        "y": 110
       },
       "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
       "data": {
@@ -307,20 +271,20 @@
     },
     {
       "id": "c9b651b5-48b1-4cfb-b117-bb0ad3eac789",
-      "width": 150,
-      "height": 50,
+      "width": 180,
+      "height": 55,
       "type": "useCase",
       "position": {
-        "x": 340,
-        "y": 470
+        "x": 400,
+        "y": 405
       },
       "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
       "data": {
         "name": "Delete own post"
       },
       "measured": {
-        "width": 150,
-        "height": 50
+        "width": 180,
+        "height": 55
       }
     },
     {
@@ -329,8 +293,8 @@
       "height": 50,
       "type": "useCase",
       "position": {
-        "x": 10,
-        "y": 40
+        "x": 15,
+        "y": 65
       },
       "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
       "data": {
@@ -339,6 +303,96 @@
       "measured": {
         "width": 150,
         "height": 50
+      }
+    },
+    {
+      "id": "cd056e98-87c2-432a-80c3-35d89a6a1c69",
+      "width": 165,
+      "height": 60,
+      "type": "useCase",
+      "position": {
+        "x": 35,
+        "y": 485
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Add Post to Bookmark\n"
+      },
+      "measured": {
+        "width": 165,
+        "height": 60
+      }
+    },
+    {
+      "id": "740cf6a5-f238-4445-9527-174f24986a78",
+      "width": 225,
+      "height": 65,
+      "type": "useCase",
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "View community digest"
+      },
+      "measured": {
+        "width": 225,
+        "height": 65
+      }
+    },
+    {
+      "id": "0dcc1301-923e-402a-b196-62297a74b3b3",
+      "width": 215,
+      "height": 75,
+      "type": "useCase",
+      "position": {
+        "x": 310,
+        "y": 160
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Switch configured llm models"
+      },
+      "measured": {
+        "width": 215,
+        "height": 75
+      }
+    },
+    {
+      "id": "59480638-76ea-46fe-bbe4-e9a16fd7f2d0",
+      "width": 260,
+      "height": 55,
+      "type": "useCase",
+      "position": {
+        "x": 310,
+        "y": 240
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Regenerate Post Summary\n"
+      },
+      "measured": {
+        "width": 260,
+        "height": 55
+      }
+    },
+    {
+      "id": "fa9c05e9-fdbd-4281-b1bd-0daa83eb18e4",
+      "width": 230,
+      "height": 70,
+      "type": "useCase",
+      "position": {
+        "x": 335,
+        "y": 295
+      },
+      "parentId": "5e67433a-5f8e-4e94-9207-0dbf7ce56b24",
+      "data": {
+        "name": "Regenerate daily Digest\n"
+      },
+      "measured": {
+        "width": 230,
+        "height": 70
       }
     }
   ],
@@ -432,45 +486,12 @@
       }
     },
     {
-      "id": "dad3a896-97a8-42e9-9235-6b56bfa26f8d",
-      "source": "cc030de4-d582-44c6-b98e-615dbed60375",
-      "target": "993a8db0-d02e-42e2-a99a-e8679500c11b",
-      "type": "UseCaseAssociation",
-      "sourceHandle": "top",
-      "targetHandle": "bottom",
-      "data": {
-        "points": []
-      }
-    },
-    {
-      "id": "e44d3b54-3eea-4384-b625-18a18a699a74",
-      "source": "894f996a-6e7a-4b8b-a7f5-36f00a1e0838",
-      "target": "cc030de4-d582-44c6-b98e-615dbed60375",
-      "type": "UseCaseAssociation",
-      "sourceHandle": "bottom",
-      "targetHandle": "top",
-      "data": {
-        "points": []
-      }
-    },
-    {
       "id": "abd3f3a8-c14b-413f-8760-0718ad3b07ce",
       "source": "a73f2230-0894-46c0-959b-1a31966849e9",
       "target": "2eddba51-b948-4d58-93b6-00ca7da19c84",
       "type": "UseCaseAssociation",
       "sourceHandle": "left",
       "targetHandle": "right",
-      "data": {
-        "points": []
-      }
-    },
-    {
-      "id": "b0af4436-c271-44cc-a4ec-b8ee36e17233",
-      "source": "4b8eb59c-e87d-41ad-b0dd-24c68d249943",
-      "target": "a73f2230-0894-46c0-959b-1a31966849e9",
-      "type": "UseCaseAssociation",
-      "sourceHandle": "right",
-      "targetHandle": "left",
       "data": {
         "points": []
       }
@@ -487,23 +508,89 @@
       }
     },
     {
-      "id": "ee93183c-c571-4d2b-8ba1-f5d048c19bdd",
-      "source": "c9b651b5-48b1-4cfb-b117-bb0ad3eac789",
-      "target": "cc030de4-d582-44c6-b98e-615dbed60375",
-      "type": "UseCaseAssociation",
-      "sourceHandle": "bottom",
-      "targetHandle": "top",
-      "data": {
-        "points": []
-      }
-    },
-    {
       "id": "3a7d83ad-884b-4bc7-b0b7-ae9ff01e612a",
       "source": "eb617962-dc2b-4197-b831-b4788614bfe4",
       "target": "bd1c8f67-11da-4091-bcd9-17a5f1f307c4",
       "type": "UseCaseAssociation",
       "sourceHandle": "left",
       "targetHandle": "right",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "bef6a6c6-7a01-4a13-8725-bf34d43ce875",
+      "source": "993a8db0-d02e-42e2-a99a-e8679500c11b",
+      "target": "cc030de4-d582-44c6-b98e-615dbed60375",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left-bottom",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "7ff1837d-1b84-4fe9-a138-5e75c2bfe818",
+      "source": "c9b651b5-48b1-4cfb-b117-bb0ad3eac789",
+      "target": "cc030de4-d582-44c6-b98e-615dbed60375",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left-bottom",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "cee9906f-1d22-422e-a849-258bdd51c76f",
+      "source": "cd056e98-87c2-432a-80c3-35d89a6a1c69",
+      "target": "8c0b6e90-f5b0-4eac-a46c-927dcff5c68b",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "left",
+      "targetHandle": "right-top",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "27be8979-9031-4fb2-9852-daef7af71015",
+      "source": "740cf6a5-f238-4445-9527-174f24986a78",
+      "target": "bd1c8f67-11da-4091-bcd9-17a5f1f307c4",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "left",
+      "targetHandle": "right-between-mid-top-center",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "9171449b-6a57-4ac2-93dd-59cf87c6907a",
+      "source": "0dcc1301-923e-402a-b196-62297a74b3b3",
+      "target": "a73f2230-0894-46c0-959b-1a31966849e9",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left-between-mid-bottom-center",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "2faa78f5-ffe1-4880-ae51-1ef2fb7b8d07",
+      "source": "59480638-76ea-46fe-bbe4-e9a16fd7f2d0",
+      "target": "a73f2230-0894-46c0-959b-1a31966849e9",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "data": {
+        "points": []
+      }
+    },
+    {
+      "id": "99992436-0a79-4b5a-afe4-21fd1f2f4abe",
+      "source": "fa9c05e9-fdbd-4281-b1bd-0daa83eb18e4",
+      "target": "a73f2230-0894-46c0-959b-1a31966849e9",
+      "type": "UseCaseAssociation",
+      "sourceHandle": "right",
+      "targetHandle": "left-between-mid-bottom-center",
       "data": {
         "points": []
       }

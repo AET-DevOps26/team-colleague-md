@@ -103,3 +103,14 @@ docs/agents/
 
 # Local-only standardization planning doc — not a PR surface.
 docs/Standardization_Plan.md
+
+# Demo clips: only the 1.5x set the README embeds is committed. The other speeds and the superseded
+# GIFs are kept locally for comparing takes — the full set at three speeds is ~66MB against a ~22MB
+# repo, and git history cannot be slimmed down again afterwards. Regenerate any speed on demand:
+# SPEED=1.25 ./scripts/make-demo-clips.sh
+docs/assets/demo/*
+!docs/assets/demo/*-1.5x.webp
+!docs/assets/demo/*-2x.webp
+# archive/ is where superseded takes are kept locally once the README stops embedding them. Ignored
+# for the same reason as the other speeds: the README is the only reason a clip is worth its bytes
+# in history.

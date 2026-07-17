@@ -35,17 +35,18 @@ function yesterdayIso(): string {
  * A model being listed in a provider's catalogue does not mean the account may call it: NVIDIA
  * serves most of its catalogue only to orgs with "Public API Endpoints" enabled and answers the
  * rest with `404 Function not found for account`. These entries are ones verified callable.
+ *
+ * The nemotron family is verified callable but deliberately absent: they are reasoning models that
+ * narrate their thinking before the bullets, and the summarizer's parser takes every line as a
+ * bullet, so the reasoning ends up on the page as the summary. Re-list them once that is fixed.
  */
 const MODEL_SUGGESTIONS: Record<string, string[]> = {
   nvidia: [
+    'mistralai/mistral-medium-3.5-128b',
     'mistralai/mistral-large-3-675b-instruct-2512',
-    'nvidia/nemotron-3-ultra-550b-a55b',
     'qwen/qwen3.5-397b-a17b',
     'deepseek-ai/deepseek-v4-pro',
-    'nvidia/nemotron-3-super-120b-a12b',
-    'nvidia/nemotron-3-nano-30b-a3b',
     'meta/llama-3.3-70b-instruct',
-    'mistralai/mistral-medium-3.5-128b',
     'z-ai/glm-5.2',
     'minimaxai/minimax-m3',
   ],
