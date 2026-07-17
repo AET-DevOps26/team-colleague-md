@@ -104,9 +104,13 @@ rate, 5xx error ratio, latency percentiles, JVM and database-pool metrics per se
 `node` target reads DOWN locally by design (the host exporter cannot run on Docker
 Desktop).
 
-**On Rancher**, Grafana is served through the shared ingress at `/grafana`:
-`https://dev.verita.stud.k8s.aet.cit.tum.de/grafana` (same `admin / verita_grafana_admin`
-login on dev).
+**On Rancher**, both environments run their own monitoring stack, served through the shared
+ingress at `/grafana` with the same `admin / verita_grafana_admin` login as local:
+
+| Environment | Grafana |
+|---|---|
+| Production | https://verita.stud.k8s.aet.cit.tum.de/grafana |
+| Development | https://dev.verita.stud.k8s.aet.cit.tum.de/grafana |
 
 **On the Azure VM**, the monitoring stack binds to localhost only and is reached over an
 SSH tunnel.
