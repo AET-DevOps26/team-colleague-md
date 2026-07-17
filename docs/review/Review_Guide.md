@@ -43,6 +43,28 @@ Highlights worth visiting:
   digest for a chosen user and day. The GenAI features are documented step-by-step in
   [GenAI Environment Setup](../contributing/GenAI_Environment_Setup.md).
 
+Three of them recorded against a seeded stack, sped up. The core loop, digest, authoring, and
+admin clips are in the [README](../../README.md#see-it-running).
+
+**Search**
+
+![Searching for "llm" from the Explore feed and scrolling the 19 results.](../assets/demo/search-results-1.5x.webp)
+
+Recent and trending queries on focus; results come back ranked across posts, people, and topics.
+
+**Topics**
+
+![Following four topics from the Manage topics page, then seeing them appear as filters on the Explore feed.](../assets/demo/topic-management-1.5x.webp)
+
+Follow a topic and it moves to the front of its group, then shows up as a filter on the feed.
+
+**Profile**
+
+![Opening a profile's Posts, Bookmarks, Likes, and Drafts tabs, unpublishing a post into Drafts, and editing the profile's bio and research interests.](../assets/demo/user-profile-2x.webp)
+
+Posts, bookmarks, likes, and drafts per user. Unpublish a post back into Drafts, or edit the bio,
+links, and research interests.
+
 ## 3. Health checks
 
 All services run Docker health checks every 30 seconds and expose a status endpoint:

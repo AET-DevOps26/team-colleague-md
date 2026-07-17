@@ -110,3 +110,7 @@ docs/Standardization_Plan.md
 # SPEED=1.25 ./scripts/make-demo-clips.sh
 docs/assets/demo/*
 !docs/assets/demo/*-1.5x.webp
+!docs/assets/demo/*-2x.webp
+# archive/ is where superseded takes are kept locally once the README stops embedding them. Ignored
+# for the same reason as the other speeds: the README is the only reason a clip is worth its bytes
+# in history.

@@ -34,5 +34,8 @@ playwright-report/
 *.sln
 *.sw?
 
-# Raw demo takes (webm) — only the converted clips under docs/assets/demo are committed.
+# Raw demo takes — only the converted clips under docs/assets/demo are committed.
+# demo-recordings/ is Playwright's output; demo_recording/ holds hand-recorded screen captures
+# (the mp4 sources for scripts/make-demo-webp.sh), which are far larger than the clips cut from them.
 demo-recordings/
+demo_recording/
