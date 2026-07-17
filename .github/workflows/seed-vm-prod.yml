@@ -1,0 +1,52 @@
+name: Seed Azure VM Demo
+
+# Manual counterpart of "Seed Rancher Production Demo" for the Azure VM environment.
+# Runs scripts/seed-vm.sh from the runner using the AZURE_PRIVATE_KEY secret, so no
+# local SSH key is needed. The seed executes inside the VM's prod compose network and
+# reads all credentials from the VM's own .env (written by Ansible) — no DB secrets
+# are passed from this workflow. Idempotent (the seed upserts), safe to re-run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Comma-separated seed domains (empty = all), e.g. users,content"
+        required: false
+        default: ""
+      reset:
+        description: "Purge stale seed-owned rows before seeding"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-verita-vm
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Seed Azure VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Write SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AZURE_PRIVATE_KEY }}" > ~/.ssh/verita_key
+          chmod 600 ~/.ssh/verita_key
+
+      - name: Run seed against the VM
+        env:
+          VM_HOST: ${{ vars.AZURE_PUBLIC_IP }}
+          VM_USER: ${{ vars.AZURE_USER }}
+          SEED_ONLY: ${{ inputs.only }}
+          SEED_RESET: ${{ inputs.reset == true && '1' || '' }}
+        run: ./scripts/seed-vm.sh
