@@ -1,6 +1,16 @@
 name: Terraform Deploy
 
 on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform action to run"
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
   pull_request:
     branches:
       - dev
@@ -23,7 +33,7 @@ env:
 
 jobs:
   terraform:
-    name: Terraform ${{ github.event_name == 'push' && 'Apply' || 'Plan' }}
+    name: Terraform ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')) && 'Apply' || 'Plan' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,15 +56,15 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan')
         run: terraform plan -no-color
 
       - name: Terraform Apply
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         run: terraform apply -auto-approve
 
       - name: Print VM Public IP
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         run: |
           echo "::notice title=VM Public IP::$(terraform output -raw vm_public_ip)"
           echo "Next: set AZURE_PUBLIC_IP GitHub Variable to the IP above."
