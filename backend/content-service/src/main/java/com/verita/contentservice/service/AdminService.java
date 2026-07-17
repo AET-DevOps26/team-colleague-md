@@ -41,7 +41,7 @@ public class AdminService {
 
     /**
      * Translates genai-service's failures for an admin audience: a 4xx is the admin's own fault
-     * (unknown or keyless provider) and is passed through as a 400 carrying GenAI's message; anything
+     * (unknown or unconfigured provider) and is passed through as a 400 carrying GenAI's message; anything
      * else means the downstream is broken, which is a 502.
      */
     private LlmConfigDto callGenAi(GenAiCall call) {

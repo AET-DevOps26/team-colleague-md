@@ -98,6 +98,9 @@
           MAIL_FROM={{ mail_from }}
           LLM_PROVIDER=logos
           LLM_MODEL=openai/gpt-oss-120b
+          OLLAMA_BASE_URL={{ ollama_base_url | default('') }}
+          GENAI_READ_TIMEOUT_SECONDS={{ genai_read_timeout_seconds | default(60) }}
+          DIGEST_MAX_WAIT_MS={{ digest_max_wait_ms | default(120000) }}
           NVIDIA_NIM_API_KEY={{ nvidia_nim_api_key }}
           LOGOS_API_KEY={{ logos_api_key }}
           GNEWS_API_KEY={{ gnews_api_key }}

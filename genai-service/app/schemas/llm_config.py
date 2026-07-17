@@ -7,7 +7,10 @@ class ProviderAvailabilityResponse(BaseModel):
     """One supported provider and whether it can actually be selected."""
 
     name: str = Field(..., description="Provider key, e.g. 'nvidia'.")
-    configured: bool = Field(..., description="True when an API key for this provider is present.")
+    configured: bool = Field(
+        ...,
+        description="True when the provider's required connection setting is present.",
+    )
 
 
 class LlmConfigResponse(BaseModel):

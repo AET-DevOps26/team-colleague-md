@@ -48,7 +48,7 @@ def _to_response(settings) -> LlmConfigResponse:
     description=(
         "Returns the (provider, model) pair currently in use — the in-memory override when an "
         "admin has set one, otherwise the environment default — along with every supported "
-        "provider and whether its API key is configured."
+        "provider and whether its required connection setting is configured."
     ),
 )
 async def get_llm_config() -> LlmConfigResponse:
@@ -62,10 +62,12 @@ async def get_llm_config() -> LlmConfigResponse:
     description=(
         "Switches the provider/model for the rest of this process's life. The override is held "
         "in memory only and resets to the environment default on restart (ADR-0020). Selecting a "
-        "provider with no API key configured is rejected."
+        "provider with no connection setting configured is rejected."
     ),
     responses={
-        400: {"description": "Unknown provider, or provider has no API key configured"},
+        400: {
+            "description": "Unknown provider, or provider has no connection setting configured"
+        },
     },
 )
 async def update_llm_config(request: LlmConfigUpdateRequest) -> LlmConfigResponse:

@@ -1234,7 +1234,7 @@ components:
       required: [name, configured]
       properties:
         name: { type: string, description: "Provider key, e.g. `nvidia`" }
-        configured: { type: boolean, description: "False when the provider has no API key; it cannot be selected" }
+        configured: { type: boolean, description: "False when the provider lacks its required connection setting; it cannot be selected" }
 
     LlmConfig:
       type: object

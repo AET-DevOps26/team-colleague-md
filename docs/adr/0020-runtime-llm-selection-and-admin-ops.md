@@ -55,9 +55,23 @@ hold a single tuple would be a large architectural cost for a small convenience.
 declared, reproducible baseline; the override is an operational lever on top of it. The UI always
 reads the live value with `GET`, so it can never show a stale claim about what is running.
 
-A provider whose **API key is absent is unavailable**: `GET` reports per-provider `configured`
-flags, the dropdown marks and disables the keyless ones, and `PUT` **rejects** them with 400.
-Selecting a provider that is guaranteed to fail every call is not a state worth reaching.
+A provider whose required **connection setting is absent is unavailable**: a cloud provider requires
+its API key, while a local provider requires its inference endpoint URL. `GET` reports per-provider
+`configured` flags, the dropdown marks and disables unconfigured providers, and `PUT` **rejects**
+them with 400. Configuration is intentionally not a live health check; reachability is verified by
+an actual generation request. Selecting a provider that cannot be addressed at all is not a state
+worth reaching, while probing every configured provider during an admin read would make that read
+slow and dependent on external systems.
+
+Provider connection settings remain **environment-controlled deployment configuration**. The
+runtime override and Admin UI may change only the logical `(provider, model)` pair; they never
+accept an API key, base URL, or other network destination. In particular, the local inference
+endpoint is supplied through the GenAI Service environment. This keeps deployment topology
+reproducible and prevents the admin configuration endpoint from becoming a server-side
+request-forgery primitive.
+
+The concrete local-inference provider, runtime topology, constrained hardware profile, and
+verification strategy are specified separately in proposed ADR-0021.
 
 ### 3. content-service is the admin front door; GenAI stays internal-only
 
@@ -71,7 +85,7 @@ browser (ADMIN JWT) → content-service /api/v1/admin/** (hasRole ADMIN) → gen
 
 This adds no gateway route, no JWT work in Python, and keeps the two identity axes ADR-0007 drew:
 **user tokens authorize user actions; the service secret authorizes service endpoints.** GenAI's
-400 (unknown/keyless provider) is passed through as the admin's 400; anything else downstream is a
+400 (unknown or unconfigured provider) is passed through as the admin's 400; anything else downstream is a
 502.
 
 The admin surface on content-service is:

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse
 from app.security import require_internal_service
+from app.services.output_sanitizer import InvalidLlmOutputError
 from app.services.summarizer import summarize
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ router = APIRouter(
     ),
     responses={
         200: {"description": "Successfully generated summary"},
-        422: {"description": "Validation error — content too short, too long, or missing"},
+        422: {"description": "Invalid request or unusable sanitized LLM output"},
         502: {"description": "LLM service unavailable or returned an error"},
     },
 )
@@ -48,6 +49,16 @@ async def summarize_post(request: SummarizeRequest) -> SummarizeResponse:
     try:
         result = await summarize(request)
         return result
+    except InvalidLlmOutputError as e:
+        logger.warning("Post AI Summary output invalid after retry: %s", e)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "invalid_llm_output",
+                "message": "LLM returned unusable summary prose after retry.",
+                "details": str(e),
+            },
+        )
     except Exception as e:
         logger.error("Summarization failed: %s", str(e), exc_info=True)
         raise HTTPException(

@@ -80,17 +80,17 @@ test.describe('Admin — operations tab', () => {
     await page.locator('[data-testid="admin-tab-operations"]').click();
   });
 
-  test('ADM-8: the live LLM config loads and keyless providers cannot be selected', async ({ page }) => {
+  test('ADM-8: the live LLM config loads and unconfigured providers cannot be selected', async ({ page }) => {
     await expect(page.locator('[data-testid="admin-llm-current"]')).toContainText('active:');
 
     const providerSelect = page.locator('[data-testid="admin-llm-provider"]');
     await expect(providerSelect).toBeVisible();
     await expect(page.locator('[data-testid="admin-llm-model"]')).not.toHaveValue('');
 
-    // Providers without an API key are reported by GenAI and rendered unselectable.
+    // Providers without their required connection setting are rendered unselectable.
     const disabled = providerSelect.locator('option[disabled]');
     for (const option of await disabled.all()) {
-      await expect(option).toContainText('no API key');
+      await expect(option).toContainText('not configured');
     }
   });
 

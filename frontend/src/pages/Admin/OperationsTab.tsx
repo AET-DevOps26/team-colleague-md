@@ -50,6 +50,7 @@ const MODEL_SUGGESTIONS: Record<string, string[]> = {
     'minimaxai/minimax-m3',
   ],
   logos: ['openai/gpt-oss-120b'],
+  ollama: ['qwen3:4b-instruct'],
 };
 
 /** Per-post summary state shown next to a re-trigger, driven by polling GET /posts/{id}/summary. */
@@ -126,8 +127,8 @@ export default function OperationsTab() {
       setConfig(updated);
       showToast({ message: `GenAI now uses ${updated.provider} / ${updated.model}.`, variant: 'success' });
     } catch {
-      // The most likely 400 is a provider whose API key is missing on the GenAI host.
-      setConfigError('Could not apply that configuration. The provider may have no API key configured.');
+      // The most likely 400 is a provider whose required connection setting is missing.
+      setConfigError('Could not apply that configuration. The provider may not be configured.');
     } finally {
       setSavingConfig(false);
     }
@@ -283,10 +284,10 @@ export default function OperationsTab() {
               data-testid="admin-llm-provider"
             >
               {config?.availableProviders.map((p) => (
-                // A provider with no API key would fail every call, so it cannot be picked.
+                // A provider without its required connection setting would fail every call.
                 <option key={p.name} value={p.name} disabled={!p.configured}>
                   {p.name}
-                  {p.configured ? '' : ' — no API key'}
+                  {p.configured ? '' : ' — not configured'}
                 </option>
               ))}
             </select>

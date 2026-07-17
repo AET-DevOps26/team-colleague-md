@@ -11,8 +11,8 @@ summarization, and personalized recommendations. It is built as four backend mic
 The fastest way to run the full platform.
 
 **First-time setup.** Create `genai-service/.env` from the template (the placeholder values
-are enough to boot; add a real LLM API key such as `NVIDIA_NIM_API_KEY` or `LOGOS_API_KEY`
-to enable AI summaries and the daily digest):
+are enough to boot; configure a cloud API key or the local Ollama option described in
+[`docs/GenAI_Environment_Setup.md`](docs/GenAI_Environment_Setup.md) to enable summaries and digests):
 
 ```bash
 cp genai-service/.env.example genai-service/.env
@@ -416,8 +416,8 @@ uvicorn app.main:app --reload --port 8000
 
 Health check: `http://localhost:8000/health`
 
-The service starts without a real API key (health and docs respond), but summarization and
-digest generation need a valid provider key in `.env`. For the TUM Logos endpoint, use
+The service starts without a configured provider (health and docs respond), but summarization and
+digest generation need either a valid cloud provider key or `OLLAMA_BASE_URL` in `.env`. For the TUM Logos endpoint, use
 `LLM_PROVIDER=logos`, `LLM_MODEL=openai/gpt-oss-120b`, and `LOGOS_API_KEY`; the endpoint is
 only reachable from the TUM network or eduVPN.
 
@@ -426,5 +426,10 @@ Azure and Kubernetes CD use the same Logos provider/model defaults and inject
 GenAI Service. The Logos endpoint is fixed in the application rather than deployment configuration.
 The Helm deployment uses one GenAI replica because asynchronous digest-job state is currently
 process-local; scaling out requires moving that state to a shared store.
+
+For private local inference on macOS or Windows Docker Desktop, run Ollama on the host and use
+`LLM_PROVIDER=ollama`, `LLM_MODEL=qwen3:4b-instruct`, and
+`OLLAMA_BASE_URL=http://host.docker.internal:11434/v1`. Ollama itself is not deployed by Compose or
+Helm; see [ADR-0021](docs/adr/0021-host-native-ollama-for-local-inference.md).
 
 ---

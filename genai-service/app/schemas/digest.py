@@ -88,6 +88,7 @@ DigestWarningCode = Literal["missing_credentials", "provider_error", "no_sources
 DigestErrorCode = Literal[
     "no_sources_found",
     "llm_error",
+    "invalid_llm_output",
     "llm_parse_error",
     "job_not_found",
     "unexpected_error",

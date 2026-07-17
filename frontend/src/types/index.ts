@@ -301,7 +301,7 @@ export interface AdminUserPage {
   totalElements: number;
 }
 
-/** A GenAI provider and whether it has an API key — keyless ones cannot be selected. */
+/** A GenAI provider and whether its required connection setting is present. */
 export interface LlmProviderAvailability {
   name: string;
   configured: boolean;

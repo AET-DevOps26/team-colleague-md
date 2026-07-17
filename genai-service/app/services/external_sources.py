@@ -10,7 +10,6 @@ from email.utils import parsedate_to_datetime
 from html import unescape
 import logging
 import re
-import unicodedata
 from typing import Any, cast
 
 import httpx
@@ -18,6 +17,7 @@ from pydantic import BaseModel
 
 from app.config import get_settings
 from app.schemas.digest import DigestGenerateRequest, DigestJobWarning, DigestTopic, DigestWarningProvider
+from app.services.output_sanitizer import sanitize_text
 
 logger = logging.getLogger(__name__)
 
@@ -209,9 +209,10 @@ async def _fetch_github_sources(
             if not published_at or not _in_period(published_at, request):
                 continue
             title = release.get("name") or release.get("tag_name") or f"{repo} release"
+            title = _clean_text(title)
             snippet = _clean_snippet(release.get("body") or title)
             url = release.get("html_url")
-            if not snippet or not url:
+            if not title or not snippet or not url:
                 continue
             items.append(
                 ExternalSourceItem(
@@ -240,15 +241,16 @@ async def _fetch_github_sources(
             if not published_at or not _in_period(published_at, request):
                 continue
             snippet = _clean_snippet(pr.get("body") or pr.get("title"))
+            title = _clean_text(pr.get("title"))
             url = pr.get("html_url")
-            if not snippet or not url:
+            if not title or not snippet or not url:
                 continue
             items.append(
                 ExternalSourceItem(
                     provider="github",
                     topicId=topic.id,
                     topicName=topic.name,
-                    title=f"{repo}: {pr.get('title')}",
+                    title=f"{repo}: {title}",
                     snippet=snippet,
                     url=url,
                     publishedAt=published_at,
@@ -303,7 +305,7 @@ async def _fetch_gnews_sources(
                 provider="gnews",
                 topicId=topic.id,
                 topicName=topic.name,
-                title=title,
+                title=_clean_text(title),
                 snippet=snippet,
                 url=url,
                 publishedAt=published_at,
@@ -347,7 +349,7 @@ async def _fetch_huggingface_sources(
                     provider="huggingface",
                     topicId=topic.id,
                     topicName=topic.name,
-                    title=repo_id,
+                    title=_clean_text(repo_id),
                     snippet=snippet,
                     url=f"https://huggingface.co/{repo_id}",
                     publishedAt=published_at,
@@ -436,18 +438,11 @@ def _clean_text(value: str | None) -> str:
     if not value:
         return ""
     text = unescape(re.sub(r"<[^>]+>", " ", value))
-    text = _remove_unicode_format_chars(text)
     text = re.sub(r"https?://\S+", " ", text)
     text = re.sub(r"[`*_>#]+", " ", text)
     text = re.sub(r"\s[-*]\s", " ", text)
     text = text.translate(SMART_PUNCTUATION)
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def _remove_unicode_format_chars(value: str) -> str:
-    return "".join(char for char in value if unicodedata.category(char) != "Cf")
-
-
+    return sanitize_text(text)
 def _parse_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
