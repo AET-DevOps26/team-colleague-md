@@ -55,7 +55,11 @@ export async function assertUserSeedSchemaExists(client: UserDbClient) {
   }
 }
 
-export async function assertNoUserIdentityConflicts(client: UserDbClient, users: SeedUser[]) {
+export async function assertNoUserIdentityConflicts(
+  client: UserDbClient,
+  users: SeedUser[],
+  { ignoreSeedOwnedRows = false }: { ignoreSeedOwnedRows?: boolean } = {},
+) {
   const ids = users.map((user) => user.id);
   const usernames = users.map((user) => user.username);
   const emails = users.map((user) => user.email);
@@ -80,6 +84,11 @@ export async function assertNoUserIdentityConflicts(client: UserDbClient, users:
 
   const conflicts: string[] = [];
   for (const row of result.rows) {
+    // A pending --reset purges seed-owned rows before the write pass, so during a
+    // dry run those rows cannot conflict with the fixtures that replace them.
+    if (ignoreSeedOwnedRows && row.email.endsWith(SEED_USER_EMAIL_SUFFIX)) {
+      continue;
+    }
     const byId = fixturesById.get(row.id);
     const byUsername = fixturesByUsername.get(row.username);
     const byEmail = fixturesByEmail.get(row.email);
