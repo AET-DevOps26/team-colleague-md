@@ -212,6 +212,9 @@ services:
       # Cross-service calls (Clients.java) reach peers by compose service name, not localhost.
       - USER_SERVICE_BASE_URL=http://user-service:8081
       - GENAI_SERVICE_BASE_URL=http://genai-service:8000
+      # Local inference can take longer than the cloud defaults.
+      - GENAI_READ_TIMEOUT_SECONDS=${GENAI_READ_TIMEOUT_SECONDS:-300}
+      - DIGEST_MAX_WAIT_MS=${DIGEST_MAX_WAIT_MS:-300000}
       - RECOMMENDATION_SERVICE_BASE_URL=http://recommendation-service:8083
       - MINIO_URL=http://minio:9000
     depends_on:

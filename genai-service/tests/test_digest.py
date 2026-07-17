@@ -20,6 +20,7 @@ from app.schemas.digest import (
 from app.services.digest_generator import DigestJsonParseError
 from app.services.digest_jobs import clear_jobs
 from app.services.external_sources import ExternalSourceItem
+from app.services.output_sanitizer import InvalidLlmOutputError
 
 INTERNAL_TOKEN = "test-internal-token"
 INTERNAL_HEADERS = {"X-Internal-Service-Token": INTERNAL_TOKEN}
@@ -199,6 +200,21 @@ class TestDigestJobs:
         assert data["status"] == "FAILED"
         assert data["error"]["code"] == "llm_parse_error"
         assert "bad json" in data["error"]["details"]
+
+    @patch("app.services.digest_runner.generate_digest", new_callable=AsyncMock)
+    @patch("app.services.digest_runner.fetch_and_select_sources", new_callable=AsyncMock)
+    def test_digest_job_distinguishes_invalid_sanitized_output(self, mock_fetch, mock_generate, client):
+        mock_fetch.return_value = ([_source()], [])
+        mock_generate.side_effect = InvalidLlmOutputError(
+            "Digest LLM output has empty required prose fields: summary"
+        )
+
+        response = client.post("/api/v1/genai/digests/generate", json=REQUEST_BODY)
+        data = client.get(response.json()["statusUrl"]).json()
+
+        assert data["status"] == "FAILED"
+        assert data["error"]["code"] == "invalid_llm_output"
+        assert "summary" in data["error"]["details"]
 
     def test_digest_job_not_found(self, client):
         response = client.get("/api/v1/genai/digests/jobs/00000000-0000-0000-0000-000000000000")

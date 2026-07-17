@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from app.config import get_settings
 from app.main import app
@@ -55,6 +56,12 @@ SHORT_CONTENT = "Too short to summarize."  # Under 50 chars
 # ---------------------------------------------------------------------------
 
 
+def test_summarize_prompt_forbids_emoji():
+    from app.services.summarizer import SYSTEM_PROMPT
+
+    assert "Do NOT use emoji" in SYSTEM_PROMPT
+
+
 class TestSummarizeEndpoint:
     """Tests for POST /api/v1/genai/summarize."""
 
@@ -91,6 +98,113 @@ class TestSummarizeEndpoint:
         assert data["model"] == "gemini-2.0-flash"
         assert "GPT-5" in data["summary"][0]
         assert data["usage"]["total_tokens"] == 150
+
+    @patch("app.services.summarizer._build_chain")
+    def test_summarize_sanitizes_prose_without_retrying(self, mock_build_chain, client):
+        from langchain_core.messages import AIMessage
+
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.return_value = AIMessage(
+            content=(
+                "• 🚀 GPT-4o improves HumanEval by 3.5%\n"
+                "• C++ support remains available ✅"
+            ),
+            usage_metadata={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+        )
+        mock_build_chain.return_value = (mock_chain, "test-model")
+
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={"postId": "test-post-id", "content": VALID_CONTENT},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["summary"] == [
+            "GPT-4o improves HumanEval by 3.5%",
+            "C++ support remains available",
+        ]
+        assert mock_chain.ainvoke.await_count == 1
+
+    @patch("app.services.summarizer._build_chain")
+    def test_summarize_retries_empty_sanitized_output_and_aggregates_usage(
+        self, mock_build_chain, client
+    ):
+        from langchain_core.messages import AIMessage
+
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.side_effect = [
+            AIMessage(
+                content="• 🚀\n• ✅",
+                usage_metadata={"input_tokens": 100, "output_tokens": 10, "total_tokens": 110},
+            ),
+            AIMessage(
+                content="• GPT-4o improves HumanEval by 3.5%",
+                usage_metadata={"input_tokens": 110, "output_tokens": 20, "total_tokens": 130},
+            ),
+        ]
+        mock_build_chain.return_value = (mock_chain, "test-model")
+
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={"postId": "test-post-id", "content": VALID_CONTENT},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["summary"] == ["GPT-4o improves HumanEval by 3.5%"]
+        assert response.json()["usage"] == {
+            "input_tokens": 210,
+            "output_tokens": 30,
+            "total_tokens": 240,
+        }
+        assert mock_chain.ainvoke.await_count == 2
+        retry_input = mock_chain.ainvoke.await_args_list[1].args[0]
+        assert "previous response" in retry_input["retry_instruction"]
+
+    @patch("app.services.summarizer._build_chain")
+    def test_summarize_returns_distinct_error_after_two_invalid_outputs(
+        self, mock_build_chain, client
+    ):
+        from langchain_core.messages import AIMessage
+
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.side_effect = [
+            AIMessage(content="• 🚀"),
+            AIMessage(content="• ✅"),
+        ]
+        mock_build_chain.return_value = (mock_chain, "test-model")
+
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={"postId": "test-post-id", "content": VALID_CONTENT},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["error"] == "invalid_llm_output"
+        assert mock_chain.ainvoke.await_count == 2
+
+    @patch("app.services.summarizer._build_chain")
+    def test_summarize_reports_no_usage_when_retry_usage_is_incomplete(
+        self, mock_build_chain, client
+    ):
+        from langchain_core.messages import AIMessage
+
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.side_effect = [
+            AIMessage(content="• 🚀"),
+            AIMessage(
+                content="• GPT-4o improves HumanEval by 3.5%",
+                usage_metadata={"input_tokens": 110, "output_tokens": 20, "total_tokens": 130},
+            ),
+        ]
+        mock_build_chain.return_value = (mock_chain, "test-model")
+
+        response = client.post(
+            "/api/v1/genai/summarize",
+            json={"postId": "test-post-id", "content": VALID_CONTENT},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["usage"] is None
 
     @patch("app.services.summarizer._build_chain")
     def test_summarize_without_title(self, mock_build_chain, client):
@@ -156,6 +270,7 @@ class TestSummarizeEndpoint:
         data = response.json()
         assert data["detail"]["error"] == "llm_error"
         assert "rate limit" in data["detail"]["details"]
+        assert mock_chain.ainvoke.await_count == 1
 
 
 class TestHealthEndpoint:
@@ -238,4 +353,25 @@ class TestLlmFactory:
             api_key="test-logos-key",
             base_url="https://logos.aet.cit.tum.de/v1",
             temperature=0.3,
+        )
+
+    @patch("app.services.summarizer.ChatOpenAI")
+    def test_get_llm_supports_ollama_openai_compatible_provider(self, mock_chat_openai):
+        from app.services.summarizer import _get_llm
+
+        settings = SimpleNamespace(
+            llm_provider="ollama",
+            llm_model="qwen3:4b-instruct",
+            llm_temperature=0.0,
+            ollama_base_url="http://host.docker.internal:11434/v1",
+        )
+
+        result = _get_llm(settings)
+
+        assert result == mock_chat_openai.return_value
+        mock_chat_openai.assert_called_once_with(
+            model="qwen3:4b-instruct",
+            api_key=SecretStr("ollama"),
+            base_url="http://host.docker.internal:11434/v1",
+            temperature=0.0,
         )

@@ -41,10 +41,11 @@ The fastest way to run the full platform.
 cp genai-service/.env.example genai-service/.env
 ```
 
-The recommended setup for testing GenAI is Logos with `openai/gpt-oss-120b`, which is already
-the template default. Add a real `LOGOS_API_KEY` in `genai-service/.env` to enable AI summaries
-and daily digest generation. A `GNEWS_API_KEY` is recommended for reliable digest source coverage,
-but is not required to run the service. See
+The placeholder values are enough to boot. The recommended setup for testing GenAI is Logos with
+`openai/gpt-oss-120b`, which is already the template default — add a real `LOGOS_API_KEY` in
+`genai-service/.env` to enable AI summaries and daily digest generation, or point the service at a
+local Ollama instead. A `GNEWS_API_KEY` is recommended for reliable digest source coverage, but is
+not required to run the service. See
 [GenAI Environment Setup](docs/contributing/GenAI_Environment_Setup.md) for the other providers
 and source API keys.
 

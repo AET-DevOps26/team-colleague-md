@@ -372,7 +372,9 @@ The K8s deployment is a single umbrella chart, [`infra/helm/verita/`](../../infr
   GitHub Actions Secrets; the Logos endpoint itself is fixed in the application rather than
   in deployment configuration. The chart pins `replicaCount: 1` because digest-job state is
   process-local — job creation and status polling must land on the same process, so scaling
-  out requires moving that state to a shared store.
+  out requires moving that state to a shared store. Ollama, the local-inference option, is a
+  host-native process that neither Compose nor Helm deploys (see
+  [ADR-0021](../adr/0021-host-native-ollama-for-local-inference.md)).
 
 Chart layout, install/upgrade commands, and troubleshooting:
 [`infra/helm/verita/README.md`](../../infra/helm/verita/README.md).

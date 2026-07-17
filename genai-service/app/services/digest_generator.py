@@ -16,9 +16,16 @@ from app.schemas.digest import DigestEvent, DigestGenerateRequest, DigestGenerat
 from app.schemas.summarize import TokenUsage
 from app.services.external_sources import ExternalSourceItem
 from app.services.llm_config import active_settings
+from app.services.llm_usage import aggregate_usage, extract_usage
+from app.services.output_sanitizer import InvalidLlmOutputError, sanitize_text
 from app.services.summarizer import _get_llm
 
 logger = logging.getLogger(__name__)
+MAX_LLM_ATTEMPTS = 2
+RETRY_INSTRUCTION = (
+    "Regenerate the complete digest. The previous response had required prose that became empty "
+    "after sanitization. Use ordinary text without emoji in every required prose field."
+)
 
 SYSTEM_PROMPT = """\
 You are a daily digest writer for Verita, an AI knowledge-sharing platform.
@@ -34,6 +41,7 @@ Rules:
 - Each event's topicKeys must contain only topic keys from the provided topics.
 - Prefer combining related sources into one event, but do not cite unrelated sources just to increase citation count.
 - Do not invent facts, source IDs, topic keys, or source names.
+- Do not use emoji in any generated prose.
 - If evidence is weak or uncertain, say so briefly.
 - The digest tone should be {tone}.
 """
@@ -65,11 +73,16 @@ def _build_digest_chain():
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", SYSTEM_PROMPT),
-            ("human", "{input_json}"),
+            ("human", "{input_json}\n{retry_instruction}"),
         ]
     )
     llm = _get_llm(settings)
-    structured_llm = llm.with_structured_output(DigestLlmOutput)
+    if settings.llm_provider.lower() == "ollama":
+        structured_llm = llm.with_structured_output(
+            DigestLlmOutput, include_raw=True, method="json_schema"
+        )
+    else:
+        structured_llm = llm.with_structured_output(DigestLlmOutput, include_raw=True)
     return prompt | structured_llm, settings.llm_model
 
 
@@ -87,48 +100,69 @@ async def generate_digest(
         SYSTEM_PROMPT.format(max_events=request.maxEvents, tone=request.tone),
         input_json,
     )
-    structured_result = await chain.ainvoke(
-        {
-            "input_json": input_json,
-            "max_events": request.maxEvents,
-            "tone": request.tone,
-        }
-    )
-    logger.debug("Digest LLM raw structured response=%s", _format_llm_debug_payload(structured_result))
-    payload, raw_message = _extract_structured_digest(structured_result)
+    attempt_usage: list[TokenUsage | None] = []
+    for attempt in range(1, MAX_LLM_ATTEMPTS + 1):
+        structured_result = await chain.ainvoke(
+            {
+                "input_json": input_json,
+                "max_events": request.maxEvents,
+                "tone": request.tone,
+                "retry_instruction": RETRY_INSTRUCTION if attempt > 1 else "",
+            }
+        )
+        logger.debug(
+            "Digest LLM structured response received type=%s",
+            type(structured_result).__name__,
+        )
+        payload, raw_message = _extract_structured_digest(structured_result)
+        attempt_usage.append(extract_usage(raw_message))
+        payload = _sanitize_digest_payload(payload)
+        try:
+            _validate_required_digest_prose(payload)
+        except InvalidLlmOutputError as exc:
+            logger.warning(
+                "Digest LLM sanitized output invalid attempt=%d maxAttempts=%d reason=%s",
+                attempt,
+                MAX_LLM_ATTEMPTS,
+                exc,
+            )
+            if attempt < MAX_LLM_ATTEMPTS:
+                continue
+            raise
 
-    try:
-        events = [
-            _build_event(event_payload, source_by_id, topic_id_by_key)
-            for event_payload in payload.events
-        ][: request.maxEvents]
-    except ValidationError as exc:
-        raise DigestJsonParseError(str(exc)) from exc
+        try:
+            events = [
+                _build_event(event_payload, source_by_id, topic_id_by_key)
+                for event_payload in payload.events
+            ][: request.maxEvents]
+        except ValidationError as exc:
+            raise DigestJsonParseError(str(exc)) from exc
 
-    cited_source_count = len({source.url for event in events for source in event.sources})
-    logger.info(
-        "Digest LLM structured output accepted generatedEventCount=%d acceptedEventCount=%d sourceCount=%d citedSourceCount=%d",
-        len(payload.events),
-        len(events),
-        len(sources),
-        cited_source_count,
-    )
-    usage = _extract_usage(raw_message)
-    return DigestGenerateResponse(
-        digestDate=request.digestDate,
-        periodStart=request.periodStart,
-        periodEnd=request.periodEnd,
-        topStorySubtitle=payload.topStorySubtitle or "New AI developments across subscribed topics.",
-        summary=payload.summary or "",
-        topics=request.topics,
-        events=events,
-        eventCount=len(events),
-        sourceCount=len(sources),
-        readTimeMinutes=_estimate_read_time(payload, events),
-        generatedAt=datetime.now(timezone.utc),
-        model=model_name,
-        usage=usage,
-    )
+        cited_source_count = len({source.url for event in events for source in event.sources})
+        logger.info(
+            "Digest LLM structured output accepted generatedEventCount=%d acceptedEventCount=%d sourceCount=%d citedSourceCount=%d",
+            len(payload.events),
+            len(events),
+            len(sources),
+            cited_source_count,
+        )
+        return DigestGenerateResponse(
+            digestDate=request.digestDate,
+            periodStart=request.periodStart,
+            periodEnd=request.periodEnd,
+            topStorySubtitle=payload.topStorySubtitle,
+            summary=payload.summary,
+            topics=request.topics,
+            events=events,
+            eventCount=len(events),
+            sourceCount=len(sources),
+            readTimeMinutes=_estimate_read_time(payload, events),
+            generatedAt=datetime.now(timezone.utc),
+            model=model_name,
+            usage=aggregate_usage(attempt_usage),
+        )
+
+    raise AssertionError("Digest LLM attempt loop exited unexpectedly")
 
 
 def _extract_structured_digest(result: Any) -> tuple[DigestLlmOutput, Any | None]:
@@ -196,21 +230,17 @@ def _build_llm_input_json(
     )
 
 
-def _format_llm_debug_payload(payload: Any) -> str:
-    if isinstance(payload, BaseModel):
-        return payload.model_dump_json()
-    try:
-        return json.dumps(payload, default=str, ensure_ascii=True)
-    except TypeError:
-        return str(payload)
-
-
 def _build_event(
     payload: DigestLlmEvent,
     source_by_id: dict[str, ExternalSourceItem],
     topic_id_by_key: dict[str, str],
 ) -> DigestEvent:
-    topic_ids = [topic_id_by_key[topic_key] for topic_key in payload.topicKeys if topic_key in topic_id_by_key]
+    if any(topic_key not in topic_id_by_key for topic_key in payload.topicKeys) or any(
+        source_id not in source_by_id for source_id in payload.sourceIds
+    ):
+        raise DigestJsonParseError("Digest event contains invalid topicKeys or sourceIds")
+
+    topic_ids = [topic_id_by_key[topic_key] for topic_key in payload.topicKeys]
     sources = [
         DigestSource(
             url=item.url,
@@ -222,8 +252,6 @@ def _build_event(
         for source_id in payload.sourceIds
         if (item := source_by_id.get(source_id)) is not None
     ]
-    if not topic_ids or not sources:
-        raise DigestJsonParseError("Digest event contains invalid topicKeys or sourceIds")
     return DigestEvent(
         headline=payload.headline,
         summaryBullets=[bullet for bullet in payload.summaryBullets if bullet.strip()],
@@ -232,15 +260,46 @@ def _build_event(
     )
 
 
-def _extract_usage(ai_message) -> TokenUsage | None:
-    if hasattr(ai_message, "usage_metadata") and ai_message.usage_metadata:
-        usage = ai_message.usage_metadata
-        return TokenUsage(
-            input_tokens=usage.get("input_tokens", 0),
-            output_tokens=usage.get("output_tokens", 0),
-            total_tokens=usage.get("total_tokens", 0),
+def _sanitize_digest_payload(payload: DigestLlmOutput) -> DigestLlmOutput:
+    changed_fields: list[str] = []
+    events = []
+    for index, event in enumerate(payload.events):
+        headline = sanitize_text(event.headline)
+        bullets = [cleaned for bullet in event.summaryBullets if (cleaned := sanitize_text(bullet))]
+        if headline != event.headline:
+            changed_fields.append(f"events[{index}].headline")
+        if bullets != event.summaryBullets:
+            changed_fields.append(f"events[{index}].summaryBullets")
+        events.append(event.model_copy(update={"headline": headline, "summaryBullets": bullets}))
+
+    subtitle = sanitize_text(payload.topStorySubtitle)
+    summary = sanitize_text(payload.summary)
+    if subtitle != payload.topStorySubtitle:
+        changed_fields.append("topStorySubtitle")
+    if summary != payload.summary:
+        changed_fields.append("summary")
+    if changed_fields:
+        logger.info("Sanitized digest LLM prose fields=%s", changed_fields)
+    return payload.model_copy(
+        update={"topStorySubtitle": subtitle, "summary": summary, "events": events}
+    )
+
+
+def _validate_required_digest_prose(payload: DigestLlmOutput) -> None:
+    empty_fields = []
+    if not payload.topStorySubtitle:
+        empty_fields.append("topStorySubtitle")
+    if not payload.summary:
+        empty_fields.append("summary")
+    for index, event in enumerate(payload.events):
+        if not event.headline:
+            empty_fields.append(f"events[{index}].headline")
+        if not event.summaryBullets:
+            empty_fields.append(f"events[{index}].summaryBullets")
+    if empty_fields:
+        raise InvalidLlmOutputError(
+            f"Digest LLM output has empty required prose fields: {', '.join(empty_fields)}"
         )
-    return None
 
 
 def _estimate_read_time(payload: DigestLlmOutput, events: list[DigestEvent]) -> int:

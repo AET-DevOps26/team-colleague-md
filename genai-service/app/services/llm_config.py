@@ -5,8 +5,9 @@ The active ``(provider, model)`` pair is the env-configured default until an Adm
 override through the internal config endpoint. The override lives in process memory only, so
 it resets to the env default whenever the service restarts — GenAI stays stateless by design.
 
-A provider is only selectable when its API key is configured; ``set_override`` rejects the
-rest so an admin cannot switch the platform onto a provider that is guaranteed to fail.
+A provider is only selectable when its required connection setting is configured;
+``set_override`` rejects the rest so an admin cannot switch the platform onto a provider
+that is guaranteed to fail.
 """
 
 import logging
@@ -17,14 +18,21 @@ from app.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_PROVIDERS: tuple[str, ...] = ("openrouter", "nvidia", "google", "logos")
+SUPPORTED_PROVIDERS: tuple[str, ...] = (
+    "openrouter",
+    "nvidia",
+    "google",
+    "logos",
+    "ollama",
+)
 
-# Which settings field carries the API key for each provider.
-_API_KEY_FIELDS: dict[str, str] = {
+# Which settings field makes each provider reachable.
+_CONNECTION_FIELDS: dict[str, str] = {
     "openrouter": "openrouter_api_key",
     "nvidia": "nvidia_nim_api_key",
     "google": "google_api_key",
     "logos": "logos_api_key",
+    "ollama": "ollama_base_url",
 }
 
 _lock = threading.Lock()
@@ -36,7 +44,7 @@ class ProviderNotSupportedError(ValueError):
 
 
 class ProviderNotConfiguredError(ValueError):
-    """Raised when the requested provider has no API key configured."""
+    """Raised when the requested provider has no connection setting configured."""
 
 
 @dataclass(frozen=True)
@@ -46,16 +54,16 @@ class ProviderAvailability:
 
 
 def is_configured(provider: str, settings: Settings | None = None) -> bool:
-    """True when the provider has a non-empty API key in the environment."""
+    """True when the provider has its required connection setting in the environment."""
     settings = settings or get_settings()
-    field = _API_KEY_FIELDS.get(provider.lower())
+    field = _CONNECTION_FIELDS.get(provider.lower())
     if field is None:
         return False
     return bool(getattr(settings, field, "").strip())
 
 
 def provider_availability(settings: Settings | None = None) -> list[ProviderAvailability]:
-    """Report every supported provider and whether it is usable (API key present)."""
+    """Report every supported provider and whether its connection setting is present."""
     settings = settings or get_settings()
     return [ProviderAvailability(name=p, configured=is_configured(p, settings)) for p in SUPPORTED_PROVIDERS]
 
@@ -82,7 +90,7 @@ def set_override(provider: str, model: str) -> Settings:
 
     Raises:
         ProviderNotSupportedError: the provider is unknown.
-        ProviderNotConfiguredError: the provider has no API key configured.
+        ProviderNotConfiguredError: the provider has no connection setting configured.
     """
     global _override
 
@@ -90,7 +98,9 @@ def set_override(provider: str, model: str) -> Settings:
     if normalized not in SUPPORTED_PROVIDERS:
         raise ProviderNotSupportedError(f"Unsupported LLM provider: {provider}")
     if not is_configured(normalized):
-        raise ProviderNotConfiguredError(f"Provider '{normalized}' has no API key configured.")
+        raise ProviderNotConfiguredError(
+            f"Provider '{normalized}' has no connection setting configured."
+        )
 
     cleaned_model = model.strip()
     if not cleaned_model:

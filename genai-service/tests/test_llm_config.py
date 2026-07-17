@@ -2,7 +2,7 @@
 Tests for the runtime LLM configuration override (ADR-0020).
 
 Covers the internal GET/PUT endpoints, provider-availability reporting, the rejection of
-providers with no API key, and the fact that a set override actually reaches the LLM factory.
+unconfigured providers, and the fact that a set override actually reaches the LLM factory.
 """
 
 import pytest
@@ -18,7 +18,7 @@ INTERNAL_HEADERS = {"X-Internal-Service-Token": INTERNAL_TOKEN}
 
 @pytest.fixture
 def settings():
-    """Env baseline: nvidia + google have keys, openrouter + logos do not."""
+    """Env baseline: nvidia + google have keys; Ollama has no endpoint."""
     s = get_settings()
     s.internal_service_token = INTERNAL_TOKEN
     s.llm_provider = "nvidia"
@@ -28,6 +28,7 @@ def settings():
     s.google_api_key = "google-key"
     s.openrouter_api_key = ""
     s.logos_api_key = ""
+    s.ollama_base_url = ""
     reset_override()
     yield s
     reset_override()
@@ -54,6 +55,7 @@ class TestGetLlmConfig:
             "nvidia": True,
             "google": True,
             "logos": False,
+            "ollama": False,
         }
 
     def test_requires_internal_service_token(self, settings):
@@ -85,6 +87,22 @@ class TestPutLlmConfig:
         assert effective.llm_model == "gemini-2.5-pro"
         # Env fields other than provider/model are untouched.
         assert effective.nvidia_nim_api_key == "nvidia-key"
+
+    def test_ollama_is_selectable_when_base_url_is_configured(self, client, settings):
+        settings.ollama_base_url = "http://host.docker.internal:11434/v1"
+
+        response = client.put(
+            "/internal/v1/llm-config",
+            json={"provider": "ollama", "model": "qwen3:4b-instruct"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["provider"] == "ollama"
+        assert response.json()["model"] == "qwen3:4b-instruct"
+        assert {
+            provider["name"]: provider["configured"]
+            for provider in response.json()["availableProviders"]
+        }["ollama"] is True
 
     def test_rejects_provider_without_api_key(self, client):
         response = client.put(

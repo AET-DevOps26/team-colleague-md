@@ -109,6 +109,8 @@ spec:
               value: {{ $svc.llm.provider | quote }}
             - name: LLM_MODEL
               value: {{ $svc.llm.model | quote }}
+            - name: OLLAMA_BASE_URL
+              value: {{ $svc.llm.ollamaBaseUrl | quote }}
             - name: NVIDIA_NIM_API_KEY
               valueFrom:
                 secretKeyRef:

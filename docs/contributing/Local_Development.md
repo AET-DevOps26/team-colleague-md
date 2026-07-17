@@ -265,11 +265,12 @@ uvicorn app.main:app --reload --port 8000
 
 Health check: `http://localhost:8000/health`
 
-The service starts without a real API key (health and docs respond), but summarization and
-digest generation need a valid provider key in `.env`. For the TUM Logos endpoint, use
-`LLM_PROVIDER=logos`, `LLM_MODEL=openai/gpt-oss-120b`, and `LOGOS_API_KEY`; the endpoint is
-only reachable from the TUM network or eduVPN. Provider configuration, admin-panel testing,
-and troubleshooting are covered in [GenAI Environment Setup](GenAI_Environment_Setup.md).
+The service starts without a configured provider (health and docs respond), but summarization and
+digest generation need either a valid cloud provider key or `OLLAMA_BASE_URL` in `.env`. For the
+TUM Logos endpoint, use `LLM_PROVIDER=logos`, `LLM_MODEL=openai/gpt-oss-120b`, and `LOGOS_API_KEY`;
+the endpoint is only reachable from the TUM network or eduVPN. Provider configuration, admin-panel
+testing, and troubleshooting are covered in
+[GenAI Environment Setup](GenAI_Environment_Setup.md).
 
 ---
 

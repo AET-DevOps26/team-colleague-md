@@ -33,7 +33,7 @@ test('ADM-2: an admin reaches the panel and it survives a hard refresh', async (
   await expect(page.locator('[data-testid="admin-page"]')).toBeVisible();
 });
 
-test('ADM-3: the live LLM config loads and keyless providers cannot be selected', async ({ page }) => {
+test('ADM-3: the live LLM config loads and unconfigured providers cannot be selected', async ({ page }) => {
   await loginAs(page, SEED_USERS.alexchen);
   await page.goto('/admin');
   await page.locator('[data-testid="admin-tab-operations"]').click();
@@ -41,9 +41,9 @@ test('ADM-3: the live LLM config loads and keyless providers cannot be selected'
   await expect(page.locator('[data-testid="admin-llm-current"]')).toContainText('active:');
   await expect(page.locator('[data-testid="admin-llm-model"]')).not.toHaveValue('');
 
-  // GenAI reports which providers have an API key; the rest must be unselectable.
+  // GenAI reports which providers have their connection setting; the rest must be unselectable.
   const disabled = page.locator('[data-testid="admin-llm-provider"] option[disabled]');
   for (const option of await disabled.all()) {
-    await expect(option).toContainText('no API key');
+    await expect(option).toContainText('not configured');
   }
 });

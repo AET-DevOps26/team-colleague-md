@@ -45,7 +45,7 @@ export const adminService = {
     return data;
   },
 
-  /** Rejected with 400 if the provider has no API key configured. */
+  /** Rejected with 400 if the provider has no required connection setting configured. */
   async updateLlmConfig(provider: string, model: string): Promise<LlmConfig> {
     const { data } = await api.put<LlmConfig>('/api/v1/admin/genai/llm-config', { provider, model });
     return data;
